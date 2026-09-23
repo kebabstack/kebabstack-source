@@ -621,9 +621,9 @@ city^=Remote"></textarea>
     <div id="pAsst" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--ks-rule)">
       <div class="kv" style="margin-bottom:6px"><b>Your AI assistant.</b> Let a chat assistant on your computer use your apps — with exactly your rights, never more. Disconnect it here anytime.</div>
       <div id="pAsstList" class="kv" style="margin-bottom:6px"></div>
-      <div class="btnrow" style="margin:0"><button id="pAsstConnect">Connect an assistant</button><span id="pAsstStatus" class="status"></span></div>
+      <div class="btnrow" style="margin:0"><a href="assistant-guide.html" target="_blank" rel="noopener">Setup guide</a><button id="pAsstConnect">Connect an assistant</button><span id="pAsstStatus" class="status"></span></div>
       <div id="pAsstCode" class="hidden" style="margin-top:8px">
-        <div class="kv">Paste this code into your assistant within 10 minutes (the assistant asks for it, or run <code>npx kebab-mcp connect &lt;code&gt;</code>). First time? <a href="sdk/mcp.md" target="_blank" rel="noopener">Setup guide</a>.</div>
+        <div class="kv">Paste this code into your assistant within 10 minutes (the assistant asks for it, or run <code>node server.mjs connect "&lt;code&gt;"</code> from your installed connector folder). First time? <a href="assistant-guide.html" target="_blank" rel="noopener">Setup guide</a>.</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><code id="pAsstCodeText" class="mono" style="word-break:break-all;flex:1;font-size:12px"></code><button id="pAsstCopy" class="sm">copy</button></div>
       </div>
     </div>
@@ -1362,7 +1362,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.32.2"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.33.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1437,6 +1437,7 @@ const idlFactory = ({ IDL }) => {
     aiInfo: IDL.Func([], [IDL.Record({ apps: IDL.Vec(IDL.Record({ calls: IDL.Nat, fetches: IDL.Nat, hasLane: IDL.Bool, id: IDL.Nat, lastCall: IDL.Int, lastFetch: IDL.Int, name: IDL.Text })), keyHint: IDL.Text, model: IDL.Text, on: IDL.Bool, provider: IDL.Text, setAt: IDL.Int, url: IDL.Text, visionModel: IDL.Text })], ["query"]),
     amIAdmin: IDL.Func([], [IDL.Bool], ["query"]),
     assistantApps: IDL.Func([IDL.Text], [IDL.Vec(IDL.Record({ canisterId: IDL.Text, name: IDL.Text, note: IDL.Text, tileId: IDL.Nat, url: IDL.Text }))], ["query"]),
+    assistantDisconnect: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     assistantPeople: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(IDL.Record({ department: IDL.Text, displayName: IDL.Text, email: IDL.Text, groups: IDL.Vec(IDL.Text), id: IDL.Text, title: IDL.Text }))], ["query"]),
     assistantTicket: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, ticket: IDL.Text, url: IDL.Text })], []),
     assistantWhoami: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ client: IDL.Text, displayName: IDL.Text, email: IDL.Text, expiresAt: IDL.Int, hubRole: IDL.Text, id: IDL.Text, orgName: IDL.Text }))], ["query"]),

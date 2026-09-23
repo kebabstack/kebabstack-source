@@ -2571,3 +2571,36 @@ test('watch: DNS failures cannot be accepted or trimmed into a healthy baseline'
   await app.removeDomain(tok,added.id);assert.equal((await app.acceptAll(tok,added.id)).ok,false);
  } finally {await pic.tearDown();}
 });
+
+test('assistants: self-disconnect revokes only the supplied credential and stays idempotent while disabled', async () => {
+  const pic = await PocketIc.create(server.getUrl());
+  try {
+    const { actor: hub } = await initialized(pic);
+    await settled(pic);hub.setPrincipal(owner);await hub.setAssistantsEnabled(true);
+    hub.setPrincipal(member);
+    const first = await hub.redeemAssistantCode((await hub.mintAssistantCode('')).code, 'First');
+    const second = await hub.redeemAssistantCode((await hub.mintAssistantCode('')).code, 'Second');
+    assert.equal(first.ok, true);assert.equal(second.ok, true);
+    hub.setPrincipal(stranger);
+    assert.equal((await hub.assistantDisconnect('')).ok, false);
+    assert.equal((await hub.assistantDisconnect('0'.repeat(128))).ok, false);
+    assert.equal((await hub.assistantDisconnect(first.token)).ok, true);
+    assert.deepEqual(await hub.assistantWhoami(first.token), []);
+    assert.equal((await hub.assistantWhoami(second.token)).length, 1, 'another assistant stays connected');
+    assert.equal((await hub.assistantDisconnect(first.token)).ok, true, 'repeat is harmless');
+    hub.setPrincipal(owner);await hub.setAssistantsEnabled(false);hub.setPrincipal(stranger);
+    assert.equal((await hub.assistantDisconnect(second.token)).ok, true, 'can clean up after company switch-off');
+  } finally { await pic.tearDown(); }
+});
+
+test('assistants: concurrent code generation leaves only the latest code usable', async () => {
+  const pic = await PocketIc.create(server.getUrl());
+  try {
+    const { actor: hub } = await initialized(pic);
+    await settled(pic);hub.setPrincipal(owner);await hub.setAssistantsEnabled(true);hub.setPrincipal(member);
+    const codes = await Promise.all([hub.mintAssistantCode(''),hub.mintAssistantCode(''),hub.mintAssistantCode('')]);
+    assert.ok(codes.every(c=>c.ok));
+    const results = await Promise.all(codes.map(c=>hub.redeemAssistantCode(c.code,'Parallel')));
+    assert.equal(results.filter(r=>r.ok).length,1,'at most one pending code per person after asynchronous minting');
+  } finally { await pic.tearDown(); }
+});

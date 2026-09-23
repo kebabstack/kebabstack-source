@@ -16,7 +16,7 @@ const PRIM = {
 };
 
 class Parser {
-  constructor(text) { this.t = text; this.i = 0; }
+  constructor(text) { if (Buffer.byteLength(text) > 1048576) throw new SyntaxError("interface exceeds 1 MiB"); this.t = text; this.i = 0; this.depth = 0; this.nodes = 0; }
   ws() { for (;;) { const m = /^(\s+|\/\/[^\n]*)/.exec(this.t.slice(this.i)); if (!m) break; this.i += m[0].length; } }
   peek(lit) { this.ws(); return this.t.startsWith(lit, this.i); }
   peekWord(w) { this.ws(); return new RegExp("^" + w + "(?![A-Za-z0-9_])").test(this.t.slice(this.i)); }
@@ -30,6 +30,10 @@ class Parser {
   }
   // ---- AST: { k: "prim"|"named"|"record"|"tuple"|"variant"|"vec"|"opt"|"func", ... }
   typ() {
+    if (++this.depth > 64 || ++this.nodes > 50000) throw new SyntaxError("interface exceeds type complexity limit");
+    try { return this.typInner(); } finally { this.depth--; }
+  }
+  typInner() {
     if (this.peekWord("record")) {
       this.eat("record"); this.eat("{"); const fields = [];
       while (!this.peek("}")) {
@@ -38,7 +42,11 @@ class Parser {
         if (this.peek(";")) this.eat(";");
       }
       this.eat("}");
-      if (fields.length && fields.every(([n]) => n === null || /^\d+$/.test(n))) return { k: "tuple", items: fields.map(([, t]) => t) };
+      if (fields.length && fields.every(([n]) => n === null || /^\d+$/.test(n))) {
+        const numbered = fields.map(([n, t], i) => [n === null ? i : Number(n), t]).sort((a, b) => a[0] - b[0]);
+        if (!numbered.every(([n], i) => n === i)) throw new SyntaxError("sparse or duplicate numeric record fields are not supported");
+        return { k: "tuple", items: numbered.map(([, t]) => t) };
+      }
       return { k: "record", fields };
     }
     if (this.peekWord("variant")) {
@@ -56,7 +64,7 @@ class Parser {
     if (this.peekWord("func")) { this.eat("func"); return { k: "func", ...this.funcSig() }; }
     if (this.peekWord("service")) { this.eat("service"); this.eat(":"); this.serviceBody(); return { k: "prim", name: "principal" }; }
     const name = this.ident();
-    if (PRIM[name]) return { k: "prim", name };
+    if (Object.hasOwn(PRIM, name)) return { k: "prim", name };
     return { k: "named", name };
   }
   funcSig() {
@@ -79,10 +87,14 @@ class Parser {
   serviceBody() {
     if (this.peek("(")) { let depth = 0; for (;;) { const c = this.t[this.i++]; if (c === undefined) throw new SyntaxError("unterminated init args"); if (c === "(") depth++; else if (c === ")" && --depth === 0) break; } this.eat("->"); }
     this.eat("{"); const methods = [];
-    while (!this.peek("}")) {
+    for (;;) {
+      const start = this.i;
+      if (this.peek("}")) break;
       const name = this.ident(); this.eat(":");
       if (this.peekWord("func")) this.eat("func");
-      methods.push([name, this.funcSig()]);
+      const sig = this.funcSig();
+      sig.declaration = this.t.slice(start, this.i).trim();
+      methods.push([name, sig]);
       if (this.peek(";")) this.eat(";");
     }
     this.eat("}");
@@ -95,7 +107,7 @@ export function parseDidAst(text) {
   const p = new Parser(String(text)); const types = new Map(); let methods = null;
   for (;;) {
     p.ws(); if (p.i >= p.t.length) break;
-    if (p.peekWord("type")) { p.eat("type"); const name = p.ident(); p.eat("="); types.set(name, p.typ()); p.eat(";"); }
+    if (p.peekWord("type")) { p.eat("type"); const name = p.ident(); p.eat("="); if (types.has(name)) throw new SyntaxError("duplicate type definition"); types.set(name, p.typ()); p.eat(";"); }
     else if (p.peekWord("service")) { p.eat("service"); if (p.peek(":")) p.eat(":"); methods = p.serviceBody(); if (p.peek(";")) p.eat(";"); }
     else throw new SyntaxError(`unexpected at ${JSON.stringify(p.t.slice(p.i, p.i + 40))}`);
   }
@@ -106,14 +118,19 @@ export function parseDidAst(text) {
 /** Build IDL types from the AST. Named types are inlined (like the generated idl.js); a genuinely recursive type becomes IDL.Rec. */
 export function buildService(ast) {
   const built = new Map(); const visiting = new Map(); // name -> IDL.Rec while under construction
-  const build = (t) => {
+  let depth = 0;
+  const build = t => { if (++depth > 128) throw new SyntaxError("interface type dependency depth exceeded"); try { return buildInner(t); } finally { depth--; } };
+  const buildInner = (t) => {
     switch (t.k) {
       case "prim": return PRIM[t.name]();
       case "vec": return IDL.Vec(build(t.of));
       case "opt": return IDL.Opt(build(t.of));
       case "tuple": return IDL.Tuple(...t.items.map(build));
-      case "record": return IDL.Record(Object.fromEntries(t.fields.map(([n, f]) => [n, build(f)])));
-      case "variant": return IDL.Variant(Object.fromEntries(t.fields.map(([n, f]) => [n, build(f)])));
+      case "record": case "variant": {
+        if (new Set(t.fields.map(([n]) => n)).size !== t.fields.length) throw new SyntaxError("duplicate record or variant field");
+        const fields = Object.fromEntries(t.fields.map(([n, f]) => [n, build(f)]));
+        return t.k === "record" ? IDL.Record(fields) : IDL.Variant(fields);
+      }
       case "func": return IDL.Func(t.args.map(build), t.rets.map(build), t.ann);
       case "named": {
         if (built.has(t.name)) return built.get(t.name);
@@ -122,6 +139,7 @@ export function buildService(ast) {
         if (!def) throw new SyntaxError(`unknown type ${t.name}`);
         const rec = IDL.Rec(); visiting.set(t.name, rec);
         const inner = build(def);
+        if (inner === rec) throw new SyntaxError("unproductive recursive type");
         visiting.delete(t.name);
         // was the placeholder used? then keep the Rec (filled), else inline
         let out = inner;
@@ -132,6 +150,7 @@ export function buildService(ast) {
       default: throw new SyntaxError(`unsupported type kind ${t.k}`);
     }
   };
+  if (new Set(ast.methods.map(([n]) => n)).size !== ast.methods.length) throw new SyntaxError("duplicate method name");
   const fields = Object.fromEntries(ast.methods.map(([name, sig]) => [name, IDL.Func(sig.args.map(build), sig.rets.map(build), sig.ann)]));
   return IDL.Service(fields);
 }
@@ -151,5 +170,7 @@ function recUsed(type, rec, seen = new Set()) {
 export function didToIdlFactory(text) {
   const ast = parseDidAst(text);
   const service = buildService(ast);
-  return () => service;
+  const factory = () => service;
+  factory.declarations = Object.fromEntries(ast.methods.map(([name, sig]) => [name, sig.declaration]));
+  return factory;
 }

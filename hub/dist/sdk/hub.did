@@ -649,6 +649,12 @@ service : {
        tileId: nat;
        url: text;
      }) query;
+  /// Revoke only the assistant credential presented here. Idempotent, including when the lane is off.
+  /// Existing app sessions remain governed by their own leases; the reference MCP client also checks the Hub before calls.
+  assistantDisconnect: (token: text) -> (record {
+                                           detail: text;
+                                           ok: bool;
+                                         });
   /// Colleagues, exactly as the pickers of the person's OWN apps see them: the union of the directories the hub hands to the
   /// connectors behind the tiles this person may open (each with its scope, exclude filters, access policy and lanes — title/department
   /// only from an app with the profile lane, groups only from one with the groups lane). No apps → nobody. q = name or address.

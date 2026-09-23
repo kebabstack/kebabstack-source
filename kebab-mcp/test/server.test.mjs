@@ -106,7 +106,7 @@ test("connect → whoami → curated + generic tools act as the person through h
   assert.deepEqual(cr.slice(1), ["desk-sess-1", 3n, "Printer", "jams", [["where", "Office"]]]);
   // generic: describe + call with JSON args coerced to Candid (nat → BigInt), session prepended
   r = await client.callTool({ name: "kebab_describe", arguments: { app: "desk" } });
-  assert.match(textOf(r), /myTickets : \(tok : text\)/);
+  assert.equal(jsonOf(r).methods.find(m => m.name === "myTickets").kind, "query");
   r = await client.callTool({ name: "kebab_call", arguments: { app: "desk", method: "setPriority", args: [42, "high"] } });
   assert.equal(r.isError, undefined, textOf(r)); assert.equal(jsonOf(r).ok, true);
   assert.deepEqual(calls.find((c) => c[0] === "desk.setPriority").slice(1), ["desk-sess-1", 42n, "high"]);

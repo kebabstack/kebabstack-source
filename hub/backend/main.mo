@@ -117,7 +117,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.32.2";
+  transient let BUILD_VERSION : Text = "0.33.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -6090,6 +6090,10 @@ persistent actor UserHub {
     for (c in List.values(old)) ignore Map.delete(assistantCodes, Text.compare, c);
     let code = hex(await ic00.raw_rand());
     if (portalSession(caller, sessionToken) == null or not assistantsOn) return { ok = false; code = ""; detail = "session ended" };
+    // Another request can mint while raw_rand is pending. Invalidate its code before publishing this one.
+    List.clear(old);
+    for ((c, ac) in Map.entries(assistantCodes)) if (ac.email == s.email) List.add(old, c);
+    for (c in List.values(old)) ignore Map.delete(assistantCodes, Text.compare, c);
     Map.add(assistantCodes, Text.compare, code, { email = s.email; displayName = s.displayName; expiresAt = Time.now() + ASSISTANT_CODE_TTL_NS });
     journal("assistant", "connect code minted by " # s.email, caller);
     { ok = true; code = Principal.toText(Principal.fromActor(UserHub)) # "." # code; detail = "" };
@@ -6158,6 +6162,7 @@ persistent actor UserHub {
     if (liveAssistantsOf(ac.email) >= 10) return fail("this person already has 10 connected assistants — disconnect one in the hub menu first");
     let token = hex(await ic00.raw_rand()) # hex(await ic00.raw_rand());
     if (not assistantsOn or accessOf(ac.email) != #active) return fail("access changed while connecting");
+    if (liveAssistantsOf(ac.email) >= 10) return fail("this person already has 10 connected assistants — disconnect one in the Hub menu");
     var lbl = norm(clientName); if (lbl == "") lbl := "assistant";
     if (lbl.size() > 60) { var cut = ""; var i = 0; for (c in lbl.chars()) { if (i < 60) cut #= Char.toText(c); i += 1 }; lbl := cut };
     let a : Assistant = { id = nextAssistantId; email = ac.email; client = lbl; createdAt = Time.now(); expiresAt = Time.now() + ASSISTANT_TOKEN_TTL_NS; lastUsedAt = 0; revokedAt = 0; uses = 0 };
@@ -6165,6 +6170,22 @@ persistent actor UserHub {
     Map.add(assistants, Text.compare, assistantKey(token), a); // the token itself is never stored
     journal("assistant", "assistant \"" # lbl # "\" connected for " # ac.email # " (30 days, revocable in the menu)", SYSTEM_PRINCIPAL);
     { ok = true; token; email = ac.email; displayName = ac.displayName; id = pidForEmail(ac.email); expiresAt = a.expiresAt; orgName; detail = "" };
+  };
+  /// Revoke only the assistant credential presented here. Idempotent, including when the lane is off.
+  /// Existing app sessions remain governed by their own leases; the reference MCP client also checks the Hub before calls.
+  public shared func assistantDisconnect(token : Text) : async { ok : Bool; detail : Text } {
+    if (token.size() != 128) return { ok = false; detail = "invalid assistant token" };
+    let key = assistantKey(token);
+    switch (assistants.get(key)) {
+      case null { { ok = false; detail = "unknown assistant token; check the Hub menu" } };
+      case (?a) {
+        if (a.revokedAt == 0) {
+          assistants.add(key, { a with revokedAt = Time.now() });
+          journal("assistant", "assistant " # a.client # " disconnected itself for " # a.email, SYSTEM_PRINCIPAL);
+        };
+        { ok = true; detail = "" };
+      };
+    };
   };
   public shared query func assistantWhoami(token : Text) : async ?{ email : Text; displayName : Text; id : Text; client : Text; expiresAt : Int; orgName : Text; hubRole : Text } {
     switch (assistantOf(token)) {

@@ -1,6 +1,6 @@
 {
   "name": "kebab-mcp",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "kebab-stack for your AI assistant: an MCP server that signs into your company's apps as you (via the hub) and lets the assistant read and act with your rights",
   "license": "MIT",
   "type": "module",
@@ -10,10 +10,12 @@
   "files": [
     "server.mjs",
     "lib/",
-    "README.md"
+    "README.md",
+    "INSTALL.md",
+    "CHANGELOG.md"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.22.2"
   },
   "scripts": {
     "test": "node --test"

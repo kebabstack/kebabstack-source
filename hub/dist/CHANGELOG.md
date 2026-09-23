@@ -1,5 +1,11 @@
 # Changelog — kebab-stack hub
 
+## [0.33.0] — 2026-09-23
+
+- Refresh personal-assistant setup with a readable, branded installation guide and source-based commands; remove the unpublished npm-package shortcut.
+- Allow an assistant to revoke only its own Hub credential, including after expiry or a company switch-off. Recheck one-code and ten-assistant limits after asynchronous code/token generation.
+- Document MCP 0.3.0: checked read-only calls, fresh Hub authorization, exact app selection, current Desk/Assets/Contracts/Forms/Crumbs tools and the limits of already issued app sessions. Directory sync, Lunch, central roles and existing state are preserved.
+
 ## [0.32.2] — 2026-09-23
 
 - Publish Brand & Product System 1.2.0 with workspace composition examples, compact context/selector rules and full-page visual acceptance criteria. Runtime app styling, roles and directory behavior remain unchanged.

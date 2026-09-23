@@ -1,5 +1,14 @@
 # Changelog — kebab-mcp
 
+## [0.3.0] — 2026-09-23
+
+- Recheck Hub authorization and menu membership before app calls, including cached sessions. Fail closed on Hub errors, isolate caches by Hub/tile/backend and reject ambiguous or partial app names. Coalesce concurrent sign-ins and refresh live interfaces.
+- Add `kebab_query`, which enforces query-only execution, and searchable/paginated method discovery. Mark backend error responses as MCP errors. Never replay an update automatically.
+- Validate integer precision/ranges, booleans, required and extra record fields, tuple lengths and blob bytes. Preserve large numbers as decimal strings instead of mistaking IDs or amounts for timestamps. Bound recursive input/interface parsing.
+- Add Desk customer projects, ticket/person/offboarding context, on-call response and HR/Finance reporting; Asset sales progress; due Contracts; Forms metadata; and Crumbs site/report tools. Use the apps' existing project and record permissions. Verify signatures against current interfaces.
+- Add Hub-side self-disconnection (Hub 0.33.0+), atomic private credential storage and explicit local-only cleanup. Document separate app-session revocation limits and AI-provider data flows.
+- Publish a branded Hub setup guide using the actual GitHub source installation. Require Node 22.22.2+ and include installation/changelog in package contents.
+
 ## [0.2.1] — 2026-09-23
 
 - Document the supported installation from the public GitHub source and configure clients with the local Node entry point. Remove instructions to fetch an unpublished npm package. Assistant permissions and behavior are unchanged.
