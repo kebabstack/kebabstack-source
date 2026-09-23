@@ -1,8 +1,8 @@
 # Deploy Ship the Bug 2D alongside 3D
 
-This module is **bug2d v0.2.0**, a separate two-canister application. Never link it to
+This module is **bug2d v0.2.5**, a separate two-canister application. Never link it to
 an existing `bug` backend or frontend. Do not use the Kitchen `bug` recipe for this
-module: that recipe continues to maintain the 3D game. This 2D release uses the CLI.
+module: that recipe maintains the integrated 2D/3D game. This 2D release uses the CLI.
 
 1. `npm ci`, `npm run build:backend`, `npm run build`, `npm test`, and
    `npm run test:backend`. The backend check compares the committed stable signature

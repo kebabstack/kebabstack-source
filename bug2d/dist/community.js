@@ -2,7 +2,7 @@ import { compareFlight } from './result-board.js';
 import { scoreOf } from './scoring.js';
 import { mountSuite, topbarIdlFactory } from './app.js';
 import { connect } from './client-api.js';
-import { VERSION } from './physics.js';
+import { SCORE_VERSION } from './physics.js';
 const $ = id => document.getElementById(id);
 const number = value => Number(value).toLocaleString('en-US');
 const unwrap = r => { if ('err' in r) throw new Error(r.err); return r.ok; };
@@ -171,7 +171,7 @@ export class Community {
       }
       const coins = r.coinIds.map(id => { const [,chunk,index] = id.split(':'); return BigInt(Number(chunk) * 21 + Number(index)); });
       r.publishAttempted = true;
-      const row = unwrap(await api.arcadeSubmit({ runId: ticket.id, meters: BigInt(Math.floor(r.d)), coins, durationMs: BigInt(Math.round(r.elapsed * 1000)), version: VERSION }));
+      const row = unwrap(await api.arcadeSubmit({ runId: ticket.id, meters: BigInt(Math.floor(r.d)), coins, durationMs: BigInt(Math.round(r.elapsed * 1000)), version: SCORE_VERSION }));
       r.published = true; if (this.getRun() !== r) return;
       $('publishBtn').textContent = 'PUBLISHED ✓'; $('againBtn').textContent = 'PLAY AGAIN';
       $('saveNote').textContent = `${number(row.score)} points published as ${row.name}. Your best score stays on the board.`;

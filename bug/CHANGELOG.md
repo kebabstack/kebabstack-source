@@ -1,6 +1,8 @@
 # Changelog — kebab-stack bug (Ship the Bug)
 
 ## [0.17.5] — 2026-09-23
+- Keep score payload compatibility separate from the displayed app version so cosmetic releases do not prevent publishing valid flights. Exercise the browser payload version against the local backend.
+
 
 - Prepare the public source edition: use the canonical Bug mark for the flight guide and omit the supplied mascot portrait whose redistribution license was not documented. Flight behavior, profiles and scores are unchanged.
 

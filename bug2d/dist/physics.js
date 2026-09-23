@@ -4,6 +4,8 @@ import { burnRate } from './scoring.js';
 import { makeMines } from './mines.js';
 import { newFlow, flowCoin, breakFlow, flowNearMiss, stepFlow } from './overdrive.js';
 export const VERSION = '0.2.5';
+// Payload compatibility follows gameplay rules, not cosmetic app releases.
+export const SCORE_VERSION = '0.2.0';
 export const PROMPT_BOOSTS = 5;
 export const STEP = 1 / 120;
 export const START_HEIGHT = 38;

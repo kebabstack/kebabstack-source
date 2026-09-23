@@ -126,11 +126,11 @@ bound to the browser and origin where they were created; the old address stays u
 Use the repository's pinned tools (`npm ci` at root and in `bug/`). Keep `moc` 1.12.0.
 From `bug/`, run `mops install --locked`, `npm run build:backend`, `npm run build`,
 `npm test`, and `npm run test:backend`. The build checks the committed stable baseline
-before generating Candid/browser bindings. The backend integration test builds the
-0.2.1 source from Git, seeds private data, upgrades it, then checks retained state,
-public/Hub identity isolation, score validation and revocation. Mode-specific Hub
-submission and access revocation are covered by the same suite. For a populated
-0.11.0 upgrade, build that Git revision separately, then run
+before generating Candid/browser bindings. The default backend integration check
+seeds synthetic profiles and scores, verifies both modes and invalid submissions,
+and checks a populated restart. Historical migration cases require explicit
+baseline artifacts as described below. For a populated
+0.11.0 upgrade, supply its previously built Wasm, then run
 `KEBAB_MODES_BASELINE_WASM=/absolute/path/to/0.11.0.wasm npm run test:modes:backend`.
 Set `KEBAB_MODES_BASELINE_VERSION=0.12.0` with a 0.12.0 Wasm to seed and
 verify both populated mode boards. It checks unchanged 3D records, shared names, separate boards, cross-mode ticket
@@ -162,3 +162,14 @@ follow the other Kebapstack apps: deploy the two canisters, patch the frontend
 placeholders, call `setHub`, and connect the backend plus frontend tile in the Hub.
 There is no public first-visitor admin claim. Public guest profiles cannot change
 Hub settings or reset other players' scores.
+
+### Tests from the public source snapshot
+
+`npm run test:backend` runs fresh setup and a populated restart of the current
+release without private Git history. Historical migrations are separate: provide
+`KEBAB_LEGACY_BASELINE_DIR` (0.2.1) and `KEBAB_EARLY_PUBLIC_BASELINE_DIR`
+(early public arcade), each containing `backend.wasm` and `backend.did`, to run
+those retained migration cases. Without them, they are explicitly skipped.
+`KEBAB_MODES_BASELINE_WASM` and `KEBAB_MODES_BASELINE_VERSION` enable a previous
+mode-aware release upgrade. Score payload compatibility follows `SCORE_VERSION`;
+cosmetic app version bumps do not change that protocol.

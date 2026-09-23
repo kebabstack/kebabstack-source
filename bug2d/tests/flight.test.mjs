@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const releaseVersion=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;
 import {createRun,beginCharge,launch,boost,stepRun,makeObjects,STEP,fire,VERSION,findTarget} from '../src/physics.js';
 import {GameView,buildingLayout} from '../src/scene.js';
 import {stepGhost} from '../src/ghost.js';
@@ -58,5 +60,5 @@ test('Canvas2D renders every chapter with bounded resources across viewport size
   for(const d of [0,200,650,1500,2450,4500,50000]){r.d=d;r.y=d>1000?85:21;r.zone=Math.min(9,Math.floor(d/500));v.update(r,STEP);const objects=v.objects;v.update(r,0);assert.equal(v.objects,objects);assert.ok(v.objects.length<250);assert.ok(v.chunks.size<=6);}
   v.reset(1,2);v.update(createRun(),0);assert.equal(v.particles.length,0);
  }
- assert.ok(calls>1000);assert.equal(VERSION,'0.2.0');
+ assert.ok(calls>1000);assert.equal(VERSION,releaseVersion);
 });

@@ -1,26 +1,18 @@
 import assert from 'node:assert/strict';
 import {PocketIc,PocketIcServer,createIdentity} from '@dfinity/pic';
 import {execFileSync} from 'node:child_process';
-import {mkdirSync,writeFileSync,existsSync} from 'node:fs';
+import {SCORE_VERSION,VERSION} from '../src/physics.js';
 import {fileURLToPath} from 'node:url';
 import {idlFactory} from '../src/generated/backend.did.js';
-const root=fileURLToPath(new URL('../',import.meta.url)),base=root+'test/baseline/',mops=root+'node_modules/.bin/mops';
-mkdirSync(base,{recursive:true});
-const git=f=>execFileSync('git',['show','7fa8788:bug/'+f],{cwd:root,encoding:'utf8'});
-writeFileSync(base+'main.mo',git('backend/main.mo'));
-writeFileSync(base+'mops.toml',git('mops.toml').replace('../sdk/motoko','../../../sdk/motoko').replace('backend/main.mo','main.mo').replace('backend/dist','dist'));
-for(const args of [['install'],['check'],['build']])execFileSync(mops,args,{cwd:base,stdio:'inherit'});
-if(!existsSync(root+'../hub/backend/dist/backend.wasm'))for(const args of [['install','--locked'],['build']])execFileSync(mops,args,{cwd:root+'../hub',stdio:'inherit'});
-async function idl(path){const code=execFileSync('python3',[root+'../sdk/tools/did2idl.py',path],{encoding:'utf8'});return(await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'))).idlFactory;}
-const legacyIdl=await idl(base+'dist/backend.did'),hubIdl=await idl(root+'../hub/backend/dist/backend.did');
-const publicBase=root+'test/public-baseline/';
-for(const file of ['backend/main.mo','backend/types.mo','backend/lib/Rules.mo','backend/mixins/Arcade.mo','mops.toml']){
- const out=publicBase+file;mkdirSync(out.slice(0,out.lastIndexOf('/')),{recursive:true});
- const source=execFileSync('git',['show','1e1efc9:bug/'+file],{cwd:root,encoding:'utf8'});
- writeFileSync(out,file==='mops.toml'?source.replace('../sdk/motoko','../../../sdk/motoko'):source);
+const root=fileURLToPath(new URL('../',import.meta.url));
+const base=process.env.KEBAB_LEGACY_BASELINE_DIR,publicBase=process.env.KEBAB_EARLY_PUBLIC_BASELINE_DIR;
+if(!base||!publicBase){
+ console.log('SKIP: historical 0.2.1 and early-public migrations need KEBAB_LEGACY_BASELINE_DIR and KEBAB_EARLY_PUBLIC_BASELINE_DIR (backend.wasm + backend.did). No private Git history is required.');
+ execFileSync(process.execPath,[root+'tests/modes.backend.mjs'],{stdio:'inherit',env:process.env});
+ process.exit(0);
 }
-for(const args of [['install'],['check'],['build']])execFileSync(mops,args,{cwd:publicBase,stdio:'inherit'});
-const publicIdl=await idl(publicBase+'backend/dist/backend.did');
+async function idl(path){const code=execFileSync('python3',[root+'../sdk/tools/did2idl.py',path],{encoding:'utf8'});return(await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'))).idlFactory;}
+const legacyIdl=await idl(base+'/backend.did'),hubIdl=await idl(root+'../hub/backend/dist/backend.did'),publicIdl=await idl(publicBase+'/backend.did');
 const server=await PocketIcServer.start(),pic=await PocketIc.create(server.getUrl());
 const controller=createIdentity('bug-upgrade-controller').getPrincipal(),owner=createIdentity('bug-upgrade-owner').getPrincipal(),guest=createIdentity('bug-guest-a').getPrincipal(),guestB=createIdentity('bug-guest-b').getPrincipal();
 const ok=r=>{assert.ok('ok' in r,r.err);return r.ok;};let checks=0;const pass=s=>{checks++;console.log('✓ '+s);},pause=()=>pic.advanceTime(600);
@@ -28,7 +20,7 @@ try{
  await pic.setTime(Date.now());const code='ab'.repeat(32);
  const {actor:hub,canisterId:hubId}=await pic.setupCanister({sender:controller,controllers:[controller],wasm:root+'../hub/backend/dist/backend.wasm',idlFactory:hubIdl,environmentVariables:[{name:'KEBAB_CLAIM_CODE',value:code}]});
  hub.setPrincipal(owner);assert.equal((await hub.claimHubWithCode(code,{orgName:'Upgrade Test',displayName:'Owner',email:'owner@example.test'})).ok,true);
- const {actor:old,canisterId}=await pic.setupCanister({sender:controller,controllers:[controller],wasm:process.env.KEBAB_BASELINE_WASM||base+'dist/backend.wasm',idlFactory:legacyIdl});
+ const {actor:old,canisterId}=await pic.setupCanister({sender:controller,controllers:[controller],wasm:process.env.KEBAB_BASELINE_WASM||base+'/backend.wasm',idlFactory:legacyIdl});
  old.setPrincipal(controller);assert.equal(await old.setHub(hubId.toText()),true);
  const connector=await hub.connectApp({name:'bug',canisterId:canisterId.toText(),note:'',lanes:['identity','roles','groups'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[{name:'Bug',kind:'app',url:'https://bug.example.test'}]});assert.equal(connector.ok,true);
  const ticket=async()=>{hub.setPrincipal(owner);const t=await hub.mintAppTicket('',connector.tileId);assert.equal(t.ok,true);return t.ticket;};
@@ -39,12 +31,12 @@ try{
  const archived=(await old.leaderboard(session.token))[0];assert.equal(archived.allTime[0].name,'OriginalCaptain');
  const upgrade=()=>pic.upgradeCanister({sender:controller,canisterId,wasm:process.env.KEBAB_CANDIDATE_WASM||root+'backend/dist/backend.wasm',upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});await upgrade();
  const a=pic.createActor(idlFactory,canisterId);a.setPrincipal(guest);
- assert.equal((await a.info()).version,'0.17.0');assert.equal((await a.info()).hubId,hubId.toText());assert.equal((await a.info()).orgName,'Keep Our Company');assert.equal((await a.getSettings(session.token))[0].adminGroup,'flight-admins');
+ assert.equal((await a.info()).version,VERSION);assert.equal((await a.info()).hubId,hubId.toText());assert.equal((await a.info()).orgName,'Keep Our Company');assert.equal((await a.getSettings(session.token))[0].adminGroup,'flight-admins');
  assert.deepEqual((await a.leaderboard(session.token))[0].allTime,archived.allTime);assert.deepEqual(await a.leaderboard(''),[]);assert.deepEqual(await a.arcadeLeaderboard(),[]);pass('0.2.1 upgrade preserves settings, Hub, names and PRIVATE scores; public board starts empty');
  const anon=pic.createActor(idlFactory,canisterId);assert.ok('err' in await anon.arcadeSetName('Anonymous'));pass('anonymous cannot reserve guest identity');
  assert.ok('err' in await a.arcadeSetName('OriginalCaptain'));pass('guest cannot steal existing Hub callsign');await pause();
  ok(await a.arcadeSetName('PilotAlpha'));await pause();const ra=ok(await a.arcadeBegin());await pic.advanceTime(10000);
- const claim={runId:ra.id,meters:500n,coins:[0n,1n,2n,3n,4n,5n,6n,7n,8n,9n],durationMs:10000n,version:'0.17.0'};
+ const claim={runId:ra.id,meters:500n,coins:[0n,1n,2n,3n,4n,5n,6n,7n,8n,9n],durationMs:10000n,version:SCORE_VERSION};
  for(const [patch,name]of[[{coins:[0n,0n]},'duplicate coin'],[{meters:20000n},'impossible speed'],[{coins:[9999n]},'unreachable coin'],[{durationMs:100000n},'clock ahead of server'],[{version:'0.2.1'},'wrong version']]){assert.ok('err' in await a.arcadeSubmit({...claim,...patch}));pass(name+' rejected');await pause();}
  assert.equal(ok(await a.arcadeSubmit(claim)).score,1000n);pass('server computes metres + 50 points per coin');await pause();assert.ok('err' in await a.arcadeSubmit(claim));pass('single-use flight ticket');
  const b=pic.createActor(idlFactory,canisterId);b.setPrincipal(guestB);assert.ok('err' in await b.arcadeSetName('pilotalpha'));await pause();ok(await b.arcadeSetName('PilotBeta'));await pause();const rb=ok(await b.arcadeBegin());await pic.advanceTime(10000);ok(await b.arcadeSubmit({...claim,runId:rb.id,meters:800n,coins:[]}));assert.deepEqual((await anon.arcadeLeaderboard()).map(r=>r.name),['PilotAlpha','PilotBeta']);pass('all guests share public board; coins reward shorter flight');
@@ -74,7 +66,7 @@ try{
  await pause();ok(await a.arcadeRemove());assert.deepEqual((await anon.arcadeLeaderboard()).map(r=>r.name),['OriginalCaptain','PilotBeta']);pass('remove only own public score');
  const fresh=await pic.setupCanister({sender:controller,controllers:[controller],wasm:process.env.KEBAB_CANDIDATE_WASM||root+'backend/dist/backend.wasm',idlFactory});fresh.actor.setPrincipal(guest);ok(await fresh.actor.arcadeProfile());ok(await fresh.actor.arcadeSetName('FreshPilot'));ok(await fresh.actor.arcadeBegin());pass('fresh guest can load profile, pick name and launch immediately');
  // A populated 0.3.1 upgrade proves the new board cannot inherit easier records.
- const prior=await pic.setupCanister({sender:controller,controllers:[controller],wasm:publicBase+'backend/dist/backend.wasm',idlFactory:publicIdl});
+ const prior=await pic.setupCanister({sender:controller,controllers:[controller],wasm:publicBase+'/backend.wasm',idlFactory:publicIdl});
  prior.actor.setPrincipal(guest);ok(await prior.actor.arcadeSetName('EarlyPilot'));
  const early=ok(await prior.actor.arcadeBegin());await pic.advanceTime(20000);
  ok(await prior.actor.arcadeSubmit({runId:early.id,meters:2000n,coins:[],durationMs:20000n,version:'0.3.1'}));await pause();

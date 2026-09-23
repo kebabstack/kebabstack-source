@@ -1,5 +1,6 @@
 import { compareFlight } from '../src/result-board.js';
 import { scoreOf } from '../src/scoring.js';
+import { SCORE_VERSION } from '../src/physics.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -10,7 +11,7 @@ async function setup(actor,hash='',deployment={}){
  if(!actor.arcadePublish)actor.arcadePublish=async(mode,s)=>{const r=await ('twoD' in mode?actor.arcadeSubmitMode(mode,s):actor.arcadeSubmit(s));return 'err' in r?r:{ok:{flight:r.ok,best:r.ok,improved:true,mode}};};
  const dom=new JSDOM(html,{url:(deployment.origin||'https://game.example.test/')+hash});
  const w=dom.window;let run={phase:'done',practice:false,d:460,coins:2,coinIds:['1:0:0','1:0:1'],elapsed:17,ranking:Promise.resolve({id:1n})};
- const Community=new Function('document','location','history','connect','VERSION','mountSuite','topbarIdlFactory','compareFlight','scoreOf',source.replace('export class Community','class Community')+';return Community')(w.document,w.location,w.history,async()=>({actor,hubUrl:'https://hub.example.test',hubActor:()=>({}),hubTileId:deployment.hubTileId}),'0.17.0',()=>({destroy(){}}),()=>({}),compareFlight,scoreOf);
+ const Community=new Function('document','location','history','connect','SCORE_VERSION','mountSuite','topbarIdlFactory','compareFlight','scoreOf',source.replace('export class Community','class Community')+';return Community')(w.document,w.location,w.history,async()=>({actor,hubUrl:'https://hub.example.test',hubActor:()=>({}),hubTileId:deployment.hubTileId}),SCORE_VERSION,()=>({destroy(){}}),()=>({}),compareFlight,scoreOf);
  const c=new Community({mode:deployment.mode,showModal:id=>w.document.getElementById(id).setAttribute('open',''),closeModal:id=>w.document.getElementById(id).removeAttribute('open'),getRun:()=>run});
  return {c,w,getRun:()=>run,setRun:r=>{run=r},$:id=>w.document.getElementById(id)};
 }
@@ -147,4 +148,10 @@ test('an expired optional Hub ticket still restores the browser public profile',
  const {c,$}=await setup({arcadeLogin:async()=>({err:'Ticket expired'}),arcadeProfile:async()=>({ok:{name:'DDA',hub:false}})},'#uht=expired-optional-ticket');
  await c.boot();assert.equal(c.pilot.name,'DDA');assert.equal($('logoutBtn').hidden,true);
  assert.equal($('profileDialog').hasAttribute('open'),false);
+});
+
+test('score publication uses the gameplay protocol across cosmetic releases',async()=>{
+ let payload;const {c,$}=await setup({arcadeSubmit:async s=>{payload=s;return{ok:{name:'Pilot',score:560n}}}});
+ c.pilot={name:'Pilot'};$('resultName').value='Pilot';await c.publish();
+ assert.equal(payload.version,SCORE_VERSION);
 });

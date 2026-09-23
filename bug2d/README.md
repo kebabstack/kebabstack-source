@@ -1,4 +1,4 @@
-# Ship the Bug 2D · v0.2.0
+# Ship the Bug 2D · v0.2.5
 
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical identity, semantic light/dark colours and common navigation/control sizes. Product access and workflow boundaries remain explicit.
 

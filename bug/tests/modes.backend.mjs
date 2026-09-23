@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';import {PocketIc,PocketIcServer,createIdentity} from '@dfinity/pic';import {idlFactory} from '../src/generated/backend.did.js';
-const baselineVersion=process.env.KEBAB_MODES_BASELINE_VERSION||'0.11.0';
-const wasm=new URL('../backend/dist/backend.wasm',import.meta.url).pathname,baseline=process.env.KEBAB_MODES_BASELINE_WASM;if(!baseline)throw Error('Set KEBAB_MODES_BASELINE_WASM to the built 0.11.0 backend.');
+import {SCORE_VERSION,VERSION} from '../src/physics.js';
+const baselineVersion=process.env.KEBAB_MODES_BASELINE_VERSION||(process.env.KEBAB_MODES_BASELINE_WASM?'0.11.0':SCORE_VERSION);
+const wasm=new URL('../backend/dist/backend.wasm',import.meta.url).pathname,baseline=process.env.KEBAB_MODES_BASELINE_WASM||wasm;
+if(!process.env.KEBAB_MODES_BASELINE_WASM)console.log('Current release: fresh setup and populated restart; historical upgrade requires KEBAB_MODES_BASELINE_WASM.');
 import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
 const previousTmp=process.env.TMPDIR,testTmp=mkdtempSync(join(tmpdir(),'stb-modes-'));process.env.TMPDIR=testTmp;
 const server=await PocketIcServer.start(),pic=await PocketIc.create(server.getUrl()),controller=createIdentity('modes-controller').getPrincipal(),pilot=createIdentity('modes-pilot').getPrincipal(),other=createIdentity('modes-other').getPrincipal();
@@ -8,12 +10,12 @@ const ok=r=>{assert.ok('ok'in r,r.err);return r.ok;},twoD={twoD:null},threeD={th
 try{
  await pic.setTime(Date.now());const {actor:a,canisterId}=await pic.setupCanister({sender:controller,controllers:[controller],wasm:baseline,idlFactory});a.setPrincipal(pilot);
  ok(await a.arcadeSetName('SharedPilot'));const old=ok(await a.arcadeBegin());await pic.advanceTime(10000);
- const submission=(runId,meters,version='0.17.0')=>({runId,meters:BigInt(meters),coins:[0n,1n],durationMs:10000n,version});
+ const submission=(runId,meters,version=SCORE_VERSION)=>({runId,meters:BigInt(meters),coins:[0n,1n],durationMs:10000n,version});
  ok(await a.arcadeSubmit(submission(old.id,900,baselineVersion)));const previous=await a.arcadeLeaderboard();
  if(baselineVersion!=='0.11.0'){await pause();const legacy2d=ok(await a.arcadeBeginMode(twoD));await pic.advanceTime(10000);ok(await a.arcadeSubmitMode(twoD,submission(legacy2d.id,400,baselineVersion)));}
  const previous2d=baselineVersion==='0.11.0'?[]:await a.arcadeLeaderboardMode(twoD);
  const upgrade=()=>pic.upgradeCanister({sender:controller,canisterId,wasm,upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});await upgrade();
- assert.equal((await a.info()).version,'0.17.0');assert.deepEqual(await a.arcadeLeaderboard(),previous);assert.deepEqual(await a.arcadeLeaderboardMode(twoD),previous2d);assert.equal(ok(await a.arcadeProfile()).name,'SharedPilot');
+ assert.equal((await a.info()).version,VERSION);assert.deepEqual(await a.arcadeLeaderboard(),previous);assert.deepEqual(await a.arcadeLeaderboardMode(twoD),previous2d);assert.equal(ok(await a.arcadeProfile()).name,'SharedPilot');
  await pause();const t3=ok(await a.arcadeBeginMode(threeD));await pause();const t2=ok(await a.arcadeBeginMode(twoD));await pic.advanceTime(10000);
  assert.ok('err'in await a.arcadeSubmit(submission(t2.id,500)));await pause();assert.ok('err'in await a.arcadeSubmitMode(twoD,submission(t3.id,500)));await pause();
  for(const patch of [{version:'0.2.0'},{coins:[0n,0n]},{meters:90000n},{durationMs:100000n}]){assert.ok('err'in await a.arcadeSubmitMode(twoD,{...submission(t2.id,700),...patch}));await pause();}
@@ -39,5 +41,5 @@ try{
  await upgrade();assert.equal((await a.arcadeLeaderboard())[0].score,1300n);assert.equal((await a.arcadeLeaderboardMode(twoD)).length,2);
  ok(await a.arcadeRemoveMode(twoD));assert.deepEqual((await a.arcadeLeaderboardMode(twoD)).map(r=>r.name),['OtherPilot']);assert.equal((await a.arcadeLeaderboard())[0].score,1300n);
  await pause();ok(await b.arcadeRemove());assert.equal((await a.arcadeLeaderboard())[0].score,1300n);assert.equal((await a.arcadeLeaderboardMode(twoD)).length,1);
- console.log('PASS: populated '+baselineVersion+' upgrade, shared callsign, independent 2D/3D records, mode-bound tickets, invalid payloads, replay protection, archive isolation, anonymous rejection, scoped removal, repeat upgrade, accurate publication receipts, lost-ack retries, late guest callsign, retained best, changed-payload and cross-owner/mode replay rejection.');
+ console.log('PASS: populated '+(process.env.KEBAB_MODES_BASELINE_WASM?baselineVersion:VERSION)+' upgrade, shared callsign, independent 2D/3D records, mode-bound tickets, invalid payloads, replay protection, archive isolation, anonymous rejection, scoped removal, repeat upgrade, accurate publication receipts, lost-ack retries, late guest callsign, retained best, changed-payload and cross-owner/mode replay rejection.');
 }finally{await pic.tearDown();await server.stop();if(previousTmp===undefined)delete process.env.TMPDIR;else process.env.TMPDIR=previousTmp;rmSync(testTmp,{recursive:true,force:true});}

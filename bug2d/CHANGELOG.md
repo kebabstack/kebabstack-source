@@ -1,7 +1,10 @@
 # Changelog
 
 ## [0.2.5] — 2026-09-23
+- Keep score payload compatibility separate from the displayed app version so cosmetic releases do not prevent publishing valid flights. Exercise the browser payload version against the local backend.
 
+
+- Refresh legacy regression version expectations from the package version; score validation and populated-upgrade assertions remain in place.
 - Prepare the public source edition: use the canonical Bug mark for the flight guide and omit the supplied mascot portrait whose redistribution license was not documented. Flight behavior, profiles and scores are unchanged.
 
 ## [0.2.4] — 2026-09-22
