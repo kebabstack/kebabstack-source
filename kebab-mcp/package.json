@@ -1,6 +1,6 @@
 {
   "name": "kebab-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "kebab-stack for your AI assistant: an MCP server that signs into your company's apps as you (via the hub) and lets the assistant read and act with your rights",
   "license": "MIT",
   "type": "module",

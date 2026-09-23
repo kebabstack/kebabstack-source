@@ -1,5 +1,10 @@
 # Changelog — kebab-mcp
 
+## [0.2.1] — 2026-09-23
+
+- Document the supported installation from the public GitHub source and configure clients with the local Node entry point. Remove instructions to fetch an unpublished npm package. Assistant permissions and behavior are unchanged.
+- Align package, lockfile and server versions.
+
 ## [0.2.0] — 2026-09-06
 
 Security release from the full audit (`KEBABSTACK-AUDIT-2026-09-06.md`). Works with hub ≥ 0.19 (0.18 tokens were retired there; reconnect once).

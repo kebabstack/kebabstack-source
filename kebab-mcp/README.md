@@ -8,26 +8,47 @@ app **as you**, with exactly your rights — the hub mints the tickets, the apps
 the gating, the same lease and lock-out apply. Nothing is granted that you could
 not do by hand in the browser.
 
-## Connect (once, ~1 minute)
+## Install from the source repository
+
+Use Node.js 22.22.2 or newer. This alpha is distributed through GitHub; an
+npm package has not been published. Install the locked dependencies locally:
+
+```bash
+git clone https://github.com/kebabstack/kebabstack-source.git kebabstack
+cd kebabstack/kebab-mcp
+npm ci
+```
+
+Keep this checkout in a permanent location. To update it, review the changes,
+then run `git pull --ff-only` and `npm ci` again. Restart the assistant afterward.
+
+## Connect
 
 1. In the hub: **Menu → your name → Connect an assistant**. Copy the code
    (`<hub canister id>.<64 hex>`; valid 10 minutes, one use).
 2. On your computer:
    ```bash
-   npx kebab-mcp connect <code> --as "Desktop chat"
+   node server.mjs connect "PASTE_YOUR_CODE_HERE" --as "Desktop chat"
    ```
    The token (30 days, revocable in the hub menu anytime) is stored in
    `~/.kebab-mcp/config.json`, readable by you only.
 3. Tell your chat client to start the server — in its MCP servers config
    (most desktop chat apps and IDEs read a `mcpServers` block like this):
    ```json
-   { "mcpServers": { "kebab": { "command": "npx", "args": ["-y", "kebab-mcp"] } } }
+   { "mcpServers": { "kebab": { "command": "node", "args": ["/absolute/path/to/kebabstack/kebab-mcp/server.mjs"] } } }
    ```
+   Replace the example with the full path to your local `server.mjs`. If the
+   desktop client cannot find Node, use the full path to the Node executable too.
    Or skip step 2 and let the assistant ask you for the code: it has a
    `kebab_connect` tool.
 
-`npx kebab-mcp status` shows who is connected and which apps; `disconnect`
-forgets the local token (disconnect it in the hub menu too).
+From the `kebab-mcp` directory, `node server.mjs status` shows who is connected
+and which apps; `node server.mjs disconnect` forgets the local token (disconnect
+it in the hub menu too).
+
+Some Hub versions show a shorthand `npx kebab-mcp` command. Use the local
+commands above instead. Do not accept an npm download prompt for that name;
+this repository is the distribution source.
 
 ## What the assistant can do
 

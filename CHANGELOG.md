@@ -3,6 +3,7 @@
 ## [0.3.0] — 2026-09-23
 
 - Prepare the complete alpha source distribution with a fresh public history, generic operator examples, MIT licensing and retained upstream notices. Internal deployment receipts and configuration remain private.
+- Correct the MCP source-installation guide and synchronize its release metadata; no unpublished npm package is needed.
 - Extend publication guards to Crumbs, correctly distinguish valid Unicode source from binary data, and add regression checks.
 - Document source review, supported build tools and private vulnerability reporting. Business application runtime versions are unchanged by source packaging; the optional game editions replace an unlicensed supplied portrait with the canonical mark.
 

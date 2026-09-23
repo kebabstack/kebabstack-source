@@ -15,7 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const VERSION = "0.2.0";
+export const VERSION = "0.2.1";
 
 export function buildServer(rt) {
   const server = new McpServer({ name: "kebab-mcp", version: VERSION }, { instructions: "You are connected to the person's company hub (kebab-stack). Every tool acts AS that person, with exactly their rights — nothing more. Prefer the curated tools (kebab_my_tickets, kebab_people, kebab_devices …); for anything else read the interface with kebab_describe and call it with kebab_call. Writes change real data: confirm with the person before filing, assigning, handing over or changing anything. If a tool says the hub no longer accepts this assistant, ask the person for a new code from the hub menu and call kebab_connect." });

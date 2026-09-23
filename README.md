@@ -79,7 +79,7 @@ have their own token/session expiry; outbound SCIM deprovisioning is not shipped
 2. [Operate and recover](docs/OPERATIONS.md): controller recovery, offboarding,
    upgrades, snapshots, rollback and external services.
 3. [Build an app](docs/agent/onboard-app.md) using the SDK.
-4. [Connect an AI assistant](docs/agent/mcp.md): the hub's assistant lane and the
+4. [Connect an AI assistant](kebab-mcp/README.md): the hub's assistant lane and the
    `kebab-mcp` server — a chat assistant acts as the person, with the person's rights.
 5. [Contribute and verify](CONTRIBUTING.md): pinned tools, tests, version rules and
    release checks. Every module has its own version and changelog.
