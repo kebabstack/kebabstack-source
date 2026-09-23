@@ -184,7 +184,7 @@ export function createRuntime({ config, deps, saveConfig: save = saveConfig, rem
   }
   /** does the app still accept our session? SDK apps answer `whoami(tok)` / `me(tok)` with null when it is gone */
   async function sessionAlive(e) {
-    const probe = ["whoami", "me"].find((n) => e.service._fields.some(([name]) => name === n) && typeof e.actor[n] === "function");
+    const probe = ["whoami", "me"].find(n => e.service._fields.some(([name, f]) => name === n && f.argTypes.length === 1 && f.argTypes[0] === IDL.Text && f.retTypes.length === 1 && f.retTypes[0] instanceof IDL.OptClass && f.annotations.some(a => a === "query" || a === "composite_query")) && typeof e.actor[n] === "function");
     if (!probe) return true; // no way to tell — assume alive, never retry blindly
     try { return unwrapOpt(await e.actor[probe](e.session)) !== null; } catch (_) { return true; }
   }
