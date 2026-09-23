@@ -128,13 +128,14 @@ Create `.analytics.local.json` beside package.json (gitignored):
 
 ```json
 {
+  "tracker": "https://analytics.example.org/tracker.js",
   "endpoint": "https://YOUR-BACKEND.icp.net/api/v1/events",
   "site": "kebabstack-dev",
   "retentionDays": 365
 }
 ```
 
-Copy the exact endpoint and website ID from Crumbs → Settings → Tracking script.
+Copy the exact tracker URL, endpoint and website ID from Crumbs → Settings → Tracking script.
 Confirm domain, collection and retention under General; reflect later retention
 changes here and rebuild the notice. No API or reporting key belongs in this file.
 Without it builds omit tracking and retain the analytics-free notice. Malformed
@@ -159,4 +160,3 @@ Analytics remains an alpha pilot. Cookie-free collection is not a legal
 certification or an automatic consent exemption; see `crumbs/PRIVACY.md` and the
 operator's actual site policy. Product demos do not read private analytics.
 
-The ignored `.analytics.local.json` must explicitly include `tracker`, the HTTPS URL ending in `/tracker.js`, alongside `endpoint`, `site` and `retentionDays`. For example, use `https://analytics.example.org/tracker.js`. Never commit the installation file. An unconfigured checkout builds without collection.
