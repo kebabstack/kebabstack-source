@@ -12,8 +12,8 @@ const factory=({IDL})=>IDL.Service({read:IDL.Func([IDL.Text],[IDL.Vec(IDL.Nat)],
 function fixture() {
   const state={active:true,items:[{tileId:1n,name:'Desk',canisterId:'first',url:'https://desk.example.test',note:''}],log:[],tickets:0,fail:false};
   const hub={assistantWhoami:async()=>{if(state.fail)throw Error('Hub unavailable');return state.active?[{expiresAt:1n}]:[];},assistantApps:async()=>state.items,assistantTicket:async(_,id)=>{state.tickets++;return{ok:true,ticket:String(id)};},assistantDisconnect:async()=>{state.active=false;return{ok:true};},assistantPeople:async()=>[]};
-  const actor=cid=>({hub_ping:async()=>'desk',loginWithTicket:async()=>[{token:cid+'-token'}],read:async t=>{state.log.push([cid,'read',t]);return [1n];},write:async(...a)=>{state.log.push([cid,'write',...a]);return [];},whoami:async()=>[]});
-  const rt=createRuntime({config:{hubCanisterId:HUB,token:'token'},deps:{actor:async(_,cid)=>cid===HUB?hub:actor(cid),idlFactoryFor:async()=>factory},removeConfig:()=>state.removed=true});
+  const actor=cid=>({hub_ping:async()=>'desk',loginWithTicket:async()=>[{token:cid+'-token'}],read:async t=>{state.log.push([cid,'read',t]);return state.empty?[]:[1n];},write:async(...a)=>{state.log.push([cid,'write',...a]);return [];},whoami:async()=>{state.log.push([cid,'probe']);return[];}});
+  const rt=createRuntime({config:{hubCanisterId:HUB,token:'token'},deps:{actor:async(_,cid)=>cid===HUB?hub:actor(cid),idlFactoryFor:async()=>state.probeUpdate?({IDL})=>IDL.Service({read:IDL.Func([IDL.Text],[IDL.Vec(IDL.Nat)],["query"]),whoami:IDL.Func([IDL.Text],[IDL.Opt(IDL.Text)],[])}):factory},removeConfig:()=>state.removed=true});
   return{state,rt};
 }
 test('cached app sessions stop on revocation, switch-off and Hub failure, including mutations',async()=>{
@@ -83,4 +83,15 @@ test('untrusted interfaces reject pathological depth, duplicate methods and inva
   for(const did of ['service:{ x:('+ 'opt '.repeat(100)+'nat)->(); }','type A=A; service:{x:(A)->();}','service:{x:()->();x:()->();}','service:{x:(record{2:nat;0:text})->();}'])assert.throws(()=>didToIdlFactory(did));
   const service=didToIdlFactory('service:{x:(record{1:nat;0:text})->();}')({IDL});
   assert.equal(service._fields[0][1].argTypes[0].display(),'record {text; nat}');
+});
+
+test('a lookalike whoami update is never executed as an expired-session probe',async()=>{
+  const {state,rt}=fixture();state.probeUpdate=true;
+  const original=Date.now;let time=original();Date.now=()=>time;
+  try{
+    await rt.query('desk','read',[]);time+=120000;state.empty=true;
+    assert.deepEqual(await rt.query('desk','read',[]),[]);
+    assert.equal(state.tickets,1,'interface refresh keeps the same valid app session');
+    assert.equal(state.log.filter(x=>x[1]==='probe').length,0,'read tool cannot call an update-shaped probe');
+  }finally{Date.now=original;}
 });
