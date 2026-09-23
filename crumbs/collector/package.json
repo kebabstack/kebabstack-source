@@ -1,0 +1,17 @@
+{
+  "name": "@kebab-stack/crumbs-collector",
+  "version": "0.6.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test ../test/collector.test.mjs ../test/tracker.test.mjs"
+  },
+  "dependencies": {
+    "@icp-sdk/core": "5.4.0",
+    "maxmind": "5.0.7"
+  }
+}

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 128" width="560" height="128">
+  <!-- KebabStack wordmark, for dark backgrounds -->
+  <!-- icon -->
+  <g>
+    <circle cx="64" cy="16" r="7" fill="none" stroke="#E8EDF3" stroke-width="5"/>
+    <rect x="61" y="22" width="6" height="98" rx="3" fill="#E8EDF3"/>
+    <rect x="38" y="38" width="52" height="14" rx="7" fill="#FFB23A"/>
+    <rect x="28" y="56" width="72" height="14" rx="7" fill="#FF8A3D"/>
+    <rect x="34" y="74" width="60" height="14" rx="7" fill="#FF6B4A"/>
+    <rect x="43" y="92" width="42" height="14" rx="7" fill="#F0503C"/>
+  </g>
+  <!-- wordmark: kebab-case is the joke, the hyphen gets the accent -->
+  <text x="122" y="80" font-family="'JetBrains Mono','Fira Code',Menlo,Consolas,monospace" font-size="46" font-weight="700" letter-spacing="-1">
+    <tspan fill="#E8EDF3">kebab</tspan><tspan fill="#FF6B4A">-</tspan><tspan fill="#E8EDF3">stack</tspan>
+  </text>
+</svg>

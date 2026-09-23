@@ -1,0 +1,24 @@
+import T "../types";
+import H "HttpUtil";
+import Array "mo:core/Array";
+module {
+  type J = H.J;
+  func t(x : Text) : J { #string(x) };
+  func n(x : Int) : J { H.jInt(x) };
+  func b(x : Bool) : J { #bool(x) };
+  public func siteRole(x : T.SiteRole) : Text { switch x {case (#none) "none";case (#read) "read";case (#manage) "manage";case (#admin) "admin"} };
+  public func scope(x : {#read;#manage;#share}) : Text {switch x {case (#read)"read";case (#manage)"manage";case (#share)"share"}};
+  public func eventKind(x : {#pageview;#event;#engagement}) : Text {switch x {case (#pageview)"pageview";case (#event)"event";case (#engagement)"engagement"}};
+  public func goalKind(x : {#page;#event;#scroll:Nat}) : Text {switch x {case (#page)"page";case (#event)"event";case (#scroll _)"scroll"}};
+  public func metrics(x : T.Metrics) : J { #object_([("visitors",n(x.visitors)),("visits",n(x.visits)),("pageviews",n(x.pageviews)),("events",n(x.events)),("bounces",n(x.bounces)),("durationSeconds",n(x.durationSeconds)),("engagementMs",n(x.engagementMs)),("scrollDepthSum",n(x.scrollDepthSum)),("scrollSamples",n(x.scrollSamples)),("revenue",#array(x.revenue.map(func(c,v) : J {#array([t(c),n(v)])})))]) };
+  public func site(x : T.Site) : J { #object_([("id",t(x.id)),("name",t(x.name)),("domain",t(x.domain)),("timezone",t(x.timezone)),("retentionDays",n(x.retentionDays)),("enabled",b(x.enabled)),("allowedProperties",#array(x.allowedProperties.map(t))),("excludedPaths",#array(x.excludedPaths.map(t))),("viewers",#array(x.viewers.map(t)))]) };
+  public func siteView(x : T.SiteView) : J { #object_([("id",t(x.id)),("name",t(x.name)),("domain",t(x.domain)),("timezone",t(x.timezone)),("retentionDays",n(x.retentionDays)),("enabled",b(x.enabled)),("allowedProperties",#array(x.allowedProperties.map(t))),("excludedPaths",#array(x.excludedPaths.map(t))),("viewers",#array(x.viewers.map(t))),("accessRole",t(siteRole(x.accessRole)))]) };
+  public func person(x : T.AccessPerson) : J { #object_([("id",t(x.id)),("email",t(x.email)),("displayName",t(x.displayName)),("active",b(x.active)),("eligible",b(x.eligible)),("automatic",b(x.automatic))]) };
+  public func access(x : T.AccessView) : J { #object_([("site",t(x.site)),("revision",n(x.revision)),("readers",#array(x.readers.map(person))),("managers",#array(x.managers.map(person))),("legacyAllReaders",b(x.legacyAllReaders)),("updatedBy",t(x.updatedBy)),("updatedAt",n(x.updatedAt))]) };
+  public func report(x : T.Report) : J { #object_([("totals",metrics(x.totals)),("rows",#array(x.rows.map(func(r : T.Row) : J {#object_([("value",t(r.value)),("metrics",metrics(r.metrics))])}))),("scanned",n(x.scanned)),("truncated",b(x.truncated))]) };
+  public func goal(x : T.Goal) : J { #object_([("id",t(x.id)),("site",t(x.site)),("name",t(x.name)),("value",t(x.value)),("kind",t(goalKind(x.kind))),("scrollDepth",switch(x.kind){case (#scroll depth)n(depth);case _ #null_})]) };
+  public func key(x : T.Key) : J { #object_([("id",t(x.id)),("owner",t(x.owner)),("site",t(x.site)),("name",t(x.name)),("scope",t(scope(x.scope))),("expiresAt",n(x.expiresAt))]) };
+  public func annotation(x : T.Annotation) : J { #object_([("id",t(x.id)),("site",t(x.site)),("text",t(x.text)),("at",n(x.at))]) };
+  public func importRow(x : T.ImportRow) : J { #object_([("id",t(x.id)),("site",t(x.site)),("dimension",t(x.dimension)),("value",t(x.value)),("day",n(x.day)),("metrics",metrics(x.metrics))]) };
+  public func event(x : T.Event) : J { #object_([("id",t(x.id)),("site",t(x.site)),("visitor",t(x.visitor)),("path",t(x.path)),("hostname",t(x.hostname)),("source",t(x.source)),("medium",t(x.medium)),("campaign",t(x.campaign)),("content",t(x.content)),("term",t(x.term)),("country",t(x.country)),("region",t(x.region)),("city",t(x.city)),("device",t(x.device)),("browser",t(x.browser)),("os",t(x.os)),("name",t(x.name)),("currency",t(x.currency)),("at",n(x.at)),("order",n(x.order)),("revenueMinor",n(x.revenueMinor)),("engagementMs",n(x.engagementMs)),("scrollDepth",n(x.scrollDepth)),("kind",#object_([(eventKind(x.kind),#null_)])),("props",#array(x.props.map(func(k,v) : J {#array([t(k),t(v)])}))),("interactive",b(x.interactive))]) };
+};

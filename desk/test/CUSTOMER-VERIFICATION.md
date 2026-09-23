@@ -1,0 +1,13 @@
+# Customer support 0.11.0 verification — 2026-09-17
+
+All checks used local test identities and canisters. No production rollout was performed.
+
+- Pinned Mops install/check/build: Desk and Kitchen. Desk 0.11.0 and Kitchen 0.7.3 stable signatures remain compatible with their committed baselines; Desk also checked against a preserved, built 0.10.0 signature.
+- `tests/customer-support.test.mjs`: 4/4 passing against the Mops build, then 4/4 against the actual ICP recipe artifact (`desk/.icp/cache/artifacts/backend`). Both runs include a populated 0.10.0 → candidate upgrade and a second upgrade retaining customer requests, private links and access boundaries.
+- Combined customer, lifecycle, central permissions and security suites: 101 passing, 0 failing, 8 optional older-baseline fixtures skipped. The lifecycle baseline was supplied; its populated upgrade/Lunch preservation check passed. Run files with `--test-concurrency=1`: this PocketIC version derives port files from the parent PID, so parallel test files can collide.
+- Desk frontend smoke: Admin, Agent, Requester and canonical sign-in flows passed. 20 frontend regression tests passed, including private-link retention across polling, key clearing after navigation/sign-out, denied employee context on external tickets and exact retries after a lost submission response.
+- Release publisher/executor regressions passed for their applicable fixtures. The populated installer upgrade passed after replacing its stale hard-coded 0.7.2 expectation with the version declared in `kitchen/mops.toml`. The optional Hub rollout baseline was not supplied to that suite (Hub/Lunch was exercised by the lifecycle suite).
+- Five Python release checks passed, including the independent backend placeholder in `support.js`. SDK served-copy consistency, metadata/placeholder checks and `git diff --check` passed.
+- Isolated Chrome review at 1440 px and 390 px: project overview/settings, staff customer ticket, public form/private conversation and the embedded dialog. Mobile layout has no horizontal overflow. Widget opens the public form without Hub sign-in. Preview uses sample data and a local mock HTTP service; it is not a hosted production-gateway acceptance test.
+
+Before a production launch, publish the reviewed release through the normal bundle/executor workflow and verify the hosted backend HTTP routes, company CSP/frame policy and exact website origins. The guide describes first-version limits, including no customer email delivery, uploads or automatic data deletion. Production deployment still requires explicit authorization for this deployment.

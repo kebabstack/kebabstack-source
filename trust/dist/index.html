@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>kebab-stack · trust</title>
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/tokens.css">
+<script>try{if(localStorage.getItem("ks-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
+<link rel="stylesheet" href="./trust.css">
+<link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./components.css">
+</head>
+<body class="ks-workspace">
+<section id="login" aria-busy="true" class="is-waiting app-auth">
+  <div class="auth-shell">
+    <aside class="auth-story">
+      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
+      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
+      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
+    </aside>
+    <section class="auth-main" aria-labelledby="loginTitle">
+      <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
+      <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
+      <h1 id="loginTitle"><span class="auth-ready">Welcome to Trust.</span><span class="auth-waiting">Opening Trust…</span></h1>
+      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
+      <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
+      <div id="loginStatus" class="status" role="alert"></div>
+      <div id="loginWarn" class="warnbox hidden"></div>
+      <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
+      <p class="lfoot">Access is managed by your company in the Hub.</p>
+    </section>
+  </div>
+</section>
+
+<div id="layout">
+  <div id="topbar"></div><nav class="tabs" id="nav" aria-label="Trust navigation"></nav>
+  <main>
+    <section class="view" id="v-devices">
+      <div class="page-heading"><div><p class="eyebrow">DEVICE TRUST</p><h2 id="devTitle">Devices</h2><p class="lead" id="devLead">See what needs attention, then take the next step.</p></div><a class="button-link primary hidden" id="addDevices" href="#/enroll">＋ Add devices</a></div>
+      <div id="setupBox" class="notice hidden"></div><div class="stats hidden" id="stats" aria-label="Filter devices by status"></div>
+      <div class="filters"><label class="search-label"><span class="sr-only">Search devices</span><input type="search" id="devQ" placeholder="Search device or person"></label><label class="sr-only" for="devOs">Operating system</label><select id="devOs"><option value="">All operating systems</option><option value="macos">macOS</option><option value="windows">Windows</option><option value="linux">Linux</option></select><label class="sr-only" for="devOwner">Assignment</label><select id="devOwner"><option value="">All assignments</option><option value="unassigned">Without a person</option></select><button class="subtle" id="devRefresh">Refresh</button></div>
+      <div class="list-heading"><span id="devCount" class="kv" role="status"></span><button id="devClear" class="text-button hidden">Clear filters</button></div>
+      <div class="card device-list"><div id="devRows"><div class="empty">Loading devices…</div></div></div>
+      <details id="failCard" class="card hidden"><summary>Recurring issues <span class="kv">Across current reports</span></summary><div class="fails" id="failRows"></div></details>
+      <p class="footnote">Agent-reported checks. A passing result is a recent observation, not a security guarantee. <a href="#/docs">How Trust works</a></p>
+    </section>
+
+    <section class="view" id="v-device">
+      <a href="#/devices" id="dBack" class="back">← Devices</a>
+      <div class="page-heading"><div><p class="eyebrow">DEVICE DETAILS</p><h2 id="dName">Loading device…</h2><div class="kv" id="dMeta"></div><div id="dPills" class="pills"></div></div><div id="dRing"></div></div>
+      <div id="dNext" class="next-step" role="status"></div>
+      <div class="device-columns"><div>
+        <section class="card"><div class="section-heading"><h3 id="dPostureTitle">Checks</h3><button id="dRefresh" class="subtle">Refresh</button></div><div id="dPosture"></div></section>
+        <details class="card"><summary>Device information <span class="kv" id="dFactsNote"></span></summary><div id="dFacts"></div></details>
+        <details class="card hidden" id="dAskCard"><summary>Investigate this device <span class="kv">Admin tools</span></summary><p class="kv">Review a read-only query before sending it. Only this device will answer.</p><div id="dAiOff" class="notice hidden"></div><div class="row" id="dAiRow"><div><label for="dQ">What would you like to check?</label><input type="text" id="dQ" placeholder="For example, the installed osquery version"></div><button id="dGen">Draft query</button></div><label for="dSql">Review osquery SQL</label><textarea class="sql" id="dSql" placeholder="SELECT version FROM osquery_info;"></textarea><div class="btnrow"><button id="dRun" class="primary">Run on this device</button><span id="dRunStatus" class="status" role="status"></span></div><div id="dRes"></div></details>
+      </div><aside>
+        <section class="card" id="dOwnerCard"><p class="eyebrow">ASSIGNED TO</p><div id="dOwnerLine"></div><div id="dOwnerPick" class="pick hidden"><label for="dOwnerIn">Choose a person</label><input type="text" id="dOwnerIn" placeholder="Search the Hub directory" autocomplete="off"><div class="list hidden" id="dOwnerList"></div><div class="btnrow"><button id="dOwnerSave" class="primary">Assign</button><button id="dOwnerClear" class="subtle">Clear assignment</button><span id="dOwnerStatus" class="status" role="status"></span></div></div></section>
+        <div id="dActions"></div>
+      </aside></div>
+    </section>
+
+    <section class="view" id="v-checks">
+      <div class="page-heading"><div><p class="eyebrow">SHARED VISIBILITY</p><h2>Checks</h2><p class="lead" id="chkLead">The checks your company uses, and exactly what each one reads.</p></div></div>
+      <div class="tabs sub" id="chkOs" aria-label="Operating system"><button class="tab active" data-os="macos">macOS</button><button class="tab" data-os="windows">Windows</button><button class="tab" data-os="linux">Linux</button></div>
+      <div id="chkSummary" class="list-heading kv"></div>
+      <div class="check-controls hidden" id="chkAdminCard"><label for="chkPreset">Start from a preset</label><select id="chkPreset"><option value="1">Baseline · level 1</option><option value="2">Baseline + stricter · levels 1 &amp; 2</option><option value="none">Turn off this OS's built-in checks</option></select><button id="chkApply" class="subtle">Apply to selection</button><button class="primary" id="chkSave" disabled>Saved</button><span id="chkStatus" class="status" role="status"></span></div>
+      <div id="chkGroups"></div>
+      <details class="card hidden" id="chkAddCard"><summary>Add a custom check <span class="kv">Advanced</span></summary><p class="kv">Use a read-only query and choose what a passing answer means.</p>
+        <div class="row"><div><label for="cTitle">Check name</label><input type="text" id="cTitle" placeholder="Chrome is installed"></div><div><label for="cOs">Operating system</label><select id="cOs"><option value="macos">macOS</option><option value="windows">Windows</option><option value="linux">Linux</option><option value="all">All</option></select></div></div>
+        <label for="cSql">osquery SQL</label><textarea class="sql" id="cSql" placeholder="SELECT name FROM apps WHERE name = 'Google Chrome.app';"></textarea>
+        <div class="row"><div><label for="cOp">Passes when</label><select id="cOp"><option value="nonEmpty">At least one row is returned</option><option value="empty">No rows are returned</option><option value="eq">A column equals a value</option><option value="ne">A column differs from a value</option><option value="in">A column matches one of several values</option><option value="le">A number is at most a value</option><option value="ge">A number is at least a value</option></select></div><div id="cCompare" class="row hidden"><div><label for="cCol">Column</label><input type="text" id="cCol" placeholder="encrypted"></div><div><label for="cVal">Expected value</label><input type="text" id="cVal" placeholder="1"></div></div></div>
+        <details class="inset"><summary>Organization and identifier</summary><div class="row"><div><label for="cCat">Category</label><input type="text" id="cCat" placeholder="Custom"></div><div><label for="cLevel">Level</label><select id="cLevel"><option value="1">Baseline</option><option value="2">Stricter</option></select></div><div><label for="cId">Identifier · optional</label><input type="text" id="cId" placeholder="Created automatically"></div></div></details>
+        <div class="btnrow"><button class="primary" id="cSave">Add check</button><span id="cStatus" class="status" role="status"></span></div>
+      </details>
+      <details class="card"><summary>Recent investigations <span class="kv">What admins asked devices to read</span></summary><p class="kv">Query text is visible to everyone signed in. Device answers remain admin-only.</p><div id="recentQ"></div></details>
+    </section>
+
+    <section class="view" id="v-ask">
+      <p class="eyebrow">ADMIN TOOLS</p><h2>Investigate</h2><p class="lead">Ask a specific question. Review the query, choose the devices, then read their answers.</p>
+      <div class="card"><div class="row"><div><label for="qScope">Devices to ask</label><select id="qScope"><option value="all">All operating systems</option><option value="macos">macOS only</option><option value="windows">Windows only</option><option value="linux">Linux only</option></select></div><div><label for="qLabel">Investigation name · optional</label><input type="text" id="qLabel" placeholder="Agent versions"></div></div>
+        <div id="aiOff" class="notice hidden"></div><div class="row" id="aiRow"><div><label for="qQ">What would you like to know?</label><input type="text" id="qQ" placeholder="Which osquery versions are installed?"></div><button id="qGen">Draft query</button></div><div class="kv" id="qGenStatus" role="status"></div>
+        <label for="qSql">Review osquery SQL</label><textarea class="sql" id="qSql" placeholder="SELECT version FROM osquery_info;"></textarea><p class="kv">A draft is never run automatically. Device answers are not sent to AI; your question is.</p>
+        <div class="btnrow"><button id="qRun" class="primary">Run investigation</button><span id="qRunStatus" class="status" role="status"></span></div>
+      </div><div id="qRes"></div>
+    </section>
+
+    <section class="view" id="v-enroll">
+      <a href="#/devices" class="back">← Devices</a><p class="eyebrow">SETUP</p><h2>Add devices</h2><p class="lead">Download an installer and deploy it with your device-management tool. Trust starts collecting checks when the agent connects.</p>
+      <div class="enroll-layout"><section class="card"><div class="step" id="st1"><span class="step-number">1</span><div><h3>Prepare enrolment</h3><p class="kv" id="enrollLine"></p><button id="enGen" class="primary">Prepare deployment</button><span id="enStatus" class="status" role="status"></span><details class="inset"><summary>Use an existing enrolment secret</summary><label for="enIn">Secret</label><div class="row"><input type="password" id="enIn" placeholder="8–128 characters" autocomplete="new-password"><button id="enSet">Save secret</button></div></details></div></div>
+        <div class="step" id="st2"><span class="step-number">2</span><div><h3>Prepare the MDM rollout</h3><p class="kv">For macOS, install the background-item profile first. It keeps the Trust service managed; macOS can still show a background-item notice. The quiet profile is optional and suppresses this notification category for every app on the Mac.</p><div class="btnrow"><button id="bgProfileDl">Download macOS profile</button><button id="quietProfileDl" class="subtle">Quiet profile · optional</button><span id="profileStatus" class="status" role="status"></span></div><p class="footnote">Assign the profile, wait until Iru reports it installed, then deploy the installer below. Use the quiet profile only if that is your company policy.</p></div></div>
+        <div class="step" id="st3"><span class="step-number">3</span><div><h3>Deploy the agent</h3><div class="tabs sub" id="insOs"><button class="tab active" data-os="macos">macOS</button><button class="tab" data-os="linux">Linux</button><button class="tab" data-os="windows">Windows · pilot</button></div><div class="installer-download"><div><strong id="insName">trust-macos-install.sh</strong><p class="kv">Hash-verified osquery · no self-updater</p></div><button id="insDl" class="primary">Download installer</button><button id="insCopy" class="subtle">Copy</button></div><p class="kv" id="insInstructions">Run once as root through Iru. Set the Custom Script to “install once”; a failed run retries automatically.</p><p class="footnote">The installer contains the enrolment secret. Iru owns future updates and removal. Trust will never delete a generic osquery installation.</p><span id="insStatus" class="status" role="status"></span><details class="inset"><summary>Inspect installer</summary><pre class="codebox" id="insBox"></pre><p class="kv">Agent endpoint: <code id="insHost"></code></p></details><details class="inset"><summary>Operator checks for Iru</summary><p class="kv">Run these as separate one-time Custom Scripts when you need evidence in an Iru job. They never contain the enrolment secret.</p><div class="btnrow"><button id="preflightDl">Preflight</button><button id="auditDl">Audit installed</button><button id="uninstallDl">Uninstall</button><button id="removedAuditDl">Audit removed</button><span id="operatorStatus" class="status" role="status"></span></div></details></div></div>
+        <div class="step" id="st4"><span class="step-number">4</span><div><h3>Run the pilot check</h3><p class="kv">Deploy to one device per operating system first. In Trust, wait for a fresh result, confirm the assigned person and run the local deployment audit before expanding the blueprint.</p><a class="button-link" href="#/devices">Open devices →</a></div></div>
+      </section><aside class="card"><h3>Migration from the old installer</h3><p class="kv">Old Trust installs used shared osquery paths and a self-updater. Download the migration script only for devices that already belong to this Trust server; it refuses unknown or shared installations. Run it once through Iru, then use the new installer for future devices.</p><button id="migrationDl">Download migration script</button><span id="migrationStatus" class="status" role="status"></span><hr><h3>Already using Assets?</h3><p class="kv">Trust can match devices to their assigned people by serial number. Set up that connection once.</p><a href="#/settings" class="text-link">Connect Assets →</a></aside></div>
+    </section>
+
+    <section class="view" id="v-settings">
+      <p class="eyebrow">CONFIGURATION</p><h2>Settings</h2><p class="lead">Connect the inventory, manage agent updates and keep access in the Hub.</p>
+      <div class="settings-layout"><div>
+        <section class="card"><div class="section-heading"><h3>Device assignments</h3><span class="pill" id="sOwnPill"></span></div><p class="kv">Assets supplies the assigned person by serial number. Trust refreshes this connection every 15 minutes.</p><div id="sOwnMeta" class="notice"></div><label for="sAssets">Assets backend ID</label><input type="text" id="sAssets" placeholder="xxxxx-xxxxx-xxxxx-xxxxx-cai" autocomplete="off"><p class="kv">In Assets → Settings → Device trust, allow this Trust ID:</p><div class="copy-line"><code id="sSelfId"></code><button id="sSelfCopy" class="subtle">Copy</button></div><div class="btnrow"><button id="sOwnPull" class="subtle">Refresh assignments</button><span id="sOwnStatus" class="status" role="status"></span></div>
+          <details class="inset"><summary>Deployment settings</summary><label for="sAppUrl">Trust address · sign-in and notifications</label><input type="text" id="sAppUrl" placeholder="https://trust.example.com"><label for="sGateway">Agent gateway domain</label><input type="text" id="sGateway" placeholder="icp.net"><p class="kv">Changing the gateway requires new installers. Existing agents keep their configured endpoint.</p><input type="hidden" id="sOrg"></details><div class="save-bar"><button id="sSave" class="primary">Save configuration</button><span id="sStatus" class="status" role="status"></span></div></section>
+        <section class="card"><h3>Agent updates</h3><p class="kv">Iru is the update authority. Download a new reviewed installer from Add devices, test it on the pilot blueprint and then deploy it as an update. Trust does not run a hidden updater on employee devices.</p><p class="notice" id="verEff">Managed by the deployment tool · bundle 0.7.2</p></section>
+        <details class="card"><summary>Agent performance <span class="kv">Advanced</span></summary><p class="kv">Changes apply after Save, when agents next retrieve their configuration.</p><div id="tuneRows"></div><div class="btnrow"><button id="tuneSave">Save agent settings</button><span class="kv" id="tuneMeta"></span><span id="tuneStatus" class="status" role="status"></span></div></details>
+        <details class="card"><summary>Removed devices</summary><p class="kv">Removing a device revokes Trust enrolment immediately. Use Iru to uninstall the agent, then save the job reference as proof. Trust never infers removal from an offline device.</p><div id="rmRows"></div></details>
+        <details class="card"><summary>Activity</summary><div class="table-scroll"><table><thead><tr><th>When</th><th>Who</th><th>What changed</th></tr></thead><tbody id="logRows"></tbody></table></div></details>
+      </div><aside>
+        <section class="card"><p class="eyebrow">MANAGED IN HUB</p><h3>People &amp; access</h3><p class="kv" data-hub-permissions>Hub owners, admins and Trust admins manage this app. Fleet viewers can read the fleet; employees see their own devices.</p><a data-hub-permissions-link class="text-link" href="#">Open Hub permissions ↗</a><p class="kv" id="sMeta"></p><button id="sSync" class="subtle">Refresh directory</button></section>
+        <section class="card"><div class="section-heading"><h3>AI assistance</h3><span class="pill" id="sAiPill"></span></div><p class="kv" id="sAiLine"></p><button id="sAiRefresh" class="subtle">Check connection</button><span id="sAiStatus" class="status" role="status"></span></section>
+        <details class="card"><summary>Sample data</summary><p class="kv">Explore with sample devices before enrolling real hardware. Samples are labelled and cannot answer investigations.</p><div class="btnrow"><button id="sSeed">Add sample devices</button><button id="sUnseed">Remove samples</button><span id="sSeedStatus" class="status" role="status"></span></div></details>
+      </aside></div>
+    </section>
+
+    <section class="view docs" id="v-docs">
+      <p class="eyebrow">THE SHORT GUIDE</p><h2>How Trust works</h2><p class="lead">Know which device needs attention, what was checked and what to do next.</p>
+      <div class="guide-grid"><section class="card"><span class="step-number">1</span><h3>Connect your devices</h3><p>IT deploys the read-only osquery agent from <b>Add devices</b>. Assets supplies the assigned person; IT can set a fallback assignment for unknown serials.</p></section><section class="card"><span class="step-number">2</span><h3>Work through what needs attention</h3><p>Use the device filters, open an item and review its checks. Trust shows failures, missing answers and old evidence separately.</p></section><section class="card"><span class="step-number">3</span><h3>Verify the result</h3><p>Apply the fix through your normal IT process. Keep the device online so its agent can report again, then refresh its page.</p></section></div>
+      <div class="card"><h3>Reading a device's status</h3><dl class="guide-states"><dt>Needs attention</dt><dd>A recent check failed. Open the device to see the check and suggested next step.</dd><dt>Not verified</dt><dd>Answers are missing, a query could not run, or there are no active checks for this operating system.</dd><dt>Out of date</dt><dd>A check or the device's last contact is older than 24 hours. This is not proof of a failure or a recent pass.</dd><dt>Checks passing</dt><dd>All active, applicable checks have recent successful answers. This is not certification or a guarantee that the device is secure.</dd></dl><p class="kv">After upgrading from older Trust versions, old results wait for fresh agent answers because their per-check age was not recorded.</p></div>
+      <details class="card"><summary>What employees can see</summary><p>Employees see their assigned devices, results and the checks catalogue. Fleet viewers have read access to all devices. Admins manage checks, enrolment, assignments and investigations. These roles are set only in Hub → Permissions.</p></details>
+      <details class="card"><summary>What Trust reads and sends</summary><p>The Checks page exposes the configured SQL and pass rules. Admin investigations are listed there too; answers are admin-only. Queries can read system and application metadata. Trust restricts SQL and disables event streams and file carving, but the agent reports with the permissions granted to it.</p><p>AI drafting sends your question to the Hub-configured provider. Device answers are not automatically sent with it; avoid putting confidential data in the question.</p></details>
+      <details class="card"><summary>Checks, fixes and notifications</summary><p>The built-in catalogue is a starting point, not a certified CIS assessment. IT chooses checks appropriate to each operating system. Newly failing checks can notify the assigned active employee through the Hub. Delivery is best effort. Trust does not apply fixes or block company sign-in based on posture.</p></details>
+      <details class="card"><summary>Agent updates and removal</summary><p>Iru owns installer updates and removal. Trust revokes enrolment immediately, then waits for an IT audit reference instead of guessing whether an offline device was cleaned up. Unknown or shared osquery installations are never deleted automatically. Windows remains a pilot path.</p></details>
+      <details class="card"><summary>For the company</summary><p>Trust helps IT identify work and avoids manually collecting each device's settings. IT still deploys agents, chooses checks, investigates failures and performs remediation. Results are self-reported and can be falsified by a compromised device; there is no verified savings or compliance guarantee.</p></details>
+    </section>
+  </main>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

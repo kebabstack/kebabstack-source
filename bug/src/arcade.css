@@ -1,0 +1,137 @@
+/* The launch deck and flight log share the same cockpit palette. Layout and
+   input rules remain in style.css; this layer never blocks the flight canvas. */
+:root {color-scheme:dark;--ink:#e3f0ff;--muted:#a2b6cc;--line:#96bdf32b;--cream:#eef6ff;background:#182438}
+.grain {opacity:.06}
+.game-header {background:#0a1325e8;border-bottom-color:#80bfff25}
+main::before {background:linear-gradient(90deg,#090f22f5 0%,#0c1429dc 22%,#10193280 40%,#14203a00 63%)}
+#intro {max-width:590px;color:#eef5ff}
+#intro .eyebrow {color:#96e5ef;letter-spacing:.17em;font-size:9px}
+#intro .tiny-line {width:28px;height:2px;background:#7be8ed;box-shadow:0 0 14px #77e8ed80}
+#intro h1 {font-weight:800;font-size:clamp(56px,6vw,90px);line-height:.99;letter-spacing:-.068em;text-shadow:0 3px 32px #03091540}
+#intro h1 em {background:linear-gradient(120deg,#8ce9f0 6%,#a2b9ff 48%,#c197f3 75%,#eea1c6);background-clip:text;color:transparent}
+#intro>p {color:#afc0d6;font-size:13px;line-height:1.75}
+.launch-coordinates {display:flex;align-items:center;gap:8px;font:8px ui-monospace,monospace;letter-spacing:.06em;margin-top:20px;color:#bddeec}
+.launch-coordinates i {width:5px;height:5px;border-radius:50%;background:#8df4d4;box-shadow:0 0 10px #79fbc5}
+.launch-coordinates span {color:#8ba2bf;border-left:1px solid #7a9dce38;margin-left:5px;padding-left:12px}
+.mission {border-color:#93b7d92b}.mission-number {color:#94e2f1;border-color:#8ac5df55}
+.mission div span,.legend {color:#a9bad0}
+.flight-path,.footer-meta {color:#ccdded;text-shadow:0 1px 5px #040c1e}
+.journey-line {background:#93bad253}.journey-line i {background:#7193b0;border-color:#20364f}
+.journey-line i.active {border-color:#213951}
+.control-dock {background:linear-gradient(115deg,#101e33f2,#142338ef);border-color:#8cb9e74a;box-shadow:0 14px 50px #03091580,inset 0 1px #b3deff14}
+.action-button {background:linear-gradient(110deg,#a7ffe1,#8be8ed);box-shadow:0 0 25px #64dbe013}
+.action-button:hover {background:linear-gradient(110deg,#cbffed,#b0f5fa)}
+.footer-meta kbd {background:#203149;border-color:#8faec647}
+.flight-hud,.distance-block>div span,.flight-stat>span {color:#d2e1f0}
+.round-button {background:#192c48bd;border-color:#aacbeb55;color:#dae8fb}
+#loading {background:radial-gradient(ellipse at 50% 35%,#22294b,#090f21 70%);color:#cbf3ff}
+#loading span {color:#9db2d1}.loader-bug {color:#9be9f1;text-shadow:0 0 35px #7a9eff70}
+
+/* Dark flight logs: subtle star points, instrument lines and restrained glow. */
+dialog,#resultDialog {color:#e2ecfa;background-color:#101a2d;border:1px solid #7cace765;border-radius:18px;box-shadow:0 35px 110px #010512b3,0 0 50px #7199f513,inset 0 1px #c6e7ff12;scrollbar-color:#486081 #0c1527}
+dialog {background-image:radial-gradient(ellipse at 0% 0%,#28406566,transparent 60%)}
+dialog::backdrop {background:#050b1bc2;backdrop-filter:blur(12px)}
+dialog h2,dialog h3 {color:#eff6ff}
+dialog>p,dialog .privacy-note,.help-list li,.help-list span {color:#adbed3!important}
+dialog .eyebrow {color:#91d6e8}
+.dialog-close {color:#bed1e9;border:1px solid #8ab6e53b;background:#192941;border-radius:9px;min-width:36px;min-height:36px}
+button:focus-visible,a:focus-visible,input:focus-visible {outline:2px solid #85ecff;outline-offset:3px}
+.primary-button {color:#102c35;background:linear-gradient(110deg,#a9f9dd,#97dcf1);box-shadow:0 0 25px #77cee515;min-height:46px}
+.primary-button:hover {background:linear-gradient(110deg,#c7ffe9,#b9edff)}
+.secondary-button {color:#d0e2f9;border-color:#7699c45c;background:#1c2c451f;min-height:46px}
+.secondary-button:hover {background:#253952}
+dialog .text-button {color:#a8d8eb}
+dialog input,#playerName,#resultName,#resultName:disabled {color:#e7f3ff;background:#080f20;border:1px solid #7097c568;box-shadow:inset 0 2px 8px #00000020}
+dialog input::placeholder {color:#8b9db9;opacity:1}
+dialog input:focus {border-color:#97e6ef}
+dialog .name-label,.help-list b {color:#cee9f5}
+.board-tabs {border-color:#7d9fc442}
+.board-tabs button {background:#15243b;color:#aebfd7;border-color:#7295bc44}
+.board-tabs button[aria-pressed=true] {background:#223e53;color:#a8f5e4;border-color:#8ddbc276}
+.score-row {border-bottom-color:#7b9fcb28;color:#dde9fa}
+.score-row>span,.score-row small,.score-empty,#boardStatus,.local-season {color:#9eb3ce}
+.help-list li,.atlas article {border-color:#739cca30}
+.atlas article {background:#14243a}.atlas article p {color:#aec3db}.atlas article h3 {color:#e2eeff}
+#steeringStatus,#steeringDialog>small {color:#aabbd2}
+.steering-illustration {background:linear-gradient(135deg,#223859,#1a4849);color:#a7f5e4;border:1px solid #92d8e345}
+/* Scope the shared Hub topbar's game surface without modifying its SDK copy. */
+#profileDialog #suiteTopbar {
+  --ks-bg:#0d192d;--ks-bg-sunk:#16263b;--ks-bg-elev:#1d3049;--ks-bg-card:#15253b;
+  --ks-fg:#e4eef9;--ks-fg-body:#e4eef9;--ks-fg-secondary:#b8cbe0;--ks-fg-muted:#9bafc8;
+  --ks-rule:#87abd33a;--ks-rule-strong:#87abd36b;--ks-accent:#96eddf;--ks-accent-strong:#327f83;
+  --ks-accent-dim:#7be3d81a;--ks-focus:#85ecff;
+  background:var(--ks-bg-sunk);border-color:var(--ks-rule);color:var(--ks-fg)
+}
+#profileDialog #suiteTopbar button,#profileDialog #suiteTopbar a {color:#dbeafa}
+
+#resultDialog {position:relative;background:#101b30;isolation:isolate}
+#resultDialog::before {content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,#78e9e8,#aa90ec 56%,#e499c6);pointer-events:none;z-index:1}
+.result-overview {position:relative;isolation:isolate;background:radial-gradient(ellipse at 5% 10%,#28466180,transparent 60%),linear-gradient(140deg,#18263d,#101b2f);overflow:hidden}
+.result-overview::before {content:"";z-index:-1;pointer-events:none;position:absolute;width:240px;height:240px;right:-100px;top:75px;border:1px solid #82c1ff12;border-radius:50%;box-shadow:0 0 0 28px #8fc4f906,0 0 0 70px #8fc4f905}
+#resultDialog .eyebrow {color:#98c7df;letter-spacing:.1em}
+#resultDialog .result-distance b {color:#baf9f1;text-shadow:0 0 35px #54e6dc26;font-variant-numeric:tabular-nums}
+#resultDialog .result-distance>span {color:#91adcb}
+#resultDialog .bonus-report {color:#a8d4df!important}
+#resultDialog .result-grid {border-color:#8cb3dc2e}
+#resultDialog .result-grid small {color:#90a9c6}
+#resultDialog .result-grid strong {color:#e0eefb}
+#resultQuip {color:#b6c7dc}
+#resultDialog .combat-report {color:#91a9c6!important}
+.result-board {border-color:#8db1dd26;background:radial-gradient(ellipse at 100% 0%,#5a3f8833,transparent 65%)}
+.result-rank {padding:10px 11px;border:1px solid #b6a2ec40;border-radius:10px;background:#6256a019}
+.result-rank b {color:#d6c6ff;text-shadow:0 0 25px #ae86f633}
+.result-rank span {color:#b6abce}
+#resultBoardStatus,#resultBoardNote {color:#9eb6d0}
+#resultScoreList .score-row {border-color:#89afd12b;border-radius:7px;margin:4px 0;background:#1b2b441f}
+#resultScoreList .score-row:first-child:not(.this-flight)>span,#resultScoreList .score-row:first-child:not(.this-flight) strong {color:#f5d898}
+#resultScoreList .score-row small {color:#97aecb}
+#resultScoreList .this-flight {border-color:#8ce9d169;background:linear-gradient(90deg,#204a4b,#173644);box-shadow:inset 3px 0 #89f8ce,0 3px 22px #4ccbb808}
+#resultScoreList .this-flight strong {color:#c5fff1}
+#resultScoreList .this-flight small {color:#a0d9cc}
+#resultScoreList .own-best {background:#22314c}
+.result-board-gap {color:#94adc9}
+.result-choice {border-color:#81a6d339;background:linear-gradient(110deg,#152339,#111e32)}
+.result-name label {color:#b1cfdf}
+#resultNameHint {color:#9db2cb}
+#resultDialog #publishBtn {color:#11353c;background:linear-gradient(105deg,#aff8de,#93ddef);box-shadow:0 0 22px #89d8ed12}
+#resultDialog #publishBtn:hover {background:linear-gradient(105deg,#d2ffed,#bbedff)}
+#resultDialog #againBtn {border-color:#84a7d16b;background:#25375042;color:#d5e8fb}
+#resultDialog #againBtn:hover {background:#2c405d}
+#resultDialog #saveNote,#localSaveNote {color:#a6bdd7}
+#resultDialog #saveBtn {color:#a6d1e1}
+.result-local {border-color:#8baecc29}
+
+@media(max-width:650px) and (orientation:portrait) {
+  main::before {background:linear-gradient(180deg,#0b1329f5 0%,#101932bd 22%,#17223d00 47%)}
+  body:not(.is-playing) #intro {left:20px;right:16px;top:38px;max-width:none}
+  #intro h1 {font-size:clamp(35px,9.5vw,48px);line-height:.96;margin:15px 0 12px}
+  #intro .eyebrow {font-size:7px;letter-spacing:.11em}
+  #intro>p {font-size:10px;line-height:1.55}
+  .launch-coordinates {font-size:6px;margin-top:12px;gap:6px}
+  .launch-coordinates span {padding-left:7px;margin-left:2px}
+  #resultDialog .result-overview::before {width:180px;height:180px;top:-15px;right:-60px}
+  .result-rank {padding:6px 9px}
+}
+@media(max-height:700px) and (orientation:portrait) {
+  body:not(.is-playing) #intro {top:26px}#intro h1 {font-size:34px;margin:12px 0}.launch-coordinates {margin-top:10px}
+}
+@media(max-height:500px) and (orientation:landscape) {
+  #intro {top:20px}#intro h1 {font-size:39px;line-height:.97;margin:0 0 12px}
+  #intro>p {font-size:10px}.launch-coordinates {font-size:6px;margin-top:10px}
+  main::before {background:linear-gradient(90deg,#091225eb,#131f3855 48%,transparent 65%)}
+}
+
+.touch-steer button {background:#14253fce;color:#d1edff;border-color:#98c5e275}
+.burn-panel>span {color:#a4c2e4}.burn-panel>strong {color:#b1ffe6}.burn-panel>small {color:#a8efdc}
+
+/* Five charges fit in the existing dock even on a narrow phone. */
+#boostPips {gap:4px}
+#boostPips i {width:auto;min-width:0;flex:1;max-width:25px}
+.brand img {width:36px;height:36px;filter:drop-shadow(0 0 7px #81cfff28)}
+@media(max-width:750px) {.brand img {width:28px;height:28px}}
+
+/* Keep server confirmation beside the action, including narrow result sheets. */
+#resultDialog #saveNote {grid-column:1/-1;margin:0 0 12px;line-height:1.5;font:14px/1.5 ui-sans-serif,system-ui;white-space:normal}
+#resultDialog #saveNote[data-state="success"] {color:#aeffcf;background:#16433166;border:1px solid #68dbaa66;padding:12px;border-radius:8px}
+#resultDialog #saveNote[data-state="error"] {color:#ffd0c6;background:#642d3266;border:1px solid #ff977966;padding:12px;border-radius:8px}
+#scoreList .own-best {background:#17483c66;border:1px solid #64dcac66;border-radius:8px;padding:14px}

@@ -1,0 +1,69 @@
+// Version: 1.0.0
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Install__418664736 =
+  {
+    adopted : Bool;
+    backend : Text;
+    connectorId : Nat;
+    frontend : Text;
+    installedAt : Int;
+    recipeId : Text;
+    state : Text;
+    tileId : Nat;
+    updatedAt : Int;
+    version : Text
+  };
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Job__24119603 =
+  {
+    by : Text;
+    endedAt : Int;
+    id : Nat;
+    kind : Text;
+    recipeId : Text;
+    startedAt : Int;
+    state : Text;
+    steps : [Step__918242435];
+    version : Text
+  };
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LogRow__410755882 = {at : Int; ok : Bool; what : Text; who : Text};
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Step__918242435 = {detail : Text; name : Text; status : Text};
+actor {
+  stable CHUNK : Nat;
+  stable DEFAULT_SCHEDULE :
+    {atHourUtc : Nat; enabled : Bool; everyHours : Nat; keep : Nat};
+  stable DIRECT_MAX : Nat;
+  stable bornAt : Int;
+  stable var busyJob : Nat;
+  stable var cookBy : Text;
+  stable var cookClaimCode : Text;
+  stable var cookHubUrl : Text;
+  stable var cookJob : Nat;
+  stable var hubId : Text;
+  stable installed :
+    {
+      var root : Node__430031793<Text, Install__418664736>;
+      var size : Nat__58649523
+    };
+  stable jobs :
+    {
+      var root : Node__430031793<Nat, Job__24119603>;
+      var size : Nat__58649523
+    };
+  stable journal :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable var nextJob : Nat;
+  stable var nextLog : Nat;
+  stable ownerCache :
+    {var root : Node__430031793<Principal, Int>; var size : Nat__58649523};
+  stable var pantryOverride : Text
+};

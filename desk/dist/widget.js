@@ -1,0 +1,12 @@
+/* Public, create-only widget. No API secret or Hub session belongs in this script. */
+(() => {
+  const script=document.currentScript, project=script?.dataset.project;
+  if(!/^[a-f0-9]{64}$/.test(project||''))return;
+  const source=new URL('./support.html',script.src);source.hash='form/'+project+(/^\d+$/.test(script.dataset.requestType||'')?'/'+script.dataset.requestType:'');
+  const host=document.createElement('div'), shadow=host.attachShadow({mode:'closed'});
+  const style=document.createElement('style');style.textContent=':host{all:initial;position:fixed;right:20px;bottom:20px;z-index:2147483000;font-family:system-ui,sans-serif}button{font:600 14px system-ui,sans-serif;border:0;border-radius:30px;padding:14px 20px;background:#315d4e;color:white;cursor:pointer;box-shadow:0 3px 16px #0002}dialog{position:fixed;inset:auto 20px 84px auto;margin:0;padding:0;border:1px solid #dfe6df;border-radius:18px;width:min(440px,calc(100vw - 32px));height:min(700px,calc(100dvh - 116px));box-shadow:0 12px 50px #0003;background:#f8f8f2}dialog::backdrop{background:#142c2526}header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;font:600 13px system-ui,sans-serif;color:#315d4e;border-bottom:1px solid #dfe6df}header button{padding:6px 10px;background:transparent;color:#315d4e;box-shadow:none}iframe{width:100%;height:calc(100% - 49px);border:0}button:focus-visible{outline:3px solid #eaa35a;outline-offset:3px}';
+  const button=document.createElement('button');button.type='button';button.textContent=script.dataset.label||'Contact support';button.setAttribute('aria-haspopup','dialog');
+  const dialog=document.createElement('dialog');dialog.setAttribute('aria-label','Customer support');const header=document.createElement('header');header.textContent='Customer support';const close=document.createElement('button');close.textContent='Close \u00d7';close.type='button';header.append(close);dialog.append(header);
+  let frame;button.onclick=()=>{if(!frame){frame=document.createElement('iframe');frame.src=source.href;frame.title='Send a support request';frame.referrerPolicy='no-referrer';frame.allow='clipboard-write';frame.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads');dialog.append(frame);}dialog.showModal();close.focus();};close.onclick=()=>dialog.close();dialog.addEventListener('close',()=>button.focus());
+  shadow.append(style,button,dialog);document.body.append(host);
+})();

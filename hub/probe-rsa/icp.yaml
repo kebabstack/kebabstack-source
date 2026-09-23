@@ -1,0 +1,17 @@
+# RSA feasibility probe for the OIDC provider — deploy once, call `bench`, read the numbers, delete.
+environments:
+  - name: prod
+    network: ic
+    canisters: [backend]
+    settings:
+      backend:
+        environment_variables:
+          __META_PROJECT: "KebabStack RSA Probe"
+          __META_PROJECT_ID: "kebabstack-rsa-probe"
+          __META_NAME: "Probe"
+          __META_MAIN_CANISTER: "true"
+
+canisters:
+  - name: backend
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"

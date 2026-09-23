@@ -1,0 +1,27 @@
+{
+  "version": "5.23.0",
+  "source": "https://github.com/osquery/osquery/releases/tag/5.23.0",
+  "macTeamId": "3522FA9PXF",
+  "assets": {
+    "osquery-5.23.0.windows_arm64.zip": {
+      "url": "https://github.com/osquery/osquery/releases/download/5.23.0/osquery-5.23.0.windows_arm64.zip",
+      "sha256": "92a820a39c12f7516040b62dc8e8546469c821f505eed0b7ff1eb7e43cc4b018"
+    },
+    "osquery-5.23.0.windows_x86_64.zip": {
+      "url": "https://github.com/osquery/osquery/releases/download/5.23.0/osquery-5.23.0.windows_x86_64.zip",
+      "sha256": "5ddb8e1c23fd870838ef4ff47c0d2e5a080f22a6944fc4870d726e7b20e962a4"
+    },
+    "osquery-5.23.0_1.linux_aarch64.tar.gz": {
+      "url": "https://github.com/osquery/osquery/releases/download/5.23.0/osquery-5.23.0_1.linux_aarch64.tar.gz",
+      "sha256": "d9d4e5f6eeabda4949ae0ba6a8db424c789ec60ffef99269f479ff4b73f46e33"
+    },
+    "osquery-5.23.0_1.linux_x86_64.tar.gz": {
+      "url": "https://github.com/osquery/osquery/releases/download/5.23.0/osquery-5.23.0_1.linux_x86_64.tar.gz",
+      "sha256": "0045739a68475760f7bc26ca493afda71cc02a8e4d29984717742d3e4c099296"
+    },
+    "osqueryd-macos-bare-5.23.0.tar.gz": {
+      "url": "https://github.com/osquery/osquery/releases/download/5.23.0/osqueryd-macos-bare-5.23.0.tar.gz",
+      "sha256": "003746cff324dee082a205f83ddcd165e29b92f0e0c0a511d003ef8a4c4dea10"
+    }
+  }
+}

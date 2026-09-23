@@ -1,0 +1,11 @@
+# Example app wired to the kebab-stack hub. Deploy: icp deploy -e ic
+canisters:
+  backend:
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+      configuration:
+        main: backend/main.mo
+    settings:
+      metadata:
+        __META_PROJECT: "KebabStack Example"
+        __META_PROJECT_ID: "kebabstack-example"

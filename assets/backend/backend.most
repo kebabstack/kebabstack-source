@@ -1,0 +1,418 @@
+// Version: 1.0.0
+type AbmAssertion__982528300 = {exp : Int; jwt : Text; signedAt : Int};
+type AbmConn__733940377 =
+  {
+    clientId : Text;
+    createdAt : Int;
+    devices : Nat;
+    enabled : Bool;
+    id : Nat;
+    key : Blob;
+    keyId : Text;
+    lastResult : Text;
+    lastSync : Int;
+    matched : Nat;
+    name : Text;
+    noMdm : Nat;
+    scope : Text;
+    unmatched : Nat
+  };
+type AbmDevice__911919000 =
+  {
+    addedAt : Text;
+    capacity : Text;
+    color : Text;
+    connId : Nat;
+    connName : Text;
+    family : Text;
+    mdmServer : Text;
+    model : Text;
+    orderDate : Text;
+    orderNo : Text;
+    productType : Text;
+    serial : Text;
+    source : Text;
+    status : Text;
+    syncedAt : Int;
+    updatedAt : Text
+  };
+type Asset__378788893 =
+  {
+    archived : Bool;
+    assignee : Text;
+    createdAt : Int;
+    createdBy : Text;
+    holder : Text;
+    id : Nat;
+    kind : Text;
+    model : Text;
+    note : Text;
+    serial : Text;
+    status : Text;
+    tag : Text;
+    updatedAt : Int;
+    vendor : Text
+  };
+type Buyer__854564082 =
+  {
+    country : Text;
+    email : Text;
+    houseNo : Text;
+    name : Text;
+    pid : Text;
+    postalCode : Text;
+    street : Text;
+    town : Text
+  };
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type DealEvent__981800022 =
+  {action : Text; actorLabel : Text; at : Int; detail : Text};
+type DealNotice__220008744 =
+  {
+    attempts : Nat;
+    detail : Text;
+    email : Text;
+    nextAt : Int;
+    saleId : Nat;
+    title : Text
+  };
+type Deal__28261704 =
+  {
+    completedAt : Int;
+    downloadedAt : Int;
+    expiresAt : Int;
+    generation : Nat;
+    handedOverAt : Int;
+    keyHash : Text;
+    notifyEmail : Text;
+    openedAt : Int;
+    quote : Text;
+    revoked : Bool
+  };
+type Event__55031293 =
+  {
+    assetId : Nat;
+    at : Int;
+    by : Text;
+    detail : Text;
+    id : Nat;
+    kind : Text;
+    photoId : Nat;
+    to : Text
+  };
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type InvoiceData__710829019 =
+  {
+    acceptedLine : Text;
+    buyer : Buyer__854564082;
+    creditOf : Text;
+    currency : Text;
+    description : Text;
+    dueOn : Text;
+    footer : Text;
+    gross : Text;
+    grossMinor : Nat;
+    ibanPretty : Text;
+    issuedOn : Text;
+    kind : Text;
+    lang : Text;
+    net : Text;
+    netMinor : Nat;
+    number : Text;
+    qrPayload : Text;
+    reference : Text;
+    referencePretty : Text;
+    seller :
+      {
+        country : Text;
+        houseNo : Text;
+        name : Text;
+        postalCode : Text;
+        street : Text;
+        town : Text;
+        uid : Text;
+        vatRegistered : Bool
+      };
+    vat : Text;
+    vatMinor : Nat;
+    vatRate : Text;
+    vatRateBp : Nat;
+    waiverText : Text;
+    waiverVersion : Nat
+  };
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LogRow__410755882 = {at : Int; what : Text; who : Text};
+type MdmConn__50414368 =
+  {
+    clientId : Text;
+    created : Nat;
+    createdAt : Int;
+    devices : Nat;
+    enabled : Bool;
+    id : Nat;
+    kind : Text;
+    lastResult : Text;
+    lastSync : Int;
+    matched : Nat;
+    name : Text;
+    secret : Text;
+    url : Text
+  };
+type MdmMeta__103883149 =
+  {
+    compliance : Text;
+    connId : Nat;
+    connName : Text;
+    deviceName : Text;
+    externalId : Text;
+    kind : Text;
+    lastSeen : Text;
+    osVersion : Text;
+    syncedAt : Int;
+    userEmail : Text;
+    userName : Text
+  };
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type NotifyState__771511965 =
+  {at : Int; detail : Text; ok : Bool; title : Text; to : Text};
+type Photo__148154263 =
+  {
+    assetId : Nat;
+    at : Int;
+    by : Text;
+    bytes : Blob;
+    eventId : Nat;
+    id : Nat;
+    mime : Text
+  };
+type Purchase__1025641815 =
+  {
+    at : Int;
+    by : Text;
+    currency : Text;
+    date : Text;
+    note : Text;
+    priceMinor : Nat
+  };
+type SaleDoc__1047958008 =
+  {
+    at : Int;
+    by : Text;
+    bytes : Blob;
+    hash : Text;
+    id : Nat;
+    kind : Text;
+    name : Text;
+    saleId : Nat
+  };
+type Sale__491607931 =
+  {
+    acceptedAt : Int;
+    acceptedBy : Text;
+    acceptedHow : Text;
+    assetId : Nat;
+    buyer : Buyer__854564082;
+    cancelReason : Text;
+    cancelledAt : Int;
+    checksBy : Text;
+    createdAt : Int;
+    createdBy : Text;
+    creditNoteNo : Text;
+    creditPdfId : Nat;
+    currency : Text;
+    description : Text;
+    dueOn : Text;
+    grossMinor : Nat;
+    id : Nat;
+    invoiceNo : Text;
+    issuedAt : Int;
+    issuedOn : Text;
+    mdmRemoved : Bool;
+    netMinor : Nat;
+    paidAt : Int;
+    paidNote : Text;
+    pdfHash : Text;
+    pdfId : Nat;
+    priceNote : Text;
+    proposedMinor : ?Nat;
+    reference : Text;
+    status : Text;
+    updatedAt : Int;
+    vatMinor : Nat;
+    vatRateBp : Nat;
+    waiverVersion : Nat;
+    wiped : Bool
+  };
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+actor {
+  stable abmAssertions :
+    {
+      var root : Node__430031793<Nat, AbmAssertion__982528300>;
+      var size : Nat__58649523
+    };
+  stable abmConns :
+    {
+      var root : Node__430031793<Nat, AbmConn__733940377>;
+      var size : Nat__58649523
+    };
+  stable abmDevices :
+    {
+      var root : Node__430031793<Text, AbmDevice__911919000>;
+      var size : Nat__58649523
+    };
+  stable var adminClaimed : Bool;
+  stable var adminEmails : [Text];
+  stable var adminGroup : Text;
+  stable adminLog :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable var appUrl : Text;
+  stable assets :
+    {
+      var root : Node__430031793<Nat, Asset__378788893>;
+      var size : Nat__58649523
+    };
+  stable var billing :
+    {
+      country : Text;
+      currency : Text;
+      depreciationMonths : Nat;
+      floorPct : Nat;
+      footer : Text;
+      houseNo : Text;
+      iban : Text;
+      lang : Text;
+      legalName : Text;
+      minPriceMinor : Nat;
+      paymentDays : Nat;
+      postalCode : Text;
+      prefix : Text;
+      street : Text;
+      town : Text;
+      uid : Text;
+      vatRateBp : Nat;
+      vatRegistered : Bool;
+      waiverText : Text;
+      waiverVersion : Nat;
+      yearInNumber : Bool
+    };
+  stable dealDevices :
+    {
+      var root : Node__430031793<Nat, {name : Text; serial : Text}>;
+      var size : Nat__58649523
+    };
+  stable dealEvents :
+    {
+      var root : Node__430031793<Nat, [DealEvent__981800022]>;
+      var size : Nat__58649523
+    };
+  stable dealNotices :
+    {
+      var root : Node__430031793<Text, DealNotice__220008744>;
+      var size : Nat__58649523
+    };
+  stable deals :
+    {
+      var root : Node__430031793<Nat, Deal__28261704>;
+      var size : Nat__58649523
+    };
+  stable var demoSeeded : Bool;
+  stable events :
+    {
+      var root : Node__430031793<Nat, Event__55031293>;
+      var size : Nat__58649523
+    };
+  stable former :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable groupsCache :
+    {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable var hubId : Text;
+  stable var idMigration : Text;
+  stable ids :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable invoiceCounters :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable invoiceSnapshots :
+    {
+      var root : Node__430031793<Nat, InvoiceData__710829019>;
+      var size : Nat__58649523
+    };
+  stable var lastDirectoryPull : Int;
+  stable var lastNotify : ?NotifyState__771511965;
+  stable mdmConns :
+    {
+      var root : Node__430031793<Nat, MdmConn__50414368>;
+      var size : Nat__58649523
+    };
+  stable mdmMeta :
+    {
+      var root : Node__430031793<Nat, MdmMeta__103883149>;
+      var size : Nat__58649523
+    };
+  stable var nextAbmId : Nat;
+  stable var nextAssetId : Nat;
+  stable var nextEventId : Nat;
+  stable var nextLogId : Nat;
+  stable var nextMdmId : Nat;
+  stable var nextPhotoId : Nat;
+  stable var nextSaleDocId : Nat;
+  stable var nextSaleId : Nat;
+  stable var orgName : Text;
+  stable var owner : ?Principal;
+  stable people :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable var photoBytes : Nat;
+  stable photos :
+    {
+      var root : Node__430031793<Nat, Photo__148154263>;
+      var size : Nat__58649523
+    };
+  stable purchases :
+    {
+      var root : Node__430031793<Nat, Purchase__1025641815>;
+      var size : Nat__58649523
+    };
+  stable var saleDocBytes : Nat;
+  stable saleDocs :
+    {
+      var root : Node__430031793<Nat, SaleDoc__1047958008>;
+      var size : Nat__58649523
+    };
+  stable sales :
+    {
+      var root : Node__430031793<Nat, Sale__491607931>;
+      var size : Nat__58649523
+    };
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__739831475>;
+      var size : Nat__58649523
+    };
+  stable var tagPrefix : Text;
+  stable var trustId : Text;
+  stable var trustLastPull : Int
+};

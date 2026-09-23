@@ -1,0 +1,340 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>kebab-stack · sign-in skewer preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,380;0,6..72,400;0,6..72,500;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   kebab-stack · design tokens v1
+   Light, nerdy, kebab. One skewer, many layers.
+
+   Two type faces, each with one job:
+     --ks-display   mono, headings & brand   (terminal warmth)
+     --ks-ui        system sans, UI chrome
+     --ks-mono      mono, values/ids/code
+
+   Primary accent: flame (#E85D2F) — the grill.
+   Fresh green for "active/ok" indicators — the salad.
+   Default theme: warm paper. Dark theme: charcoal, opt-in via
+   [data-theme="dark"] on <html>.
+   ===================================================================== */
+
+:root {
+  /* ---- Type faces ------------------------------------------------- */
+  --ks-display:
+    "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo,
+    "Cascadia Code", Consolas, monospace;
+  --ks-ui:
+    "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --ks-mono:
+    "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo,
+    "Cascadia Code", Consolas, monospace;
+
+  /* ---- Type scale ------------------------------------------------- */
+  --ks-fz-eyebrow: 11px;
+  --ks-fz-body: 16px;
+  --ks-fz-body-sm: 14px;
+  --ks-fz-h3: 20px;
+  --ks-fz-h2: 30px;
+  --ks-fz-h1: clamp(34px, 5.6vw, 64px);
+  --ks-fz-marker: 12px;
+
+  --ks-lh-tight: 1.05;
+  --ks-lh-display: 1.18;
+  --ks-lh-body: 1.55;
+  --ks-lh-meta: 1.4;
+
+  --ks-tracking-display: -0.02em;   /* mono headings, slightly tightened */
+  --ks-tracking-h2: -0.015em;
+  --ks-tracking-eyebrow: 0.16em;
+  --ks-tracking-mono: 0.02em;
+
+  --ks-weight-display: 600;
+  --ks-weight-body: 400;
+  --ks-weight-ui: 400;
+  --ks-weight-ui-strong: 500;
+
+  /* ---- Spacing ---------------------------------------------------- */
+  --ks-space-1: 4px;
+  --ks-space-2: 8px;
+  --ks-space-3: 12px;
+  --ks-space-4: 16px;
+  --ks-space-5: 24px;
+  --ks-space-6: 32px;
+  --ks-space-7: 48px;
+  --ks-space-8: 64px;
+  --ks-space-9: 96px;
+  --ks-space-10: 128px;
+  --ks-space-section: 120px;
+
+  /* ---- Layout ----------------------------------------------------- */
+  --ks-container: 1280px;
+  --ks-prose: 720px;
+  --ks-gutter: 32px;
+
+  /* ---- Radii ------------------------------------------------------ */
+  --ks-radius-inline: 4px;
+  --ks-radius-card: 10px;
+  --ks-radius-input: 8px;
+  --ks-radius-pill: 9999px;
+
+  /* ---- Border weights --------------------------------------------- */
+  --ks-rule-w: 1px;
+  --ks-card-stripe-w: 3px;
+
+  /* =================================================================
+     LIGHT THEME (default: warm paper)
+     ================================================================= */
+
+  /* Backgrounds */
+  --ks-bg: #fbf8f2;                   /* warm paper */
+  --ks-bg-sunk: #f4eee4;              /* sunk panels */
+  --ks-bg-elev: #ffffff;              /* raised cards */
+  --ks-bg-cta-inverse: #211d17;
+  --ks-bg-card: #ffffff;
+
+  /* Grid paper texture (nerd graph paper) */
+  --ks-grid-line: rgba(33, 29, 23, 0.05);
+  --ks-grid-tile: 24px;
+
+  /* Text */
+  --ks-fg: #211d17;                   /* warm charcoal ink */
+  --ks-fg-body: #211d17;
+  --ks-fg-secondary: #5b5345;
+  --ks-fg-muted: #8d8271;
+  --ks-fg-disabled: #bbb0a0;
+  --ks-fg-inverse: #ffffff;
+
+  /* Rules and borders */
+  --ks-rule: #e9e1d3;
+  --ks-rule-strong: #5b5345;
+
+  /* Accent: flame */
+  --ks-accent: #e85d2f;
+  --ks-accent-strong: #c94a22;
+  --ks-accent-dim: rgba(232, 93, 47, 0.12);
+
+  /* Section stripes (card top stripes, category coding) */
+  --ks-section-default: var(--ks-accent);
+  --ks-section-teal: #1f9d6b;          /* the salad */
+  --ks-section-blue: #3d6ed0;
+
+  /* Indicators (status dots) */
+  --ks-indicator-teal: #21a06e;        /* fresh = active */
+  --ks-indicator-rust: var(--ks-accent);
+
+  /* Code surfaces */
+  --ks-code-bg: #f3ecdf;
+  --ks-code-fg: #211d17;
+
+  /* Focus */
+  --ks-focus: #c94a22;
+}
+
+/* ===================================================================
+   DARK THEME (opt-in): charcoal grill, flame glows brighter.
+   Apply on <html data-theme="dark">.
+   =================================================================== */
+
+[data-theme="dark"] {
+  --ks-bg: #16130e;
+  --ks-bg-elev: #201b14;
+  --ks-bg-cta-inverse: #ffffff;
+  --ks-bg-card: #201b14;
+  --ks-bg-sunk: #1d1812;
+
+  --ks-grid-line: rgba(243, 237, 226, 0.05);
+
+  --ks-fg: #f3ede2;
+  --ks-fg-body: #f3ede2;
+  --ks-fg-secondary: #aba08d;
+  --ks-fg-muted: #7e7465;
+  --ks-fg-disabled: #4c453b;
+  --ks-fg-inverse: #211d17;
+
+  --ks-rule: #2e2820;
+  --ks-rule-strong: #6a6152;
+
+  --ks-accent: #ff7a45;
+  --ks-accent-strong: #ff8f60;
+  --ks-accent-dim: rgba(255, 122, 69, 0.16);
+
+  --ks-section-default: var(--ks-accent);
+  --ks-section-teal: #34b57e;
+  --ks-section-blue: #6f97e8;
+
+  --ks-indicator-teal: #34b57e;
+  --ks-indicator-rust: var(--ks-accent);
+
+  --ks-code-bg: #201b14;
+  --ks-code-fg: #f3ede2;
+
+  --ks-focus: var(--ks-accent);
+}
+
+/* ===================================================================
+   Base element styling
+   =================================================================== */
+
+html {
+  background: var(--ks-bg);
+  color: var(--ks-fg);
+  font-family: var(--ks-ui);
+  font-size: 16px;
+  line-height: var(--ks-lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background: var(--ks-bg);
+  color: var(--ks-fg);
+}
+
+::selection {
+  background: var(--ks-accent);
+  color: #ffffff;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--ks-rule-strong);
+  text-underline-offset: 3px;
+}
+a:hover { color: var(--ks-accent); }
+
+:focus-visible {
+  outline: 2px solid var(--ks-focus);
+  outline-offset: 2px;
+}
+
+/* Headings carry the mono display face: the terminal is the brand. */
+.ks-prose,
+.ks-display,
+h1, h2, h3, h4, h5 {
+  font-family: var(--ks-display);
+  letter-spacing: var(--ks-tracking-display);
+}
+
+/* ===================================================================
+   Surface utilities
+   =================================================================== */
+
+.ks-bg-sunk {
+  background: var(--ks-bg-sunk);
+}
+
+/* Nerd graph paper: two crossed hairline gradients, 24px tile. */
+.ks-grid-paper {
+  background-image:
+    linear-gradient(90deg, var(--ks-grid-line) 1px, transparent 1px),
+    linear-gradient(var(--ks-grid-line) 1px, transparent 1px);
+  background-size: var(--ks-grid-tile) var(--ks-grid-tile);
+  background-position: -1px -1px;
+  background-repeat: repeat;
+}
+
+.ks-grid-paper-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.8;
+  background-image:
+    linear-gradient(90deg, var(--ks-grid-line) 1px, transparent 1px),
+    linear-gradient(var(--ks-grid-line) 1px, transparent 1px);
+  background-size: var(--ks-grid-tile) var(--ks-grid-tile);
+  background-position: -1px -1px;
+  background-repeat: repeat;
+}
+
+/* The skewer divider: a dotted line with layers on it. Decorative. */
+.ks-skewer-rule {
+  border: 0;
+  height: 1px;
+  background: repeating-linear-gradient(90deg,
+    var(--ks-rule) 0 12px, transparent 12px 20px);
+  position: relative;
+}
+
+body { margin:0; background: var(--ks-bg); color: var(--ks-fg-body); font: 400 15px/1.55 var(--ks-ui); }
+.kv { color: var(--ks-fg-secondary); font-size: 13px; } .mono { font-family: var(--ks-mono); } .hidden { display:none !important; }
+.status { font: 400 12px var(--ks-mono); } .warnbox { border:1px solid var(--ks-accent); padding:10px 14px; border-radius:10px; white-space:pre-wrap; max-width:520px; }
+  button { padding: 8px 18px; border: 1px solid var(--ks-rule-strong); background: transparent; color: var(--ks-fg); border-radius: var(--ks-radius-pill); font: 600 11px var(--ks-ui); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+  button:hover { border-color: var(--ks-accent); color: var(--ks-accent); }
+  button.primary { background: var(--ks-accent); color: #fff; border-color: var(--ks-accent); }
+  button.primary:hover { background: var(--ks-accent-strong); border-color: var(--ks-accent-strong); color: #fff; }
+  #login { display: flex; min-height: 96vh; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 24px; transition: opacity .3s ease; }
+  #login.is-gone { opacity: 0; pointer-events: none; }
+  #login .mark { font: 380 46px/1 var(--ks-display); color: var(--ks-fg); letter-spacing: -.01em; margin-top: 8px; }
+  #login .lorg { font: 400 17px var(--ks-ui); color: var(--ks-fg-secondary); margin-bottom: 10px; }
+  #login .lbtn { padding: 12px 30px; }
+  #login .lhint { max-width: 440px; text-align: center; line-height: 1.55; margin-top: 4px; }
+  #login .lfoot { font-size: 11.5px; opacity: .65; }
+  #login #ssoButtons:not(:empty) + .status + .lbtn { background: transparent; color: var(--ks-fg); border-color: var(--ks-rule-strong); }
+  /* company logo set: it takes the wordmark's place, kebab-stack becomes the small product mark at the bottom */
+  #login.has-logo .mark { order: 8; font: 500 12px var(--ks-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ks-fg-muted); margin-top: 22px; }
+  #login.has-logo .lfoot { order: 9; }
+  #login.has-logo .lstage svg { width: 64px; height: 74px; }
+  /* the skewer: pieces lift off while we wait for the passkey, get stacked when it worked, and the whole thing turns once */
+  .lstage { perspective: 700px; }
+  #lgSvg { display: block; transform-style: preserve-3d; }
+  .lg-piece { transform-box: fill-box; transform-origin: center; }
+  .lg-piece[data-i="0"] { --dx: -30px; --dy: -12px; }
+  .lg-piece[data-i="1"] { --dx: 34px; --dy: -6px; }
+  .lg-piece[data-i="2"] { --dx: -32px; --dy: 0px; }
+  .lg-piece[data-i="3"] { --dx: 30px; --dy: 8px; }
+  #login.is-waiting .lg-piece { animation: lgHover 1.7s ease-in-out infinite alternate; }
+  #login.is-waiting .lg-piece[data-i="1"] { animation-delay: -.45s; } #login.is-waiting .lg-piece[data-i="2"] { animation-delay: -.9s; } #login.is-waiting .lg-piece[data-i="3"] { animation-delay: -1.35s; }
+  @keyframes lgHover { from { transform: translate(var(--dx), var(--dy)) rotate(-7deg); } to { transform: translate(calc(var(--dx) * 1.12), calc(var(--dy) - 9px)) rotate(7deg); } }
+  #login.is-landing .lg-piece { animation: lgLand .55s cubic-bezier(.34, 1.56, .64, 1) both; }
+  #login.is-landing .lg-piece[data-i="2"] { animation-delay: .12s; } #login.is-landing .lg-piece[data-i="1"] { animation-delay: .24s; } #login.is-landing .lg-piece[data-i="0"] { animation-delay: .36s; }
+  @keyframes lgLand { from { transform: translate(var(--dx), calc(var(--dy) - 34px)) rotate(-9deg); } to { transform: none; } }
+  #login.is-landing #lgSvg { animation: lgSpin .95s cubic-bezier(.45, 0, .2, 1) .8s both; }
+  @keyframes lgSpin { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+  #login.is-settling .lg-piece { animation: lgSettle .5s ease both; }
+  @keyframes lgSettle { from { transform: translate(var(--dx), var(--dy)) rotate(-4deg); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { #login .lg-piece, #login #lgSvg { animation: none !important; } #login { transition: none; } }
+
+.bar { position: fixed; top: 12px; left: 12px; display:flex; gap:8px; z-index: 5; flex-wrap: wrap; }
+.bar button { font-size: 10px; padding: 6px 12px; }
+</style></head><body>
+<div class="bar">
+  <button onclick="loginWait()">1 · wait (passkey dialog open)</button>
+  <button onclick="loginLand()">2 · land (signed in)</button>
+  <button onclick="loginSettle()">3 · settle (cancelled)</button>
+  <button onclick="document.getElementById('login').classList.toggle('has-logo'); document.getElementById('loginLogo').classList.toggle('hidden')">toggle company logo</button>
+  <button onclick="document.getElementById('ssoButtons').innerHTML = document.getElementById('ssoButtons').innerHTML ? '' : '<button class=primary style="padding:12px 28px">Sign in with Okta</button>'; document.getElementById('loginBtn').textContent = document.getElementById('ssoButtons').innerHTML ? 'or sign in with your passkey' : 'Sign in with your passkey'">toggle company sign-in</button>
+</div>
+<div id="login">
+  <div class="lstage" id="loginStage" aria-hidden="true">
+    <svg id="lgSvg" viewBox="0 0 128 148" width="92" height="106" xmlns="http://www.w3.org/2000/svg">
+      <g class="lg-stick" style="color:var(--ks-fg)"><circle cx="64" cy="16" r="7" fill="none" stroke="currentColor" stroke-width="5"/><rect x="61" y="22" width="6" height="118" rx="3" fill="currentColor"/></g>
+      <rect class="lg-piece" data-i="0" x="38" y="38" width="52" height="14" rx="7" fill="#FFB23A"/>
+      <rect class="lg-piece" data-i="1" x="28" y="56" width="72" height="14" rx="7" fill="#FF8A3D"/>
+      <rect class="lg-piece" data-i="2" x="34" y="74" width="60" height="14" rx="7" fill="#FF6B4A"/>
+      <rect class="lg-piece" data-i="3" x="43" y="92" width="42" height="14" rx="7" fill="#F0503C"/>
+    </svg>
+  </div>
+  <img id="loginLogo" class="hidden" alt="" style="max-height:56px;max-width:260px">
+  <div class="mark" id="loginMark">kebab<span style="color:var(--ks-accent)">-</span>stack</div>
+  <div class="kv lorg" id="loginOrg">hub — one directory, every layer</div>
+  <div id="ssoButtons" style="display:flex;flex-direction:column;gap:10px;min-width:280px;align-items:stretch"></div>
+  <div id="ssoStatus" class="status"></div>
+  <button id="loginBtn" class="primary lbtn">Sign in with your passkey</button>
+  <div class="kv lhint" id="loginRole">One sign-in for everything: hub staff land in the console, everyone else on their menu.</div>
+  <div class="kv lfoot">passkeys via Internet Identity · nothing to remember, nothing to phish</div>
+  <div id="denied" class="warnbox hidden">This passkey is not an admin of this hub.
+Ask an existing admin to add your principal:
+<span id="myPrincipal" class="mono"></span></div>
+
+<script>
+document.getElementById('loginOrg').textContent = 'Supercool GmbH';
+document.getElementById('loginLogo').src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="56"><rect width="220" height="56" rx="12" fill="#1a1611"/><text x="110" y="36" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="22" fill="#fff">SUPERCOOL</text></svg>');
+const $ = (id) => document.getElementById(id);
+var loginClicked = false;
+const reducedMotion = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const LOGIN_BTN_TEXT = () => ($("ssoButtons").innerHTML ? "or sign in with your passkey" : "Sign in with your passkey");
+function loginWait() { loginClicked = true; const l = $("login"); l.classList.remove("is-settling", "is-landing", "is-gone"); l.classList.add("is-waiting"); $("loginBtn").disabled = true; $("loginBtn").textContent = "Waiting for your passkey…"; }
+function loginSettle() { const l = $("login"); l.classList.remove("is-waiting", "is-landing", "is-gone"); l.classList.add("is-settling"); setTimeout(() => l.classList.remove("is-settling"), 600); $("loginBtn").disabled = false; $("loginBtn").textContent = LOGIN_BTN_TEXT(); }
+function loginLand() { const l = $("login"); if (reducedMotion()) return; l.classList.remove("is-waiting", "is-settling"); l.classList.add("is-landing"); $("loginBtn").disabled = true; $("loginBtn").textContent = "Signed in";
+  setTimeout(() => { l.classList.add("is-gone"); setTimeout(() => { l.classList.remove("is-landing", "is-gone"); $("loginBtn").disabled = false; $("loginBtn").textContent = LOGIN_BTN_TEXT(); }, 900); }, 1750); }
+</script></body></html>

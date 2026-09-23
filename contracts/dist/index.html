@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contracts · KebabStack</title>
+<link rel="icon" href="/contract-mark.svg">
+<link rel="stylesheet" href="/tokens.css">
+<script>try{if(localStorage.getItem("ks-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--ks-bg);color:var(--ks-fg-body);font:400 15px/1.55 var(--ks-ui)}
+#layout{display:none;min-height:100vh;flex-direction:column}#layout.on{display:flex}
+#login{display:flex;min-height:88vh;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:20px}#login .mark{font:380 42px var(--ks-display);color:var(--ks-fg)}
+.kv{font:400 13px var(--ks-ui);color:var(--ks-fg-secondary)}.kv b{color:var(--ks-fg);font-weight:600}
+.status{font:500 var(--ks-fz-marker) var(--ks-mono);letter-spacing:.04em;padding:3px 11px;border-radius:var(--ks-radius-pill);background:var(--ks-bg-sunk);border:1px solid var(--ks-rule);color:var(--ks-fg-secondary)}.status:empty{display:none}.status.ok{border-color:var(--ks-indicator-teal);color:var(--ks-indicator-teal);background:transparent}.status.err{border-color:var(--ks-accent);color:var(--ks-accent);background:transparent}
+.warnbox{background:var(--ks-bg-sunk);border:1px solid var(--ks-rule);border-left:3px solid var(--ks-accent);border-radius:var(--ks-radius-card);padding:10px 14px;font:400 13.5px/1.5 var(--ks-ui);margin:14px 32px 0}
+.hidden{display:none!important}
+button{font-family:var(--ks-ui);cursor:pointer;background:none;border:none;color:inherit}
+input,select,textarea{font-family:var(--ks-ui);font-size:15px;color:var(--ks-fg);background:var(--ks-bg-elev);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-input);padding:10px 14px;transition:border-color .15s ease}
+textarea{resize:vertical;min-height:70px;line-height:1.5}
+input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--ks-focus);outline-offset:2px}
+a{color:inherit;text-decoration:none;transition:color .15s ease}a:hover{color:var(--ks-accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.linkbtn{font-family:var(--ks-ui);font-size:12px;font-weight:500;letter-spacing:.06em;color:var(--ks-fg-secondary);padding:6px 10px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-pill);transition:border-color .15s ease,color .15s ease;background:none;white-space:nowrap}
+.linkbtn:hover{border-color:var(--ks-rule-strong);color:var(--ks-fg)}.linkbtn.on{border-color:var(--ks-fg);color:var(--ks-fg)}
+.pill{display:inline-flex;align-items:center;gap:10px;font-family:var(--ks-ui);font-size:12px;font-weight:600;letter-spacing:.06em;border-radius:var(--ks-radius-pill);padding:12px 24px;transition:background .15s ease,color .15s ease,border-color .15s ease;border:1px solid transparent;white-space:nowrap}
+.pill.primary{background:var(--ks-accent);color:#fff}.pill.primary:hover{background:var(--ks-accent-strong)}
+.pill.outline{border:1px solid var(--ks-rule-strong);color:var(--ks-fg)}.pill.outline:hover{border-color:var(--ks-fg)}
+.pill.sm{padding:8px 16px;font-size:11px}.pill[disabled]{opacity:.45;cursor:default}
+.tag{display:inline-flex;align-items:center;gap:6px;font:500 10.5px var(--ks-mono);letter-spacing:.1em;padding:4px 10px;border-radius:var(--ks-radius-pill);border:1px solid var(--ks-rule);color:var(--ks-fg-secondary);text-transform:uppercase;white-space:nowrap}
+.tag .dot{width:7px;height:7px;border-radius:50%;background:var(--ks-fg-muted)}
+.tag.active .dot,.tag.filed .dot,.tag.confirmed .dot,.tag.ok .dot{background:var(--ks-indicator-teal)}
+.tag.cancelling .dot,.tag.review .dot,.tag.processing .dot,.tag.open .dot,.tag.due .dot{background:#d9a03f}
+.tag.endConfirmed .dot,.tag.failed .dot,.tag.rejected .dot,.tag.overdue .dot{background:var(--ks-accent)}
+.tag.received .dot{background:#8a84ff}
+.tag.clickable{cursor:pointer}.tag.clickable:hover{border-color:var(--ks-rule-strong)}.tag.sel{border-color:var(--ks-fg);color:var(--ks-fg)}
+.wrap{max-width:1120px;margin:0 auto;padding:clamp(20px,4vh,44px) 32px 80px}
+.pagehead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.pagehead h2{font-family:var(--ks-display);font-weight:400;font-size:clamp(26px,4vw,38px);letter-spacing:-.01em;flex:1;min-width:200px}
+.pagehead .sub{font:400 13px var(--ks-ui);color:var(--ks-fg-secondary);width:100%}
+/* main navigation under the topbar */
+.mainnav{border-bottom:1px solid var(--ks-rule);background:var(--ks-bg-sunk)}
+.mainnav .in{max-width:1120px;margin:0 auto;padding:0 32px;display:flex;gap:4px;overflow-x:auto}
+.mainnav button{font:500 12px var(--ks-ui);letter-spacing:.1em;padding:14px 16px;color:var(--ks-fg-secondary);border-bottom:2px solid transparent;text-transform:uppercase;white-space:nowrap}
+.mainnav button.on{color:var(--ks-fg);border-bottom-color:var(--ks-accent)}.mainnav button:hover{color:var(--ks-fg)}
+.mainnav button .n{font:500 10.5px var(--ks-mono);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-pill);padding:1px 7px;margin-left:6px;color:var(--ks-fg-secondary)}
+.tabs{display:flex;gap:4px;margin-top:14px;border-bottom:1px solid var(--ks-rule);overflow-x:auto}
+.tabs button{font:500 12px var(--ks-ui);letter-spacing:.1em;padding:12px 16px;color:var(--ks-fg-secondary);border-bottom:2px solid transparent;text-transform:uppercase;white-space:nowrap}
+.tabs button.on{color:var(--ks-fg);border-bottom-color:var(--ks-accent)}.tabs button:hover{color:var(--ks-fg)}
+/* cards, tables, forms */
+.scard{background:var(--ks-bg-card);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:16px 18px;margin-bottom:14px}
+.scard h3{font:500 18px/1.25 var(--ks-display);margin:0 0 10px}
+.scard label,.flabel{display:block;font:500 var(--ks-fz-eyebrow) var(--ks-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ks-fg-secondary);margin:12px 0 5px}
+.scard input[type=text],.scard input[type=number],.scard input[type=date],.scard select,.scard textarea{width:100%}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1;min-width:150px}.row>div.w2{flex:2;min-width:220px}
+.btnrow{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center}
+table.plain{width:100%;border-collapse:collapse;font:400 13.5px var(--ks-ui);margin-top:8px}
+table.plain th{text-align:left;color:var(--ks-fg-secondary);font:500 var(--ks-fz-eyebrow) var(--ks-ui);letter-spacing:.14em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--ks-rule);white-space:nowrap}
+table.plain td{padding:8px;border-bottom:1px solid var(--ks-rule);vertical-align:top}
+table.plain tr.rowlink{cursor:pointer}table.plain tr.rowlink:hover td{background:var(--ks-accent-dim)}
+table.plain td.num{text-align:right;font-family:var(--ks-mono);font-size:12.5px;white-space:nowrap}
+table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
+.tblwrap{overflow-x:auto}
+.empty{border:1px dashed var(--ks-rule-strong);border-radius:var(--ks-radius-card);padding:36px 24px;text-align:center;color:var(--ks-fg-secondary);font-size:15px;font-family:var(--ks-ui)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px;align-items:center}
+.filters input[type=text]{padding:7px 12px;font-size:13.5px;min-width:220px}.filters select{padding:7px 10px;font-size:13px}
+.filters label.ck{display:flex;align-items:center;gap:6px;font:400 13px var(--ks-ui);color:var(--ks-fg-secondary);cursor:pointer}
+.notice{border:1px solid var(--ks-rule);border-left:3px solid var(--ks-accent);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);padding:14px 18px;font-family:var(--ks-ui);font-size:14px;color:var(--ks-fg-secondary);margin-bottom:16px}
+.notice.soft{border-left-color:var(--ks-rule-strong)}
+.muted{color:var(--ks-fg-muted)}.mono{font-family:var(--ks-mono);font-size:12.5px}
+.docs p{max-width:760px;margin:0 0 12px}.docs h3{font:500 18px/1.25 var(--ks-display);margin:18px 0 6px}.docs code{font:400 12.5px var(--ks-mono);background:var(--ks-bg-sunk);padding:1px 5px;border-radius:4px}
+/* today */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.tstat{background:var(--ks-bg-card);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:14px 16px}
+.tstat .v{font:400 30px/1.1 var(--ks-display);color:var(--ks-fg)}.tstat .l{font:500 10.5px var(--ks-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ks-fg-secondary);margin-top:4px}
+.item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);margin-bottom:8px;flex-wrap:wrap}
+.item .ttl{font-family:var(--ks-display);font-size:18px;font-weight:500;flex:1;min-width:200px}
+.item .ttl small{display:block;font:400 12.5px var(--ks-ui);color:var(--ks-fg-secondary)}
+.item .meta{font:400 12px var(--ks-mono);color:var(--ks-fg-muted);letter-spacing:.03em;white-space:nowrap}
+.item.link{cursor:pointer;transition:border-color .15s ease}.item.link:hover{border-color:var(--ks-rule-strong)}
+.dsec{font:500 11px var(--ks-mono);letter-spacing:.14em;color:var(--ks-fg-secondary);text-transform:uppercase;margin:26px 0 10px;border-top:1px solid var(--ks-rule);padding-top:18px}
+.dsec:first-child{border-top:0;padding-top:0;margin-top:0}
+/* people picker */
+.pick{position:relative}.pick .list{position:absolute;left:0;right:0;top:100%;z-index:90;background:var(--ks-bg-card);border:1px solid var(--ks-rule-strong);border-radius:var(--ks-radius-card);max-height:220px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}.pick .list div{padding:9px 12px;cursor:pointer;font:400 14px var(--ks-ui);border-top:1px solid var(--ks-rule)}.pick .list div:first-child{border-top:0}.pick .list div:hover{background:var(--ks-accent-dim)}.pick .list small{display:block;color:var(--ks-fg-muted);font:400 11.5px var(--ks-mono)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chipp{display:inline-flex;align-items:center;gap:6px;font:400 13px var(--ks-ui);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-pill);padding:4px 10px}.chipp button{font-size:14px;color:var(--ks-fg-muted);padding:0 2px}.chipp button:hover{color:var(--ks-accent)}.chipp.gone{opacity:.55;text-decoration:line-through}
+/* record head */
+.rhead{border-bottom:1px solid var(--ks-rule);background:var(--ks-bg-sunk)}
+.rhead .in{max-width:1120px;margin:0 auto;padding:22px 32px 0}
+.rhead .rowa{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.rhead h2{font-family:var(--ks-display);font-weight:400;font-size:clamp(24px,3vw,34px);letter-spacing:-.01em;flex:1;min-width:200px}
+.rhead .sub{font:400 13.5px var(--ks-ui);color:var(--ks-fg-secondary);width:100%;margin-top:4px}
+.kvgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 18px}
+.kvgrid .k{font:500 10.5px var(--ks-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ks-fg-secondary)}
+.kvgrid .v{font:400 15px var(--ks-ui);color:var(--ks-fg);word-break:break-word}.kvgrid .v.unk{color:var(--ks-fg-muted);font-style:italic}
+.deadline{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.dl{flex:1;min-width:180px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:12px 14px;background:var(--ks-bg-sunk)}
+.dl .d{font:400 22px/1.1 var(--ks-display)}.dl .l{font:500 10.5px var(--ks-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ks-fg-secondary);margin-top:3px}.dl.hot{border-color:var(--ks-accent)}
+/* proposals */
+.prop{border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);margin-bottom:16px;overflow:hidden}
+.prop .ph{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--ks-bg-sunk);border-bottom:1px solid var(--ks-rule);flex-wrap:wrap}
+.prop .ph .t{font:500 15px var(--ks-ui);flex:1;min-width:200px}.prop .ph .t small{display:block;font:400 12.5px var(--ks-ui);color:var(--ks-fg-secondary)}
+.prop .pb{padding:12px 16px}
+.prop table.plain td.ev{font:400 12.5px/1.45 var(--ks-ui);color:var(--ks-fg-secondary);max-width:320px}
+.prop table.plain td.ev q{display:block;border-left:2px solid var(--ks-rule-strong);padding:2px 8px;margin:2px 0;font-style:italic;quotes:none}
+.prop td input[type=text]{width:100%;min-width:120px;padding:6px 10px;font-size:13.5px}
+.prop td input[type=checkbox]{width:16px;height:16px;accent-color:var(--ks-accent)}
+.prop .unc{font:400 13px var(--ks-ui);color:var(--ks-fg-secondary);margin-top:10px}.prop .unc li{margin-left:18px}
+.prop .target{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font:400 13.5px var(--ks-ui)}
+.basis{font:500 10px var(--ks-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ks-fg-muted)}
+.basis.explicit{color:var(--ks-indicator-teal)}.basis.ambiguous,.basis.missing{color:var(--ks-accent)}
+.msgtext{white-space:pre-wrap;word-break:break-word;font:400 13.5px/1.55 var(--ks-ui);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-sunk);padding:14px 16px;max-height:420px;overflow:auto}
+/* drawer, toast, modal */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100vw);background:var(--ks-bg);border-left:1px solid var(--ks-rule);box-shadow:-24px 0 60px rgba(0,0,0,.15);z-index:70;transform:translateX(105%);transition:transform .2s ease;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer .dhead{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--ks-rule);flex-wrap:wrap}
+.drawer .dbody{flex:1;overflow-y:auto;padding:20px 22px 60px}
+.drawer .dbody label{display:block;font:500 var(--ks-fz-eyebrow) var(--ks-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ks-fg-secondary);margin:12px 0 5px}
+.drawer .dbody input[type=text],.drawer .dbody input[type=number],.drawer .dbody input[type=date],.drawer .dbody select,.drawer .dbody textarea{width:100%}
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--ks-bg-cta-inverse);color:var(--ks-bg);font:500 13px var(--ks-ui);padding:12px 22px;border-radius:var(--ks-radius-pill);transition:transform .25s ease;z-index:90;max-width:90vw}
+#toast.on{transform:translateX(-50%)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.modal .mbox{background:var(--ks-bg);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:26px;max-width:460px;width:100%;max-height:92vh;overflow:auto}
+.modal .mbox .tt{font-family:var(--ks-ui);font-weight:600;font-size:14px;letter-spacing:.05em;margin-bottom:14px}
+.modal .mbox .ta{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.modal .mbox label{display:block;font:500 var(--ks-fz-eyebrow) var(--ks-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ks-fg-secondary);margin:12px 0 5px}
+.modal .mbox input[type=text],.modal .mbox input[type=number],.modal .mbox select,.modal .mbox textarea{width:100%}
+.view{display:none}.view.on{display:block}
+@media (max-width:640px){.wrap,.rhead .in,.mainnav .in{padding-left:16px;padding-right:16px}.warnbox{margin-left:16px;margin-right:16px}}
+
+.spacebar{background:var(--ks-bg-card);border-bottom:1px solid var(--ks-rule)}
+.spacebar .in{max-width:1240px;margin:auto;padding:22px 32px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.spacebrand{display:flex;gap:12px;align-items:center;margin-right:auto}.spacebrand strong{display:block;font-size:18px}.eyebrow{display:block;font:11px var(--ks-font-mono,monospace);letter-spacing:.12em;color:var(--ks-fg-muted,#587565);margin-bottom:5px}
+.spaceglyph{font-size:30px;color:var(--ks-accent,#245344)}.spaceselect{font:11px var(--ks-font-mono,monospace);color:var(--ks-fg-muted,#587565);display:grid;gap:4px}.spaceselect select{min-width:210px;max-width:320px;padding:9px 12px}.spaceaccess{font-size:12px;color:var(--ks-fg-muted,#587565)}
+.spacefields{display:grid;gap:14px;max-width:720px}.spacefields label{display:grid;gap:5px}.spacepeople{display:grid;gap:8px;margin:16px 0}.spacemember{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--ks-rule);border-radius:10px}.spacemember span{flex:1;min-width:0;overflow-wrap:anywhere}.spacemember select{width:auto}.spacehelp{font-size:14px;line-height:1.6;color:var(--ks-fg-muted,#587565)}
+#spaceModal .box{max-width:560px;width:calc(100vw - 40px);padding:28px;border-radius:16px;background:var(--ks-bg-card);color:var(--ks-fg,#1b3029)}#spaceModal input,#spaceModal textarea{width:100%;margin:8px 0 16px}#spaceModal p{line-height:1.6}
+@media(max-width:680px){.spacebar .in{padding:16px;gap:10px}.spacebrand{width:100%}.spacebrand strong{font-size:16px}.spaceselect{flex:1 0 100%;min-width:0}.spaceselect select{min-width:0;width:100%;max-width:none}.spaceaccess{display:none}.spacebar .pill{font-size:10px;padding:9px}.spacemember{flex-wrap:wrap}.spacefields{max-width:100%}}
+.drawer:not(.on){visibility:hidden;pointer-events:none}
+.ai-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}.ai-card-heading>div{min-width:0;max-width:720px}.ai-card-heading>button{flex-shrink:0;white-space:normal}.ai-card-heading p{line-height:1.65}.ai-connection-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:26px}.ai-connection-step{display:flex;align-items:center;gap:12px;background:var(--ks-bg-sunk);border:1px solid var(--ks-rule);border-radius:12px;padding:18px}.ai-connection-step strong,.ai-connection-step span:not(.ai-step-icon){display:block}.ai-connection-step strong{font-size:14px;color:var(--ks-fg)}.ai-connection-step span:not(.ai-step-icon){font-size:13px;color:var(--ks-fg-secondary)}.ai-step-icon{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;border:1px solid var(--ks-rule);border-radius:50%;color:var(--ks-fg-secondary)}.ai-step-icon.ready{color:var(--ks-indicator-teal);border-color:var(--ks-indicator-teal)}.ai-connection-detail{margin:20px 0;color:var(--ks-fg-body)}.ai-connection-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;border-top:1px solid var(--ks-rule);padding-top:20px}.ai-connection-meta dt{font-size:12px;color:var(--ks-fg-secondary);margin-bottom:4px}.ai-connection-meta dd{font-weight:500;color:var(--ks-fg);overflow-wrap:anywhere}.ai-test-report{padding:18px 20px;border:1px solid var(--ks-rule);border-left:3px solid var(--ks-indicator-teal);border-radius:12px;background:var(--ks-bg-sunk)}.ai-test-report.err{border-left-color:var(--ks-accent)}.ai-test-report strong{color:var(--ks-fg)}.ai-test-report p{margin:6px 0 10px}#aiTestResult{margin-top:20px}#aiActionStatus{margin-top:16px;display:inline-block;white-space:normal}#aiActionStatus:empty{display:none}
+@media(max-width:700px){.ai-card-heading{flex-direction:column;gap:16px}.ai-connection-steps{grid-template-columns:1fr}.ai-connection-step{padding:12px 16px}.ai-connection-meta{grid-template-columns:1fr}.ai-card-heading>button{width:100%}}
+</style>
+<link rel="stylesheet" href="./experience.css">
+<link rel="stylesheet" href="./saas.css">
+<link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./components.css">
+</head>
+<body class="ks-workspace">
+
+<section id="login" aria-busy="true" class="is-waiting app-auth">
+  <div class="auth-shell">
+    <aside class="auth-story">
+      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
+      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
+      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
+    </aside>
+    <section class="auth-main" aria-labelledby="loginTitle">
+      <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
+      <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
+      <h1 id="loginTitle"><span class="auth-ready">Welcome to Contracts.</span><span class="auth-waiting">Opening Contracts…</span></h1>
+      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
+      <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
+      <div id="loginStatus" class="status" role="alert"></div>
+      <div id="loginWarn" class="warnbox hidden"></div>
+      <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
+      <p class="lfoot">Access is managed by your company in the Hub.</p>
+    </section>
+  </div>
+</section>
+
+<div id="layout">
+  <div id="topbar"></div>
+  <div class="spacebar"><div class="in">
+    <div class="spacecontrols"><label class="spaceselect">Workspace<select id="spaceSelect" aria-label="Current workspace"></select></label>
+    <span class="spaceaccess" id="spaceAccess"></span><button class="pill outline sm" id="spaceManage">Manage workspace</button><button class="pill primary sm" id="spaceCreate">+ Teamspace</button></div>
+  </div></div>
+  <div class="mainnav"><div class="in">
+    <button data-nav="today" class="on"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Overview<span class="n hidden" id="nToday"></span></button>
+    <button data-nav="contracts"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>SaaS contracts</button>
+    <button data-nav="keys"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="m11 11 9 9m-5-5 3-3m-1 5 3-3"/></svg>License keys</button>
+    <button data-nav="inbox"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4zM4 14h5l2 3h2l2-3h5M12 5v7m-3-3 3 3 3-3"/></svg>Inbox<span class="n hidden" id="nInbox"></span></button>
+    <button data-nav="settings" id="navConn"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg>Settings</button>
+
+  </div></div>
+
+  <div id="aiBox" class="warnbox hidden">AI access could not be confirmed with the Hub. Your documents are saved and can be reviewed manually. <a href="#/connection/ai">Check AI connection →</a></div>
+
+  <div id="workspaceState" class="workspace-state hidden" role="status"></div>
+  <section class="view" id="viewSaas"><div class="wrap" id="saasBody"></div></section>
+  <section class="view" id="viewSpace"><div class="wrap">
+    <div class="pagehead"><div><span class="eyebrow">YOUR WORKSPACE</span><h2 id="spHeading">Space settings</h2></div><button class="pill outline sm" id="spBack">BACK TO CONTRACTS</button><div class="sub" id="spIntro">Members share this space’s contracts, inbox and deadlines. Hub-assigned app admins can access every workspace.</div></div>
+    <div id="spContent"></div>
+  </div></section>
+  <div class="modal" id="spaceModal"><div class="box"><h2>Create a teamspace</h2><p>For Finance, People, Sales, Marketing — or your next project. Only people you add can open it.</p><label class="lbl" for="spNewName">Name</label><input id="spNewName" maxlength="80" placeholder="e.g. Finance"><label class="lbl" for="spNewDescription">Description</label><textarea id="spNewDescription" maxlength="500" placeholder="What belongs here?"></textarea><div class="status" id="spNewStatus"></div><div class="btnrow"><button class="pill outline" id="spNewCancel">Cancel</button><button class="pill primary" id="spNewSave">CREATE TEAMSPACE</button></div></div></div>
+  <!-- ============================ today ============================ -->
+  <section class="view" id="viewToday">
+    <div class="wrap">
+      <div class="today-hero"><div><span class="eyebrow">WORKSPACE OVERVIEW</span><h2>A clear view of your agreements.</h2><p id="tContext">Review incoming documents, keep track of commitments and decide before deadlines.</p></div><div class="hero-actions"><button class="pill outline sm" id="tRefresh" aria-label="Refresh overview">Refresh</button><button class="pill primary sm spacewriter" id="tAdd">+ Add document</button></div></div><div id="tNext"></div>
+      <div class="tgrid" id="tStats"></div>
+      <div id="tBody"></div>
+    </div>
+  </section>
+
+  <section class="view" id="viewTrash"><div class="wrap"><div class="pagehead"><div><h2>Trash</h2><p class="sub">Restore deleted items or permanently remove them and their files from this workspace.</p></div></div><div class="scard" id="trashList"></div></div></section>
+  <section class="view" id="viewIntake"><div class="wrap">
+    <div class="pagehead"><div><a class="back" href="#/inbox">← Inbox</a><h2 id="intakeTitle">Add a contract</h2><p class="sub" id="intakeSubtitle">Start with the document. AI helps you fill in the details.</p></div></div>
+    <div id="intakeBody"></div>
+    <input type="file" id="intakeFile" accept=".pdf,.txt,.eml,.png,.jpg,.jpeg,.webp,.gif" class="hidden">
+  </div></section>
+  <!-- ============================ inbox ============================ -->
+  <section class="view" id="viewInbox">
+    <div class="wrap">
+      <div class="pagehead">
+        <h2>Inbox</h2>
+        <button class="linkbtn" id="ibPaste">Paste text</button>
+        <button class="pill primary sm spacewriter" id="ibAdd">+ Add document</button>
+        <input type="file" id="ibEml" accept=".eml,.pdf,.txt,.png,.jpg,.jpeg,.webp,.gif,message/rfc822,application/pdf,text/plain,image/png,image/jpeg" multiple class="hidden">
+        <div class="sub">Add an agreement, licence or saved email. Review suggested details before saving them to a contract. AI reads text PDFs, scanned pages and purchase screenshots. Check the suggested details before filing.</div>
+      </div>
+      <div class="filters" id="ibFilters">
+        <button type="button" class="tag clickable sel" data-st="">Needs attention</button>
+        <button type="button" class="tag clickable received" data-st="received"><span class="dot"></span>Received</button>
+        <button type="button" class="tag clickable review" data-st="review"><span class="dot"></span>Ready to review</button>
+        <button type="button" class="tag clickable filed" data-st="filed"><span class="dot"></span>Filed</button>
+        <button type="button" class="tag clickable" data-st="ignored"><span class="dot"></span>Ignored</button>
+        <button type="button" class="tag clickable failed" data-st="failed"><span class="dot"></span>Failed</button>
+      </div>
+      <div id="ibUpload" class="notice soft hidden"></div>
+      <div id="ibList"></div>
+    </div>
+  </section>
+
+  <!-- ============================ one message ============================ -->
+  <section class="view" id="viewSource">
+    <div class="rhead"><div class="in">
+      <div class="rowa"><button class="linkbtn" id="srcBack">← INBOX</button><h2 id="srcTitle"></h2><span id="srcStatus"></span><button class="linkbtn hidden danger" id="srcDelete">Delete item</button></div>
+      <div class="sub" id="srcMeta"></div>
+      <div class="tabs">
+        <button data-tab="proposals" class="on">Proposals <span id="srcPropCount"></span></button>
+        <button data-tab="message">Message</button>
+        <button data-tab="documents">Documents <span id="srcDocCount"></span></button>
+        <button data-tab="filing">Filing</button>
+      </div>
+    </div></div>
+    <div class="wrap">
+      <div id="srcProposals"></div>
+      <div id="srcMessage" class="hidden"></div>
+      <div id="srcDocuments" class="hidden"></div>
+      <div id="srcFiling" class="hidden"></div>
+    </div>
+  </section>
+
+  <!-- ============================ contracts ============================ -->
+  <section class="view" id="viewContracts">
+    <div class="wrap">
+      <div class="pagehead">
+        <h2>All contracts</h2>
+        <button class="linkbtn" id="cExport">Export CSV</button>
+        <button class="pill primary sm" id="cNew">+ Add contract</button>
+      </div>
+      <div class="filters">
+        <input aria-label="Search contracts" type="search" id="cQ" placeholder="Search title, vendor, product, reference…" autocomplete="off">
+        <select id="cStatus" aria-label="Filter by contract status"><option value="">Any status</option><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
+        <label class="ck"><input type="checkbox" id="cDue"> decision within 60 days</label>
+        <label class="ck"><input type="checkbox" id="cIncomplete"> missing terms</label>
+        <label class="ck"><input type="checkbox" id="cArchived"> include archived</label>
+      </div>
+      <div id="cList"></div>
+    </div>
+  </section>
+
+  <!-- ============================ one contract (the record) ============================ -->
+  <section class="view" id="viewRecord">
+    <div class="rhead"><div class="in">
+      <div class="rowa">
+        <button class="linkbtn" id="rBack">← CONTRACTS</button>
+        <h2 id="rTitle"></h2>
+        <span id="rStatusTag"></span>
+        <button class="linkbtn hidden danger" id="rDelete">Delete record</button>
+        <button class="linkbtn hidden" id="rEdit">EDIT</button>
+        <button class="linkbtn hidden" id="rSetStatus">CHANGE STATUS</button>
+      </div>
+      <div class="sub" id="rSub"></div>
+      <div class="tabs">
+        <button data-tab="terms" class="on">Terms</button>
+        <button data-tab="proposals">Proposals <span id="rPropCount"></span></button>
+        <button data-tab="tasks">Tasks <span id="rTaskCount"></span></button>
+        <button data-tab="messages">Messages <span id="rSrcCount"></span></button>
+        <button data-tab="documents">Documents <span id="rDocCount"></span></button>
+        <button data-tab="seats">Seats</button>
+        <button data-tab="history">History</button>
+      </div>
+    </div></div>
+    <div class="wrap">
+      <div id="rTerms"></div>
+      <div id="rProposals" class="hidden"></div>
+      <div id="rTasks" class="hidden"></div>
+      <div id="rMessages" class="hidden"></div>
+      <div id="rDocuments" class="hidden"></div>
+      <div id="rSeats" class="hidden"></div>
+      <div id="rHistory" class="hidden"></div>
+    </div>
+  </section>
+
+  <!-- ============================ connection (staff; settings admins) ============================ -->
+  <section class="view" id="viewConn">
+    <div class="rhead"><div class="in">
+      <div class="rowa"><h2>Workspace tools</h2></div>
+      <div class="sub">Manage document intake, check AI access and keep your workspace running.</div>
+      <div class="tabs">
+        <button data-tab="status" class="on">Status</button>
+        <button data-tab="ai">AI</button>
+        <button data-tab="relay" class="hidden adm">Mail setup</button>
+        <button data-tab="settings" class="hidden adm">Settings</button>
+        <button data-tab="import" class="hidden spacewriter">Import</button>
+        <button data-tab="export">Export</button>
+        <button data-tab="log" class="hidden adm">Log</button>
+      </div>
+    </div></div>
+    <div class="wrap">
+      <div id="cnStatus"></div>
+      <div id="cnAi" class="hidden">
+        <div class="scard ai-connection-card">
+          <div class="ai-card-heading"><div><span class="eyebrow">CONNECTED THROUGH YOUR HUB</span><h3>AI connection</h3><p class="kv">Contracts uses your organisation’s provider and model. You do not need a separate API key here.</p></div><button class="pill outline" id="aiRefresh">Refresh connection</button></div>
+          <div id="aiConnection" aria-live="polite"></div>
+          <div class="status" id="aiActionStatus" role="status"></div>
+        </div>
+        <div class="scard">
+          <div class="ai-card-heading"><div><h3>Test the model</h3><p class="kv">Send one short, neutral example through the same connection used for document analysis. No contract text or personal data is sent. Each test uses one request from the daily AI budget.</p></div><button class="pill primary" id="aiTest" disabled>Test AI connection</button></div>
+          <div id="aiTestResult" aria-live="polite"></div>
+        </div>
+        <div class="scard"><h3>Where to change things</h3><p class="kv">A Hub owner manages the provider, model and API key in <a id="aiHubSettings" target="_blank" rel="noopener">Hub Settings → AI</a> and enables the AI lane under Apps → Contracts → Lanes. After a change, refresh the connection here. Contracts administrators can run the model test and adjust the daily budget under <a href="#/connection/settings">Settings</a>.</p><p class="kv">If a document failed earlier, open its Inbox details → Filing → <b>Read again with AI</b>. Your original stays attached. AI reads original PDF pages and images, including scans. Check its readings against the original; a connection test alone does not validate a particular document.</p></div>
+      </div>
+      <div id="cnRelay" class="hidden">
+        <div class="scard">
+          <h3>Connect the email relay</h3><p class="kv"><a href="#/mail-setup">Start here: Google Workspace setup, shared intake and recovery →</a></p>
+          <div class="kv">Mail reaches this app through a small relay that receives the contracts address, splits the message into text and files and hands it in here. Only the identities listed below may hand in mail. Add the relay's identity before you deploy it; remove it to rotate. The relay ships with this app under <span class="mono">contracts/relay/</span> — <a href="#/mail-setup">the setup guide</a> walks through the address, forwarding and identity.</div>
+          <label>Contracts address (what people put in CC)</label><input type="text" id="rlMailbox" placeholder="subscriptions@your-company.example">
+          <label>Relay identities (principals, one per line)</label><textarea id="rlPrincipals" rows="3" spellcheck="false" placeholder="aaaaa-bbbbb-…"></textarea>
+          <div class="btnrow"><button class="pill primary sm" id="rlSave">Save</button><span id="rlStatus" class="status"></span></div>
+        </div>
+        <div class="scard">
+          <h3>Without a relay</h3>
+          <div class="kv">Upload saved <span class="mono">.eml</span> files in the inbox (Gmail: ⋮ → Download message; Outlook: drag the message to the desktop). Same pipeline, same proposals — just by hand.</div>
+        </div>
+      </div>
+      <div id="cnSettings" class="hidden">
+        <div class="scard">
+          <h3>Hub connection</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p>
+
+          <div class="row"></div>
+          <div class="row"><div><label>Company name</label><input type="text" id="sOrg"></div><div><label>App address (deep links in notifications)</label><input type="text" id="sAppUrl" placeholder="https://…"></div></div>
+
+        </div>
+        <div class="scard">
+          <h3>Deadlines and reminders</h3>
+          <div class="kv">The internal decision date is set this many days before the last cancellation date. Reminders go out these many days before each date, through the hub (bell, and Slack if the person switched it on) — title and link only, never amounts.</div>
+          <div class="row"><div><label>Decide this many days before the cancellation date</label><input type="number" id="sLead" min="0" max="365"></div><div><label>Remind this many days before (comma-separated)</label><input type="text" id="sReminders" placeholder="30, 14, 7"></div></div>
+          <div class="row"><div><label>Time zone label</label><input type="text" id="sTz" placeholder="Europe/Zurich"></div><div><label>Offset from UTC in minutes (the zone is a label; daylight saving is not modelled)</label><input type="number" id="sTzOff" min="-840" max="840"></div></div>
+          <label>AI reads per day (budget)</label><input type="number" id="sAiBudget" min="0" max="100000">
+          <div class="btnrow"><button id="sSave" class="pill primary sm">Save</button><span id="sStatus" class="status"></span></div>
+          <div class="kv" id="sMeta" style="margin-top:10px"></div>
+        </div>
+        <div class="scard">
+          <h3>Sample data</h3>
+          <div class="kv">Six fictional contracts, one message in the inbox and a proposal to try the flow. Removable in one click.</div>
+          <div class="btnrow"><button id="sSeed" class="pill outline sm">ADD SAMPLE DATA</button><button id="sUnseed" class="pill outline sm">REMOVE SAMPLE DATA</button><span id="sSeedStatus" class="status"></span></div>
+        </div>
+      </div>
+      <div id="cnImport" class="hidden">
+        <div class="scard">
+          <h3>Import from a spreadsheet</h3>
+          <div class="kv">Export your sheet as CSV, paste it here (or pick the file), then say which column means what. You get a preview of every row before anything is written. Rows that match an existing contract (vendor + product + reference) are skipped, never overwritten. Amounts may be written the way your sheet writes them (1,500.00 · 1.500,00 · 1'500.50).</div>
+          <div class="row"><div class="w2"><label>CSV</label><textarea id="imCsv" rows="6" spellcheck="false" style="font-family:var(--ks-mono);font-size:12px" placeholder="Vendor;Product;Amount;Currency;Interval;Renews;Notice months;Owner e-mail"></textarea></div><div><label>Or a file</label><input type="file" id="imFile" accept=".csv,text/csv"><label>Delimiter</label><select id="imDelim"><option value="">detect</option><option value=",">comma</option><option value=";">semicolon</option><option value="&#9;">tab</option></select><label>Batch label</label><input type="text" id="imBatch" placeholder="sheet 2026-09"></div></div>
+          <div class="btnrow"><button class="pill outline sm" id="imHeaders">READ COLUMNS</button><span id="imStatus" class="status"></span></div>
+          <div id="imMap" style="margin-top:12px"></div>
+          <div class="btnrow"><button class="pill outline sm hidden" id="imPreview">Preview</button><button class="pill primary sm hidden" id="imCommit" disabled>Import</button></div>
+          <div id="imReport" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div id="cnExport" class="hidden">
+        <div class="scard">
+          <h3>Take your data with you</h3>
+          <div class="kv">CSV contains confirmed records visible to you in the selected workspace. Workspace JSON also includes the sources, proposals, document metadata, tasks and history you can access. It identifies the workspace but is not a complete instance backup or an automatic restore file. Download document files separately.</div>
+          <div class="btnrow"><button class="pill outline sm" id="exCsv">Export CSV</button><button class="pill outline sm" id="exAll">DOWNLOAD WORKSPACE JSON</button><span id="exStatus" class="status"></span></div>
+        </div>
+      </div>
+      <div id="cnLog" class="hidden"><div class="scard"><h3>Admin log</h3><div class="tblwrap"><table class="plain"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div></div></div>
+    </div>
+  </section>
+
+  <section class="view docs" id="viewMailSetup"><div class="wrap">
+    <div class="pagehead"><div><a class="back" href="#/docs">← Guide</a><h2>Bring your contracts inbox.</h2><p class="sub">Forward an email or keep the address in CC. Review the document in the same place as an upload.</p></div></div>
+    <div class="mail-flow"><span>Google Workspace<small>contracts@your-company</small></span><b>→</b><span>Email relay<small>Cloudflare Worker</small></span><b>→</b><span>Contract intake<small>Review → choose a space</small></span></div>
+    <div class="scard"><h3>Recommended: one shared, restricted intake space.</h3><p>Choose the built-in <b>Contract intake</b> workspace. Hub-assigned app admins can review and distribute its documents. Admins assigned to Contracts in Hub also have access. Connect the incoming mailbox to this space. Anyone can submit an email, but submitting does not grant access to the inbox. Personal uploads can go straight to your personal space.</p><p>During review, choose a destination you own. The email, attachments and suggestions move together. Moving an existing contract is available under its Access tab. App admins can also route into another person’s personal space.</p></div>
+    <div class="guide-answers">
+      <details open><summary>1. Create the Google Workspace address</summary><p>Use a private Google Group such as <b>contracts@your-company</b>, with conversation history enabled so a copy stays in Google. Restrict who can view conversations and members. Allow external posting if vendors will keep the address in CC; that does not require a public archive. Add the relay address as an external member with “Each email” delivery. Your Workspace administrator must allow external members.</p><p>A dedicated Gmail mailbox with an administrator-managed forwarding copy also works if you prefer mailbox retention and recovery. Avoid a forwarding-only alias with no retained copy.</p><a href="https://support.google.com/groups/answer/2464926?hl=en" target="_blank" rel="noopener">Google’s group settings guide ↗</a></details>
+      <details><summary>2. Receive on a separate Cloudflare subdomain</summary><p>For example, use <b>contracts@relay.kebabstack.com</b> for the forwarding destination. Enable Email Routing for that subdomain and route the exact address to the Contracts Email Worker. Keep the company domain’s existing Google MX records.</p><a href="https://developers.cloudflare.com/email-service/configuration/subdomains/" target="_blank" rel="noopener">Cloudflare’s subdomain setup ↗</a></details>
+      <details><summary>3. Trust the relay, then bind the intake space</summary><p>The operator generates a dedicated relay key and deploys the Worker using the downloadable runbook. Store its secret only in Cloudflare. In <a href="#/connection/relay">Workspace tools → Mail setup</a>, save the public address and the relay’s public principal.</p><p>Open Contract intake → Access &amp; mail setup. Connect the same principal. Both steps are required: infrastructure trust alone grants no access to a workspace. The sender, subject and email headers never choose the destination.</p></details>
+      <details><summary>4. Keep a recovery copy</summary><p>Configure a separate, verified fallback mailbox that a reviewer monitors. Do not point it back to contracts@ or the relay address. If parsing, attachment limits or storage fail, the complete original is forwarded there. If recovery also fails, the Worker rejects the delivery. This is not a guaranteed automatic retry queue; retain and check the Google copy.</p></details>
+      <details><summary>5. Test one complete round trip</summary><p>Send a harmless text PDF to the public address. Check that it appears in Contract intake, open its original, correct one extracted field and save to a destination. Forward the same email again: it should be recognised as a duplicate. Send a reply in the same thread and check its proposal. Finally, temporarily use an untrusted test relay identity to verify recovery delivery before relying on the mailbox.</p></details>
+      <details><summary>What can AI tell me about negotiation and signatures?</summary><p>AI reads the email and original pages, including scanned signature areas. It distinguishes signature requests, visible marks and reported completion, and flags uncertainty. A signature mark, typed name or filename is not verification of identity, a digital signature or legal finality.</p><p>Context includes the current email, its attachments, quoted text and up to four previously received messages referenced by its mail headers in the same workspace. It cannot read unseen emails or your personal mailbox. Once a contract moves, later mail still enters the shared intake space; choose a destination and use <b>Move document there for review</b>. Matching runs again inside that space without creating a duplicate contract; <b>Add to an existing contract</b> lets you choose the record manually. Both spaces must be owned by the reviewer. No automatic cross-space search exposes private contracts.</p></details>
+    </div><div class="btnrow"><a class="pill primary" href="./mail-relay-setup.md" download>Download technical runbook</a><a class="pill outline" href="#/connection/relay">Configure mail setup</a><a class="pill outline" href="#/add">Try a document upload first</a></div>
+  </div></section>
+  <!-- ============================ docs ============================ -->
+  <section class="view docs" id="viewDocs">
+    <div class="wrap">
+      <div class="today-hero"><div><span class="eyebrow">THE CONTRACTS GUIDE</span><h2>From a document to a decision.</h2><p>Upload a SaaS contract, confirm the essentials, and stay ahead of its next renewal.</p></div></div>
+      <div class="guide-grid">
+        <a class="scard" href="#/inbox"><span class="eyebrow">01 · COLLECT</span><h3>Add the original.</h3><p>Add a document, saved email or pasted text to Inbox. Everything goes into the workspace shown above.</p><span class="guide-link">Open inbox →</span></a>
+        <a class="scard" href="#/inbox"><span class="eyebrow">02 · REVIEW</span><h3>Keep a person in control.</h3><p>AI suggests details with source evidence. Check the fields, correct anything uncertain and save the changes you approve.</p><span class="guide-link">Review incoming items →</span></a>
+        <a class="scard" href="#/contracts"><span class="eyebrow">03 · MANAGE</span><h3>Make the record useful.</h3><p>Choose an owner and save the reviewed subscription. Uncheck active tracking for an offer or draft. Dates, costs and license holders appear in your SaaS table.</p><span class="guide-link">Open contracts →</span></a>
+      </div>
+      <div class="scard"><h3>No AI suggestion? You can still file it.</h3><p>Choose Add contract and upload the original. The review page lets you complete missing details and save the contract with its document in one step. In the inbox, use Review &amp; file for unfiled items; use Suggestions for updates to an existing contract. Rejecting a proposal preserves the original document; it does not accept or cancel an agreement.</p></div>
+      <div class="guide-answers">
+        <details open><summary>Who can see this workspace?</summary><p><b>Personal:</b> its owner and app admins. <b>Teamspace:</b> explicit members — owners manage access, editors maintain records and viewers read and export. Restricted records are limited to their named people and space owners, all within that space. Active Hub owners/admins and Hub-assigned Contracts Admins have access to all content and settings. Archived spaces remain readable but cannot be changed.</p><p>Keep a second owner on a teamspace. These are application access controls; hosting controllers and your configured AI provider are outside that boundary.</p></details>
+        <details><summary>What does AI read?</summary><p>With the Hub AI lane enabled, original PDFs and supported images go to your organisation’s configured AI provider for visual reading, alongside message context. This includes scanned pages, receipts and purchase screenshots. Text quotes are checked against extracted text; visual quotes are marked as AI readings for you to verify. Suggestions cannot sign, pay, renew or cancel anything.</p></details>
+        <details><summary>When will Slack remind us?</summary><p>Settings → Renewal reminders starts at 90 days before renewal or expiry, with 60/30/7-day follow-ups by default. Earlier cancellation deadlines are also checked 90 days ahead. Choose the owner, workspace owners, Hub admins/owners and optional groups. Recipients must already have contract access. The Hub notify lane, app URL, Slack bot and recipient DM preferences must be configured. Checks run every six hours after a fresh directory update.</p></details>
+        <details><summary>What do the cost totals mean?</summary><p>Annual run rate annualizes recorded active subscriptions. Historical accrual estimates costs across known dates and saved price changes, capped at today. Recorded invoices/receipts are separate and do not prove payment. Currencies and tax bases stay separate; missing values are disclosed. Open Management report, pick a year, then download CSV or print/save PDF.</p></details>
+        <details><summary>Can AI look up missing renewal terms?</summary><p>When terms are absent, AI can identify an official vendor page and read its public text. You can enter a direct URL. Source and retrieval time stay visible, and nothing is applied until you choose Use as a reviewed suggestion. Current public terms may differ from your agreement; blocked or unreadable pages leave values unknown.</p></details>
+        <details><summary>What about software keys and group assignments?</summary><p>License keys have a separate inventory with hidden values and audited reveal. Values are not sent to AI or included in ordinary exports. People and groups come from Hub. Group assignments keep the roster current without granting access to contracts or provisioning vendor accounts. Other employees cannot access unshared personal content; app admins can.</p></details>
+        <details><summary>How do emails reach a team?</summary><p><a href="#/mail-setup">Open the mail setup guide</a> for the Google Workspace and Cloudflare steps. A space owner connects a separately trusted relay identity to a dedicated incoming address. CC that address or forward a thread there. This requires a configured relay; an address alone does not receive messages. Deduplication and matching remain inside the workspace. Matching routine invoices can be filed automatically; material changes need review.</p></details>
+        <details><summary>Can I delete documents or records?</summary><p>Use <b>Delete item</b> on an inbox document or <b>Delete record</b> on a saved record. It moves to <a href="#/trash">Trash</a> in the same workspace and can be restored. Deleting a record also hides its linked originals and stops its reminders. No file is permanently erased. Workspace permissions still apply.</p></details>
+        <details><summary>What if a colleague changes the same contract?</summary><p>Saves check the record’s revision. If someone changed it while you were reviewing, reload and compare before saving. Decisions, source evidence and record history stay available.</p></details>
+        <details><summary>How do I import or export records?</summary><p>Settings → Import &amp; export accepts mapped CSV rows with a preview before writing. Existing records are not overwritten. CSV export protects against spreadsheet formulas. Workspace JSON includes visible records and metadata; download document files separately. Older records may be in Existing contracts, with their previous access preserved.</p></details>
+        <details><summary>What limits should I know?</summary><p>Files: up to 1.5 MB each, 10 per message. Keep originals below 1.4 MB for AI reading; larger files may need compression because encoded requests have a separate limit. PDF, PNG, JPEG, WebP and GIF use the Hub vision model, or its main model if no separate one is set. That model must support the file type. Original PDFs are sent complete; supplementary text is bounded. Encrypted, damaged or unreadable documents can still require a clearer copy. Review small print, dates and signature pages. An app admin configures the daily AI budget. Reminders use a fixed UTC offset; daylight-saving changes are not automatic.</p></details>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- edit contract drawer -->
+<div class="drawer" id="editDrawer">
+  <div class="dhead"><b style="font-family:var(--ks-ui);font-size:15px" id="edTitle">Contract</b><span style="flex:1"></span><button class="linkbtn" id="edClose">Close</button></div>
+  <div class="dbody">
+    <label>Title</label><input type="text" id="edTitleIn" maxlength="200">
+    <div class="row"><div><label>Counterparty / vendor</label><input type="text" id="edVendor" maxlength="200"></div><div><label>Agreement / product / plan</label><input type="text" id="edProduct" maxlength="200"></div></div>
+    <label>Reference (as written on the agreement)</label><input type="text" id="edRef" maxlength="120">
+    <label>Responsible person</label>
+    <div class="pick"><input type="text" id="edRespIn" placeholder="Search the directory…" autocomplete="off"><div class="list hidden" id="edRespList"></div></div>
+    <div class="chips" id="edRespChip"></div>
+    <label>Deputy (a member of this workspace)</label>
+    <div class="pick"><input type="text" id="edDepIn" placeholder="Search the directory, or type group:name" autocomplete="off"><div class="list hidden" id="edDepList"></div></div>
+    <div class="chips" id="edDepChip"></div>
+    <label>Who may see it</label>
+    <select id="edVis"><option value="team">Workspace — all members of this space</option><option value="restricted">Restricted — named people and space owners</option></select>
+    <label>Viewers</label>
+    <div class="pick"><input type="text" id="edViewIn" placeholder="Add a viewer…" autocomplete="off"><div class="list hidden" id="edViewList"></div></div>
+    <div class="chips" id="edViewChips"></div>
+    <div class="row"><div><label>Seats bought</label><input type="number" id="edSeats" min="0"></div><div><label>Tags (comma-separated)</label><input type="text" id="edTags"></div></div>
+    <div class="btnrow"><button class="pill primary sm" id="edSave">Save</button><span id="edStatus" class="status"></span></div>
+  </div>
+</div>
+
+<!-- terms drawer -->
+<div class="drawer" id="termsDrawer">
+  <div class="dhead"><b style="font-family:var(--ks-ui);font-size:15px" id="tdTitle">Terms</b><span style="flex:1"></span><button class="linkbtn" id="tdClose">Close</button></div>
+  <div class="dbody">
+    <div class="kv" id="tdHint">What you know for sure. Leave a field empty when you do not know — the record will show it as missing rather than guess.</div>
+    <div class="row"><div><label>Amount</label><input type="text" id="tdAmount" placeholder="1500.00" inputmode="decimal"></div><div><label>Currency</label><input type="text" id="tdCurrency" maxlength="3" placeholder="EUR"></div><div><label>Tax basis</label><select id="tdTax"><option value="unknown">unknown</option><option value="net">net</option><option value="gross">gross</option></select></div></div>
+    <div class="row"><div><label>Billed</label><select id="tdInterval"><option value="">unknown</option><option value="month">monthly</option><option value="quarter">quarterly</option><option value="year">yearly</option><option value="once">once</option><option value="other">other</option><option value="none">no payment</option></select></div><div><label>Quantity (units)</label><input type="number" id="tdQty" min="0"></div><div><label>Unit price</label><input type="text" id="tdUnit" placeholder="12.50" inputmode="decimal"></div></div>
+    <div class="row"><div><label>Start</label><input type="date" id="tdStart"></div><div><label>End</label><input type="date" id="tdEnd"></div></div>
+    <div class="row"><div><label>Renewal</label><select id="tdRenewal"><option value="">unknown</option><option value="auto">renews automatically</option><option value="manual">renews only if we act</option><option value="none">does not renew</option><option value="indefinite">no fixed expiry</option></select></div><div><label>Renewal date</label><input type="date" id="tdRenewalDate"></div></div>
+    <div class="row"><div><label>Notice period — months</label><input type="number" id="tdNoticeM" min="0" max="60"></div><div><label>… or days</label><input type="number" id="tdNoticeD" min="0" max="3660"></div><div><label>Last cancellation date (if stated)</label><input type="date" id="tdNoticeDate"></div></div>
+    <label>Note</label><textarea id="tdNote" rows="3" maxlength="4000"></textarea>
+    <label>Why (goes into the history)</label><input type="text" id="tdWhy" maxlength="300" placeholder="e.g. from the signed order form">
+    <div class="btnrow"><button class="pill primary sm" id="tdSave">Save</button><button class="pill outline sm hidden" id="tdClear">CLEAR FUTURE TERMS</button><span id="tdStatus" class="status"></span></div>
+  </div>
+</div>
+
+<!-- paste-a-message modal -->
+<div class="modal" id="pasteModal"><div class="mbox" style="max-width:620px">
+  <div class="tt">Paste text</div>
+  <div class="kv">For a message you cannot forward or save: paste the text. It goes through the same pipeline as mail.</div>
+  <div class="row"><div><label>From (address)</label><input type="text" id="pmFrom" placeholder="billing@vendor.example"></div><div><label>Sent (date)</label><input type="date" id="pmDate"></div></div>
+  <label>Subject</label><input type="text" id="pmSubject" maxlength="500">
+  <label>Text</label><textarea id="pmText" rows="10" spellcheck="false"></textarea>
+  <div class="ta"><button class="pill primary sm" id="pmSend">HAND IN</button><button class="pill outline sm" id="pmCancel">Cancel</button><span id="pmStatus" class="status"></span></div>
+</div></div>
+
+<!-- generic small modals -->
+<div class="modal" id="statusModal"><div class="mbox">
+  <div class="tt">CHANGE THE CONTRACT STATUS</div>
+  <div class="kv">Your decision, not the AI's. "End confirmed" needs an end date on the record; "ended" is for a date that has passed.</div>
+  <label>New status</label><select id="stSel"><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
+  <label>Why (history)</label><input type="text" id="stNote" maxlength="300">
+  <div class="ta"><button class="pill primary sm" id="stSave">Save</button><button class="pill outline sm" id="stCancel">Cancel</button><span id="stStatus" class="status"></span></div>
+</div></div>
+
+<div class="modal" id="taskModal"><div class="mbox">
+  <div class="tt" id="tkTitle">NEW TASK</div>
+  <label>What needs doing</label><input type="text" id="tkText" maxlength="300">
+  <label>Due (optional)</label><input type="date" id="tkDue">
+  <label>Assign to</label>
+  <div class="pick"><input type="text" id="tkAssIn" placeholder="Search the directory…" autocomplete="off"><div class="list hidden" id="tkAssList"></div></div>
+  <div class="chips" id="tkAssChip"></div>
+  <div class="ta"><button class="pill primary sm" id="tkSave">Add</button><button class="pill outline sm" id="tkCancel">Cancel</button><span id="tkStatus" class="status"></span></div>
+</div></div>
+
+<div class="modal" id="doneModal"><div class="mbox">
+  <div class="tt" id="dnTitle">DONE</div>
+  <div id="dnDecision"><label>What was decided?</label><select id="dnSel"><option value="continue">Continue — keep the contract</option><option value="cancel">Cancel — start the cancellation</option><option value="">Just mark it done</option></select></div>
+  <label>Note (history)</label><input type="text" id="dnNote" maxlength="300">
+  <div class="ta"><button class="pill primary sm" id="dnSave">Save</button><button class="pill outline sm" id="dnCancel">Cancel</button><span id="dnStatus" class="status"></span></div>
+</div></div>
+
+<div class="modal" id="snoozeModal"><div class="mbox">
+  <div class="tt">REMIND ME LATER</div>
+  <div class="kv">Only when this shows up again changes — the deadline itself does not move.</div>
+  <label>Show again in</label><select id="snSel"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
+  <div class="ta"><button class="pill primary sm" id="snSave">SNOOZE</button><button class="pill outline sm" id="snCancel">Cancel</button><span id="snStatus" class="status"></span></div>
+</div></div>
+
+<div class="modal" id="pickPersonModal"><div class="mbox">
+  <div class="tt" id="ppTitle">HAND TO A COLLEAGUE</div>
+  <div class="pick"><input type="text" id="ppIn" placeholder="Search the directory…" autocomplete="off"><div class="list hidden" id="ppList"></div></div>
+  <div class="chips" id="ppChip"></div>
+  <div class="ta"><button class="pill primary sm" id="ppSave">Save</button><button class="pill outline sm" id="ppCancel">Cancel</button><span id="ppStatus" class="status"></span></div>
+</div></div>
+
+<div class="modal" id="proposeModal"><div class="mbox" style="max-width:560px">
+  <div class="tt">PROPOSE A CHANGE</div>
+  <div class="kv">Goes through the same confirmation as a proposal from mail — useful when you know something the record does not.</div>
+  <div id="prRows"></div>
+  <button class="linkbtn" id="prAdd" style="margin-top:8px">+ ANOTHER FIELD</button>
+  <label>Summary</label><input type="text" id="prSummary" maxlength="400" placeholder="e.g. vendor confirmed the new price on the phone">
+  <div class="ta"><button class="pill primary sm" id="prSave">PROPOSE</button><button class="pill outline sm" id="prCancel">Cancel</button><span id="prStatus" class="status"></span></div>
+</div></div>
+
+<div class="modal" id="linkModal"><div class="mbox" style="max-width:560px">
+  <div class="tt">FILE THIS MESSAGE TO A CONTRACT</div>
+  <div class="pick"><input type="text" id="lkIn" placeholder="Search contracts…" autocomplete="off"><div class="list hidden" id="lkList"></div></div>
+  <div class="chips" id="lkChip"></div>
+  <label class="ck" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font:400 14px var(--ks-ui);margin-top:14px"><input type="checkbox" id="lkRule"> Remember: mail from this sender belongs to this contract</label>
+  <div class="ta"><button class="pill primary sm" id="lkSave">FILE</button><button class="pill outline sm" id="lkUnlink">UNLINK</button><button class="pill outline sm" id="lkCancel">Cancel</button><span id="lkStatus" class="status"></span></div>
+</div></div>
+
+<div class="modal" id="textModal"><div class="mbox" style="max-width:760px">
+  <div class="tt" id="txTitle">TEXT</div>
+  <div class="msgtext" id="txBody"></div>
+  <div class="ta"><button class="pill outline sm" id="txClose">Close</button></div>
+</div></div>
+
+<div class="modal" id="confirmModal"><div class="mbox">
+  <div class="tt" id="cmText"></div>
+  <div class="ta"><button class="pill primary sm" id="cmYes">CONFIRM</button><button class="pill outline sm" id="cmNo">Cancel</button></div>
+</div></div>
+
+<div id="toast"></div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

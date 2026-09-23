@@ -1,0 +1,5 @@
+
+# Upstream vendor code and SDK bundle contain intentional whitespace in literals.
+bug/dist/vendor/** -whitespace
+bug/dist/client-api.js -whitespace
+bug/src/generated/* -whitespace

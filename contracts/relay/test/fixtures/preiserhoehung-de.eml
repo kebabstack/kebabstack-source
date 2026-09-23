@@ -1,0 +1,15 @@
+From: Anna Beispiel <anna.beispiel@acme.example>
+To: subscriptions@relay.acme.example
+Message-ID: <fwd-77@acme.example>
+In-Reply-To: <orig-77@nimbus.example>
+References: <orig-76@nimbus.example> <orig-77@nimbus.example>
+Date: Wed, 02 Sep 2026 09:15:00 +0200
+Subject: Fwd: Preisanpassung Nimbus Pro ab 1. Januar
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<div>Zur Ablage =E2=80=93 der neue Preis gilt ab Januar.</div><br>
+<div>---------- Forwarded message ----------<br>From: Nimbus Billing &lt;billing@nimbus.example&gt;<br>Date: Mon, 31 Aug 2026<br>Subject: Preisanpassung Nimbus Pro</div>
+<p>Guten Tag,</p><p>ab dem 01.01.2027 kostet Nimbus Pro <b>EUR 1.200,00</b> pro Jahr (zzgl. MwSt.). K=C3=BCndigungsfrist: 3 Monate zum Vertragsende. Der Vertrag verl=C3=A4ngert sich automatisch um ein Jahr.</p>
+<p>Freundliche Gr=C3=BC=C3=9Fe<br>Nimbus Billing</p>

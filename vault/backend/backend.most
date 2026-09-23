@@ -1,0 +1,54 @@
+// Version: 1.0.0
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LogRow__410755882 = {at : Int; ok : Bool; what : Text; who : Text};
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Note__185454894 = {at : Int; by : Text; kind : Text; note : Text};
+type Schedule__873434431 =
+  {
+    atHourUtc : Nat;
+    enabled : Bool;
+    everyHours : Nat;
+    keep : Nat;
+    lastResult : Text;
+    lastRun : Int
+  };
+type Target__958983841 =
+  {addedAt : Int; canisterId : Text; kind : Text; name : Text};
+actor {
+  stable H : Int;
+  stable busy :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable var hubId : Text;
+  stable journal :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable var kitchenId : Text;
+  stable var nextLog : Nat;
+  stable ownerCache :
+    {var root : Node__430031793<Principal, Int>; var size : Nat__58649523};
+  stable var schedBusy : Int;
+  stable schedules :
+    {
+      var root : Node__430031793<Text, Schedule__873434431>;
+      var size : Nat__58649523
+    };
+  stable var setBy : ?Principal;
+  stable snapNotes :
+    {
+      var root : Node__430031793<Text, Note__185454894>;
+      var size : Nat__58649523
+    };
+  stable targets :
+    {
+      var root : Node__430031793<Text, Target__958983841>;
+      var size : Nat__58649523
+    }
+};

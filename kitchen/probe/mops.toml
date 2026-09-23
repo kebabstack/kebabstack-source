@@ -1,0 +1,16 @@
+[package]
+name = "kebabstack-kitchen-probe"
+version = "0.0.1"
+description = "feasibility probe: can an engine canister create, install, stop and delete another canister?"
+
+[toolchain]
+moc = "1.12.0"
+
+[dependencies]
+core = "2.6.1"
+
+[canisters.backend]
+main = "backend/main.mo"
+
+[build]
+outputDir = "backend/dist"

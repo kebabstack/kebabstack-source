@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workspace setup · Kebabstack</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { margin: 0; background: var(--ks-bg); color: var(--ks-fg); font: 400 15px/1.55 var(--ks-ui); }
+  main { max-width: 640px; margin: 8vh auto; padding: 0 22px; }
+  h1 { font: 400 34px/1.15 var(--ks-display); letter-spacing: -.015em; margin: 8px 0 6px; }
+  h1 em { font-style: italic; color: var(--ks-accent); }
+  .eye { font: 500 11px var(--ks-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--ks-fg-muted); }
+  .card { background: var(--ks-bg-card); border: 1px solid var(--ks-rule); border-radius: 14px; padding: 20px 22px; margin: 18px 0; }
+  .kv { color: var(--ks-fg-secondary); font-size: 14px; line-height: 1.6; }
+  button { font: 500 13px var(--ks-ui); letter-spacing: .04em; text-transform: uppercase; padding: 11px 22px; border-radius: 999px; border: 1px solid var(--ks-rule-strong); background: transparent; color: var(--ks-fg); cursor: pointer; }
+  button.primary { background: var(--ks-accent); border-color: var(--ks-accent); color: var(--ks-on-accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { font: 400 12px var(--ks-mono); margin-top: 10px; color: var(--ks-fg-secondary); min-height: 16px; }
+  .status.err { color: var(--ks-accent); } .status.ok { color: var(--ks-indicator-teal); }
+  .step { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-top: 1px solid var(--ks-rule); font-size: 14px; }
+  .step:first-child { border-top: 0; }
+  .step .m { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 500 11px var(--ks-mono); flex: 0 0 auto; border: 1.5px solid var(--ks-rule-strong); color: var(--ks-fg-muted); }
+  .step.ok .m { background: var(--ks-success-bg); border-color: var(--ks-success); color: var(--ks-success); }
+  .step.fail .m { background: var(--ks-danger-bg); border-color: var(--ks-danger); color: var(--ks-danger); }
+  .step.run .m { border-color: var(--ks-accent); color: var(--ks-accent); animation: pulse 1s infinite; }
+  .step.skip { opacity: .5; }
+  .step .d { color: var(--ks-fg-muted); font-size: 12px; overflow-wrap: anywhere; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  .code { font: 500 15px var(--ks-mono); letter-spacing: .04em; background: var(--ks-bg-sunk); border: 1px dashed var(--ks-rule-strong); border-radius: 10px; padding: 12px 14px; overflow-wrap: anywhere; user-select: all; }
+  a { color: var(--ks-accent); }
+  .hidden { display: none !important; }
+  .skewer { font-size: 40px; line-height: 1; }
+</style>
+<link rel="stylesheet" href="./components.css">
+</head>
+<body class="ks-workspace">
+<main>
+  <div class="skewer"><img src="favicon.svg" width="40" height="40" alt=""></div>
+  <div class="eye">Kebabstack · Workspace setup</div>
+  <h1 id="title">Set up your workspace</h1>
+  <p class="kv" id="lead">Create your company Hub and backup service on this Cloud Engine. Follow setup here, then use the one-time claim code to become the Hub owner.</p>
+
+  <div class="card hidden" id="cardAlready">
+    <b>This workspace is already set up.</b>
+    <div class="kv" style="margin-top:6px">Hub owners manage software under Hub → Apps → Add app or Updates. <span id="alreadyLink"></span></div>
+  </div>
+
+  <div class="card" id="cardCook">
+    <div class="kv" style="margin-bottom:12px"><b>1 · Sign in</b> with Internet Identity. Use the same identity to recover setup progress and claim your Hub.</div>
+    <button id="signin" class="primary">Sign in</button>
+    <span id="who" class="status" style="display:inline-block;margin-left:12px"></span>
+    <div class="kv" style="margin:18px 0 12px"><b>2 · Enter your setup code.</b> The installer gives you this private, one-time code.</div>
+    <label for="setupCode">Setup code</label>
+    <input id="setupCode" type="password" autocomplete="off" spellcheck="false" maxlength="128" style="box-sizing:border-box;width:100%;padding:12px;margin:8px 0 16px;background:var(--ks-bg);color:var(--ks-fg);border:1px solid var(--ks-rule-strong);border-radius:8px">
+    <div class="kv" style="margin:0 0 12px"><b>3 · Create the workspace.</b> This creates the Hub and Vault services and connects them.</div>
+    <button id="cook" disabled>Create workspace</button>
+    <div id="status" class="status"></div>
+    <div id="steps" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card hidden" id="cardDone">
+    <b>Your hub is ready.</b>
+    <div class="kv" style="margin:8px 0 10px">Open it, sign in with the same identity, and claim it with this code. The code works once; whoever holds it becomes the owner — copy it now, sign in here again to recover it until the hub is claimed.</div>
+    <div class="code" id="claimCode"></div>
+    <div style="margin-top:14px"><a id="openHub" href="#"><button class="primary">Open your hub →</button></a></div>
+  </div>
+
+  <div class="card hidden" id="cardFail">
+    <b>Setup needs attention.</b>
+    <div class="kv" style="margin-top:6px">Review the failed step and keep its details. Reload and sign in with the same identity to recover progress. Before starting again, ask the operator to inspect any services already created; do not delete them without checking for company data.</div>
+  </div>
+
+  <p class="kv" style="margin-top:28px;font-size:12px">Release catalogue: <a href="recipes/index.json">recipes/index.json</a> · Update service <span id="kid" class="mono"></span></p>
+</main>
+
+<script type="module">
+import { HttpAgent, Actor, AuthClient } from "./agent-bundle.js";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const setStatus = (cls, t) => { const el = $("status"); el.className = "status " + cls; el.textContent = t; };
+const idl = ({ IDL }) => {
+  const Step = IDL.Record({ detail: IDL.Text, name: IDL.Text, status: IDL.Text });
+  const Install = IDL.Record({ adopted: IDL.Bool, backend: IDL.Text, connectorId: IDL.Nat, frontend: IDL.Text, installedAt: IDL.Int, recipeId: IDL.Text, state: IDL.Text, tileId: IDL.Nat, updatedAt: IDL.Int, version: IDL.Text });
+  const RecipeView = IDL.Record({ backendSize: IDL.Nat, canUpdate: IDL.Bool, description: IDL.Text, detail: IDL.Text, downgrade: IDL.Bool, files: IDL.Nat, frontendMatches: IDL.Opt(IDL.Bool), icon: IDL.Text, id: IDL.Text, image: IDL.Text, installed: IDL.Opt(Install), kind: IDL.Text, name: IDL.Text, notes: IDL.Text, releaseId: IDL.Text, runningSha: IDL.Text, runningVersion: IDL.Text, sourceCommit: IDL.Text, state: IDL.Text, upToDate: IDL.Opt(IDL.Bool), version: IDL.Text });
+  const LogRow = IDL.Record({ at: IDL.Int, ok: IDL.Bool, what: IDL.Text, who: IDL.Text });
+  const Job = IDL.Record({ by: IDL.Text, endedAt: IDL.Int, id: IDL.Nat, kind: IDL.Text, recipeId: IDL.Text, startedAt: IDL.Int, state: IDL.Text, steps: IDL.Vec(Step), version: IDL.Text });
+  return IDL.Service({
+    adopt: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    applyRelease: IDL.Func([IDL.Record({ id: IDL.Text, install: IDL.Bool, releaseId: IDL.Text })], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
+    checkForUpdates: IDL.Func([], [IDL.Vec(RecipeView)], []),
+    cook: IDL.Func([], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
+    cookResult: IDL.Func([], [IDL.Opt(IDL.Record({ claimCode: IDL.Text, hubUrl: IDL.Text, jobId: IDL.Nat }))], []),
+    cookWithCode: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
+    forget: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    hubStatus: IDL.Func([], [IDL.Record({ detail: IDL.Text, frontendId: IDL.Text, hubBackend: IDL.Bool, hubFrontend: IDL.Bool, hubId: IDL.Text, vault: IDL.Bool, vaultId: IDL.Text })], []),
+    info: IDL.Func([], [IDL.Record({ hubId: IDL.Text, installed: IDL.Nat, me: IDL.Text, pantryId: IDL.Text, version: IDL.Text })], []),
+    install: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
+    job: IDL.Func([IDL.Nat], [IDL.Opt(Job)], ["query"]),
+    listInstalled: IDL.Func([], [IDL.Vec(Install)], []),
+    listJobs: IDL.Func([], [IDL.Vec(Job)], []),
+    listJournal: IDL.Func([], [IDL.Vec(LogRow)], []),
+    myCook: IDL.Func([], [IDL.Opt(Job)], ["query"]),
+    recipes: IDL.Func([], [IDL.Vec(RecipeView)], []),
+    refresh: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
+    removeLeftovers: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setHub: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setPantry: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    update: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
+    updateHub: IDL.Func([], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
+    verifyInstalled: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
+  });
+};
+// the asset canister tells the browser its sibling canister ids via the ic_env cookie
+function kitchenId() {
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)ic_env=([^;]+)/);
+    if (!m) return "";
+    const env = Object.fromEntries(decodeURIComponent(m[1]).split("&").map((kv) => kv.split("=")));
+    const id = env["PUBLIC_CANISTER_ID:backend"] || "";
+    return /^[a-z0-9-]{5,63}$/.test(id) ? id : "";
+  } catch (e) { return ""; }
+}
+const KID = kitchenId();
+$("kid").textContent = KID ? KID + " · compare with the backend id your deploy printed" : "unknown — the ic_env cookie is missing or malformed";
+const HOST = "https://icp0.io", II = "https://identity.internetcomputer.org";
+let authClient, kitchen, anon;
+const paintSteps = (j) => { $("steps").innerHTML = j.steps.map((s) => `<div class="step ${s.status}"><div class="m">${s.status === "ok" ? "✓" : s.status === "fail" ? "✗" : s.status === "run" ? "●" : s.status === "skip" ? "–" : ""}</div><div><div>${esc(s.name)}</div>${s.detail ? `<div class="d">${esc(s.detail)}</div>` : ""}</div></div>`).join(""); };
+async function boot() {
+  if (!KID) { setStatus("err", "cannot find the kitchen canister id"); return; }
+  anon = Actor.createActor(idl, { agent: await HttpAgent.create({ host: HOST }), canisterId: KID });
+  try {
+    const i = await anon.info();
+    if (i.hubId) { $("cardCook").classList.add("hidden"); $("cardAlready").classList.remove("hidden"); $("title").innerHTML = "Your workspace is set up"; $("lead").textContent = "Manage apps and updates from your Hub. Sign in here only to recover an unclaimed workspace."; $("alreadyLink").textContent = "Hub backend: " + i.hubId; $("cardCook").classList.remove("hidden"); $("cook").hidden = true; $("setupCode").disabled = true; }
+  } catch (e) { setStatus("err", "kitchen did not answer: " + String(e?.message || e).slice(0, 200)); }
+  authClient = await AuthClient.create({ idleOptions: { disableIdle: true, disableDefaultIdleCallback: true } });
+  if (await authClient.isAuthenticated()) await afterLogin();
+}
+async function afterLogin() {
+  const identity = authClient.getIdentity();
+  kitchen = Actor.createActor(idl, { agent: await HttpAgent.create({ host: HOST, identity }), canisterId: KID });
+  $("who").textContent = "signed in · " + identity.getPrincipal().toText().slice(0, 12) + "…";
+  $("signin").textContent = "Signed in"; $("signin").disabled = true;
+  $("cook").disabled = false;
+  // a cook may already be running or done for this key
+  try { const r = await kitchen.cookResult(); if (r.length) return showDone(r[0]); const jobs = await kitchen.myCook(); if (jobs.length) { $("cook").disabled = true; watchJob(jobs[0].id); } } catch (e) { setStatus("err", "Could not recover setup progress. Reload and sign in with the same login."); }
+}
+function showDone(r) {
+  $("cardDone").classList.remove("hidden");
+  $("claimCode").textContent = r.claimCode;
+  $("openHub").href = r.hubUrl + "/#claim=" + encodeURIComponent(r.claimCode); // fragment: never sent to the gateway, never in a Referer
+  $("cook").disabled = true;
+}
+$("signin").onclick = async () => {
+  if (!authClient) { setStatus("err", "Setup is not ready. Check the connection and reload."); return; }
+  await authClient.login({ identityProvider: II, maxTimeToLive: BigInt(8) * BigInt(3600) * BigInt(1e9), onSuccess: afterLogin, onError: (e) => setStatus("err", "sign-in failed: " + e) });
+};
+$("cook").onclick = async () => {
+  if (!$("setupCode").value.trim()) { setStatus("err", "Enter the setup code from your installer."); $("setupCode").focus(); return; }
+  if (!confirm("Create the workspace now? This creates three services on this Cloud Engine: Vault and the Hub backend and frontend.")) return;
+  $("cook").disabled = true; setStatus("", "starting…");
+  let r; try { r = await kitchen.cookWithCode($("setupCode").value.trim()); } catch (e) { setStatus("err", String(e?.message || e).replace(/\s+/g, " ").slice(0, 300)); $("cook").disabled = false; return; }
+  if (!r.ok) { setStatus("err", r.detail); $("cook").disabled = !!r.jobId; if (!r.jobId) return; }
+  $("setupCode").value = "";
+  watchJob(r.jobId);
+};
+let jobTimer;
+function watchJob(jobId) {
+  clearInterval(jobTimer);
+  const tick = async () => {
+    let j; try { j = (await kitchen.job(jobId))[0]; } catch (e) { setStatus("err", "Progress unavailable; the job may still be running. Reconnecting…"); return; }
+    if (!j) { setStatus("err", "This login cannot read the job. Use the login that started setup."); return; }
+    paintSteps(j);
+    setStatus("", j.state === "running" ? "Setting up… " + j.steps.filter((s) => s.status === "ok").length + "/" + j.steps.length : j.state);
+    if (j.state !== "running") {
+      clearInterval(jobTimer);
+      if (j.state === "done") { setStatus("ok", "done"); try { const res = await kitchen.cookResult(); if (res.length) showDone(res[0]); } catch (e) { setStatus("err", "Setup completed, but the result could not be read. Reload and sign in with the same login."); } }
+      else { setStatus("err", "Setup failed. Check the failed step and the cleanup instructions before retrying."); $("cardFail").classList.remove("hidden"); }
+    }
+  };
+  jobTimer = setInterval(tick, 2500);
+  void tick();
+}
+boot().catch((e) => setStatus("err", "Setup could not load. Check the connection and reload."));
+</script>
+</body>
+</html>

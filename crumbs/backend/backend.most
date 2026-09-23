@@ -1,0 +1,797 @@
+// Version: 4.0.0
+type Annotation__1014690721 = {at : Int; id : Text; site : Text; text : Text};
+type Annotation__19875784 = {at : Int; id : Text; site : Text; text : Text};
+type Annotation__613749860 = {at : Int; id : Text; site : Text; text : Text};
+type Annotation__737002811 = {at : Int; id : Text; site : Text; text : Text};
+type Annotation__753185763 = {at : Int; id : Text; site : Text; text : Text};
+type AuthState__1072497336 =
+  {
+    former : Map__386906547<Text, ConnectorUser__15258638>;
+    var hubId : Text;
+    ids : Map__386906547<Text, Text>;
+    people : Map__386906547<Text, ConnectorUser__15258638>;
+    sessions : Map__386906547<Text, Session__612294603>
+  };
+type AuthState__696926349 =
+  {
+    former : Map__386906547<Text, ConnectorUser__329763049>;
+    var hubId : Text;
+    ids : Map__386906547<Text, Text>;
+    people : Map__386906547<Text, ConnectorUser__329763049>;
+    sessions : Map__386906547<Text, Session__444262170>
+  };
+type AuthState__936255464 =
+  {
+    former : Map__386906547<Text, ConnectorUser__225755258>;
+    var hubId : Text;
+    ids : Map__386906547<Text, Text>;
+    people : Map__386906547<Text, ConnectorUser__225755258>;
+    sessions : Map__386906547<Text, Session__119220203>
+  };
+type AuthState__995508229 =
+  {
+    former : Map__386906547<Text, ConnectorUser__846023430>;
+    var hubId : Text;
+    ids : Map__386906547<Text, Text>;
+    people : Map__386906547<Text, ConnectorUser__846023430>;
+    sessions : Map__386906547<Text, Session__774255560>
+  };
+type Connection__352119751 =
+  {clientId : Text; property : Text; revision : Nat};
+type Connection__823373405 =
+  {clientId : Text; property : Text; revision : Nat};
+type ConnectorUser__15258638 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type ConnectorUser__225755258 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type ConnectorUser__329763049 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type ConnectorUser__846023430 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Event__1006284416 =
+  {
+    at : Int;
+    browser : Text;
+    campaign : Text;
+    city : Text;
+    content : Text;
+    country : Text;
+    currency : Text;
+    device : Text;
+    engagementMs : Nat;
+    hostname : Text;
+    id : Text;
+    interactive : Bool;
+    kind : {#engagement; #event; #pageview};
+    medium : Text;
+    name : Text;
+    order : Nat;
+    os : Text;
+    path : Text;
+    props : [(Text, Text)];
+    region : Text;
+    revenueMinor : Int;
+    scrollDepth : Nat;
+    site : Text;
+    source : Text;
+    term : Text;
+    visitor : Text
+  };
+type Event__474180632 =
+  {
+    at : Int;
+    browser : Text;
+    campaign : Text;
+    city : Text;
+    content : Text;
+    country : Text;
+    currency : Text;
+    device : Text;
+    engagementMs : Nat;
+    hostname : Text;
+    id : Text;
+    interactive : Bool;
+    kind : {#engagement; #event; #pageview};
+    medium : Text;
+    name : Text;
+    order : Nat;
+    os : Text;
+    path : Text;
+    props : [(Text, Text)];
+    region : Text;
+    revenueMinor : Int;
+    scrollDepth : Nat;
+    site : Text;
+    source : Text;
+    term : Text;
+    visitor : Text
+  };
+type Event__622283357 =
+  {
+    at : Int;
+    browser : Text;
+    campaign : Text;
+    city : Text;
+    content : Text;
+    country : Text;
+    currency : Text;
+    device : Text;
+    engagementMs : Nat;
+    hostname : Text;
+    id : Text;
+    interactive : Bool;
+    kind : {#engagement; #event; #pageview};
+    medium : Text;
+    name : Text;
+    order : Nat;
+    os : Text;
+    path : Text;
+    props : [(Text, Text)];
+    region : Text;
+    revenueMinor : Int;
+    scrollDepth : Nat;
+    site : Text;
+    source : Text;
+    term : Text;
+    visitor : Text
+  };
+type Event__639904380 =
+  {
+    at : Int;
+    browser : Text;
+    campaign : Text;
+    city : Text;
+    content : Text;
+    country : Text;
+    currency : Text;
+    device : Text;
+    engagementMs : Nat;
+    hostname : Text;
+    id : Text;
+    interactive : Bool;
+    kind : {#engagement; #event; #pageview};
+    medium : Text;
+    name : Text;
+    order : Nat;
+    os : Text;
+    path : Text;
+    props : [(Text, Text)];
+    region : Text;
+    revenueMinor : Int;
+    scrollDepth : Nat;
+    site : Text;
+    source : Text;
+    term : Text;
+    visitor : Text
+  };
+type Event__907141419 =
+  {
+    at : Int;
+    browser : Text;
+    campaign : Text;
+    city : Text;
+    content : Text;
+    country : Text;
+    currency : Text;
+    device : Text;
+    engagementMs : Nat;
+    hostname : Text;
+    id : Text;
+    interactive : Bool;
+    kind : {#engagement; #event; #pageview};
+    medium : Text;
+    name : Text;
+    order : Nat;
+    os : Text;
+    path : Text;
+    props : [(Text, Text)];
+    region : Text;
+    revenueMinor : Int;
+    scrollDepth : Nat;
+    site : Text;
+    source : Text;
+    term : Text;
+    visitor : Text
+  };
+type Filter__16323642 = {dimension : Text; exclude : Bool; values : [Text]};
+type Filter__517113506 = {dimension : Text; exclude : Bool; values : [Text]};
+type FunnelStep__796049682 = {kind : {#event; #page}; value : Text};
+type FunnelStep__95758436 = {kind : {#event; #page}; value : Text};
+type Goal__2154214 =
+  {id : Text; kind : {#event; #page}; name : Text; site : Text; value : Text};
+type Goal__610750974 =
+  {id : Text; kind : {#event; #page}; name : Text; site : Text; value : Text};
+type Goal__8124603 =
+  {
+    id : Text;
+    kind : {#event; #page; #scroll : Nat};
+    name : Text;
+    site : Text;
+    value : Text
+  };
+type Goal__862788792 =
+  {id : Text; kind : {#event; #page}; name : Text; site : Text; value : Text};
+type Goal__933458355 =
+  {id : Text; kind : {#event; #page}; name : Text; site : Text; value : Text};
+type ImportRow__1069397442 =
+  {
+    day : Int;
+    dimension : Text;
+    id : Text;
+    metrics : Metrics__769814836;
+    site : Text;
+    value : Text
+  };
+type ImportRow__383042394 =
+  {
+    day : Int;
+    dimension : Text;
+    id : Text;
+    metrics : Metrics__242655076;
+    site : Text;
+    value : Text
+  };
+type ImportRow__49077680 =
+  {
+    day : Int;
+    dimension : Text;
+    id : Text;
+    metrics : Metrics__283418045;
+    site : Text;
+    value : Text
+  };
+type ImportRow__559645209 =
+  {
+    day : Int;
+    dimension : Text;
+    id : Text;
+    metrics : Metrics__468472113;
+    site : Text;
+    value : Text
+  };
+type ImportRow__962382971 =
+  {
+    day : Int;
+    dimension : Text;
+    id : Text;
+    metrics : Metrics__128661269;
+    site : Text;
+    value : Text
+  };
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Key__1015800204 =
+  {
+    expiresAt : Int;
+    id : Text;
+    name : Text;
+    owner : Text;
+    scope : {#manage; #read; #share};
+    site : Text
+  };
+type Key__122935246 =
+  {
+    expiresAt : Int;
+    id : Text;
+    name : Text;
+    owner : Text;
+    scope : {#manage; #read; #share};
+    site : Text
+  };
+type Key__199483680 =
+  {
+    expiresAt : Int;
+    id : Text;
+    name : Text;
+    owner : Text;
+    scope : {#manage; #read; #share};
+    site : Text
+  };
+type Key__689059213 =
+  {
+    expiresAt : Int;
+    id : Text;
+    name : Text;
+    owner : Text;
+    scope : {#manage; #read; #share};
+    site : Text
+  };
+type Key__802178572 =
+  {
+    expiresAt : Int;
+    id : Text;
+    name : Text;
+    owner : Text;
+    scope : {#manage; #read; #share};
+    site : Text
+  };
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type Map__13625999<K, V> =
+  {var root : Node__430031793<K, V>; var size : Nat__58649523};
+type Map__386906547<K, V> = Map__670138087<K, V>;
+type Map__670138087<K, V> = Map__13625999<K, V>;
+type Metrics__128661269 =
+  {
+    bounces : Nat;
+    durationSeconds : Nat;
+    engagementMs : Nat;
+    events : Nat;
+    pageviews : Nat;
+    revenue : [(Text, Int)];
+    scrollDepthSum : Nat;
+    scrollSamples : Nat;
+    visitors : Nat;
+    visits : Nat
+  };
+type Metrics__242655076 =
+  {
+    bounces : Nat;
+    durationSeconds : Nat;
+    engagementMs : Nat;
+    events : Nat;
+    pageviews : Nat;
+    revenue : [(Text, Int)];
+    scrollDepthSum : Nat;
+    scrollSamples : Nat;
+    visitors : Nat;
+    visits : Nat
+  };
+type Metrics__283418045 =
+  {
+    bounces : Nat;
+    durationSeconds : Nat;
+    engagementMs : Nat;
+    events : Nat;
+    pageviews : Nat;
+    revenue : [(Text, Int)];
+    scrollDepthSum : Nat;
+    scrollSamples : Nat;
+    visitors : Nat;
+    visits : Nat
+  };
+type Metrics__468472113 =
+  {
+    bounces : Nat;
+    durationSeconds : Nat;
+    engagementMs : Nat;
+    events : Nat;
+    pageviews : Nat;
+    revenue : [(Text, Int)];
+    scrollDepthSum : Nat;
+    scrollSamples : Nat;
+    visitors : Nat;
+    visits : Nat
+  };
+type Metrics__769814836 =
+  {
+    bounces : Nat;
+    durationSeconds : Nat;
+    engagementMs : Nat;
+    events : Nat;
+    pageviews : Nat;
+    revenue : [(Text, Int)];
+    scrollDepthSum : Nat;
+    scrollSamples : Nat;
+    visitors : Nat;
+    visits : Nat
+  };
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type NativeState__129701745 =
+  {
+    var lastAccepted : Int;
+    var nextOrder : Nat;
+    var rateMinute : Int;
+    var rateTotal : Nat;
+    rates : Map__386906547<Text, Nat>;
+    var salt : Blob;
+    var saltDay : Int
+  };
+type NativeState__641179466 =
+  {
+    var lastAccepted : Int;
+    var nextOrder : Nat;
+    var rateMinute : Int;
+    var rateTotal : Nat;
+    rates : Map__386906547<Text, Nat>;
+    var salt : Blob;
+    var saltDay : Int
+  };
+type NewActor__110716127 =
+  {
+    auth : AuthState__696926349;
+    db : Store__587184829;
+    siteAccess : Map__386906547<Text, SiteAccess__737009397>
+  };
+type NewActor__292975807 =
+  {auth : AuthState__936255464; db : Store__239440002};
+type NewActor__542520151 =
+  {
+    auth : AuthState__1072497336;
+    business : State__705365062;
+    db : NewStore__441111695;
+    native : NativeState__129701745;
+    siteAccess : Map__386906547<Text, SiteAccess__741855966>
+  };
+type NewActor__685844935 =
+  {
+    auth : AuthState__995508229;
+    db : Store__35356389;
+    native : NativeState__641179466;
+    siteAccess : Map__386906547<Text, SiteAccess__540970964>
+  };
+type NewGoal__907575364 =
+  {
+    id : Text;
+    kind : {#event; #page; #scroll : Nat};
+    name : Text;
+    site : Text;
+    value : Text
+  };
+type NewStore__441111695 =
+  {
+    var accepted : Nat;
+    annotations : Map__386906547<Text, Annotation__737002811>;
+    var cleanupAfter : ?Text;
+    var collectors : [Principal];
+    var duplicates : Nat;
+    var eventBytes : Nat;
+    eventIds : Map__386906547<Text, Text>;
+    events : Map__386906547<Text, Event__474180632>;
+    goals : Map__386906547<Text, NewGoal__907575364>;
+    var importCleanupAfter : ?Text;
+    imports : Map__386906547<Text, ImportRow__962382971>;
+    keys : Map__386906547<Text, Key__689059213>;
+    var rejected : Nat;
+    retired : Map__386906547<Text, Bool>;
+    sites : Map__386906547<Text, Site__203668619>
+  };
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type OldActor__1063714360 = {};
+type OldActor__261049227 =
+  {
+    auth : AuthState__1072497336;
+    db : Store__736523131;
+    native : NativeState__129701745;
+    siteAccess : Map__386906547<Text, SiteAccess__741855966>
+  };
+type OldActor__549631732 =
+  {auth : AuthState__696926349; db : Store__587184829};
+type OldActor__645627152 =
+  {
+    auth : AuthState__995508229;
+    db : Store__35356389;
+    siteAccess : Map__386906547<Text, SiteAccess__540970964>
+  };
+type SavedReport__15422277 =
+  {
+    filters : [Filter__16323642];
+    id : Text;
+    name : Text;
+    revision : Nat;
+    site : Text;
+    steps : [FunnelStep__95758436];
+    updatedAt : Int
+  };
+type SavedReport__919365692 =
+  {
+    filters : [Filter__517113506];
+    id : Text;
+    name : Text;
+    revision : Nat;
+    site : Text;
+    steps : [FunnelStep__796049682];
+    updatedAt : Int
+  };
+type SearchRow__282485019 =
+  {clicks : Nat; impressions : Nat; positionMilli : Nat; value : Text};
+type SearchRow__328349349 =
+  {clicks : Nat; impressions : Nat; positionMilli : Nat; value : Text};
+type SearchSnapshot__21806394 =
+  {
+    fetchedAt : Int;
+    from : Int;
+    pages : [SearchRow__328349349];
+    property : Text;
+    queries : [SearchRow__328349349];
+    site : Text;
+    totals : SearchRow__328349349;
+    truncated : Bool;
+    until : Int
+  };
+type SearchSnapshot__861376197 =
+  {
+    fetchedAt : Int;
+    from : Int;
+    pages : [SearchRow__282485019];
+    property : Text;
+    queries : [SearchRow__282485019];
+    site : Text;
+    totals : SearchRow__282485019;
+    truncated : Bool;
+    until : Int
+  };
+type Session__119220203 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type Session__444262170 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type Session__612294603 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type Session__774255560 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type SiteAccess__540970964 =
+  {
+    managers : [Text];
+    readers : [Text];
+    revision : Nat;
+    updatedAt : Int;
+    updatedBy : Text
+  };
+type SiteAccess__737009397 =
+  {
+    managers : [Text];
+    readers : [Text];
+    revision : Nat;
+    updatedAt : Int;
+    updatedBy : Text
+  };
+type SiteAccess__741855966 =
+  {
+    managers : [Text];
+    readers : [Text];
+    revision : Nat;
+    updatedAt : Int;
+    updatedBy : Text
+  };
+type SiteAccess__975540543 =
+  {
+    managers : [Text];
+    readers : [Text];
+    revision : Nat;
+    updatedAt : Int;
+    updatedBy : Text
+  };
+type Site__1047203048 =
+  {
+    allowedProperties : [Text];
+    domain : Text;
+    enabled : Bool;
+    excludedPaths : [Text];
+    id : Text;
+    name : Text;
+    retentionDays : Nat;
+    timezone : Text;
+    viewers : [Text]
+  };
+type Site__11573055 =
+  {
+    allowedProperties : [Text];
+    domain : Text;
+    enabled : Bool;
+    excludedPaths : [Text];
+    id : Text;
+    name : Text;
+    retentionDays : Nat;
+    timezone : Text;
+    viewers : [Text]
+  };
+type Site__203668619 =
+  {
+    allowedProperties : [Text];
+    domain : Text;
+    enabled : Bool;
+    excludedPaths : [Text];
+    id : Text;
+    name : Text;
+    retentionDays : Nat;
+    timezone : Text;
+    viewers : [Text]
+  };
+type Site__209289627 =
+  {
+    allowedProperties : [Text];
+    domain : Text;
+    enabled : Bool;
+    excludedPaths : [Text];
+    id : Text;
+    name : Text;
+    retentionDays : Nat;
+    timezone : Text;
+    viewers : [Text]
+  };
+type Site__319751073 =
+  {
+    allowedProperties : [Text];
+    domain : Text;
+    enabled : Bool;
+    excludedPaths : [Text];
+    id : Text;
+    name : Text;
+    retentionDays : Nat;
+    timezone : Text;
+    viewers : [Text]
+  };
+type State__705365062 =
+  {
+    connections : Map__386906547<Text, Connection__823373405>;
+    reports : Map__386906547<Text, SavedReport__919365692>;
+    search : Map__386906547<Text, SearchSnapshot__21806394>
+  };
+type Store__239440002 =
+  {
+    var accepted : Nat;
+    annotations : Map__386906547<Text, Annotation__753185763>;
+    var cleanupAfter : ?Text;
+    var collectors : [Principal];
+    var duplicates : Nat;
+    var eventBytes : Nat;
+    eventIds : Map__386906547<Text, Text>;
+    events : Map__386906547<Text, Event__1006284416>;
+    goals : Map__386906547<Text, Goal__933458355>;
+    var importCleanupAfter : ?Text;
+    imports : Map__386906547<Text, ImportRow__49077680>;
+    keys : Map__386906547<Text, Key__802178572>;
+    var rejected : Nat;
+    retired : Map__386906547<Text, Bool>;
+    sites : Map__386906547<Text, Site__209289627>
+  };
+type Store__35356389 =
+  {
+    var accepted : Nat;
+    annotations : Map__386906547<Text, Annotation__1014690721>;
+    var cleanupAfter : ?Text;
+    var collectors : [Principal];
+    var duplicates : Nat;
+    var eventBytes : Nat;
+    eventIds : Map__386906547<Text, Text>;
+    events : Map__386906547<Text, Event__622283357>;
+    goals : Map__386906547<Text, Goal__2154214>;
+    var importCleanupAfter : ?Text;
+    imports : Map__386906547<Text, ImportRow__383042394>;
+    keys : Map__386906547<Text, Key__199483680>;
+    var rejected : Nat;
+    retired : Map__386906547<Text, Bool>;
+    sites : Map__386906547<Text, Site__11573055>
+  };
+type Store__587184829 =
+  {
+    var accepted : Nat;
+    annotations : Map__386906547<Text, Annotation__19875784>;
+    var cleanupAfter : ?Text;
+    var collectors : [Principal];
+    var duplicates : Nat;
+    var eventBytes : Nat;
+    eventIds : Map__386906547<Text, Text>;
+    events : Map__386906547<Text, Event__907141419>;
+    goals : Map__386906547<Text, Goal__610750974>;
+    var importCleanupAfter : ?Text;
+    imports : Map__386906547<Text, ImportRow__559645209>;
+    keys : Map__386906547<Text, Key__1015800204>;
+    var rejected : Nat;
+    retired : Map__386906547<Text, Bool>;
+    sites : Map__386906547<Text, Site__1047203048>
+  };
+type Store__736523131 =
+  {
+    var accepted : Nat;
+    annotations : Map__386906547<Text, Annotation__737002811>;
+    var cleanupAfter : ?Text;
+    var collectors : [Principal];
+    var duplicates : Nat;
+    var eventBytes : Nat;
+    eventIds : Map__386906547<Text, Text>;
+    events : Map__386906547<Text, Event__474180632>;
+    goals : Map__386906547<Text, Goal__862788792>;
+    var importCleanupAfter : ?Text;
+    imports : Map__386906547<Text, ImportRow__962382971>;
+    keys : Map__386906547<Text, Key__689059213>;
+    var rejected : Nat;
+    retired : Map__386906547<Text, Bool>;
+    sites : Map__386906547<Text, Site__203668619>
+  };
+{
+  "20260919_100000" : OldActor__1063714360 -> NewActor__292975807;
+  "20260919_100001" : (old : OldActor__549631732) -> NewActor__110716127;
+  "20260919_100002" : (old : OldActor__645627152) -> NewActor__685844935;
+  "20260923_080000" : (old : OldActor__261049227) -> NewActor__542520151
+}
+actor  {
+  stable auth :
+    {
+      former : Map__386906547<Text, ConnectorUser__173861307>;
+      var hubId : Text;
+      ids : Map__386906547<Text, Text>;
+      people : Map__386906547<Text, ConnectorUser__173861307>;
+      sessions : Map__386906547<Text, Session__739831475>
+    };
+  stable business :
+    {
+      connections : Map__386906547<Text, Connection__352119751>;
+      reports : Map__386906547<Text, SavedReport__15422277>;
+      search : Map__386906547<Text, SearchSnapshot__861376197>
+    };
+  stable db :
+    {
+      var accepted : Nat;
+      annotations : Map__386906547<Text, Annotation__613749860>;
+      var cleanupAfter : ?Text;
+      var collectors : [Principal];
+      var duplicates : Nat;
+      var eventBytes : Nat;
+      eventIds : Map__386906547<Text, Text>;
+      events : Map__386906547<Text, Event__639904380>;
+      goals : Map__386906547<Text, Goal__8124603>;
+      var importCleanupAfter : ?Text;
+      imports : Map__386906547<Text, ImportRow__1069397442>;
+      keys : Map__386906547<Text, Key__122935246>;
+      var rejected : Nat;
+      retired : Map__386906547<Text, Bool>;
+      sites : Map__386906547<Text, Site__319751073>
+    };
+  stable native :
+    {
+      var lastAccepted : Int;
+      var nextOrder : Nat;
+      var rateMinute : Int;
+      var rateTotal : Nat;
+      rates : Map__386906547<Text, Nat>;
+      var salt : Blob;
+      var saltDay : Int
+    };
+  stable siteAccess :
+    {
+      var root : Node__430031793<Text, SiteAccess__975540543>;
+      var size : Nat__58649523
+    }
+};

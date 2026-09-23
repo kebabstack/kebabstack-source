@@ -1,0 +1,50 @@
+From: Sunrise Cloud Billing <billing@sunrise-cloud.example>
+To: Me Myself <me@acme.example>
+Cc: subscriptions@relay.acme.example
+Message-ID: <renewal-2027@sunrise-cloud.example>
+Date: Tue, 01 Sep 2026 10:00:00 +0200
+Subject: Your Team plan renews on 1 January 2027
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="outer"
+
+--outer
+Content-Type: multipart/alternative; boundary="alt"
+
+--alt
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Dear customer,
+
+your Team plan (account SC-4471) renews automatically on 2027-01-01.
+The new yearly price is EUR 1,650.00 net (was EUR 1,500.00).
+You can cancel with two months' notice before the renewal date.
+
+Kind regards
+Sunrise Cloud Billing — café ünïcode ✓
+--alt
+Content-Type: text/html; charset=utf-8
+
+<html><body><p>Dear customer,</p><p>your Team plan renews on <b>2027-01-01</b>.</p></body></html>
+--alt--
+--outer
+Content-Type: application/pdf; name="renewal-notice.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="renewal-notice.pdf"
+
+JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBv
+Ymo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlw
+ZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMzAwIDIwMF0vQ29udGVudHMgNCAwIFIv
+UmVzb3VyY2VzPDwvRm9udDw8L0YxIDUgMCBSPj4+Pj4+ZW5kb2JqCjQgMCBvYmo8PC9MZW5ndGgg
+MTAyPj5zdHJlYW0KQlQgL0YxIDEyIFRmIDIwIDEwMCBUZCAoVGVhbSBwbGFuIHJlbmV3cyAyMDI3
+LTAxLTAxIGF0IEVVUiAxLDY1MC4wMCBwZXIgeWVhci4gTm90aWNlOiAyIG1vbnRocy4pIFRqIEVU
+CmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iajw8L1R5cGUvRm9udC9TdWJ0eXBlL1R5cGUxL0Jhc2VG
+b250L0hlbHZldGljYT4+ZW5kb2JqCnRyYWlsZXI8PC9Sb290IDEgMCBSPj4=
+--outer
+Content-Type: image/png; name="logo.png"
+Content-Transfer-Encoding: base64
+Content-ID: <logo@sunrise>
+Content-Disposition: inline; filename="logo.png"
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+--outer--

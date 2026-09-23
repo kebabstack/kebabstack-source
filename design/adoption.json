@@ -1,0 +1,112 @@
+{
+  "version": "1.2.0",
+  "status": "Shared visual foundations implemented across official apps. Workflow and accessibility evidence remains scoped to the recorded checks; this is not a blanket certification.",
+  "waves": [
+    {
+      "title": "01 · Shared foundations",
+      "scope": "SDK, logos, tokens, sign-in, app switcher",
+      "job": "One recognizable, accessible journey across the stack.",
+      "checks": "Verify shared palette, controls, suite mark, focus, sign-in, direct/deep-link handoff and role boundaries. Retain real IdP and assistive-technology checks as separate evidence.",
+      "status": "In progress",
+      "evidence": "See reviews/2026-09-22-suite-standard.md for the cross-suite visual adoption, regression checks and remaining manual certification boundaries."
+    },
+    {
+      "title": "02 · Hub & operations",
+      "scope": "Hub, Kitchen, Vault, Cloud Engine console",
+      "job": "Understand access, automate work and operate the suite with confidence.",
+      "checks": "People → effective permissions → app confirmation; sync provenance; updates and partial recovery; snapshot/restore consequences; TV pairing, expiry and aggregate scope.",
+      "status": "In progress",
+      "evidence": "See reviews/2026-09-22-suite-standard.md for the cross-suite visual adoption, regression checks and remaining manual certification boundaries."
+    },
+    {
+      "title": "03 · Everyday work",
+      "scope": "Desk & Assets",
+      "job": "Resolve requests and equipment work without duplicate entry.",
+      "checks": "Employee/agent/admin journeys; customer project boundaries; offboarding with inactive people; device return and external sale; next-action blockers and actual physical handover.",
+      "status": "In progress",
+      "evidence": "See reviews/2026-09-22-suite-standard.md for the cross-suite visual adoption, regression checks and remaining manual certification boundaries."
+    },
+    {
+      "title": "04 · Response & reporting",
+      "scope": "Desk on-call, customer support, status, HR/Finance",
+      "job": "Coordinate incidents, schedules and defensible reporting.",
+      "checks": "Coverage, DST and swaps; acknowledgment vs delivery; customer/public audience previews; project scope; time review, compensation, release and export boundaries.",
+      "status": "In progress",
+      "evidence": "See reviews/2026-09-22-suite-standard.md for the cross-suite visual adoption, regression checks and remaining manual certification boundaries."
+    },
+    {
+      "title": "05 · Risk & commitments",
+      "scope": "Trust, Watch & Contracts",
+      "job": "Understand the evidence and act before a problem becomes costly.",
+      "checks": "Posture score denominators and freshness; device deployment/recovery guides; unavailable DNS/certificate checks; actionable renewal deadlines and currency/report scope.",
+      "status": "In progress",
+      "evidence": "See reviews/2026-09-22-suite-standard.md for the cross-suite visual adoption, regression checks and remaining manual certification boundaries."
+    },
+    {
+      "title": "06 · Build & publish",
+      "scope": "Forms, Crumbs, SDK/MCP, Bug, website & marketplace",
+      "job": "Create useful extensions and publish a credible, coherent product.",
+      "checks": "Form creation and guest scope; analytics empty/history states; embed guides and key scopes; AI evidence; game-specific visual exception; marketing truth; sanitized screenshots and docs.",
+      "status": "In progress",
+      "evidence": "See reviews/2026-09-22-suite-standard.md for the cross-suite visual adoption, regression checks and remaining manual certification boundaries."
+    }
+  ],
+  "checklist": [
+    [
+      "Job & next step",
+      "Name the primary role, job, next actor, blocker and completion evidence.",
+      "purpose,workflows"
+    ],
+    [
+      "Authority & scope",
+      "Test permitted and denied roles, inactive identities, direct URLs, API calls and guest/project boundaries.",
+      "access,privacy"
+    ],
+    [
+      "State & recovery",
+      "Exercise loading, empty, partial, stale, forbidden, error, retry, duplicate events and interrupted writes.",
+      "states,automation"
+    ],
+    [
+      "Forms & consequences",
+      "Check drafts, validation, save behavior, concurrency, bulk scope and consequential-action preview.",
+      "forms,components"
+    ],
+    [
+      "Shared design",
+      "Check canonical logos, semantic tokens, type, spacing, hierarchy, components, themes and full cross-app journey.",
+      "identity,visual,delivery"
+    ],
+    [
+      "Accessible interaction",
+      "Keyboard, focus, semantic structure, screen reader, contrast, 200% text, 320 px reflow and reduced motion.",
+      "accessibility,layouts"
+    ],
+    [
+      "Data & evidence",
+      "Verify query/count/export scope, units, currencies, timezone, data freshness and source links.",
+      "data,reporting"
+    ],
+    [
+      "Privacy & audiences",
+      "Check data minimization, secrets, retention/cleanup evidence, public updates and TV/HR projections.",
+      "privacy,signals"
+    ],
+    [
+      "Words & setup",
+      "Use consistent language, useful errors, translated-length labels and prerequisite → action → verify → recover guides.",
+      "writing,navigation"
+    ],
+    [
+      "Release & outcome",
+      "Record before/after task evidence, module versions/changelogs, required tests, known gaps and deployment status.",
+      "governance"
+    ]
+  ],
+  "severities": {
+    "P0": "Access bypass, secret exposure, destructive ambiguity or false completion of a consequential action. Blocks release.",
+    "P1": "Core task cannot be completed, material state is wrong, or keyboard/screen-reader users are blocked. Blocks the affected release until fixed or an explicit safe scope reduction is reviewed.",
+    "P2": "Avoidable friction, inconsistent hierarchy, duplicated entry or an unclear secondary state. Prioritize within the redesign wave.",
+    "P3": "Cosmetic polish with no material task impact. Bundle with the affected surface."
+  }
+}

@@ -1,0 +1,7 @@
+[
+  { "match": ".well-known", "ignore": false },
+  { "match": "index.html", "headers": { "Content-Security-Policy": "frame-ancestors 'none'", "X-Frame-Options": "DENY" } },
+  { "match": ".well-known/ii-alternative-origins", "headers": { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } },
+  { "match": ".well-known/ic-domains", "headers": { "Content-Type": "text/plain" } },
+  { "match": "user-hub-app-onboarding.skill", "headers": { "Content-Type": "application/octet-stream", "Content-Disposition": "attachment; filename=\"user-hub-app-onboarding.skill\"" } }
+]

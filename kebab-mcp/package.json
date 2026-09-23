@@ -1,0 +1,28 @@
+{
+  "name": "kebab-mcp",
+  "version": "0.2.0",
+  "description": "kebab-stack for your AI assistant: an MCP server that signs into your company's apps as you (via the hub) and lets the assistant read and act with your rights",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "kebab-mcp": "server.mjs"
+  },
+  "files": [
+    "server.mjs",
+    "lib/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@dfinity/agent": "^2.4.1",
+    "@dfinity/candid": "^2.4.1",
+    "@dfinity/principal": "^2.4.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.0"
+  }
+}

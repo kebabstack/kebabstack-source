@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {summarize,annualMinor,csvCell,portfolioCsv} from '../dist/saas-metrics.js';
+const t=(a=120000n,currency='EUR',start='2025-01-01',end='2025-12-31')=>({amountMinor:[a],currency,interval:'year',start,end,renewalDate:'',noticeDate:'',taxBasis:'net'});
+const row=(terms,extra={})=>({contract:{title:'Tool',vendor:'Vendor',product:'Tool',responsible:'owner',status:'active',tags:[],seats:[10n],terms,...extra},ownerName:'Owner',groups:[],assigned:8n,history:[]});
+let rows=[row(t()),row({...t(10000n,'USD'),interval:'month'}),row({...t(),amountMinor:[]}),row(t(9900n),{tags:['document-type:receipt']}),row(t(123000n),{tags:['document-type:license-key']}),row(t(12000000n),{status:'draft'})];
+let s=summarize(rows,2025,new Date('2026-01-01T00:00:00Z'));
+assert.equal(s.currencies.find(b=>b.currency==='EUR').annual,120000);assert.equal(s.currencies.find(b=>b.currency==='USD').annual,120000);assert.equal(s.missing,1);assert.equal(s.currencies.find(b=>b.currency==='EUR').documents,9900);
+assert.equal(s.currencies.find(b=>b.currency==='EUR').accrued,120000,'receipts, keys and drafts do not double count SaaS accrual');
+const historical=row(t(240000n));historical.history=[{at:BigInt(Date.parse('2025-07-01'))*1000000n,terms:{...t(),amountMinor:[]}},{at:BigInt(Date.parse('2025-07-01'))*1000000n,terms:t()},{at:BigInt(Date.parse('2025-07-02'))*1000000n,terms:t(240000n)}];
+s=summarize([historical],2025,new Date('2026-01-01T00:00:00Z'));
+assert.equal(Math.round(s.currencies[0].accrued),Math.round((182*120000+183*240000)/365),'first known terms apply from contract start; later prices apply from recorded change');
+historical.contract.status='archived';assert.equal(Math.round(summarize([historical],2025,new Date('2026-01-01')).currencies[0].accrued),Math.round(s.currencies[0].accrued),'archiving preserves historical cost');
+assert.equal(summarize([row(t())],2025,new Date('2025-07-01')).currencies[0].accrued,120000*181/365,'current year accrual stops at today');
+assert.equal(annualMinor({...t(),interval:'once'}),null);assert.equal(csvCell('=HYPERLINK("evil")'),'"\'=HYPERLINK(""evil"")"');assert.ok(!portfolioCsv([row(t(),{tags:['document-type:license-key'],title:'HIDDEN KEY RECORD'})]).includes('HIDDEN KEY RECORD'));
+const mixed=summarize([row(t()),row({...t(),taxBasis:'gross'})]);assert.equal(mixed.currencies.length,2,'net and gross prices are not silently totalled together');
+assert.deepEqual(summarize([row({...t(),currency:'',amountMinor:[]},{tags:['document-type:license-key']})]).currencies,[],'key inventory does not create empty spend currencies');
+console.log('SaaS metrics: currencies, annualization, dated history, archived costs, missing fields and safe export passed.');

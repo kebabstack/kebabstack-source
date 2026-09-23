@@ -1,0 +1,1738 @@
+type View =
+ record {
+   active: bool;
+   createdAt: int;
+   expiresAt: int;
+   id: nat;
+   name: text;
+   sources: vec Source__1;
+ };
+type UserView =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   connId: nat;
+   connName: text;
+   displayName: text;
+   email: text;
+   externalId: text;
+   forced: bool;
+   key: text;
+   kind: text;
+   override: opt text;
+   personId: text;
+   role: text;
+   status: text;
+   updatedAt: int;
+ };
+type TransformArgs =
+ record {
+   context: blob;
+   response: HttpResponsePayload;
+ };
+type TdTeamMember =
+ record {
+   active: opt bool;
+   departmentId: opt text;
+   email: text;
+   firstName: text;
+   lastName: text;
+   managerId: opt text;
+   memberId: text;
+   protected: opt bool;
+   title: text;
+   version: opt nat;
+ };
+type TdTeamInfo =
+ record {
+   changeSeq: opt nat;
+   memberCount: nat;
+   name: text;
+   standard: text;
+   version: text;
+ };
+type SyncStat =
+ record {
+   at: int;
+   detail: text;
+   fetched: nat;
+   ok: bool;
+ };
+type SyncResult =
+ record {
+   created: nat;
+   deactivated: nat;
+   detail: text;
+   fetched: nat;
+   ok: bool;
+   updated: nat;
+ };
+type Status =
+ record {
+   app: text;
+   directoryAt: int;
+   legacy: vec LegacyGrant;
+   legacyGroups: vec record {
+                       name: text;
+                       role: text;
+                     };
+   model: nat;
+   revision: text;
+ };
+type State =
+ variant {
+   ended;
+   pending: int;
+   ready:
+    record {
+      checkedAt: int;
+      expiresAt: int;
+      id: nat;
+      name: text;
+      sources: vec Source__1;
+    };
+ };
+type SsoProvider =
+ record {
+   clientId: text;
+   clientSecret: text;
+   enabled: bool;
+   id: nat;
+   issuer: text;
+   kind: text;
+   name: text;
+ };
+type Source__1 =
+ record {
+   app: text;
+   cid: nat;
+ };
+type Source =
+ record {
+   app: text;
+   cid: nat;
+   name: text;
+   url: text;
+ };
+type Snapshot =
+ record {
+   checkedAt: int;
+   metrics: vec record {
+                  text;
+                  nat;
+                };
+   schema: nat;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+ };
+type ScimSourceView =
+ record {
+   createdAt: int;
+   domains: vec text;
+   enabled: bool;
+   groupCount: nat;
+   hasToken: bool;
+   id: nat;
+   lastOp: text;
+   lastSeen: int;
+   legacyToken: bool;
+   name: text;
+   note: text;
+   userCount: nat;
+ };
+type Role =
+ record {
+   can: vec text;
+   cannot: vec text;
+   id: text;
+   name: text;
+ };
+type ReviewItem =
+ record {
+   appName: text;
+   applied: text;
+   cid: nat;
+   decidedAt: int;
+   decidedBy: text;
+   decision: text;
+   detail: text;
+   id: nat;
+   note: text;
+   reviewId: nat;
+   reviewers: vec text;
+   subject: text;
+ };
+type Review =
+ record {
+   apps: vec nat;
+   closedAt: int;
+   dueAt: int;
+   id: nat;
+   name: text;
+   startedAt: int;
+   startedBy: text;
+   state: text;
+ };
+type ReportingScope =
+ record {
+   id: nat;
+   name: text;
+ };
+type ReportingGrant =
+ record {
+   capabilities: vec text;
+   projectId: nat;
+   subject: variant {
+              group: nat;
+              person: text;
+            };
+ };
+type Progress =
+ record {
+   bindings: vec text;
+   checkedAt: int;
+   open: nat;
+   sources: nat;
+   state: text;
+   total: nat;
+ };
+type Policy =
+ record {
+   app: text;
+   defaultRole: text;
+   groups: vec GroupGrant;
+   people: vec PersonGrant;
+ };
+type PersonGrant =
+ record {
+   id: text;
+   role: text;
+ };
+type PermissionPerson =
+ record {
+   active: bool;
+   assigned: opt text;
+   email: text;
+   id: text;
+   inherited: bool;
+   name: text;
+   previouslyAllowed: bool;
+   role: text;
+   source: text;
+ };
+type PairResult =
+ variant {
+   busy;
+   invalid;
+   ok: int;
+ };
+type OwnedObject =
+ record {
+   id: text;
+   kind: text;
+   meta: text;
+   title: text;
+   updatedAt: int;
+ };
+type OidcClientView =
+ record {
+   access: AccessPolicy;
+   alg: text;
+   cid: nat;
+   clientId: text;
+   consent: text;
+   createdAt: int;
+   enabled: bool;
+   isPublic: bool;
+   lanes: vec text;
+   name: text;
+   redirectUris: vec text;
+   tileUrl: text;
+ };
+type OidcClientArgs =
+ record {
+   access: AccessPolicy;
+   alg: text;
+   consent: text;
+   isPublic: bool;
+   lanes: vec text;
+   name: text;
+   note: text;
+   redirectUris: vec text;
+   tileUrl: text;
+ };
+type OidcAuthReq =
+ record {
+   clientId: text;
+   codeChallenge: text;
+   codeChallengeMethod: text;
+   nonce: text;
+   prompt: text;
+   redirectUri: text;
+   responseType: text;
+   scope: text;
+   state: text;
+ };
+type Notification =
+ record {
+   at: int;
+   email: text;
+   fromApp: text;
+   id: nat;
+   kind: text;
+   read: bool;
+   slack: text;
+   title: text;
+   url: text;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type LunchSummary =
+ record {
+   dates: vec text;
+   recent: vec text;
+   thisMonth: nat;
+   total: nat;
+ };
+type LegacyGrant =
+ record {
+   email: text;
+   role: text;
+   source: text;
+ };
+type JournalEntry =
+ record {
+   at: int;
+   by: text;
+   detail: text;
+   kind: text;
+ };
+type Item =
+ record {
+   detail: text;
+   historical: bool;
+   id: text;
+   kind: text;
+   path: text;
+   status: text;
+   title: text;
+ };
+type HttpResponsePayload =
+ record {
+   body: blob;
+   headers: vec HttpHeader;
+   status: nat;
+ };
+type HttpHeader =
+ record {
+   name: text;
+   value: text;
+ };
+type HttpGwResponse =
+ record {
+   body: blob;
+   headers: vec HeaderField;
+   status_code: nat16;
+   upgrade: opt bool;
+ };
+type HttpGwRequest =
+ record {
+   body: blob;
+   headers: vec HeaderField;
+   method: text;
+   url: text;
+ };
+type HeaderField =
+ record {
+   text;
+   text;
+ };
+type GroupView =
+ record {
+   editable: bool;
+   id: nat;
+   members: vec text;
+   name: text;
+   note: text;
+   source: text;
+ };
+type GroupGrant =
+ record {
+   id: nat;
+   role: text;
+ };
+type Grant =
+ record {
+   email: text;
+   endedAt: int;
+   endedBy: text;
+   expiresAt: int;
+   grantedAt: int;
+   grantedBy: text;
+   id: nat;
+   reason: text;
+   state: text;
+   target: text;
+   targetName: text;
+ };
+type Event =
+ record {
+   at: int;
+   effectiveActive: bool;
+   email: text;
+   kind: variant {
+           deactivated;
+           reactivated;
+         };
+   name: text;
+   personId: text;
+   seq: nat;
+   source: text;
+ };
+type DeskReportingAccess =
+ record {
+   capabilities: vec Role;
+   detail: text;
+   grants: vec ReportingGrant;
+   ok: bool;
+   revision: nat;
+   scopes: vec ReportingScope;
+ };
+type Context =
+ record {
+   checkedAt: int;
+   items: vec Item;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+   total: nat;
+ };
+type ConnectorUser =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type ConnView =
+ record {
+   activeCount: nat;
+   baseUrl: text;
+   clientId: text;
+   enabled: bool;
+   hookPath: text;
+   id: nat;
+   jwk: text;
+   kind: text;
+   lastSync: opt SyncStat;
+   name: text;
+   syncing: bool;
+   tokenMask: text;
+   userCount: nat;
+ };
+type Case =
+ record {
+   desk: text;
+   dueAt: opt int;
+   key: text;
+   person: text;
+   revision: int;
+   state: text;
+   ticket: nat;
+   url: text;
+ };
+type Batch =
+ record {
+   cursor: nat;
+   events: vec Event;
+   gap: bool;
+ };
+type AssistantView =
+ record {
+   active: bool;
+   client: text;
+   createdAt: int;
+   email: text;
+   expiresAt: int;
+   id: nat;
+   lastUsedAt: int;
+   uses: nat;
+ };
+type Approval =
+ variant {
+   denied;
+   invalid;
+   limit;
+   missing;
+   ok: nat;
+ };
+type AppPermissionView =
+ record {
+   canManage: bool;
+   checkedAt: int;
+   configured: bool;
+   enforced: bool;
+   id: nat;
+   name: text;
+   people: vec PermissionPerson;
+   policy: Policy;
+   revision: nat;
+   roles: vec Role;
+   status: opt Status;
+ };
+type AppLinkView =
+ record {
+   connectorId: nat;
+   hasIcon: bool;
+   hidden: bool;
+   id: nat;
+   kind: text;
+   name: text;
+   note: text;
+   url: text;
+ };
+type AccessRequest =
+ record {
+   appName: text;
+   at: int;
+   cid: nat;
+   decidedAt: int;
+   decidedBy: text;
+   email: text;
+   grantId: nat;
+   id: nat;
+   note: text;
+   reason: text;
+   state: text;
+   wantedHours: nat;
+ };
+type AccessPolicy =
+ record {
+   groups: vec text;
+   mode: text;
+   people: vec text;
+   roles: vec text;
+ };
+service : {
+  /// Who would get in under the current rules — for the admin's live preview.
+  accessPreview: (id: nat) -> (record {
+                                 count: nat;
+                                 sample: vec text;
+                               }) query;
+  /// Same, for an unsaved draft policy (the builder shows the effect before saving).
+  accessPreviewFor: (id: nat, p: AccessPolicy) ->
+   (record {
+      count: nat;
+      sample: vec text;
+    }) query;
+  addAdmin: (p: text, name: text) -> (bool);
+  addAppLink: (args: record {
+                       kind: text;
+                       name: text;
+                       note: text;
+                       url: text;
+                     }) -> (record {
+                              detail: text;
+                              id: nat;
+                              ok: bool;
+                            });
+  addConnection: (args:
+   record {
+     baseUrl: text;
+     clientId: text;
+     clientSecret: text;
+     kind: text;
+     name: text;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  addGroup: (name: text, note: text) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+    });
+  addLocalUser: (email: text, displayName: text, firstName: text, lastName:
+   text) -> (bool);
+  addOidcClient: (args: OidcClientArgs) ->
+   (record {
+      clientId: text;
+      detail: text;
+      id: nat;
+      ok: bool;
+      secret: text;
+    });
+  /// Owners: a new SCIM source — a name (the IdP), optional domains it may provision. Returns the bearer token ONCE; only its hash is kept.
+  addScimSource: (name: text, domains: vec text) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+      token: text;
+    });
+  addSlackBot: (args:
+   record {
+     name: text;
+     signingSecret: text;
+     token: text;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  addSsoProvider: (args:
+   record {
+     clientId: text;
+     clientSecret: text;
+     issuer: text;
+     kind: text;
+     name: text;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  /// Admin view: what is set (never the key) and which apps use it.
+  aiInfo: () ->
+   (record {
+      apps:
+       vec
+        record {
+          calls: nat;
+          fetches: nat;
+          hasLane: bool;
+          id: nat;
+          lastCall: int;
+          lastFetch: int;
+          name: text;
+        };
+      keyHint: text;
+      model: text;
+      on: bool;
+      provider: text;
+      setAt: int;
+      url: text;
+      visionModel: text;
+    }) query;
+  amIAdmin: () -> (bool) query;
+  /// The person's menu as the assistant sees it: connector-bound app tiles the person may open, with the BACKEND canister to talk to.
+  assistantApps: (token: text) ->
+   (vec
+     record {
+       canisterId: text;
+       name: text;
+       note: text;
+       tileId: nat;
+       url: text;
+     }) query;
+  /// Colleagues, exactly as the pickers of the person's OWN apps see them: the union of the directories the hub hands to the
+  /// connectors behind the tiles this person may open (each with its scope, exclude filters, access policy and lanes — title/department
+  /// only from an app with the profile lane, groups only from one with the groups lane). No apps → nobody. q = name or address.
+  assistantPeople: (token: text, q: text) ->
+   (vec
+     record {
+       department: text;
+       displayName: text;
+       email: text;
+       groups: vec text;
+       id: text;
+       title: text;
+     }) query;
+  /// A one-time app ticket for the assistant's person — the same gates as the portal's mintAppTicket.
+  assistantTicket: (token: text, tileId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      ticket: text;
+      url: text;
+    });
+  assistantWhoami: (token: text) ->
+   (opt
+     record {
+       client: text;
+       displayName: text;
+       email: text;
+       expiresAt: int;
+       hubRole: text;
+       id: text;
+       orgName: text;
+     }) query;
+  bootstrapWire: (args:
+   record {
+     claimCode: text;
+     kitchenId: text;
+     vaultId: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  checkAccess: (email: text) -> (variant {
+                                   active;
+                                   inactive;
+                                   unknown;
+                                 }) query;
+  checkAppPermissions: (cid: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      status: opt Status;
+    });
+  claimHub: (args: record {
+                     displayName: text;
+                     email: text;
+                     orgName: text;
+                   }) -> (record {
+                            detail: text;
+                            ok: bool;
+                          });
+  claimHubWithCode: (code: text, args:
+   record {
+     displayName: text;
+     email: text;
+     orgName: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  claimInvite: (code: text) -> (bool);
+  claimNeedsCode: () -> (bool);
+  clearAi: () -> (record {
+                    detail: text;
+                    ok: bool;
+                  });
+  clearCompanyLogo: () -> (bool);
+  clearMyAvatar: (sessionToken: text) -> (bool);
+  clearOverride: (key: text) -> (bool);
+  clearOverrides: (keys: vec text) -> (nat);
+  clearTileIcon: (id: nat) -> (record {
+                                 detail: text;
+                                 ok: bool;
+                               });
+  /// Close a review early; undecided entries stay undecided in the record.
+  closeReview: (id: nat) -> (record {
+                               detail: text;
+                               ok: bool;
+                             });
+  /// Wizard finale — one call: connector + lanes + access + tile (bound).
+  connectApp: (args:
+   record {
+     access: AccessPolicy;
+     canisterId: text;
+     lanes: vec text;
+     name: text;
+     note: text;
+     tile: opt record {
+                 kind: text;
+                 name: text;
+                 url: text;
+               };
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+            tileId: nat;
+          });
+  /// Profile picture for connected tools (registered connectors + admins).
+  connectorAvatar: (email: text) -> (opt blob) query;
+  /// Bulk variant: one query returns every stored picture for the given
+  /// emails (missing ones are simply absent — no null poisoning). Lets tools
+  /// prefetch the whole directory's avatars in one call instead of N updates.
+  connectorAvatars: (emails: vec text) -> (vec record {
+                                                 text;
+                                                 blob;
+                                               }) query;
+  /// Full directory for a registered connector canister (pull lane): dedup by
+  /// email, effective active flag included — tools cache this and refresh
+  /// periodically. Complements the frozen Phase-2 push contract.
+  connectorDirectory: () -> (vec ConnectorUser) query;
+  /// address -> person id for any address the hub has ever known (departed people included). Connectors only — this is the apps' one-time migration lane.
+  connectorLookup: (emails: vec text) -> (vec record {
+                                                text;
+                                                text;
+                                              }) query;
+  createInvite: (email: text) -> (opt text);
+  /// Manual kill switch: blocks the user hub-wide immediately, independent of
+  /// the IdP. Cleared explicitly or never — the IdP cannot re-activate an
+  /// overridden user.
+  deactivateUser: (key: text, reason: text) -> (bool);
+  /// Bulk kill switch: one call, one journal summary, ONE deactivation push
+  /// to the connected apps at the end.
+  deactivateUsers: (keys: vec text, reason: text) -> (nat);
+  /// Approve (with the asked-for or an overriding duration) or deny. The person is told either way.
+  decideAccessRequest: (id: nat, approve: bool, hours: opt nat, note:
+   text) -> (record {
+               detail: text;
+               ok: bool;
+             });
+  /// keep or remove. Remove is effective at once: the entry leaves the app's rule (a person also loses a running grant).
+  decideReviewItem: (sessionToken: text, itemId: nat, decision: text, note:
+   text) -> (record {
+               detail: text;
+               ok: bool;
+             });
+  /// Owners: generate or rotate the token of source 1 (creates the source when the hub had none).
+  genScimToken: () -> (text);
+  getAppPermissions: (cid: nat) -> (opt AppPermissionView) query;
+  /// Public: a company logo is not a secret, and the sign-in page may want it too.
+  getCompanyLogo: () -> (opt record {
+                               img: blob;
+                               mime: text;
+                             }) query;
+  getDeskReportingAccess: (cid: nat) -> (DeskReportingAccess);
+  getJournal: () -> (vec JournalEntry) query;
+  getJwk: (id: nat) -> (text) query;
+  getLive: (id: nat) -> (text) query;
+  getSettings: () -> (record {autoSyncSecs: nat;}) query;
+  getSetup: () ->
+   (record {
+      directoryMode: text;
+      orgName: text;
+      setupDone: bool;
+    }) query;
+  getUser: (key: text) -> (opt UserView) query;
+  /// Numbers for Home and the Access page.
+  governanceSummary: () ->
+   (record {
+      activeGrants: nat;
+      endingSoon: nat;
+      openRequests: nat;
+      openReviews: nat;
+      overdueReviews: nat;
+      undecided: nat;
+    }) query;
+  /// Give a person access to an app (people list) or a group for a while. hours 0 = until revoked.
+  grantAccess: (args:
+   record {
+     email: text;
+     hours: nat;
+     reason: text;
+     target: text;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  /// What a person may ask for or be given: apps with a people-based rule they are not in yet, and editable groups.
+  grantTargets: (email: text) ->
+   (record {
+      apps: vec record {
+                  cid: nat;
+                  name: text;
+                };
+      groups: vec record {
+                    gid: nat;
+                    name: text;
+                  };
+    }) query;
+  groupUsage: (id: nat) -> (vec record {
+                                  app: text;
+                                  uses: vec text;
+                                });
+  /// Groups of one person — for connected tools (routing, scoping) and admins.
+  groupsOf: (email: text) -> (vec text) query;
+  home: () ->
+   (record {
+      accessRequests: nat;
+      active: nat;
+      apps: nat;
+      groups: nat;
+      inactive: nat;
+      openInvites: nat;
+      orgName: text;
+      pendingRequests: nat;
+      people: nat;
+      recent: vec JournalEntry;
+      reviewsOpen: nat;
+      reviewsOverdue: nat;
+      role: text;
+      sample: bool;
+      scimOn: bool;
+      setupDone: bool;
+      sources: nat;
+      tiles: nat;
+      vaultId: text;
+      withKey: nat;
+    }) query;
+  http_request: (req: HttpGwRequest) -> (HttpGwResponse) query;
+  http_request_update: (req: HttpGwRequest) -> (HttpGwResponse);
+  /// Connector contract (lane "ai"): the credentials an app uses for its own calls to the AI vendor.
+  /// Cache them for a few minutes; a rotation here reaches every app on its next fetch.
+  hub_aiCredentials: () ->
+   (opt
+     record {
+       key: text;
+       model: text;
+       provider: text;
+       url: text;
+       visionModel: text;
+     });
+  /// For an app's settings page: is a key set, and does THIS app have the lane? Never the key itself. Any registered connector may ask.
+  hub_aiStatus: () ->
+   (opt
+     record {
+       connectorId: nat;
+       keySet: bool;
+       laneGranted: bool;
+       model: text;
+       provider: text;
+       visionModel: text;
+     }) query;
+  /// Apps report their calls so the owner sees who uses the key (best effort, one call per batch is fine).
+  hub_aiUsed: (calls: nat) -> ();
+  hub_hardwareCheck: (deskId: text, ticket: nat, viewer: text) -> (opt Case);
+  hub_lifecycleEvents: (after: nat) -> (Batch) query;
+  /// CONTRACT (return lane): a registered connector notifies a person.
+  /// Admins may call too (testing). Recipient must be ACTIVE and inside the
+  /// caller's source scope — the same population rule as connectorDirectory.
+  hub_notify: (args:
+   record {
+     dedupeKey: text;
+     email: text;
+     kind: text;
+     title: text;
+     url: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  /// CONTRACT: a registered connector fetches its ASSIGNED Slack credentials
+  /// (token + signing secret) — tools stop owning Slack config; rotation
+  /// happens here once and propagates on the tools' next pull.
+  hub_slackCredentials: () ->
+   (vec
+     record {
+       id: nat;
+       name: text;
+       signingSecret: text;
+       teamName: text;
+       token: text;
+     }) query;
+  hub_supportContext: (viewer: text, subject: text, cid: nat) -> (Context);
+  hub_supportSources: (viewer: text) -> (vec Source) query;
+  hub_syncHardware: (input: Case) -> (Progress);
+  icpChart: () -> (record {
+                     body: text;
+                     src: text;
+                   });
+  /// CSV bulk onboarding: creates LOCAL entries. A row is skipped when the
+  /// e-mail is empty or the person is already known from ANY source.
+  importPeople: (rows:
+   vec
+    record {
+      displayName: text;
+      email: text;
+      fields: vec record {
+                    text;
+                    text;
+                  };
+      firstName: text;
+      lastName: text;
+    }) -> (record {
+             created: nat;
+             skipped: nat;
+           });
+  kitchenAuth: (p: text) -> (bool) query;
+  /// What the kitchen needs to know to cook: where the vault is, which canister
+  /// serves this UI (for menu URLs and hub-frontend updates), the org name.
+  kitchenConfig: () ->
+   (record {
+      frontendId: text;
+      hubId: text;
+      orgName: text;
+      vaultId: text;
+    });
+  /// The kitchen registers an app it just installed: lanes from the app's
+  /// manifest (needs ∪ wants), everyone may use it, bound menu entry.
+  kitchenConnect: (args:
+   record {
+     canisterId: text;
+     name: text;
+     note: text;
+     tile: opt record {
+                 kind: text;
+                 name: text;
+                 url: text;
+               };
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+            tileId: nat;
+          });
+  kitchenInfo: () -> (record {kitchenId: text;}) query;
+  /// The kitchen's variant, by canister id (it does not know connector numbers).
+  /// (0.16.1: shares the worker instead of a shared self-call, which made the hub its own caller and refused itself.)
+  kitchenResyncLanes: (canisterId: text) ->
+   (record {
+      added: vec text;
+      detail: text;
+      ok: bool;
+    });
+  /// The kitchen sets the picture a recipe ships, right after installing the app. Never overwrites a picture an admin chose.
+  kitchenSetTileIcon: (id: nat, img: blob, mime: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// The same, addressed by the app's backend canister — for apps the kitchen updated or adopted (it may not know the tile number).
+  /// Finds the menu entry bound to that app; never overwrites a picture an admin chose.
+  /// (0.16.1: no longer delegates through a shared self-call — that made the hub its own caller and refused itself.)
+  kitchenSetTileIconFor: (canisterId: text, img: blob, mime: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Admin links their OWN passkey to a directory person — the console's
+  /// "Portal" switch then shows the workspace and opens connected apps as
+  /// that person (the way every end user does). Re-linking replaces.
+  linkMyPrincipal: (email: text) -> (record {
+                                       detail: text;
+                                       ok: bool;
+                                     });
+  /// Admin view: open requests first-in-first-out, or the history newest first (300).
+  listAccessRequests: (openOnly: bool) -> (vec AccessRequest) query;
+  listAdmins: () ->
+   (vec record {
+          name: text;
+          "principal": text;
+          role: text;
+        }) query;
+  listAppLinks: () -> (vec AppLinkView) query;
+  listAssistants: () ->
+   (record {
+      enabled: bool;
+      items: vec AssistantView;
+    }) query;
+  listConnections: () -> (vec ConnView) query;
+  listConnectors: () ->
+   (vec
+     record {
+       access: AccessPolicy;
+       addedAt: int;
+       canisterId: text;
+       filters: vec text;
+       id: nat;
+       lanes: vec text;
+       name: text;
+       note: text;
+       owners: vec text;
+       permissionApp: text;
+       permissionsManaged: bool;
+       pushedAt: int;
+       scope: vec nat;
+     }) query;
+  /// Newest first; activeOnly = the ones still in force. Capped at 300.
+  listGrants: (activeOnly: bool) -> (vec Grant) query;
+  listGroups: () -> (vec GroupView) query;
+  listInvites: () -> (vec record {
+                            email: text;
+                            expiresAt: int;
+                          }) query;
+  listOidcClients: () -> (vec OidcClientView) query;
+  listPersonRoles: () ->
+   (vec record {
+          active: bool;
+          displayName: text;
+          email: text;
+          role: text;
+        }) query;
+  listPrincipalLinks: () ->
+   (vec record {
+          email: text;
+          "principal": text;
+        }) query;
+  listRecentNotifications: () -> (vec Notification) query;
+  listReviewItems: (reviewId: nat) -> (vec ReviewItem) query;
+  listReviews: () ->
+   (vec
+     record {
+       decided: nat;
+       items: nat;
+       overdue: bool;
+       removed: nat;
+       review: Review;
+     }) query;
+  /// Admins: the SCIM sources with their counters (tokens never leave the hub).
+  listScimSources: () -> (vec ScimSourceView) query;
+  listSlackBots: () ->
+   (record {
+      assignments: vec record {
+                         nat;
+                         vec nat;
+                       };
+      bots:
+       vec
+        record {
+          enabled: bool;
+          hasSigning: bool;
+          id: nat;
+          name: text;
+          teamName: text;
+          tokenMasked: text;
+        };
+      enabled: bool;
+    }) query;
+  listSsoProviders: () -> (vec SsoProvider) query;
+  /// PUBLIC (pre-login): what the sign-in page needs to start the redirect.
+  /// Config only — no secrets (clientId is public by definition in OIDC).
+  listSsoProvidersPublic: () ->
+   (vec record {
+          authUrl: text;
+          clientId: text;
+          id: nat;
+          kind: text;
+          name: text;
+        }) query;
+  listUsers: (args:
+   record {
+     activeOnly: bool;
+     conn: opt nat;
+     limit: nat;
+     offset: nat;
+     search: text;
+   }) -> (record {
+            items: vec UserView;
+            total: nat;
+          }) query;
+  markNotificationsRead: (sessionToken: text, ids: vec nat) -> (nat);
+  /// Mint a one-time hand-off ticket for an app tile (portal session required).
+  mintAppTicket: (sessionToken: text, appId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      ticket: text;
+      url: text;
+    });
+  /// The code the person pastes into their assistant: "<hub backend canister id>.<one-time code>", valid 10 minutes, one per person.
+  mintAssistantCode: (sessionToken: text) ->
+   (record {
+      code: text;
+      detail: text;
+      ok: bool;
+    });
+  myAccess: () ->
+   (record {
+      access: variant {
+                active;
+                inactive;
+                unknown;
+              };
+      email: opt text;
+    }) query;
+  /// The caller's own requests, newest first (20).
+  myAccessRequests: (sessionToken: text) -> (vec AccessRequest) query;
+  myAssistants: (sessionToken: text) -> (vec AssistantView) query;
+  myAvatarPortal: (sessionToken: text) -> (opt blob) query;
+  myNotifications: (sessionToken: text, limit: nat) ->
+   (record {
+      items: vec Notification;
+      slackDm: bool;
+      total: nat;
+      unread: nat;
+    }) query;
+  /// What the signed-in person has to decide: undecided entries of open reviews where they are the reviewer.
+  myReviewItems: (sessionToken: text) ->
+   (vec record {
+          dueAt: int;
+          item: ReviewItem;
+          reviewName: text;
+        }) query;
+  myRole: () -> (text) query;
+  /// Issue the one-time code. Every check again, then 32 random bytes bound to everything.
+  oidcAuthorize: (sessionToken: text, r: OidcAuthReq) ->
+   (record {
+      code: text;
+      detail: text;
+      iss: text;
+      ok: bool;
+      redirectUri: text;
+    });
+  /// The picture of an external (OIDC) app by its client id — for the consent card.
+  oidcClientIcon: (clientId: text) ->
+   (opt record {
+          img: blob;
+          mime: text;
+        }) query;
+  /// Provider status for the owner page: issuer, endpoints, key state.
+  oidcInfo: () ->
+   (record {
+      authorize: text;
+      clients: nat;
+      discovery: text;
+      ecKid: text;
+      frontendOverride: text;
+      generatingSince: int;
+      issuer: text;
+      issuerOverride: text;
+      keyState: text;
+      kid: text;
+      tried: nat;
+    }) query;
+  /// Start key generation now (owners) — normally triggered by the first client.
+  oidcPrepareKeys: () -> (record {
+                            detail: text;
+                            ok: bool;
+                          });
+  /// What the consent card shows. Anyone signed in may ask; nothing secret in here.
+  oidcPreview: (sessionToken: text, clientId: text, redirectUri: text) ->
+   (record {
+      consented: bool;
+      detail: text;
+      displayName: text;
+      email: text;
+      name: text;
+      ok: bool;
+      shares: vec text;
+    }) query;
+  /// Owners: new RS256 key; the old one stays in the JWKS for 24 h so tokens in flight verify.
+  oidcRotateKey: () -> (record {
+                          detail: text;
+                          ok: bool;
+                        });
+  operationsDisplayAdmin: () ->
+   (record {
+      canManage: bool;
+      displays: vec View;
+    }) query;
+  operationsDisplayApprove: (code: text, name: text, cids: vec nat, days:
+   nat) -> (Approval);
+  operationsDisplayForget: (secret: text) -> ();
+  operationsDisplayPair: (code: text, keyHash: text) -> (PairResult);
+  operationsDisplayRevoke: (id: nat) -> (bool);
+  operationsDisplaySnapshot: (secret: text, cid: nat) -> (Snapshot);
+  operationsDisplayState: (secret: text) -> (State);
+  operationsSnapshot: (cid: nat) -> (Snapshot);
+  operationsSources: () -> (vec Source) query;
+  /// Objects owned by `email` in one connected tool. supported=false when
+  /// the connector doesn't implement the ownership contract (call fails).
+  ownedObjects: (connectorId: nat, email: text) ->
+   (record {
+      detail: text;
+      objects: vec OwnedObject;
+      ok: bool;
+      supported: bool;
+    });
+  personAppPermissions: (pid: text) ->
+   (vec
+     record {
+       app: text;
+       can: vec text;
+       cannot: vec text;
+       cid: nat;
+       configured: bool;
+       name: text;
+       role: text;
+       roleLabel: text;
+       source: text;
+     }) query;
+  /// The registry card for one address: id, history, former-holder note (staff).
+  personCard: (email: text) ->
+   (opt
+     record {
+       createdAt: int;
+       email: text;
+       emails: vec text;
+       formerHolders: vec text;
+       pid: text;
+       sealed: bool;
+     }) query;
+  /// Portal tiles for a signed-in user (session-gated, not public).
+  portalApps: (sessionToken: text) -> (vec AppLinkView) query;
+  portalLunch: (sessionToken: text) -> (opt LunchSummary);
+  /// Who am I in the portal — passkey (token "") or SSO token.
+  portalWhoami: (token: text) ->
+   (opt
+     record {
+       active: bool;
+       displayName: text;
+       email: text;
+       expiresAt: int;
+       id: text;
+       provider: text;
+     }) query;
+  previewAppPermissions: (cid: nat, p: Policy) ->
+   (opt AppPermissionView) query;
+  previewPush: () -> (vec ConnectorUser) query;
+  /// Resolve a principal to a person, for connected tools (scope-relative,
+  /// same rule as checkAccess) and admins (global).
+  principalPerson: (p: text) ->
+   (opt record {
+          access: variant {
+                    active;
+                    inactive;
+                    unknown;
+                  };
+          email: text;
+        }) query;
+  /// Wizard step 1: is this a hub-ready app, and what does it ask for?
+  probeApp: (canisterId: text) ->
+   (record {
+      already: opt nat;
+      detail: text;
+      manifest: opt Manifest;
+      ok: bool;
+      ping: text;
+    });
+  /// Positive override: treat the account as ACTIVE regardless of its IdP
+  /// status (e.g. STAGED before day one). Survives IdP changes until cleared.
+  reactivateUser: (key: text, reason: text) -> (bool);
+  /// Reassign selected objects in one tool from one email to another.
+  reassignOwned: (connectorId: nat, ids: vec text, fromEmail: text, toEmail:
+   text) -> (record {
+               detail: text;
+               moved: nat;
+               ok: bool;
+             });
+  /// One-time exchange: whoever holds a fresh code gets the token. clientName = the client's name, e.g. the desktop chat app.
+  redeemAssistantCode: (codeIn: text, clientName: text) ->
+   (record {
+      detail: text;
+      displayName: text;
+      email: text;
+      expiresAt: int;
+      id: text;
+      ok: bool;
+      orgName: text;
+      token: text;
+    });
+  /// Redeem a hand-off ticket. ONLY registered connector canisters may call.
+  /// One-time: the ticket is deleted on first use, valid 90 s, and the
+  /// user's live status is re-checked here.
+  redeemTicket: (ticket: text) ->
+   (record {
+      detail: text;
+      displayName: text;
+      email: text;
+      id: opt text;
+      ok: bool;
+      suiteToken: opt text;
+    });
+  regenHookSecret: (id: nat) -> (text);
+  /// Rotate the ES256 signing key; returns the new public JWK to register
+  /// in the Okta app (the old key stops working immediately).
+  regenSigningKey: (id: nat) -> (text);
+  registerConnector: (args:
+   record {
+     canisterId: text;
+     name: text;
+     note: text;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  removeAdmin: (p: text) -> (bool);
+  removeAppLink: (id: nat) -> (bool);
+  removeConnection: (id: nat) -> (bool);
+  removeConnector: (id: nat) -> (bool);
+  removeGroup: (id: nat) -> (record {
+                               detail: text;
+                               ok: bool;
+                             });
+  /// Hard-delete a LOCAL person (conn 0). Mastered accounts are owned by
+  /// their source and cannot be deleted here — they would reappear on the
+  /// next sync/push. Deleting also unlinks their passkeys, revokes open
+  /// invites, and pushes a deactivation to every connected tool unless
+  /// another source still holds the e-mail active.
+  /// Delete a person's hub-mastered records: Local always; SCIM-mastered ones
+  /// only while SCIM is switched off (with a live token the IdP would just
+  /// push them back — delete there). IdP-synced records are never deleted here.
+  removeLocalUser: (email: text) -> (bool);
+  removeOidcClient: (id: nat) -> (record {
+                                    detail: text;
+                                    ok: bool;
+                                  });
+  removeSample: () -> (record {
+                         detail: text;
+                         ok: bool;
+                       });
+  /// Owners: remove a source. Its people are dropped like an Okta connection's (deactivations pushed to the apps), its groups become ordinary groups.
+  removeScimSource: (id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      people: nat;
+    });
+  removeSlackBot: (id: nat) -> (bool);
+  removeSsoProvider: (id: nat) -> (bool);
+  /// Local people (added here) can change their address; mastered accounts get renames from their source.
+  renameLocalUser: (email: text, newEmail: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Ask for access. wantedHours 0 = no end date. Hub admins are notified.
+  requestAccess: (sessionToken: text, cid: nat, reason: text, wantedHours:
+   nat) -> (record {
+              detail: text;
+              id: nat;
+              ok: bool;
+            });
+  /// Apps this person could ask for: a people-based rule they are not in, in their part of the company, on the menu.
+  requestableApps: (sessionToken: text) ->
+   (vec record {
+          cid: nat;
+          name: text;
+          note: text;
+          openRequest: bool;
+        }) query;
+  /// Re-read the app's manifest and grant every lane it NEEDS that is missing (never removes one).
+  /// Admins from the app panel; the kitchen after every update — so an app that gained a need on update gets it.
+  resyncLanes: (cid: nat) ->
+   (record {
+      added: vec text;
+      detail: text;
+      ok: bool;
+    });
+  /// Evidence export — one line per entry, spreadsheet-safe.
+  reviewCsv: (id: nat) -> (text) query;
+  revokeAssistant: (sessionToken: text, id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  revokeAssistantOf: (id: nat) -> (record {
+                                     detail: text;
+                                     ok: bool;
+                                   });
+  revokeGrant: (id: nat) -> (record {
+                               detail: text;
+                               ok: bool;
+                             });
+  revokeInvite: (email: text) -> (nat);
+  /// Owners: switch source 1 off (pushes refused; people already pushed stay).
+  revokeScimToken: () -> (bool);
+  rotateOidcSecret: (id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      secret: text;
+    });
+  /// Owners: replace a source's token — the old one stops working at once (also retires the pre-0.20 plain token for source 1).
+  rotateScimSourceToken: (id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      token: text;
+    });
+  runSetup: (name: text, mode: text, adminLabel: text) -> (bool);
+  /// Admins: SCIM at a glance — enabled = at least one source is on; counters over all sources.
+  scimStatus: () ->
+   (record {
+      enabled: bool;
+      lastOp: text;
+      lastSeen: int;
+      userCount: nat;
+    }) query;
+  seedSample: () -> (record {
+                       detail: text;
+                       ok: bool;
+                     });
+  setAdminRole: (p: text, role: text) -> (bool);
+  /// Owners set the company's AI access. Empty key keeps the stored one (so URL/model can change alone).
+  setAi: (args:
+   record {
+     key: text;
+     model: text;
+     provider: text;
+     url: text;
+     visionModel: opt text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  setAppOrder: (ids: vec nat) -> (bool);
+  setAppPermissions: (cid: nat, expectedRevision: nat, p: Policy) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setAssistantsEnabled: (on: bool) -> (record {
+                                         detail: text;
+                                         ok: bool;
+                                       });
+  setAutoSync: (secs: nat) -> (bool);
+  setCompanyLogo: (img: blob, mime: text) -> (bool);
+  setConnectorAccess: (id: nat, p: AccessPolicy) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Admin: which bots a connector tool may fetch credentials for.
+  setConnectorBots: (connectorId: nat, botIds: vec nat) -> (bool);
+  setConnectorFilters: (id: nat, rules: vec text) -> (bool);
+  setConnectorLanes: (id: nat, lanes: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Give a connected app a menu entry (or change its address). Kind follows the app: hub apps sign in by ticket,
+  /// external apps by OpenID Connect. Admins.
+  setConnectorMenu: (cid: nat, url: text, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+      tileId: nat;
+    });
+  /// Who answers for an app (max 5). Reviews of this app land with them; without owners they land with the hub admins.
+  setConnectorOwners: (cid: nat, owners: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setConnectorScope: (id: nat, connIds: vec nat) -> (bool);
+  setDeskReportingAccess: (cid: nat, revision: nat, grants:
+   vec ReportingGrant) -> (record {
+                             detail: text;
+                             ok: bool;
+                           });
+  setGroupMembers: (id: nat, add: vec text, remove: vec text) ->
+   (record {
+      detail: text;
+      members: nat;
+      ok: bool;
+    });
+  setKitchen: (id: text) -> (record {
+                               detail: text;
+                               ok: bool;
+                             });
+  setLocalUserActive: (email: text, active: bool) -> (bool);
+  setLunchCanister: (id: text) -> (bool);
+  setMyAvatar: (sessionToken: text, img: blob) -> (bool);
+  setNotifSlackPref: (sessionToken: text, slackDm: bool) -> (bool);
+  /// Owners: custom domains. Changing the issuer invalidates every client's configuration — the UI says so.
+  setOidcOrigins: (issuer: text, frontend: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Give a PERSON a hub role ("" removes it). Owners only. Every passkey
+  /// linked to the person inherits it; apps see it as hubRole.
+  setPersonRole: (email: text, role: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Owners: pause (pushes are refused with 401, its people and groups become editable here) or resume a source.
+  setScimSourceEnabled: (id: nat, enabled: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setSlackDelivery: (enabled: bool) -> (bool);
+  setSsoProviderEnabled: (id: nat, enabled: bool) -> (bool);
+  /// Bind a tile to the connector that may redeem its tickets (0 = unbind).
+  setTileConnector: (appId: nat, connectorId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Menu switch (admins). Turning a tile on that has no address yet is refused — give it one first.
+  setTileHidden: (id: nat, hidden: bool) -> (record {
+                                               detail: text;
+                                               ok: bool;
+                                             });
+  setTileIcon: (id: nat, img: blob, mime: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setUserKinds: (keys: vec text, kind: text) -> (nat);
+  setUserProfile: (email: text, fields: vec record {
+                                              text;
+                                              text;
+                                            }) -> (bool);
+  setVault: (id: text) -> (record {
+                             detail: text;
+                             ok: bool;
+                           });
+  /// PUBLIC: authorization-code exchange. Returns a session token on success.
+  ssoExchange: (providerId: nat, code: text, redirectUri: text, codeVerifier:
+   text) ->
+   (record {
+      detail: text;
+      displayName: text;
+      email: text;
+      ok: bool;
+      token: text;
+    });
+  ssoKeysTransform: (args: TransformArgs) -> (HttpResponsePayload) query;
+  ssoLogout: (token: text) -> (bool);
+  /// PUBLIC: session check. Re-validates the LIVE user status on every call,
+  /// so a deactivation kills existing sessions instantly.
+  ssoWhoami: (token: text) ->
+   (opt
+     record {
+       active: bool;
+       displayName: text;
+       email: text;
+       expiresAt: int;
+       id: text;
+       provider: text;
+     }) query;
+  /// Start a review: one line per rule entry of every chosen app, frozen now. Owners (or the hub admins) are told.
+  startReview: (args: record {
+                        apps: vec nat;
+                        dueDays: nat;
+                        name: text;
+                      }) ->
+   (record {
+      detail: text;
+      id: nat;
+      items: nat;
+      ok: bool;
+    });
+  stats: () ->
+   (record {
+      active: nat;
+      autoSyncSecs: nat;
+      connections: nat;
+      connectors: nat;
+      hookEvents: nat;
+      inactive: nat;
+      lastHookAt: opt int;
+      users: nat;
+    }) query;
+  /// The topbar's heartbeat (every 30 s from every open tab): who am I, how many unread, when does this token end.
+  /// null = no valid session/token → the topbar shows "reconnect". Cheap: one pass over the inbox, no list.
+  suiteState: (token: text) ->
+   (opt
+     record {
+       active: bool;
+       displayName: text;
+       email: text;
+       expiresAt: int;
+       id: text;
+       provider: text;
+       unread: nat;
+     }) query;
+  supportDeskUrl: () -> (text) query;
+  /// Sync all enabled connections IN PARALLEL: start every sync first (each
+  /// call issues its outcalls immediately), await afterwards. Two Oktas take
+  /// as long as the slower one, not the sum. The per-connection `syncing`
+  /// guard keeps overlapping runs of the SAME connection out.
+  syncAll: () -> (vec record {
+                        nat;
+                        SyncResult;
+                      });
+  syncNow: (id: nat) -> (SyncResult);
+  team_info: () -> (TdTeamInfo) query;
+  team_members: () -> (vec TdTeamMember) query;
+  /// Validates reachability, token, and permissions with a 1-user page.
+  testConnection: (id: nat) -> (record {
+                                  detail: text;
+                                  ok: bool;
+                                  status: nat;
+                                });
+  /// Admin smoke test per bot: sends a real DM through the full path.
+  testSlackBot: (id: nat, email: text) -> (record {
+                                             detail: text;
+                                             ok: bool;
+                                           });
+  /// The picture of one menu entry (public like the company logo: a picture, no name, no address).
+  tileIcon: (id: nat) -> (opt record {
+                                img: blob;
+                                mime: text;
+                              }) query;
+  unlinkPrincipal: (p: text) -> (bool);
+  /// Edit a tile in place — the id stays stable (apps reference it as
+  /// HUB_JUMP_ID), so renames/URL changes never break the jump wiring.
+  updateAppLink: (id: nat, args:
+   record {
+     kind: text;
+     name: text;
+     note: text;
+     url: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  /// Empty clientId / clientSecret keep the stored values.
+  updateConnection: (id: nat, args:
+   record {
+     baseUrl: text;
+     clientId: text;
+     clientSecret: text;
+     enabled: bool;
+     name: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  /// Edit name/note in place. The canister id is the connector's IDENTITY
+  /// (every gate hangs on it) — changing it = remove + register, deliberately.
+  updateConnector: (id: nat, args: record {
+                                     name: text;
+                                     note: text;
+                                   }) -> (bool);
+  updateGroup: (id: nat, name: text, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  updateOidcClient: (id: nat, args:
+   record {
+     alg: text;
+     consent: text;
+     enabled: bool;
+     redirectUris: vec text;
+     tileUrl: opt text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  /// Admins: rename, change the domain scope or the note of a source.
+  updateScimSource: (id: nat, name: text, domains: vec text, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Change org name / directory mode after setup (Settings). Mode is
+  /// steering info, not a data-model switch: local (conn 0) and mastered
+  /// users coexist, so switching loses nothing.
+  updateSetup: (name: text, mode: text) -> (bool);
+  /// Empty token/secret = keep the stored one.
+  updateSlackBot: (id: nat, args:
+   record {
+     enabled: bool;
+     name: text;
+     signingSecret: text;
+     token: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  vaultAuth: (p: text) -> (bool) query;
+  vaultInfo: () -> (record {vaultId: text;}) query;
+  version: () -> (text) query;
+  whoami: () -> (text) query;
+  withdrawAccessRequest: (sessionToken: text, id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+}

@@ -1,0 +1,557 @@
+// Version: 1.0.0
+type AccessPolicy__919941470 =
+  {groups : [Text]; mode : Text; people : [Text]; roles : [Text]};
+type AccessRequest__902137167 =
+  {
+    appName : Text;
+    at : Int;
+    cid : Nat;
+    decidedAt : Int;
+    decidedBy : Text;
+    email : Text;
+    grantId : Nat;
+    id : Nat;
+    note : Text;
+    reason : Text;
+    state : Text;
+    wantedHours : Nat
+  };
+type AppLink__853635696 = {id : Nat; name : Text; note : Text; url : Text};
+type AssistantCode__739914438 =
+  {displayName : Text; email : Text; expiresAt : Int};
+type Assistant__1021639104 =
+  {
+    client : Text;
+    createdAt : Int;
+    email : Text;
+    expiresAt : Int;
+    id : Nat;
+    lastUsedAt : Int;
+    revokedAt : Int;
+    uses : Nat
+  };
+type Conn__58803623 =
+  {
+    baseUrl : Text;
+    enabled : Bool;
+    hookSecret : Text;
+    id : Nat;
+    kind : Text;
+    lastSync : ?SyncStat__222910615;
+    name : Text;
+    token : Text
+  };
+type ConnectorRequest__343326626 =
+  {
+    appName : Text;
+    at : Int;
+    canisterId : Text;
+    decidedAt : Int;
+    decision : Text;
+    id : Nat;
+    lane : Text;
+    note : Text;
+    populationWish : Text;
+    requestedBy : Text;
+    status : Text;
+    tileKind : Text;
+    tileUrl : Text
+  };
+type Connector__316469665 =
+  {addedAt : Int; canisterId : Principal; id : Nat; name : Text; note : Text};
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Gen__361870898 =
+  {bits : Nat; cur : Nat; done : Bool; found : [Nat]; tried : Nat};
+type Grant__637092062 =
+  {
+    email : Text;
+    endedAt : Int;
+    endedBy : Text;
+    expiresAt : Int;
+    grantedAt : Int;
+    grantedBy : Text;
+    id : Nat;
+    reason : Text;
+    state : Text;
+    target : Text;
+    targetName : Text
+  };
+type GroupGrant__29097267 = {id : Nat; role : Text};
+type Group__930697544 =
+  {id : Nat; members : [Text]; name : Text; note : Text};
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Invite__669811892 = {email : Text; expiresAt : Int};
+type JournalEntry__256422166 =
+  {at : Int; by : Text; detail : Text; kind : Text};
+type Key__676607727 =
+  {
+    createdAt : Int;
+    d : Nat;
+    dp : Nat;
+    dq : Nat;
+    e : Nat;
+    kid : Text;
+    n : Nat;
+    p : Nat;
+    q : Nat;
+    qinv : Nat
+  };
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LegacyGrant__795685867 = {email : Text; role : Text; source : Text};
+type Map__13625999<K, V> =
+  {var root : Node__430031793<K, V>; var size : Nat__58649523};
+type Map__386906547<K, V> = Map__670138087<K, V>;
+type Map__670138087<K, V> = Map__13625999<K, V>;
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Notification__744695751 =
+  {
+    at : Int;
+    email : Text;
+    fromApp : Text;
+    id : Nat;
+    kind : Text;
+    read : Bool;
+    slack : Text;
+    title : Text;
+    url : Text
+  };
+type OidcClient__506679717 =
+  {
+    alg : Text;
+    cid : Nat;
+    clientId : Text;
+    consent : Text;
+    createdAt : Int;
+    enabled : Bool;
+    isPublic : Bool;
+    redirectUris : [Text];
+    secretHash : Text;
+    updatedAt : Int
+  };
+type OidcCode__122870733 =
+  {
+    authTime : Int;
+    challenge : Text;
+    cid : Nat;
+    email : Text;
+    expiresAt : Int;
+    nonce : Text;
+    provider : Text;
+    redirectUri : Text;
+    scope : Text;
+    sub : Text
+  };
+type OidcToken__329142809 =
+  {cid : Nat; email : Text; expiresAt : Int; scope : Text; sub : Text};
+type PermissionCheck__68449854 =
+  {checkedAt : Int; status : Status__947094800};
+type PersonGrant__328057996 = {id : Text; role : Text};
+type Person__845211964 =
+  {
+    createdAt : Int;
+    email : Text;
+    emails : [Text];
+    pid : Text;
+    sealedAt : Int
+  };
+type Policy__630656513 =
+  {
+    app : Text;
+    defaultRole : Text;
+    groups : [GroupGrant__29097267];
+    people : [PersonGrant__328057996]
+  };
+type ReviewItem__516517488 =
+  {
+    appName : Text;
+    applied : Text;
+    cid : Nat;
+    decidedAt : Int;
+    decidedBy : Text;
+    decision : Text;
+    detail : Text;
+    id : Nat;
+    note : Text;
+    reviewId : Nat;
+    reviewers : [Text];
+    subject : Text
+  };
+type Review__85665861 =
+  {
+    apps : [Nat];
+    closedAt : Int;
+    dueAt : Int;
+    id : Nat;
+    name : Text;
+    startedAt : Int;
+    startedBy : Text;
+    state : Text
+  };
+type ScimSource__155503634 =
+  {
+    createdAt : Int;
+    domains : [Text];
+    enabled : Bool;
+    id : Nat;
+    lastOp : Text;
+    lastSeen : Int;
+    name : Text;
+    note : Text;
+    tokenHash : Text
+  };
+type Session__1030403100 =
+  {
+    createdAt : Int;
+    displayName : Text;
+    email : Text;
+    expiresAt : Int;
+    provider : Text
+  };
+type SlackBot__576383643 =
+  {
+    enabled : Bool;
+    id : Nat;
+    name : Text;
+    signingSecret : Text;
+    teamName : Text;
+    token : Text
+  };
+type SsoProvider__2676149 =
+  {
+    clientId : Text;
+    clientSecret : Text;
+    enabled : Bool;
+    id : Nat;
+    issuer : Text;
+    kind : Text;
+    name : Text
+  };
+type Status__947094800 =
+  {
+    app : Text;
+    directoryAt : Int;
+    legacy : [LegacyGrant__795685867];
+    legacyGroups : [{name : Text; role : Text}];
+    model : Nat;
+    revision : Text
+  };
+type StoredPolicy__98989417 =
+  {policy : Policy__630656513; revision : Nat; updatedAt : Int};
+type SuiteToken__720076457 =
+  {
+    connId : Nat;
+    createdAt : Int;
+    displayName : Text;
+    email : Text;
+    expiresAt : Int
+  };
+type SyncStat__222910615 =
+  {at : Int; detail : Text; fetched : Nat; ok : Bool};
+type UserRec__774488424 =
+  {
+    activeIdp : Bool;
+    attributes : [(Text, Text)];
+    connId : Nat;
+    createdAt : Int;
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    override : ?Text;
+    status : Text;
+    updatedAt : Int
+  };
+actor {
+  stable AVATAR_MAX : Nat;
+  stable FORWARDED_ATTRS : [Text];
+  stable HUB_VERSION : Text;
+  stable LANES : [Text];
+  stable LOCAL_CONN : Nat;
+  stable LOGO_MAX : Nat;
+  stable MAX_AVATARS : Nat;
+  stable NOTIF_DEDUPE_NS : Int;
+  stable NOTIF_PER_USER_CAP : Nat;
+  stable NOTIF_RETENTION_NS : Int;
+  stable OIDC_CODE_TTL : Int;
+  stable OIDC_IDTOKEN_TTL : Int;
+  stable OIDC_LANES : [Text];
+  stable OIDC_MAX_BODY : Nat;
+  stable OIDC_MAX_CODES : Nat;
+  stable OIDC_MAX_CODES_PER_PERSON : Nat;
+  stable OIDC_MAX_TOKENS : Nat;
+  stable OIDC_RATE_PER_5MIN : Nat;
+  stable OIDC_TOKEN_TTL : Int;
+  stable PROFILE_KEYS : [Text];
+  stable SCIM_CONN : Nat;
+  stable accessRequests :
+    {
+      var root : Node__430031793<Nat, AccessRequest__902137167>;
+      var size : Nat__58649523
+    };
+  stable adminRoles :
+    {var root : Node__430031793<Principal, Text>; var size : Nat__58649523};
+  stable admins :
+    {var root : Node__430031793<Principal, Text>; var size : Nat__58649523};
+  stable aiFetches :
+    {var root : Node__430031793<Nat, (Nat, Int)>; var size : Nat__58649523};
+  stable var aiKey : Text;
+  stable var aiModel : Text;
+  stable var aiProvider : Text;
+  stable var aiSetAt : Int;
+  stable var aiUrl : Text;
+  stable aiUsage :
+    {var root : Node__430031793<Nat, (Nat, Int)>; var size : Nat__58649523};
+  stable var aiVisionModel : Text;
+  stable appLinkConnectors :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable appLinkHidden :
+    {var root : Node__430031793<Nat, Bool>; var size : Nat__58649523};
+  stable appLinkKinds :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable appLinks :
+    {
+      var root : Node__430031793<Nat, AppLink__853635696>;
+      var size : Nat__58649523
+    };
+  stable var appOrder : [Nat];
+  stable appPermissionChecks :
+    {
+      var root : Node__430031793<Nat, PermissionCheck__68449854>;
+      var size : Nat__58649523
+    };
+  stable appPermissionPolicies :
+    {
+      var root : Node__430031793<Nat, StoredPolicy__98989417>;
+      var size : Nat__58649523
+    };
+  stable assistantCodes :
+    {
+      var root : Node__430031793<Text, AssistantCode__739914438>;
+      var size : Nat__58649523
+    };
+  stable assistants :
+    {
+      var root : Node__430031793<Text, Assistant__1021639104>;
+      var size : Nat__58649523
+    };
+  stable var assistantsEnabled : Bool;
+  stable var assistantsOn : Bool;
+  stable var autoSyncSecs : Nat;
+  stable var claimCode : Text;
+  stable var claimUsed : Bool;
+  stable var companyLogo : ?Blob;
+  stable var companyLogoMime : Text;
+  stable connectorAccess :
+    {
+      var root : Node__430031793<Nat, AccessPolicy__919941470>;
+      var size : Nat__58649523
+    };
+  stable connectorBots :
+    {var root : Node__430031793<Nat, [Nat]>; var size : Nat__58649523};
+  stable connectorFilters :
+    {var root : Node__430031793<Nat, [Text]>; var size : Nat__58649523};
+  stable connectorLanes :
+    {var root : Node__430031793<Nat, [Text]>; var size : Nat__58649523};
+  stable connectorOwners :
+    {var root : Node__430031793<Nat, [Text]>; var size : Nat__58649523};
+  stable connectorPushedAt :
+    {var root : Node__430031793<Nat, Int>; var size : Nat__58649523};
+  stable connectorRequests :
+    {
+      var root : Node__430031793<Nat, ConnectorRequest__343326626>;
+      var size : Nat__58649523
+    };
+  stable connectorScopes :
+    {var root : Node__430031793<Nat, [Nat]>; var size : Nat__58649523};
+  stable connectors :
+    {
+      var root : Node__430031793<Nat, Connector__316469665>;
+      var size : Nat__58649523
+    };
+  stable conns :
+    {
+      var root : Node__430031793<Nat, Conn__58803623>;
+      var size : Nat__58649523
+    };
+  stable var directoryMode : Text;
+  stable emailToPid :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable forceActive :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable grants :
+    {
+      var root : Node__430031793<Nat, Grant__637092062>;
+      var size : Nat__58649523
+    };
+  stable groupScimIds :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable groupScimSource :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable groups :
+    {
+      var root : Node__430031793<Nat, Group__930697544>;
+      var size : Nat__58649523
+    };
+  stable var hookEvents : Nat;
+  stable inviteCodes :
+    {
+      var root : Node__430031793<Text, Invite__669811892>;
+      var size : Nat__58649523
+    };
+  stable var kitchenId : Text;
+  stable var lastHookAt : ?Int;
+  stable var lunchCanister : Text;
+  stable var nextAccessRequestId : Nat;
+  stable var nextAppLinkId : Nat;
+  stable var nextAssistantId : Nat;
+  stable var nextConnId : Nat;
+  stable var nextConnectorId : Nat;
+  stable var nextConnectorRequestId : Nat;
+  stable var nextGrantId : Nat;
+  stable var nextGroupId : Nat;
+  stable var nextNotifId : Nat;
+  stable var nextReviewId : Nat;
+  stable var nextReviewItemId : Nat;
+  stable var nextScimSourceId : Nat;
+  stable var nextSlackBotId : Nat;
+  stable var nextSsoId : Nat;
+  stable notifDedupe :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable notifSlackOptOut :
+    {var root : Node__430031793<Text, Bool>; var size : Nat__58649523};
+  stable notifications :
+    {
+      var root : Node__430031793<Nat, Notification__744695751>;
+      var size : Nat__58649523
+    };
+  stable oauthClientIds :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable oauthKeys :
+    {var root : Node__430031793<Nat, Blob>; var size : Nat__58649523};
+  stable oidcClients :
+    {
+      var root : Node__430031793<Nat, OidcClient__506679717>;
+      var size : Nat__58649523
+    };
+  stable oidcCodes :
+    {
+      var root : Node__430031793<Text, OidcCode__122870733>;
+      var size : Nat__58649523
+    };
+  stable oidcConsents :
+    {
+      var root : Node__430031793<Nat, Map__386906547<Text, Int>>;
+      var size : Nat__58649523
+    };
+  stable var oidcEcKey : ?Blob;
+  stable var oidcEcKid : Text;
+  stable var oidcFrontendOverride : Text;
+  stable var oidcGen : ?Gen__361870898;
+  stable var oidcGenStartedAt : Int;
+  stable var oidcIssuerOverride : Text;
+  stable var oidcRsaKey : ?Key__676607727;
+  stable var oidcRsaPrev : ?Key__676607727;
+  stable var oidcRsaPrevUntil : Int;
+  stable oidcSubs :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable oidcTokens :
+    {
+      var root : Node__430031793<Text, OidcToken__329142809>;
+      var size : Nat__58649523
+    };
+  stable var orgName : Text;
+  stable personRoles :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable persons :
+    {
+      var root : Node__430031793<Text, Person__845211964>;
+      var size : Nat__58649523
+    };
+  stable var pidBootstrappedAt : Int;
+  stable var pidCounter : Nat;
+  stable var pidSeed : ?Blob;
+  stable principalLinks :
+    {var root : Node__430031793<Principal, Text>; var size : Nat__58649523};
+  stable reviewItems :
+    {
+      var root : Node__430031793<Nat, ReviewItem__516517488>;
+      var size : Nat__58649523
+    };
+  stable reviews :
+    {
+      var root : Node__430031793<Nat, Review__85665861>;
+      var size : Nat__58649523
+    };
+  stable runs :
+    {
+      var blockIndex : Nat__58649523;
+      var blocks : [var [var ?JournalEntry__256422166]];
+      var elementIndex : Nat__58649523
+    };
+  stable sampleEmails :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable sampleGroups :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable var sampleOn : Bool;
+  stable sampleTiles :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable var scimLastOp : Text;
+  stable var scimLastSeen : Int;
+  stable scimSources :
+    {
+      var root : Node__430031793<Nat, ScimSource__155503634>;
+      var size : Nat__58649523
+    };
+  stable var scimToken : Text;
+  stable sessionTtlNs : Int;
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__1030403100>;
+      var size : Nat__58649523
+    };
+  stable var setupDone : Bool;
+  stable var slackBotToken : Text;
+  stable slackBots :
+    {
+      var root : Node__430031793<Nat, SlackBot__576383643>;
+      var size : Nat__58649523
+    };
+  stable var slackEnabled : Bool;
+  stable slackIdCache :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable slackUserCache2 :
+    {var root : Node__430031793<Text, (Nat, Text)>; var size : Nat__58649523};
+  stable ssoProviders :
+    {
+      var root : Node__430031793<Nat, SsoProvider__2676149>;
+      var size : Nat__58649523
+    };
+  stable suiteTokens :
+    {
+      var root : Node__430031793<Text, SuiteToken__720076457>;
+      var size : Nat__58649523
+    };
+  stable syncGuardTtlNs : Int;
+  stable ticketTtlNs : Int;
+  stable tileIconMimes :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable tileIcons :
+    {var root : Node__430031793<Nat, Blob>; var size : Nat__58649523};
+  stable userAvatars :
+    {var root : Node__430031793<Text, Blob>; var size : Nat__58649523};
+  stable userKeyToPid :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable userKinds :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable users :
+    {
+      var root : Node__430031793<Text, UserRec__774488424>;
+      var size : Nat__58649523
+    };
+  stable var vaultId : Text
+};

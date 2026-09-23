@@ -1,0 +1,121 @@
+type Target =
+ record {
+   addedAt: int;
+   canisterId: text;
+   kind: text;
+   name: text;
+ };
+type Status =
+ record {
+   busy: bool;
+   canisterId: text;
+   controllers: vec text;
+   detail: text;
+   memorySize: nat;
+   moduleHash: text;
+   protected: bool;
+   schedule: opt Schedule;
+   snapshots: vec SnapView;
+   snapshotsSize: nat;
+   state: text;
+ };
+type SnapView =
+ record {
+   by: text;
+   id: text;
+   kind: text;
+   note: text;
+   size: nat;
+   takenAt: int;
+ };
+type Schedule =
+ record {
+   atHourUtc: nat;
+   enabled: bool;
+   everyHours: nat;
+   keep: nat;
+   lastResult: text;
+   lastRun: int;
+ };
+type LogRow =
+ record {
+   at: int;
+   ok: bool;
+   what: text;
+   who: text;
+ };
+/// kebab-stack vault — the pantry.
+///
+/// One small canister that holds no business data and does one thing: keep
+/// snapshots of the hub and of every connected app, restore them, and run
+/// schedules. It works because it is a CO-CONTROLLER of each protected
+/// canister (only controllers may snapshot); that also makes it the most
+/// privileged canister of the suite — hence: owner-only, every action
+/// journaled, nothing else in here.
+///
+/// Why not inside the hub: a canister cannot stop itself and carry on, and a
+/// hub→vault→stop(hub) chain would deadlock (stopping waits for the open
+/// call). The browser therefore talks to the vault directly; the vault asks
+/// the hub "is this principal an owner?" BEFORE it touches anything.
+///
+/// Stable state is append-only (never remove or rename a top-level var).
+service : {
+  addTarget: (canisterId: text, name: text, kind: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  deleteSnapshot: (canisterId: text, snapshotId: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  info: () ->
+   (record {
+      hubId: text;
+      kitchenId: text;
+      me: text;
+      targets: nat;
+      version: text;
+    }) query;
+  listJournal: () -> (vec LogRow);
+  listSchedules: () -> (vec record {
+                              text;
+                              Schedule;
+                            });
+  listTargets: () -> (vec Target);
+  removeTarget: (canisterId: text) -> (record {
+                                         detail: text;
+                                         ok: bool;
+                                       });
+  restore: (canisterId: text, snapshotId: text, safetySnapshot: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setHub: (id: text) -> (record {
+                           detail: text;
+                           ok: bool;
+                         });
+  setKitchen: (id: text) -> (record {
+                               detail: text;
+                               ok: bool;
+                             });
+  setSchedule: (canisterId: text, s:
+   record {
+     atHourUtc: nat;
+     enabled: bool;
+     everyHours: nat;
+     keep: nat;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  snapshot: (canisterId: text, note: text) ->
+   (record {
+      detail: text;
+      id: text;
+      ok: bool;
+    });
+  status: (canisterId: text) -> (Status);
+}

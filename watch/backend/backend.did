@@ -1,0 +1,415 @@
+type Summary =
+ record {
+   busy: bool;
+   changes30d: nat;
+   domains: nat;
+   enabled: nat;
+   events30d: nat;
+   expiringSoon: nat;
+   expiryWarnDays: nat;
+   intervalMins: nat;
+   lastRun: opt Run;
+   lookalikesRegistered: nat;
+   monitoringSince: int;
+   open: nat;
+   postureGood: nat;
+   postureWeak: nat;
+   recipients: vec text;
+   recordSets: nat;
+   reports: nat;
+   runs: nat;
+   warn: nat;
+ };
+type Snapshot =
+ record {
+   checkedAt: int;
+   metrics: vec record {
+                  text;
+                  nat;
+                };
+   schema: nat;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+ };
+type Settings =
+ record {
+   adminCount: nat;
+   adminEmails: vec text;
+   adminGroup: text;
+   appUrl: text;
+   expiryWarnDays: nat;
+   hubId: text;
+   intervalMins: nat;
+   lastDirectoryPull: int;
+   monitoringSince: int;
+   notifyAdmins: bool;
+   operatorsSeen: vec text;
+   orgName: text;
+   peopleCount: nat;
+   trustedOperators: vec text;
+ };
+type Run =
+ record {
+   at: int;
+   by: text;
+   changes: nat;
+   detail: text;
+   domains: nat;
+   id: nat;
+   problems: nat;
+   queries: nat;
+ };
+type Report =
+ record {
+   accepted: nat;
+   alerts: nat;
+   domains: nat;
+   generatedAt: int;
+   id: nat;
+   learned: nat;
+   lookups: nat;
+   month: text;
+   postureWeak: nat;
+   problems: nat;
+   runs: nat;
+   "text": text;
+ };
+type RecordSet =
+ record {
+   detail: text;
+   domainId: nat;
+   expected: vec text;
+   firstSeen: int;
+   lastChangedAt: int;
+   lastSeen: int;
+   rtype: text;
+   status: text;
+   values: vec text;
+ };
+type Posture =
+ record {
+   caa: text;
+   checkedAt: int;
+   detail: text;
+   dmarc: text;
+   dnssec: text;
+   domainId: nat;
+   lock: text;
+   mail: text;
+   mtaSts: text;
+   spf: text;
+ };
+type PermissionStatus =
+ record {
+   app: text;
+   directoryAt: int;
+   legacy: vec LegacyGrant;
+   legacyGroups: vec record {
+                       name: text;
+                       role: text;
+                     };
+   model: nat;
+   revision: text;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type Lookalike =
+ record {
+   checkedAt: int;
+   detail: text;
+   domainId: nat;
+   firstSeen: int;
+   name: text;
+   registered: bool;
+   registeredSince: int;
+ };
+type LogRow =
+ record {
+   at: int;
+   what: text;
+   who: text;
+ };
+type LegacyGrant =
+ record {
+   email: text;
+   role: text;
+   source: text;
+ };
+type Item =
+ record {
+   detail: text;
+   historical: bool;
+   id: text;
+   kind: text;
+   path: text;
+   status: text;
+   title: text;
+ };
+type IpOwner =
+ record {
+   checkedAt: int;
+   ip: text;
+   org: text;
+   owner: text;
+ };
+type Event =
+ record {
+   after: vec text;
+   at: int;
+   before: vec text;
+   by: text;
+   detail: text;
+   domainId: nat;
+   id: nat;
+   kind: text;
+   rtype: text;
+ };
+type DomainRow =
+ record {
+   checks: opt CheckSummary;
+   domain: Domain;
+   expiryDays: opt int;
+   grade: text;
+   open: nat;
+   records: vec RecordSet;
+   worst: text;
+ };
+type DomainInput =
+ record {
+   name: text;
+   note: text;
+   types: vec text;
+   watchers: vec text;
+ };
+type DomainDetail =
+ record {
+   apex: bool;
+   cert: opt CertState;
+   events: vec Event;
+   lookalikes: vec Lookalike;
+   owners: vec IpOwner;
+   posture: opt Posture;
+   postureText: text;
+   registrable: text;
+   row: DomainRow;
+   watcherEmails: vec text;
+   watcherNames: vec text;
+ };
+type Domain =
+ record {
+   createdAt: int;
+   createdBy: text;
+   enabled: bool;
+   expiresAt: text;
+   expiryCheckedAt: int;
+   expiryDetail: text;
+   id: nat;
+   lastCheck: int;
+   lastResult: text;
+   name: text;
+   note: text;
+   types: vec text;
+   watchers: vec text;
+ };
+type DirectoryRow =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type Context =
+ record {
+   checkedAt: int;
+   items: vec Item;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+   total: nat;
+ };
+type CheckSummary =
+ record {
+   certificateAt: int;
+   certificateDetail: text;
+   certificateEnds: text;
+   certificateRetryAt: int;
+   lookalikes: nat;
+   postureAt: int;
+ };
+type CertState =
+ record {
+   certEnds: text;
+   certIssuer: text;
+   checkedAt: int;
+   detail: text;
+   domainId: nat;
+   issuers: vec text;
+   names: vec text;
+ };
+service : {
+  acceptAll: (tok: text, id: nat) -> (record {
+                                        detail: text;
+                                        ok: bool;
+                                      });
+  /// The current answer becomes the expectation; the change is closed.
+  acceptChange: (tok: text, id: nat, rtype: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  addAdminEmail: (email: text) -> (bool);
+  addDomain: (tok: text, x: DomainInput) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+    });
+  adminLogRows: (tok: text) -> (vec LogRow) query;
+  checkNow: (tok: text, id: opt nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      run: Run;
+    });
+  claimAdmin: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  directory: (tok: text, q: text) ->
+   (vec record {
+          department: text;
+          displayName: text;
+          email: text;
+        }) query;
+  /// Evidence for an auditor: what is watched, how, since when, what happened. CSV, spreadsheet-safe.
+  exportEvidence: (tok: text, days: nat) -> (text) query;
+  getDomain: (tok: text, id: nat) -> (opt DomainDetail) query;
+  getSettings: (tok: text) -> (opt Settings) query;
+  hub_deactivate: (emails: vec text) -> (nat);
+  hub_manifest: () -> (Manifest) query;
+  /// Aggregate-only read for Hub Operations; no session or records leave this app.
+  hub_operations: (viewer: text) -> (Snapshot) query;
+  hub_permissionStatus: () -> (PermissionStatus);
+  /// The Hub brokers this read for a signed-in Desk agent. The viewer retains
+  /// their ordinary app permissions; this endpoint never grants extra access.
+  hub_personContext: (viewer: text, subject: text, viewerRole: text) ->
+   (Context) query;
+  hub_ping: () -> (text) query;
+  hub_upsert: (rows: vec DirectoryRow) -> (nat);
+  hub_usesGroup: (_name: text) -> (vec text) query;
+  ignoreLookalike: (tok: text, name: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  info: () ->
+   (record {
+      appUrl: text;
+      hubId: text;
+      hubSet: bool;
+      orgName: text;
+      version: text;
+    }) query;
+  listDomains: (tok: text) -> (vec DomainRow) query;
+  listReports: (tok: text) -> (vec Report) query;
+  listRuns: (tok: text, limit: nat) -> (vec Run) query;
+  loginWithTicket: (ticket: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
+  recentEvents: (tok: text, limit: nat) ->
+   (vec record {
+          domain: text;
+          event: Event;
+        }) query;
+  removeDomain: (tok: text, id: nat) -> (record {
+                                           detail: text;
+                                           ok: bool;
+                                         });
+  reportNow: (tok: text) -> (record {
+                               detail: text;
+                               ok: bool;
+                             });
+  setAdminEmails: (tok: text, emails: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setHub: (id: text) -> (bool);
+  setSettings: (tok: text, args:
+   record {
+     adminGroup: text;
+     appUrl: text;
+     expiryWarnDays: nat;
+     intervalMins: nat;
+     notifyAdmins: bool;
+     orgName: text;
+     trustedOperators: opt vec text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  signOut: (tok: text) -> ();
+  summary: (tok: text) -> (opt Summary) query;
+  syncNow: (tok: text) -> (record {
+                             detail: text;
+                             ok: bool;
+                           });
+  /// Prove the alert chain without touching DNS: one notification to every recipient, with the hub's answer for each.
+  testAlert: (tok: text) -> (record {
+                               detail: text;
+                               ok: bool;
+                             });
+  /// A/AAAA: forget known addresses that are no longer served (the set only grows on accept; this trims it to what both resolvers see now).
+  trimKnown: (tok: text, id: nat, rtype: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  updateDomain: (tok: text, id: nat, x:
+   record {
+     enabled: bool;
+     note: text;
+     types: vec text;
+     watchers: vec text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  whoami: (tok: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       hubId: text;
+       id: text;
+       needsClaim: bool;
+       orgName: text;
+       role: text;
+       roleSource: text;
+     }) query;
+}

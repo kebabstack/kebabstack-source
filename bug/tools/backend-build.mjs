@@ -1,0 +1,14 @@
+import { execFileSync } from 'node:child_process';
+import { copyFileSync, writeFileSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const mops=root+'node_modules/.bin/mops';
+const run=(cmd,args)=>execFileSync(cmd,args,{cwd:root,stdio:'inherit'});
+run(mops,['install','--locked']);run(mops,['check','--fix']);run(mops,['build','backend']);
+const moc=execFileSync(mops,['toolchain','bin','moc'],{cwd:root,encoding:'utf8'}).trim();
+run(moc,['--stable-compatible','backend/backend.most','backend/dist/backend.most']);
+writeFileSync(root+'backend/backend.did', readFileSync(root+'backend/dist/backend.did','utf8').split('\n').map(s=>s.trimEnd()).join('\n'));
+const idl=execFileSync('python3',['../sdk/tools/did2idl.py','backend/dist/backend.did'],{cwd:root,encoding:'utf8'});
+writeFileSync(root+'dist/idl.js',idl);
+run(root+'node_modules/.bin/icp-bindgen',['--did-file','backend/dist/backend.did','--out-dir','src/generated','--actor-disabled','--declarations-flat','--force']);
+if(process.env.ICP_WASM_OUTPUT_PATH)copyFileSync(root+'backend/dist/backend.wasm',process.env.ICP_WASM_OUTPUT_PATH);

@@ -1,0 +1,225 @@
+// Version: 1.0.0
+type CertState__615134835 =
+  {
+    certEnds : Text;
+    certIssuer : Text;
+    checkedAt : Int;
+    detail : Text;
+    domainId : Nat;
+    issuers : [Text];
+    names : [Text]
+  };
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Domain__277248303 =
+  {
+    createdAt : Int;
+    createdBy : Text;
+    enabled : Bool;
+    expiresAt : Text;
+    expiryCheckedAt : Int;
+    expiryDetail : Text;
+    id : Nat;
+    lastCheck : Int;
+    lastResult : Text;
+    name : Text;
+    note : Text;
+    types : [Text];
+    watchers : [Text]
+  };
+type Event__55031293 =
+  {
+    after : [Text];
+    at : Int;
+    before : [Text];
+    by : Text;
+    detail : Text;
+    domainId : Nat;
+    id : Nat;
+    kind : Text;
+    rtype : Text
+  };
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type IpOwner__831090191 =
+  {checkedAt : Int; ip : Text; org : Text; owner : Text};
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LogRow__410755882 = {at : Int; what : Text; who : Text};
+type Lookalike__563069236 =
+  {
+    checkedAt : Int;
+    detail : Text;
+    domainId : Nat;
+    firstSeen : Int;
+    name : Text;
+    registered : Bool;
+    registeredSince : Int
+  };
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Posture__352723494 =
+  {
+    caa : Text;
+    checkedAt : Int;
+    detail : Text;
+    dmarc : Text;
+    dnssec : Text;
+    domainId : Nat;
+    lock : Text;
+    mail : Text;
+    mtaSts : Text;
+    spf : Text
+  };
+type RecordSet__1034531147 =
+  {
+    detail : Text;
+    domainId : Nat;
+    expected : [Text];
+    firstSeen : Int;
+    lastChangedAt : Int;
+    lastSeen : Int;
+    rtype : Text;
+    status : Text;
+    values : [Text]
+  };
+type Report__14429908 =
+  {
+    accepted : Nat;
+    alerts : Nat;
+    domains : Nat;
+    generatedAt : Int;
+    id : Nat;
+    learned : Nat;
+    lookups : Nat;
+    month : Text;
+    postureWeak : Nat;
+    problems : Nat;
+    runs : Nat;
+    text : Text
+  };
+type Run__296243777 =
+  {
+    at : Int;
+    by : Text;
+    changes : Nat;
+    detail : Text;
+    domains : Nat;
+    id : Nat;
+    problems : Nat;
+    queries : Nat
+  };
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+actor {
+  stable var adminClaimed : Bool;
+  stable var adminEmails : [Text];
+  stable var adminGroup : Text;
+  stable adminLog :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable var appUrl : Text;
+  stable certWarned :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable certs :
+    {
+      var root : Node__430031793<Nat, CertState__615134835>;
+      var size : Nat__58649523
+    };
+  stable domains :
+    {
+      var root : Node__430031793<Nat, Domain__277248303>;
+      var size : Nat__58649523
+    };
+  stable events :
+    {
+      var root : Node__430031793<Nat, Event__55031293>;
+      var size : Nat__58649523
+    };
+  stable var expiryWarnDays : Nat;
+  stable expiryWarned :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable former :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable groupsCache :
+    {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable var hubId : Text;
+  stable var idMigration : Text;
+  stable ids :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var intervalMins : Nat;
+  stable ipOwners :
+    {
+      var root : Node__430031793<Text, IpOwner__831090191>;
+      var size : Nat__58649523
+    };
+  stable var lastDirectoryPull : Int;
+  stable var lastReportMonth : Text;
+  stable lookalikeCheckedAt :
+    {var root : Node__430031793<Nat, Int>; var size : Nat__58649523};
+  stable lookalikeIgnored :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable lookalikes :
+    {
+      var root : Node__430031793<Text, Lookalike__563069236>;
+      var size : Nat__58649523
+    };
+  stable var monitoringSince : Int;
+  stable var nextDomainId : Nat;
+  stable var nextEventId : Nat;
+  stable var nextLogId : Nat;
+  stable var nextReportId : Nat;
+  stable var nextRunId : Nat;
+  stable var notifyAdmins : Bool;
+  stable var orgName : Text;
+  stable var owner : ?Principal;
+  stable people :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable postures :
+    {
+      var root : Node__430031793<Nat, Posture__352723494>;
+      var size : Nat__58649523
+    };
+  stable records :
+    {
+      var root : Node__430031793<Text, RecordSet__1034531147>;
+      var size : Nat__58649523
+    };
+  stable registrableOf :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable reports :
+    {
+      var root : Node__430031793<Nat, Report__14429908>;
+      var size : Nat__58649523
+    };
+  stable runs :
+    {
+      var root : Node__430031793<Nat, Run__296243777>;
+      var size : Nat__58649523
+    };
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__739831475>;
+      var size : Nat__58649523
+    };
+  stable var trustedOperators : [Text]
+};

@@ -1,0 +1,19 @@
+/* Generated from design/logos/registry.json. Do not edit. */
+const APP_LOGO_PATHS = Object.freeze({
+  "hub": "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M16 3a4 4 0 0 1 0 8M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
+  "desk": "M3 8V4h18v4a4 4 0 0 0 0 8v4H3v-4a4 4 0 0 0 0-8m11-4v3m0 4v2m0 4v3",
+  "assets": "M4 4h16v12H4zM2 20h20M8 16l-1 4m9-4 1 4",
+  "trust": "m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Zm-4 9 3 3 5-6",
+  "contracts": "M14 2H4v20h16V8l-6-6Zm0 0v6h6M8 13h8m-8 4h5",
+  "forms": "M8 3H4v18h16V3h-4M8 2h8v4H8zM8 11h1m3 0h4m-8 5h1m3 0h4",
+  "watch": "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z",
+  "crumbs": "M3 3v18h18M7 16v-4m5 4V8m5 8V5",
+  "kitchen": "m12 3 10 5-10 5L2 8l10-5ZM2 12l10 5 10-5M2 16l10 5 10-5",
+  "vault": "M3 3h18v5H3zM5 8v13h14V8m-10 4h6",
+  "phone": "M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm2 0v3h6V2m-4 16h2",
+  "kebab-mcp": "m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z",
+  "sdk": "m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18",
+  "bug": "M9 3l1 3m5-3-1 3M8 9a4 4 0 0 1 8 0v7a4 4 0 0 1-8 0V9Zm0 1h8m-4 0v10M4 9l4 2m8 0 4-2M3 15h5m8 0h5M5 21l4-3m6 0 4 3"
+});
+function appLogoHtml(id) { const d=Object.hasOwn(APP_LOGO_PATHS,id)?APP_LOGO_PATHS[id]:null; return d ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+d+'"/></svg>' : ''; }
+globalThis.kebabBrand = Object.freeze({html:appLogoHtml, paths:APP_LOGO_PATHS});

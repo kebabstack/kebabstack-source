@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+import {renderSaas} from '../dist/saas-workspace.js';
+const dom=new JSDOM('<main></main>',{url:'https://contracts.example/#/keys/1'});Object.assign(globalThis,{document:dom.window.document,window:dom.window,FormData:dom.window.FormData,location:dom.window.location});
+const originalTimer=globalThis.setTimeout;let hide;globalThis.setTimeout=f=>{hide=f;return 0;};
+const c={id:1n,title:'Editor',product:'Editor',vendor:'Example',responsible:'me',status:'active',tags:['document-type:license-key'],seats:[2n],revision:3n,terms:{start:'',end:'',amountMinor:[],interval:'once',renewalDate:'',noticeDate:'',renewalRule:'none',currency:'',note:''}};
+let canEdit=true,policy={enabled:true,owner:true,spaceOwners:true,hubAdmins:true,groups:[],days:[90n,14n]},saves=0,download;
+const api={portfolio:async()=>[{rows:[{contract:c,canEdit,ownerName:'Owner',groups:[],assigned:1n,hasKey:true,commercial:[],history:[]}],policy,directoryAt:0n,canManage:true,people:2n}],directoryGroups:async()=>[{name:'IT',members:2n}],directory:async()=>[],revealLicenseKey:async()=>['DEMO-SECRET'],saveLicenseKey:async(t,id,rev,input)=>{saves++;assert.equal(rev,3n);assert.equal(input.key,'');return {ok:true,detail:'Saved'}},setRenewalPolicy:async(t,p)=>{policy=p;return {ok:true,detail:'Saved'}}};
+const root=document.querySelector('main'),ctx={api,token:'fixture',stale:()=>false,space:{name:'IT'},me:{id:'me',displayName:'Owner'},canWrite:true,toast:()=>{},download:(...d)=>download=d};
+await renderSaas(root,ctx,'keys','1');assert.ok(!root.textContent.includes('DEMO-SECRET'));assert.equal(root.querySelector('#revealKey').type,'button');await root.querySelector('#revealKey').onclick();assert.equal(saves,0,'revealing does not submit the form');assert.equal(root.querySelector('#revealedKey').textContent,'DEMO-SECRET');hide();assert.equal(root.querySelector('#revealedKey').hidden,true);
+await root.querySelector('form').onsubmit({preventDefault(){}});assert.equal(saves,1);
+canEdit=false;await renderSaas(root,{...ctx,canWrite:false},'keys','1');assert.equal(root.querySelector('textarea[name=key]').disabled,true);assert.equal(root.querySelector('[type=submit]').hidden,true);assert.equal(root.querySelector('#revealKey').disabled,false,'authorized reader can reveal without gaining edit access');
+await renderSaas(root,ctx,'settings');assert.equal(root.querySelectorAll('.reminder-schedule>span').length,2,'schedule displays saved custom marks');let f=root.querySelector('form');f.elements.days.value='90, 30';await f.onsubmit({preventDefault(){}});assert.deepEqual(policy.days,[90n,30n]);
+await renderSaas(root,ctx,'reports');root.querySelector('#reportCsv').click();assert.match(download[0],/^saas-report-/);assert.ok(!download[1].includes('DEMO-SECRET'));assert.ok(!download[1].includes('Editor'),'license keys excluded from SaaS report');
+await renderSaas(root,{...ctx,canWrite:false},'keys','new');assert.match(root.textContent,/read-only/);assert.equal(root.querySelector('form'),null);
+globalThis.setTimeout=originalTimer;dom.window.close();console.log('SaaS UI: audited reveal, no accidental submit, read-only keys, reminder settings and secret-free report passed.');

@@ -1,0 +1,483 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>kebab-stack · assets</title>
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/tokens.css">
+<script>try{if(localStorage.getItem("ks-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ks-bg); color: var(--ks-fg-body); font: 400 15px/1.55 var(--ks-ui); transition: background .15s ease, color .15s ease; -webkit-tap-highlight-color: transparent; }
+  /* mobile-first: a top bar, a tab row, one column. The phone is the primary device for this app. */
+  #layout { display: none; min-height: 100vh; flex-direction: column; }
+  #layout.on { display: flex; }
+  .tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--ks-rule); overflow-x: auto; scrollbar-width: none; background: var(--ks-bg); }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { background: transparent; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 12px 14px 12px; cursor: pointer; font: 500 13.5px var(--ks-ui); color: var(--ks-fg-secondary); letter-spacing: 0; text-transform: none; border-radius: 0; white-space: nowrap; }
+  .tab.active { color: var(--ks-fg); border-bottom-color: var(--ks-accent); }
+  .tab .n { margin-left: 6px; font: 500 10.5px var(--ks-mono); color: var(--ks-fg-muted); }
+  main { flex: 1; padding: 18px 16px 90px; max-width: 980px; width: 100%; margin: 0 auto; }
+  @media (min-width: 760px) { main { padding: 26px 30px 90px; } .tabs { padding: 0 22px; } }
+  .view { display: none; }
+  .view.active { display: block; }
+  h2 { font: 500 26px/1.15 var(--ks-display); letter-spacing: -0.015em; margin: 0 0 6px; color: var(--ks-fg); }
+  h3 { font: 500 18px/1.25 var(--ks-display); margin: 0 0 10px; color: var(--ks-fg); }
+  .lead { font: 400 14.5px/1.55 var(--ks-ui); color: var(--ks-fg-secondary); margin: 0 0 18px; max-width: 640px; }
+  .card { background: var(--ks-bg-card); border: 1px solid var(--ks-rule); border-top: var(--ks-card-stripe-w) solid var(--ks-accent); border-radius: var(--ks-radius-card); padding: 16px 18px; margin-bottom: 14px; }
+  .card.flat { border-top-width: 1px; border-top-color: var(--ks-rule); }
+  label { display: block; font: 500 var(--ks-fz-eyebrow) var(--ks-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--ks-fg-secondary); margin: 12px 0 5px; }
+  input[type=text], input[type=search], select, textarea { padding: 10px 12px; border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-input); font: 400 15px var(--ks-ui); background: var(--ks-bg-card); color: var(--ks-fg); width: 100%; }
+  textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--ks-focus); outline-offset: 2px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 150px; display: flex; flex-direction: column; justify-content: flex-end; }
+  button { padding: 10px 18px; border: 1px solid var(--ks-rule-strong); background: transparent; color: var(--ks-fg); border-radius: var(--ks-radius-pill); font: 600 11.5px var(--ks-ui); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+  button:hover { border-color: var(--ks-accent); color: var(--ks-accent); }
+  button.primary { background: var(--ks-accent); color: #fff; border-color: var(--ks-accent); }
+  button.primary:hover { background: var(--ks-accent-strong); border-color: var(--ks-accent-strong); color: #fff; }
+  button.sm { padding: 6px 12px; font-size: 10px; }
+  button:disabled { opacity: .45; cursor: default; }
+  .btnrow { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+  .status { font: 500 var(--ks-fz-marker) var(--ks-mono); letter-spacing: .04em; padding: 3px 11px; border-radius: var(--ks-radius-pill); background: var(--ks-bg-sunk); border: 1px solid var(--ks-rule); color: var(--ks-fg-secondary); }
+  .status:empty { display: none; }
+  .status.ok { border-color: var(--ks-indicator-teal); color: var(--ks-indicator-teal); background: transparent; }
+  .status.err { border-color: var(--ks-accent); color: var(--ks-accent); background: transparent; }
+  .mono { font: 400 12.5px var(--ks-mono); letter-spacing: .02em; }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: var(--ks-radius-pill); font: 500 11px var(--ks-mono); letter-spacing: .04em; background: var(--ks-bg-sunk); border: 1px solid var(--ks-rule); color: var(--ks-fg-secondary); }
+  .pill.on { border-color: var(--ks-indicator-teal); color: var(--ks-indicator-teal); background: transparent; }
+  .pill.off { border-color: var(--ks-accent); color: var(--ks-accent); background: transparent; }
+  .pill.warn { border-color: #d98a1e; color: #b8700f; background: transparent; }
+  .pill.s-in_stock { border-color: var(--ks-indicator-teal); color: var(--ks-indicator-teal); }
+  .pill.s-assigned { border-color: var(--ks-fg); color: var(--ks-fg); }
+  .pill.s-loaned { border-color: #d98a1e; color: #b8700f; }
+  .pill.s-sold, .pill.s-scrapped { opacity: .75; }
+  .pill.s-lost { border-color: var(--ks-accent); color: var(--ks-accent); }
+  .kv { font: 400 13px var(--ks-ui); color: var(--ks-fg-secondary); }
+  .kv b { color: var(--ks-fg); font-weight: 600; }
+  .hidden { display: none !important; }
+  .warnbox { background: var(--ks-bg-sunk); border: 1px solid var(--ks-rule); border-left: 3px solid var(--ks-accent); border-radius: var(--ks-radius-card); padding: 10px 14px; font: 400 13.5px/1.5 var(--ks-ui); margin-bottom: 14px; }
+  .warnbox a { color: var(--ks-fg); }
+  .empty { padding: 26px 10px; text-align: center; color: var(--ks-fg-muted); font: 400 14px var(--ks-ui); }
+  code { font: 400 12.5px var(--ks-mono); background: var(--ks-code-bg); padding: 1px 6px; border-radius: 4px; }
+  #login { display: flex; min-height: 88vh; align-items: center; justify-content: center; flex-direction: column; gap: 16px; text-align: center; padding: 20px; }
+  #login .mark { font: 380 42px var(--ks-display); color: var(--ks-fg); }
+  /* intake */
+  .bigcam { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 34px 20px; border: 2px dashed var(--ks-rule-strong); border-radius: 18px; background: var(--ks-bg-card); cursor: pointer; text-transform: none; letter-spacing: 0; font: 500 17px var(--ks-ui); color: var(--ks-fg); }
+  .bigcam:hover { border-color: var(--ks-accent); color: var(--ks-fg); }
+  .bigcam .ic { font-size: 40px; line-height: 1; }
+  .bigcam .sub { font: 400 13px var(--ks-ui); color: var(--ks-fg-secondary); }
+  .altrow { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .steps { display: flex; gap: 6px; margin: 0 0 14px; flex-wrap: wrap; }
+  .step { font: 500 10.5px var(--ks-mono); letter-spacing: .1em; text-transform: uppercase; padding: 4px 10px; border-radius: var(--ks-radius-pill); border: 1px solid var(--ks-rule); color: var(--ks-fg-muted); }
+  .step.on { border-color: var(--ks-accent); color: var(--ks-accent); }
+  .step.done { border-color: var(--ks-indicator-teal); color: var(--ks-indicator-teal); }
+  .shot { display: flex; gap: 14px; align-items: flex-start; }
+  .shot img { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid var(--ks-rule); flex-shrink: 0; background: var(--ks-bg-sunk); }
+  .reads { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .read { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 10px; border: 1px solid var(--ks-rule-strong); font: 500 13.5px var(--ks-mono); color: var(--ks-fg); background: var(--ks-bg-card); cursor: pointer; text-transform: none; letter-spacing: .02em; }
+  .read .k { font: 500 9.5px var(--ks-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--ks-fg-muted); }
+  .read .c { font: 400 10px var(--ks-mono); color: var(--ks-fg-muted); }
+  .read.low { border-style: dashed; }
+  .cand { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--ks-rule); }
+  .cand:first-child { border-top: 0; }
+  .cand .sc { font: 500 12px var(--ks-mono); color: var(--ks-fg-muted); min-width: 34px; }
+  .cand .t { flex: 1; min-width: 0; }
+  .cand .t b { display: block; font: 500 15px var(--ks-ui); color: var(--ks-fg); }
+  .cand .t span { font: 400 12.5px var(--ks-ui); color: var(--ks-fg-secondary); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .chip { padding: 9px 14px; border-radius: 12px; border: 1px solid var(--ks-rule-strong); background: var(--ks-bg-card); color: var(--ks-fg); font: 500 14px var(--ks-ui); text-transform: none; letter-spacing: 0; cursor: pointer; }
+  .chip.on { background: var(--ks-fg); color: var(--ks-bg); border-color: var(--ks-fg); }
+  .drop.over { border-color: var(--ks-accent); background: var(--ks-bg-card); }
+  .pick { position: relative; }
+  .pick .list { position: absolute; left: 0; right: 0; top: 100%; z-index: 4; background: var(--ks-bg-card); border: 1px solid var(--ks-rule-strong); border-radius: var(--ks-radius-card); max-height: 220px; overflow: auto; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .pick .list div { padding: 9px 12px; cursor: pointer; font: 400 14px var(--ks-ui); border-top: 1px solid var(--ks-rule); }
+  .pick .list div:first-child { border-top: 0; }
+  .pick .list div:hover { background: var(--ks-accent-dim); }
+  .pick .list small { display: block; color: var(--ks-fg-muted); font: 400 11.5px var(--ks-mono); }
+  .done { text-align: center; padding: 24px 10px; }
+  .done .big { font-size: 42px; line-height: 1; margin-bottom: 8px; }
+  /* devices */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+  .filters input[type=search] { flex: 1; min-width: 180px; }
+  .filters select { width: auto; min-width: 140px; }
+  .dev { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--ks-rule); cursor: pointer; }
+  .dev:first-child { border-top: 0; }
+  .dev:hover .t b { color: var(--ks-accent); }
+  .dev .ic { width: 40px; height: 40px; border-radius: 11px; background: var(--ks-bg-sunk); border: 1px solid var(--ks-rule); display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+  .dev .t { flex: 1; min-width: 0; }
+  .dev .t b { display: block; font: 500 15px var(--ks-ui); color: var(--ks-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dev .t span { font: 400 12px var(--ks-mono); color: var(--ks-fg-secondary); }
+  .dev .r { text-align: right; flex-shrink: 0; }
+  .dev .r .kv { display: block; font-size: 11.5px; margin-top: 3px; white-space: nowrap; }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat { padding: 8px 12px; border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-card); background: var(--ks-bg-card); cursor: pointer; }
+  .stat.active { border-color: var(--ks-accent); }
+  .stat .n { font: 500 20px/1.1 var(--ks-display); color: var(--ks-fg); }
+  .stat .l { font: 500 9.5px var(--ks-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--ks-fg-secondary); margin-top: 2px; }
+  @media (max-width: 600px) {
+    .dev { display: grid; grid-template-columns: 40px minmax(0, 1fr); }
+    .dev .t b { white-space: normal; overflow-wrap: anywhere; }
+    .dev .t span { overflow-wrap: anywhere; }
+    .dev .r { grid-column: 2; text-align: left; min-width: 0; }
+    .dev .r .kv { white-space: normal; overflow-wrap: anywhere; }
+  }
+  /* detail */
+  .kvl { display: grid; grid-template-columns: 96px 1fr; gap: 4px 10px; font: 400 14px var(--ks-ui); }
+  .kvl div:nth-child(odd) { color: var(--ks-fg-muted); font-size: 12.5px; padding-top: 2px; }
+  .ev { display: grid; grid-template-columns: 10px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--ks-rule); }
+  .ev .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ks-rule-strong); margin-top: 7px; }
+  .ev.act .dot { background: var(--ks-accent); }
+  .ev .what { font: 400 14px/1.5 var(--ks-ui); color: var(--ks-fg-body); }
+  .ev .meta { font: 400 11.5px var(--ks-mono); color: var(--ks-fg-muted); margin-top: 2px; }
+  .ev img { display: block; margin-top: 8px; max-width: 220px; max-height: 220px; border-radius: 10px; border: 1px solid var(--ks-rule); cursor: zoom-in; }
+  .photos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .photos img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--ks-rule); cursor: zoom-in; }
+  #zoom { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+  #zoom.on { display: flex; }
+  #zoom img { max-width: 96vw; max-height: 94vh; border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font: 400 13.5px var(--ks-ui); margin-top: 8px; }
+  th { text-align: left; color: var(--ks-fg-secondary); font: 500 var(--ks-fz-eyebrow) var(--ks-ui); letter-spacing: .14em; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--ks-rule); }
+  td { padding: 8px; border-bottom: 1px solid var(--ks-rule); vertical-align: top; }
+  .docs p, .docs li { font: 400 14.5px/1.6 var(--ks-ui); color: var(--ks-fg-body); max-width: 680px; }
+  /* sales */
+  .pill.st-draft { color: var(--ks-fg-muted); }
+  .pill.st-offered { border-color: #d98a1e; color: #b8700f; }
+  .pill.st-accepted { border-color: var(--ks-fg); color: var(--ks-fg); }
+  .pill.st-issued { border-color: var(--ks-indicator-teal); color: var(--ks-indicator-teal); }
+  .pill.st-paid { border-color: var(--ks-indicator-teal); color: var(--ks-indicator-teal); background: var(--ks-accent-dim); }
+  .pill.st-cancelled { border-color: var(--ks-accent); color: var(--ks-accent); }
+  .money { font: 500 22px/1.1 var(--ks-display); color: var(--ks-fg); }
+  .terms { white-space: pre-wrap; font: 400 14px/1.6 var(--ks-ui); color: var(--ks-fg-body); border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-card); padding: 12px 14px; background: var(--ks-bg-sunk); max-height: 320px; overflow: auto; }
+  .ck { display: flex; align-items: center; gap: 10px; font: 400 14.5px var(--ks-ui); color: var(--ks-fg); text-transform: none; letter-spacing: 0; margin: 8px 0; cursor: pointer; }
+  .ck input { width: 18px; height: 18px; accent-color: var(--ks-accent); }
+  .stepline { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
+  input[type=number], input[type=date], input[type=password] { padding: 10px 12px; border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-input); font: 400 15px var(--ks-ui); background: var(--ks-bg-card); color: var(--ks-fg); width: 100%; }
+</style>
+<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./components.css">
+</head>
+<body class="ks-workspace">
+
+<section id="login" aria-busy="true" class="is-waiting app-auth">
+  <div class="auth-shell">
+    <aside class="auth-story">
+      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
+      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
+      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
+    </aside>
+    <section class="auth-main" aria-labelledby="loginTitle">
+      <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
+      <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
+      <h1 id="loginTitle"><span class="auth-ready">Welcome to Assets.</span><span class="auth-waiting">Opening Assets…</span></h1>
+      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
+      <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
+      <div id="loginStatus" class="status" role="alert"></div>
+      <div id="loginWarn" class="warnbox hidden"></div>
+      <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
+      <p class="lfoot">Access is managed by your company in the Hub.</p>
+    </section>
+  </div>
+</section>
+
+<div id="layout">
+  <div id="topbar"></div>
+  <div class="tabs" id="nav" role="navigation" aria-label="Assets"></div>
+  <main>
+
+
+    <!-- ===== intake ===== -->
+    <section class="view" id="v-intake"><p class="eyebrow">CAPTURE &amp; UPDATE</p>
+      <h2>Scan a device</h2>
+      <p class="lead">Take a photo of the serial or sticker. Find the device, then record what happened.</p>
+      <div id="aiOff" class="warnbox hidden"></div>
+      <div id="ik0">
+        <button class="bigcam" id="camBtn"><span class="ic"><svg width="44" height="44" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="4" y="8" width="24" height="19" rx="4"></rect><path d="m10 8 2-4h8l2 4"></path><circle cx="16" cy="17" r="5"></circle></svg></span><span>Take a photo</span><span class="sub">Capture the serial or inventory sticker</span></button>
+        <input type="file" id="camFile" accept="image/*" capture="environment" class="hidden">
+        <input type="file" id="galFile" accept="image/*" class="hidden">
+        <div class="altrow"><button id="galBtn" class="sm">Choose from photos</button><button id="handBtn" class="sm">Find or add manually</button></div>
+      </div>
+      <div id="ik1" class="hidden">
+        <div class="steps"><span class="step on" id="st1">1 · photo</span><span class="step" id="st2">2 · which device</span><span class="step" id="st3">3 · what happened</span></div>
+        <div class="card flat">
+          <div class="shot"><img id="shotImg" alt="" class="hidden"><div style="flex:1;min-width:0">
+            <div class="kv" id="readStatus">reading the photo…</div>
+            <div class="reads" id="reads"></div>
+            <div class="kv" id="readNotes"></div>
+            <div class="row" style="margin-top:6px"><div><label for="ikQuery">Search by tag or serial</label><input type="search" id="ikQuery" placeholder="type or tap a reading above" autocomplete="off"></div></div>
+          </div></div>
+        </div>
+        <div class="card flat">
+          <h3>Which device?</h3>
+          <div id="cands"><div class="empty">nothing searched yet</div></div>
+          <div class="btnrow"><button id="ikNew" class="sm">Not in the list — add a new device</button><button id="ikRestart" class="sm">Start over</button><span id="candStatus" class="status" role="status"></span></div>
+        </div>
+        <div class="card flat hidden" id="ikNewCard">
+          <h3>New device</h3>
+          <div class="row"><div><label for="nTag">Tag (sticker)</label><input type="text" id="nTag" placeholder="INV-0042"></div><div><label for="nSerial">Serial</label><input type="text" id="nSerial" placeholder="as printed"></div></div>
+          <div class="row"><div><label for="nVendor">Vendor</label><input type="text" id="nVendor" placeholder="Apple"></div><div><label for="nModel">Model</label><input type="text" id="nModel" placeholder="MacBook Pro 14&quot;"></div><div><label for="nKind">Kind</label><select id="nKind"><option value="laptop">laptop</option><option value="phone">phone</option><option value="tablet">tablet</option><option value="monitor">monitor</option><option value="accessory">accessory</option><option value="other">other</option></select></div></div>
+          <div><label for="nNote">Note</label><input type="text" id="nNote" placeholder="optional"></div>
+          <div class="btnrow"><button id="ikUseNew" class="primary sm">Use this new device</button><span id="newStatus" class="status" role="status"></span></div>
+        </div>
+      </div>
+      <div id="ik2" class="hidden">
+        <div class="steps"><span class="step done">1 · photo</span><span class="step done">2 · which device</span><span class="step on">3 · what happened</span></div>
+        <div class="card">
+          <div class="kv">Device</div>
+          <h3 id="ikDevName" style="margin:2px 0 2px">–</h3>
+          <div class="kv mono" id="ikDevMeta"></div>
+          <label>What happened?</label>
+          <div class="chips" id="actChips">
+            <button class="chip on" data-act="handed_out">Handed out to…</button><button class="chip" data-act="returned">Returned</button><button class="chip" data-act="loaned">Loaned to…</button><button class="chip" data-act="sold">Record past sale</button><button class="chip" data-act="scrapped">Scrapped</button><button class="chip" data-act="lost">Lost</button><button class="chip" data-act="photo">Just documenting</button>
+          </div>
+          <div id="toRow" class="pick"><label id="toLabel" for="ikTo">To whom</label><input type="text" id="ikTo" placeholder="start typing a name…" autocomplete="off"><div class="list hidden" id="toList"></div></div>
+          <div><label for="ikNote">Note</label><input type="text" id="ikNote" placeholder="optional — e.g. charger included"></div>
+          <div class="btnrow"><button id="ikSave" class="primary">Save</button><button id="ikBack" class="sm">Back</button><span id="saveStatus" class="status" role="status"></span></div>
+        </div>
+      </div>
+      <div id="ik3" class="hidden">
+        <div class="card done"><div class="big">🍢</div><h3 id="doneTitle">Saved</h3><div class="kv" id="doneSub"></div><div class="btnrow" style="justify-content:center"><button id="doneNext" class="primary">Next photo</button><button id="doneOpen" class="sm">Open the device</button></div></div>
+      </div>
+      <div class="card flat" id="recentCard">
+        <h3>Recent activity</h3>
+        <div id="recentRows"><div class="empty">nothing yet</div></div>
+      </div>
+    </section>
+
+    <!-- ===== devices ===== -->
+    <section class="view" id="v-devices"><div class="page-heading"><div><p class="eyebrow">YOUR INVENTORY</p><h2 id="devTitle">Devices</h2><p class="lead" id="devLead">Find a device, see who has it, and keep its next move clear.</p></div><a id="devScan" class="hidden" href="#/intake">Scan a device ↗</a></div>
+
+
+      <div class="stats" id="stats" aria-label="Inventory status"></div>
+      <div class="filters"><input type="search" id="devQ" placeholder="search tag, serial, model, person…" aria-label="Search devices"><select id="devStatus" aria-label="Device status"><option value="">all statuses</option><option value="offboarding" hidden>offboarding · outstanding hardware</option><option value="preparing">with IT · preparing</option><option value="in_stock">in stock</option><option value="assigned">assigned</option><option value="loaned">loaned</option><option value="sold">sold</option><option value="scrapped">scrapped</option><option value="lost">lost</option><option value="unknown">unknown</option></select><button id="devAdd" class="sm primary">Add device</button></div>
+      <div class="card flat"><div id="devRows"><div class="empty">loading…</div></div></div>
+    </section>
+
+    <!-- ===== one device ===== -->
+    <section class="view" id="v-apple"><p class="eyebrow">RECONCILIATION</p>
+      <h2>Apple inventory</h2>
+      <div class="kv" id="apLead" style="margin-bottom:10px">Compare Apple Business Manager with your register. Close the gaps before devices change hands.</div>
+      <div class="chips" id="apFilters" style="margin-bottom:10px"><button class="chip on" data-f="all">All</button><button class="chip" data-f="unmatched">Not in the register</button><button class="chip" data-f="nomdm">No device management</button><button class="chip" data-f="matched">In the register</button><button class="chip" data-f="sold">Sold — release in ABM</button><select id="apConn" style="margin-left:auto;max-width:220px"><option value="0">every connection</option></select></div>
+      <div class="btnrow" style="margin:0 0 10px"><span class="kv" id="apCount"></span><button id="apAddAll" class="sm hidden">Add all in this view to the register</button><span id="apStatus" class="status" role="status"></span></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Serial</th><th>Model</th><th>Ordered</th><th>Managed by</th><th>In the register</th><th></th></tr></thead><tbody id="apRows"><tr><td colspan="6" class="kv">no Apple Business Manager connection yet — add one under Settings</td></tr></tbody></table></div>
+    </section>
+    <section class="view" id="v-device">
+      <a href="#/devices" id="dBack" class="kv" style="display:inline-block;margin-bottom:8px">‹ Devices</a>
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:200px"><h2 id="dName">–</h2><div id="dPills"></div></div><div class="btnrow" style="margin:0" id="dActions"></div></div>
+      <div class="card flat" style="margin-top:14px">
+        <div class="kvl" id="dKv"></div>
+        <div id="dMdm" class="hidden" style="margin-top:10px;padding:10px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)"></div>
+        <div id="dAbm" class="hidden" style="margin-top:10px;padding:10px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)"></div>
+        <div class="photos" id="dPhotos"></div>
+        <div class="btnrow" id="dAdminRow"><button id="dEdit" class="sm">Edit details</button><button id="dPhotoBtn" class="sm">Add photo</button><input type="file" id="dPhotoFile" accept="image/*" class="hidden"><button id="dArchive" class="sm">Archive</button><span id="dStatus" class="status" role="status"></span></div>
+      </div>
+      <div class="card flat hidden" id="dEditCard">
+        <h3>Edit</h3>
+        <div class="row"><div><label for="eTag">Tag</label><input type="text" id="eTag"></div><div><label for="eSerial">Serial</label><input type="text" id="eSerial"></div></div>
+        <div class="row"><div><label for="eVendor">Vendor</label><input type="text" id="eVendor"></div><div><label for="eModel">Model</label><input type="text" id="eModel"></div><div><label for="eKind">Kind</label><select id="eKind"><option value="laptop">laptop</option><option value="phone">phone</option><option value="tablet">tablet</option><option value="monitor">monitor</option><option value="accessory">accessory</option><option value="other">other</option></select></div></div>
+        <div><label for="eNote">Note</label><input type="text" id="eNote"></div>
+        <div class="btnrow"><button id="eSave" class="primary sm">Save</button><button id="eCancel" class="sm">Cancel</button><span id="eStatus" class="status" role="status"></span></div>
+      </div>
+      <div class="card flat hidden hardware-card" id="dHardware"></div>
+      <div class="card flat hidden" id="dSaleCard">
+        <h3>Selling this device</h3>
+        <div class="kv" id="dPurchaseLine"></div>
+        <details><summary>Purchase details &amp; pricing basis</summary><div class="row" id="dPurchaseRow"><div><label for="pPrice">Purchase price (incl. VAT)</label><input type="text" id="pPrice" placeholder="2999.00" inputmode="decimal"></div><div><label for="pCur">Currency</label><input type="text" id="pCur" maxlength="3" placeholder="CHF"></div><div><label for="pDate">Purchased on</label><input type="date" id="pDate"></div><div><label for="pNote">Note</label><input type="text" id="pNote" placeholder="invoice no, shop…"></div></div><div class="btnrow"><button id="pSave" class="sm">Save purchase details</button><button id="pClear" class="sm">Clear</button><span id="pStatus" class="status" role="status"></span></div></details>
+
+        <div id="dSaleOpen" class="hidden" style="margin-top:12px;border-top:1px solid var(--ks-rule);padding-top:10px"></div>
+        <div id="dSaleStart" class="hidden" style="margin-top:12px;border-top:1px solid var(--ks-rule);padding-top:10px">
+          <div class="kv" id="dProposal"></div>
+          <div class="btnrow"><button id="dSellBtn" class="primary sm">Sell this device…</button></div>
+        </div>
+        <div id="dSellForm" class="hidden" style="margin-top:12px">
+          <div class="chips" id="buyerKind"><button class="chip on" data-act="person">A colleague</button><button class="chip" data-act="external">An outside buyer</button></div>
+          <div id="bPersonRow" class="pick"><label for="bPerson">Who buys it (from the directory)</label><input type="text" id="bPerson" placeholder="start typing a name…" autocomplete="off"><div class="list hidden" id="bPersonList"></div></div>
+          <div id="bExtRow" class="hidden"><div class="row"><div><label for="bName">Buyer name</label><input type="text" id="bName"></div><div><label for="bEmail">E-mail</label><input type="text" id="bEmail"></div></div></div>
+          <details><summary>Billing address · optional now</summary><div class="row"><div style="flex:2"><label for="bStreet">Street</label><input type="text" id="bStreet"></div><div><label for="bHouse">No.</label><input type="text" id="bHouse"></div></div><div class="row"><div><label for="bPostal">Postal code</label><input type="text" id="bPostal"></div><div style="flex:2"><label for="bTown">Town</label><input type="text" id="bTown"></div><div><label for="bCountry">Country</label><input type="text" id="bCountry" value="CH" maxlength="2"></div></div></details>
+
+          <div class="kv" style="margin-top:6px">The buyer adds their billing address when accepting the offer.</div>
+          <div class="row"><div><label for="bPrice">Price incl. VAT</label><input type="text" id="bPrice" inputmode="decimal" placeholder="650.00"></div><div style="flex:2"><label for="bPriceNote">Note on the price (history)</label><input type="text" id="bPriceNote" placeholder="e.g. rule price; battery worn, minus 50"></div></div>
+          <div class="btnrow"><button id="bCreate" class="primary sm">Start the sale</button><button id="bCancel" class="sm">Cancel</button><span id="bStatus" class="status" role="status"></span></div>
+        </div>
+      </div>
+      <div class="card flat hidden" id="dActCard">
+        <h3 id="dActTitle">What happened?</h3>
+        <div class="chips" id="dActChips"><button class="chip on" data-act="handed_out">Handed out to…</button><button class="chip" data-act="returned">Returned</button><button class="chip" data-act="loaned">Loaned to…</button><button class="chip" data-act="sold">Record past sale</button><button class="chip" data-act="scrapped">Scrapped</button><button class="chip" data-act="lost">Lost</button><button class="chip" data-act="note">Note</button></div>
+        <div id="dToRow" class="pick"><label id="dToLabel" for="dTo">To whom</label><input type="text" id="dTo" placeholder="start typing a name…" autocomplete="off"><div class="list hidden" id="dToList"></div></div>
+        <div><label for="dNote">Note</label><input type="text" id="dNote" placeholder="optional"></div>
+        <div class="btnrow"><button id="dActSave" class="primary sm">Save</button><button id="dActCancel" class="sm">Cancel</button><span id="dActStatus" class="status" role="status"></span></div>
+      </div>
+      <div class="card flat"><h3>History</h3><div id="dEvents"></div></div>
+    </section>
+
+    <!-- ===== sales (admins) ===== -->
+    <section class="view" id="v-sales"><div class="page-heading"><div><p class="eyebrow">DEVICE LIFECYCLE</p><h2>Sales</h2><p class="lead">From the first offer to the final hand-over. See what needs to happen next.</p></div><a href="#/devices">Start a sale ↗</a></div>
+
+
+      <div class="flow" id="saleFilters" role="group" aria-label="Sales process"></div><div class="sales-toolbar"><button class="filter-button on" id="salesOpen">Needs action</button><button class="filter-button" id="salesAll">All sales</button><input type="search" id="salesQ" placeholder="Search device, buyer or invoice" aria-label="Search sales"><details><summary>Finance export ↗</summary><div class="export-popover"><label for="salesYear">Invoice year (optional)</label><input type="text" id="salesYear" placeholder="All years" inputmode="numeric" maxlength="4"><div class="btnrow"><button id="salesCsv" class="sm">Download CSV</button></div></div></details></div>
+      <div class="card flat"><div class="list-heading"><span id="salesCount">Loading sales…</span><span>Next step</span></div><div id="saleRows"><div class="empty">loading…</div></div><div class="btnrow"><button id="salesPrev" class="sm hidden">Previous</button><button id="salesNext" class="sm hidden">Next 100</button></div></div>
+      <div class="kv" id="salesReady" role="status"></div>
+    </section>
+
+    <!-- ===== one sale ===== -->
+    <section class="view" id="v-sale">
+      <a href="#/sales" id="sBack" class="kv" style="display:inline-block;margin-bottom:8px">‹ Sales</a>
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:200px"><h2 id="sTitle">–</h2><div id="sPills"></div></div><div class="money" id="sMoney"></div></div><ol class="sale-progress" id="saleProgress"></ol><div class="next-action" id="saleNext"></div>
+
+
+
+
+
+
+
+    <div class="detail-columns"><div><div class="card flat" id="sAdminCard"><h3>Next action</h3><div class="btnrow" id="sActions"></div><div class="row hidden" id="sPaidRow"><div style="flex:2"><label for="sPaidNote">Note for the record (bank statement line, date)</label><input type="text" id="sPaidNote" placeholder="optional"></div><div><label>&nbsp;</label><button id="sPaidGo" class="primary sm">Mark paid</button></div></div><div class="row hidden" id="sCancelRow"><div style="flex:2"><label for="sCancelReason">Reason</label><input type="text" id="sCancelReason" placeholder="why — goes into the history"></div><div><label>&nbsp;</label><button id="sCancelGo" class="sm">Cancel the sale</button></div></div><span id="sActStatus" class="status" role="status"></span></div><div id="sFormerBuyer" class="card flat hidden"></div>
+      <div class="card" id="sDealCard"></div><div class="card flat" id="sChecksCard">
+        <h3 id="sChecksTitle">Prepare for hand-over</h3><p class="setting-description">Complete these after payment, before the device leaves IT.</p>
+        <label class="ck"><input type="checkbox" id="ckWiped"><span>Wiped &amp; setup tested<small>No company or personal data remains. The device reaches a usable setup screen.</small></span></label>
+        <label class="ck"><input type="checkbox" id="ckMdm"><span>Company management released<small>MDM enrolment is removed and automatic re-enrolment is prevented. A stale Kandji entry alone does not prove enrolment.</small></span></label>
+        <div class="btnrow"><button id="ckSave" class="sm">Save checks</button><span id="ckStatus" class="status" role="status"></span></div>
+      <details><summary>Wipe, locks &amp; Kandji: the right order</summary><ol class="prep-guide"><li><b>Check locks while the device is still in MDM</b>Resolve Activation Lock and retrieve any required unlock PIN. Keep access to the MDM record until the wipe is verified.</li><li><b>Wipe, then test on the device</b>A queued erase command is not proof. Check the completed wipe and setup screen. Check the PIN again after the command if needed.</li><li><b>Release company management</b>Release from Apple Business Manager when applicable and verify setup no longer requires company enrolment. Remove the Kandji / Iru record after verification.</li></ol><p class="privacy-note">Assets records your checks. It does not send erase, unlock or delete commands to the MDM.</p></details><div class="secret-box"><b>Device unlock PIN</b><p class="setting-description">Read from the linked Kandji / Iru record. Activation Lock bypass codes are a separate check.</p><button id="pinRead" class="sm">Check Kandji / Iru</button><button id="pinHide" class="sm hidden">Hide</button><output id="pinValue" class="hidden" aria-live="polite"></output><p id="pinStatus" class="status" role="status"></p></div></div><div class="card flat hidden" id="handoverCard"><h3>Hand over the device</h3><p class="setting-description" id="handoverHelp"></p><label class="ck hidden" id="handoverAbmRow"><input type="checkbox" id="handoverAbm"><span>I released the device in Apple Business Manager</span></label><label for="handoverNote">Hand-over note (optional)</label><input type="text" id="handoverNote" maxlength="300"><div class="btnrow"><button class="primary" id="handoverGo">Record hand-over</button><span class="status" id="handoverStatus" role="status"></span></div></div></div><div><div class="card flat" style="margin-top:14px" id="sSummaryCard"><h3>Sale details</h3><div class="kvl" id="sKv"></div><div class="kv" id="sProposal" style="margin-top:8px"></div></div><div class="card" id="sDocCard"><h3>Documents</h3><div id="sDocs"></div><div class="btnrow" id="sDocActions"></div><span id="sDocStatus" class="status" role="status"></span></div><details class="card flat" id="sTermsCard"><summary>Accepted terms</summary><div class="disclosure-body"><div class="kv" id="sTermsLine" style="margin-bottom:8px"></div><div class="terms" id="sTermsText"></div><div class="btnrow" id="sTermsActions"></div></div></details><details class="card flat" id="sEditCard"><summary>Edit buyer &amp; price</summary><div class="disclosure-body">
+
+        <div class="row"><div><label for="seName">Buyer name</label><input type="text" id="seName"></div><div><label for="seEmail">E-mail</label><input type="text" id="seEmail"></div></div>
+        <div class="row"><div style="flex:2"><label for="seStreet">Street</label><input type="text" id="seStreet"></div><div><label for="seHouse">No.</label><input type="text" id="seHouse"></div></div>
+        <div class="row"><div><label for="sePostal">Postal code</label><input type="text" id="sePostal"></div><div style="flex:2"><label for="seTown">Town</label><input type="text" id="seTown"></div><div><label for="seCountry">Country</label><input type="text" id="seCountry" maxlength="2"></div></div>
+        <div class="row"><div><label for="sePrice">Price incl. VAT</label><input type="text" id="sePrice" inputmode="decimal"></div><div style="flex:2"><label for="sePriceNote">Note on the price</label><input type="text" id="sePriceNote"></div></div>
+        <div><label for="seDesc">Line text on the invoice</label><input type="text" id="seDesc"></div>
+        <div class="btnrow"><button id="seSave" class="primary sm">Save</button><span id="seStatus" class="status" role="status"></span></div>
+      </div></details><details class="card"><summary>Personal data &amp; retention</summary><div class="disclosure-body privacy-note"><p><b>Buyer details</b> are used to fulfil the sale and issue the invoice. Only the buyer and authorised Assets staff can open this sale.</p><p><b>Invoices and credit notes</b> remain in the archive. Closing a sale or revoking a dealroom link does not delete its records.</p><p><b>No automatic personal-data deletion is configured.</b> Agree retention and deletion requests with your organisation. Keep optional notes free of unnecessary personal information.</p><a href="#/settings/privacy">View data &amp; privacy settings ↗</a></div></details></div></div></section>
+
+    <!-- ===== offers (the buyer) ===== -->
+    <section class="view" id="v-offers">
+      <a id="offersBack" class="hidden" href="#/offers">‹ All my offers &amp; invoices</a>
+      <h2 id="offersTitle">Offers &amp; invoices</h2>
+      <p class="lead">Devices the company offers to you. Read the hand-over terms, add your postal address for the invoice, accept — that is your signature. Your invoices stay here for download.</p>
+      <div id="offerRows"><div class="empty">loading…</div></div>
+    </section>
+
+    <!-- ===== import / export ===== -->
+    <section class="view" id="v-import"><p class="eyebrow">DATA TOOLS</p>
+      <h2>Import &amp; export</h2>
+      <p class="lead">Bring in your inventory or download a copy. Existing serials and tags are matched.</p>
+      <div class="card">
+        <h3>Import CSV</h3>
+        <div class="kv">Header row with any of: <code>tag</code>, <code>serial</code>, <code>vendor</code>, <code>model</code>, <code>kind</code>, <code>status</code>, <code>assignee</code> (e-mail), <code>holder</code>, <code>note</code>. Other columns are ignored. Up to 5 000 rows per file.</div>
+        <div class="btnrow"><button id="impPick" class="sm">Choose file</button><input type="file" id="impFile" accept=".csv,text/csv" class="hidden"><span class="kv" id="impName"></span></div>
+        <textarea id="impText" placeholder="…or paste CSV here"></textarea>
+        <div class="btnrow"><button id="impRun" class="primary sm">Import</button><span id="impStatus" class="status" role="status"></span></div>
+      </div>
+      <div class="card flat">
+        <h3>Export CSV</h3>
+        <div class="kv">Every device that is not archived, with assignee and last update.</div>
+        <div class="btnrow"><button id="expRun" class="sm">Download CSV</button><span id="expStatus" class="status" role="status"></span></div>
+      </div>
+    </section>
+
+    <!-- ===== settings ===== -->
+    <section class="view" id="v-settings"><p class="eyebrow">WORKSPACE</p>
+      <h2>Settings</h2>
+      <p class="lead">Connections, access and sales preferences, in one place.</p>
+
+
+
+
+
+
+
+
+
+    <div class="section-nav" id="settingsNav" role="group" aria-label="Settings sections"><button data-settings="general">General</button><button data-settings="connections">Connections</button><button data-settings="sales">Sales &amp; billing</button><button data-settings="privacy">Data &amp; privacy</button><button data-settings="maintenance">Maintenance</button></div><div class="settings-group hidden" id="settings-general"><div class="card flat">
+        <h3>Notifications <span class="pill" id="sNtPill">…</span></h3>
+        <div class="kv" id="sNtLine">…</div>
+      </div><div class="card flat">
+        <h3>Hub connection</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p>
+        <div class="kv">Active Hub owners and admins have Admin access. Other app roles are assigned under Hub → Permissions. Employees see their own and explicitly shared content.</div>
+        <div class="row"><div><label for="sAppUrl">App address (deep links in notifications)</label><input type="text" id="sAppUrl" placeholder="https://…"><p class="kv" id="sAppUrlHint"></p></div></div>
+        <div class="row"><div><label for="sPrefix">Tag prefix</label><input type="text" id="sPrefix" placeholder="INV-"></div><div><label for="sOrg">Company name</label><input type="text" id="sOrg"></div></div>
+
+        <div class="btnrow"><button id="sSave" class="primary sm">Save</button><span id="sStatus" class="status" role="status"></span></div>
+        <div class="kv" id="sMeta" style="margin-top:10px"></div>
+      </div></div><div class="settings-group hidden" id="settings-connections"><div class="card">
+        <h3>Reading photos <span class="pill" id="sAiPill">…</span></h3>
+        <div class="kv" id="sAiLine"></div>
+        <div class="btnrow"><button id="sAiRefresh" class="sm">Ask the hub again</button><span id="sAiStatus" class="status" role="status"></span></div>
+      </div><details class="card flat"><summary>Device management (MDM)</summary><div class="disclosure-body">
+
+        <div class="kv">Sync device information every six hours, or on demand. New devices are added; existing assignments are preserved and differences are flagged for review. Saved API credentials cannot be read back from the app.</div>
+        <div class="table-scroll" role="region" aria-label="MDM connections" tabindex="0"><table><thead><tr><th>Connection</th><th>Last sync</th><th>Result</th><th></th></tr></thead><tbody id="mdmRows"><tr><td colspan="4" class="kv">none yet</td></tr></tbody></table></div>
+        <div id="mdmForm" style="margin-top:12px;border-top:1px solid var(--ks-rule);padding-top:10px">
+          <div class="row"><div><label for="mdKind">System</label><select id="mdKind"><option value="iru">Iru (formerly Kandji)</option><option value="jamf">Jamf Pro</option><option value="intune">Microsoft Intune</option></select></div><div><label for="mdName">Name</label><input type="text" id="mdName" placeholder="optional, e.g. Iru EU"></div></div>
+          <div class="row"><div style="flex:2"><label id="mdUrlLabel" for="mdUrl">API address</label><input type="text" id="mdUrl" placeholder="https://yourcompany.api.kandji.io"></div><div id="mdClientRow" class="hidden"><label for="mdClient">Client id</label><input type="text" id="mdClient"></div></div>
+          <div><label id="mdSecretLabel" for="mdSecret">API token</label><input type="password" id="mdSecret" autocomplete="off" placeholder="write-only"></div>
+          <div class="kv" id="mdHint" style="margin-top:6px"></div>
+          <div class="btnrow"><button id="mdAdd" class="primary sm">Add connection</button><button id="mdCancel" class="sm hidden">Cancel</button><span id="mdStatus" class="status" role="status"></span></div>
+        </div>
+      </div></details><details class="card flat"><summary>Apple Business Manager</summary><div class="disclosure-body">
+
+        <div class="kv">Apple's own register of what the company bought: every Mac, iPhone and iPad from Apple or a reseller, and which device-management service holds it. A sync (every 6 hours, or now) reads it and matches serials with the register; devices that are only in Apple Business Manager appear under <a href="#/apple">Apple</a>, where you take them into the register. Nothing is written back to Apple. The private key never leaves your browser: it signs an assertion valid 180 days (Apple's maximum); drop the .pem again before it ends.</div>
+        <div class="table-scroll" role="region" aria-label="Apple connections" tabindex="0"><table><thead><tr><th>Connection</th><th>Last sync</th><th>Result</th><th></th></tr></thead><tbody id="abmRows"><tr><td colspan="4" class="kv">none yet</td></tr></tbody></table></div>
+        <div id="abmForm" style="margin-top:12px;border-top:1px solid var(--ks-rule);padding-top:10px">
+          <div class="row"><div><label for="abName">Name</label><input type="text" id="abName" placeholder="e.g. Apple Business Manager · Group"></div><div style="flex:2"><label for="abClient">Client id</label><input type="text" id="abClient" placeholder="BUSINESSAPI.xxxxxxxx-xxxx-…" autocomplete="off"></div></div>
+          <div class="row"><div><label for="abKeyId">Key id</label><input type="text" id="abKeyId" placeholder="shown next to the key in Apple Business Manager" autocomplete="off"></div></div>
+          <div id="abDrop" class="drop" tabindex="0" style="margin-top:8px;padding:18px;border:2px dashed var(--ks-rule-strong);border-radius:var(--ks-radius-card);text-align:center;cursor:pointer"><div><b>Drop the private key (.pem) here</b> — or click to choose it</div><div class="kv" id="abKeyInfo">Apple Business Manager → Preferences → API → your key → Download. The key never leaves this browser — it signs a 180-day assertion here.</div></div>
+          <input type="file" id="abFile" accept=".pem,.key,application/x-pem-file,text/plain" class="hidden">
+          <div class="btnrow"><button id="abAdd" class="primary sm">Add connection</button><button id="abCancel" class="sm hidden">Cancel</button><span id="abStatus" class="status" role="status"></span></div>
+        </div>
+      </div></details><details class="card flat"><summary>Device trust</summary><div class="disclosure-body">
+
+        <div class="kv">The trust app checks whether devices are in good shape and shows each person <i>their own</i> devices. For that it asks this register who has which serial. Allow it here: paste the id that Trust → Settings → <i>Where owners come from</i> shows. Nothing else leaves the register.</div>
+        <div class="row"><div style="flex:2"><label for="sTrust">Trust app (backend canister id)</label><input type="text" id="sTrust" placeholder="xxxxx-xxxxx-xxxxx-xxxxx-cai" autocomplete="off"></div></div>
+        <div class="btnrow"><button id="sTrustSave" class="primary sm">Allow</button><span id="sTrustStatus" class="status" role="status"></span><span class="kv" id="sTrustMeta"></span></div>
+      </div></details></div><div class="settings-group hidden" id="settings-sales"><div class="card flat" id="billingCard">
+        <h3>Selling devices — invoice settings</h3>
+        <div class="kv">What the invoice and its Swiss QR-bill payment part say about the company. Agree the number range with finance before the first sale — every issued invoice is theirs to book (Sales → Export for finance).</div>
+        <div class="row"><div style="flex:2"><label for="blName">Legal name (creditor)</label><input type="text" id="blName" maxlength="70"></div><div><label for="blUid">UID</label><input type="text" id="blUid" placeholder="CHE-123.456.789"></div></div>
+        <div class="row"><div style="flex:2"><label for="blStreet">Street</label><input type="text" id="blStreet" maxlength="70"></div><div><label for="blHouse">No.</label><input type="text" id="blHouse" maxlength="16"></div><div><label for="blPostal">Postal code</label><input type="text" id="blPostal" maxlength="16"></div><div style="flex:2"><label for="blTown">Town</label><input type="text" id="blTown" maxlength="35"></div><div><label for="blCountry">Country</label><input type="text" id="blCountry" maxlength="2" placeholder="CH"></div></div>
+        <div class="row"><div style="flex:2"><label for="blIban">IBAN (CH/LI)</label><input type="text" id="blIban" placeholder="CH00 0000 0000 0000 0000 0"></div><div><label for="blCur">Currency</label><select id="blCur"><option value="CHF">CHF</option><option value="EUR">EUR</option></select></div><div><label for="blLang">Payment part language</label><select id="blLang"><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="it">Italiano</option></select></div></div>
+        <div class="row"><div><label for="blVat">VAT-registered</label><select id="blVat"><option value="1">yes — VAT on the invoice</option><option value="0">no</option></select></div><div><label for="blVatRate">VAT rate %</label><input type="text" id="blVatRate" placeholder="8.1" inputmode="decimal"></div><div><label for="blPrefix">Number prefix</label><input type="text" id="blPrefix" placeholder="IT-"></div><div><label for="blYear">Year in number</label><select id="blYear"><option value="1">IT-2026-0001</option><option value="0">IT-0001</option></select></div><div><label for="blDays">Payment terms (days)</label><input type="number" id="blDays" min="0" max="120"></div></div>
+        <div class="row"><div><label for="blMonths">Price rule: write-down over (months)</label><input type="number" id="blMonths" min="1" max="120"></div><div><label for="blFloor">Floor (% of purchase price)</label><input type="number" id="blFloor" min="0" max="100"></div><div><label for="blMin">Minimum price</label><input type="text" id="blMin" inputmode="decimal" placeholder="50.00"></div></div>
+        <div class="kv" style="margin-top:6px">Selling below fair value to an employee can count as pay in kind — agree the rule with finance and HR; the rule's price and every deviation are on the record.</div>
+        <div><label for="blWaiver">Hand-over terms (page 2 of the invoice) <span class="pill" id="blWaiverVersion"></span></label><textarea id="blWaiver" style="min-height:140px"></textarea></div>
+        <div><label for="blFooter">Closing line on the invoice</label><input type="text" id="blFooter" maxlength="300" placeholder="Thank you"></div>
+        <div class="btnrow"><button id="blSave" class="primary sm">Save invoice settings</button><span id="blStatus" class="status" role="status"></span></div>
+      </div></div><div class="settings-group hidden" id="settings-privacy"><div class="card"><h3>Collect less. Keep records deliberately.</h3><p class="privacy-note">Buyer email and postal address stay out of the sales overview. Invoice data remains in the sale detail and archived PDF. Unlock PINs are fetched only on request and cleared from the screen after 30 seconds.</p><div class="kvl"><div>Directory</div><div>People and roles are synced from the Hub.</div><div>Device history</div><div>Assignments, names, notes and photos remain in the register. Archiving a device hides it; it does not erase it.</div><div>Sales</div><div>Buyer details, acceptance, invoices and payment notes remain. Cancelled offers are also retained.</div><div>Photo recognition</div><div>When enabled, photos are sent to the configured AI provider, including any personal details visible in the image.</div><div>Private links</div><div>Expire after 14 days; can be revoked earlier. Revocation closes access, not the underlying record.</div><div>Automatic deletion</div><div>Not configured. There is currently no automated retention or anonymisation job.</div></div></div><div class="card flat"><h3>Handling a deletion request</h3><p class="privacy-note">Review the person’s device history, photos, sale records and exports. Separate optional operational data from documents that must be retained. Finance should confirm the invoice retention schedule; your privacy owner should define deletion and legal holds. An archive action is not a deletion response.</p><p class="privacy-note">Swiss accounting records generally require ten years of retention from the end of the financial year. Other obligations and holds may apply. The app does not automatically establish compliance.</p><a class="quiet-link" href="https://www.kmu.admin.ch/en/electronic-bookkeeping" target="_blank" rel="noopener noreferrer">Swiss SME portal: accounting retention ↗</a></div></div><div class="settings-group hidden" id="settings-maintenance"><div class="card flat">
+        <h3>Sample register</h3>
+        <div class="kv">Eight sample devices to try the intake on. Removable in one click; only offered while the register is empty.</div>
+        <div class="btnrow"><button id="sSeed" class="sm">Add sample devices</button><button id="sUnseed" class="sm">Remove sample devices</button><button id="sSync" class="sm">Sync people from the hub</button><span id="sSeedStatus" class="status" role="status"></span></div>
+      </div><div class="card flat"><h3>Admin log</h3><table><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div></div></section>
+
+    <!-- ===== docs ===== -->
+    <section class="view docs" id="v-docs">
+      <h2>How assets works</h2>
+      <details><summary>What happens to hardware when a colleague leaves?</summary><p>Deactivation keeps the current holder. Confirm departure in Desk; Assets then prepares a hardware follow-up on every assigned device. Plan a return, handover or sale with a responsible admin and due date. Confirm the serial or tag when the device physically changes hands. Returned devices stay in preparation until checked for reuse. Desk reads the result automatically and keeps incomplete offboardings open.</p><p>Reactivation pauses outstanding work for review. A former colleague can buy through an outside-buyer dealroom. Existing colleague sales have a Continue after departure action: new offers need fresh acceptance; issued invoices stay unchanged. Private links last 14 days. Staff must verify the buyer and deliver the link through an appropriate channel.</p></details>
+      <p>One register of devices. Each device has a tag (the sticker), a serial, vendor, model and kind; a status; the person who has it; and an append-only history — every hand-over, return, sale, scrapping, note and photo, with who did it and when.</p>
+      <details><summary>The intake</summary><p>The moment a device changes hands is the only moment the information exists. So the intake starts with the camera: photograph the back or the sticker. If an owner set an AI key in the hub (Settings → AI) and granted this app the <i>AI</i> lane, the picture is read — every code on it, with a confidence. Readings are only suggestions: the register matches them against tags and serials (exact, then with 0/O · 1/I · 5/S · 8/B folded, then by one or two edits) and shows candidates; you confirm. Nothing matches? Two taps create the device with what was read. Then you say what happened; the photo is kept as evidence on that event.</p><p>Without an AI key the camera still works: the photo is stored, you search by tag or serial (the same fuzzy matching), or add the device by hand. Only the reading step is off, and it says so with a link to the hub's settings.</p></details>
+
+
+      <details><summary>People</summary><p>People come from the hub directory. A hand-over picks the person there — no free-text names — so offboarding in the hub can list the devices a person holds and reassign them. The person is told through the hub's notifications.</p></details>
+
+      <details><summary>Roles</summary><p>Active Hub owners and admins have Admin access. Other app roles are assigned under Hub → Permissions. Employees see their own and explicitly shared content.</p></details>
+
+      <details><summary>Photos</summary><p>Scaled on the phone to at most 1280 px before upload, stored in the app itself, shown in the history. 900 KB per photo, twelve per device, 400 MB in total. When AI reading is enabled, the AI vendor receives the picture. Names, faces or other personal details visible in the image are included; check the image before sending it.</p></details>
+
+      <details><summary>Device management</summary><p>Connect Iru (formerly Kandji), Jamf Pro or Microsoft Intune under Settings. Every six hours — or when you press Sync now — the register pulls what the MDM knows: serial, model, OS, last check-in, the logged-in user. A device the register does not know is created (assigned to the MDM's user if that person is in the hub directory, otherwise in stock with the name noted). A known device gets its gaps filled. Where the register says one person and the MDM another — or the register says sold, scrapped or lost and the MDM still sees the device — nothing is changed; a <b>mismatch</b> is shown on the device and in the list, for a human to settle. Secrets never leave the app except towards the MDM; the calls go out from your engine as single-node requests.</p></details>
+
+      <details><summary>Apple Business Manager</summary><p>Apple keeps its own register of what a company bought: Apple Business Manager (or Apple School Manager). Under Settings you connect it with the client id, the key id and the private key Apple issued — the key never leaves your browser: it signs one client assertion there (ES256, valid 180 days, Apple's maximum) and only that assertion reaches the app, which trades it for one-hour tokens and reads two lists every six hours — the organisation's devices and which device-management service each one is assigned to. Serials that exist in the register are linked and show an "Apple Business Manager" box on the device; the rest are the gap: devices the company owns but nobody has handed out through this register. The <a href="#/apple">Apple</a> page lists them, with a filter for those no device-management service holds at all. The filter <i>Sold — release in ABM</i> is the other direction: devices the register says are sold, scrapped or lost but Apple still lists — release them in Apple Business Manager once the invoice is paid, otherwise the buyer is forced into your device management at setup; after the next sync they disappear from the list. "Add" takes a device into the register as <i>unknown</i> — Apple, model, capacity, ordered when, from whom — until someone finds it and records the hand-over; as soon as an MDM sees it, the MDM sync links it by serial. Nothing is ever written to Apple. The API account's role must allow reading devices — Apple's <i>Read Only</i> answers 403 to every read (verified); use the smallest role that works for you. Before the 180 days end, drop the .pem again on Edit — the Settings card warns two weeks ahead.</p></details>
+
+      <details><summary>Device trust</summary><p>The trust app checks whether devices are in good shape and shows each person their own devices. To know whose device a serial is, it asks this register — once you allow it under Settings → Device trust (paste the id Trust shows). It receives serial and e-mail for assigned devices, nothing else, and only that one canister may ask.</p></details>
+
+      <details><summary>Selling devices</summary><p>Start a sale from a device, choose the buyer and agree the price. Colleagues see their offer under <i>Offers &amp; invoices</i> and accept with their own Hub sign-in.</p><p>For an outside buyer, use <b>External dealroom → Create private link</b>, then copy and send that link. The buyer reviews the price and terms, completes their address and accepts without an account. Their invoice is generated and archived automatically. They download it and explicitly confirm receipt; you receive a Hub notification, with Slack delivery if configured. Opening a room or requesting a download is recorded separately from acceptance and receipt.</p><p>A dealroom link lasts 14 days. You can revoke it or create a replacement; the previous link stops working. Anyone holding the link can respond for this buyer, so keep it private. Changes to the offer or invoice settings need a new link. Issued PDFs stay unchanged.</p><p>For every sale, confirm payment from your bank record, then save the wipe/MDM checks, release the device in ABM if necessary and record hand-over. Only that final step marks the device sold. An unaccepted offer can be declined in the room and is cancelled automatically. After invoicing, IT cancels with a credit note and arranges any refund. Older external invoices can also get a room for download and receipt confirmation.</p><p>Invoices and credit notes stay in the archive. Finance receives them through Sales → Export. Receipt confirmation is neither payment nor hand-over confirmation. An unconfirmed receipt does not block IT from recording a paid, prepared hand-over. Swiss QR-bills use a normal CH/LI IBAN with SCOR; QR-IBAN/QRR is not supported. The pricing rule, VAT treatment and sale terms are configured by your organisation.</p></details>
+
+
+
+
+
+      <details><summary>Not yet</summary><p>Barcode/QR reading in the browser; approvals for hand-overs; per-person self-service returns; pushing the register's tag back into the MDM; sending invoices by mail from the app; QR-IBAN/QRR references; AppleCare coverage per device.</p></details>
+
+    </section>
+  </main>
+</div>
+<div id="zoom"><img id="zoomImg" alt=""></div>
+<script type="module" src="./app.js"></script>
+
+
+</body></html>

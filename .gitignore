@@ -1,0 +1,38 @@
+.icp/
+hub/dist/.well-known/
+.DS_Store
+.mops/
+kitchen/dist/recipes/
+kitchen/dist/recipes.*/
+node_modules/
+**/backend/dist/
+__pycache__/
+*.pyc
+.wrangler/
+test-results/
+
+kitchen/dist/.recipes-build-*/
+kitchen/dist/.recipes-previous/
+kebab-mcp/node_modules/
+contracts/relay/node_modules/
+contracts/relay/.dev.vars
+
+bug/test/baseline/
+bug/tests/mock-dist/
+bug/.preview-backend.json
+bug/.icp-cli/
+
+bug/.tool-cache/
+bug/.tool-config/
+
+# Populated pre-Season-2 canister compiled by the Bug upgrade test.
+bug/test/public-baseline/
+
+# Local Assets review fixture (never deploy)
+.assets-preview/
+
+# Private publication markers, findings and asset review receipts.
+.marketplace-private/
+
+# Crumbs collector runtime identity, salts and delivery queue.
+crumbs/collector/data/

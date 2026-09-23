@@ -1,0 +1,18 @@
+[package]
+name = "kebabstack-trust"
+version = "0.9.1"
+description = "kebab-stack trust — is every work device in good shape? Read-only osquery checks, scored per device, with the list of checks open to everyone"
+
+[toolchain]
+moc = "1.12.0"
+
+[dependencies]
+core = "2.6.1"
+json = "1.4.0"
+kebab-hub = "../sdk/motoko"
+
+[canisters.backend]
+main = "backend/main.mo"
+
+[build]
+outputDir = "backend/dist"

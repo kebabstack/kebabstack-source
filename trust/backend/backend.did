@@ -1,0 +1,489 @@
+type Snapshot =
+ record {
+   checkedAt: int;
+   metrics: vec record {
+                  text;
+                  nat;
+                };
+   schema: nat;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+ };
+type Settings =
+ record {
+   adminCount: nat;
+   adminEmails: vec text;
+   adminGroup: text;
+   ai: AiState;
+   appUrl: text;
+   assetsId: text;
+   backendHost: text;
+   configVersion: nat;
+   demoSeeded: bool;
+   effectiveVersion: text;
+   enrollConfigured: bool;
+   enrollFingerprint: text;
+   gatewayDomain: text;
+   hubId: text;
+   lastDirectoryPull: int;
+   manualOwners: nat;
+   orgName: text;
+   ownersCount: nat;
+   ownersLastError: text;
+   ownersPulledAt: int;
+   peopleCount: nat;
+   pinnedVersion: text;
+   selfId: text;
+   stableVersion: text;
+   tuneDistInterval: nat;
+   tuneScheduleSplay: nat;
+   tuneWatchdogMem: nat;
+   tuneWatchdogUtil: nat;
+   versionMode: text;
+ };
+type Removal =
+ record {
+   evidence: text;
+   hostname: text;
+   id: text;
+   identifiers: vec text;
+   requestedAt: int;
+   serial: text;
+   verifiedAt: int;
+   verifiedBy: text;
+ };
+type PermissionStatus =
+ record {
+   app: text;
+   directoryAt: int;
+   legacy: vec LegacyGrant;
+   legacyGroups: vec record {
+                       name: text;
+                       role: text;
+                     };
+   model: nat;
+   revision: text;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type LogRow =
+ record {
+   at: int;
+   what: text;
+   who: text;
+ };
+type LegacyGrant =
+ record {
+   email: text;
+   role: text;
+   source: text;
+ };
+type Item =
+ record {
+   detail: text;
+   historical: bool;
+   id: text;
+   kind: text;
+   path: text;
+   status: text;
+   title: text;
+ };
+type HttpGwResponse =
+ record {
+   body: blob;
+   headers: vec record {
+                  text;
+                  text;
+                };
+   status_code: nat16;
+   upgrade: opt bool;
+ };
+type HttpGwRequest =
+ record {
+   body: blob;
+   headers: vec record {
+                  text;
+                  text;
+                };
+   method: text;
+   url: text;
+ };
+type FleetStats =
+ record {
+   activeChecks: nat;
+   avgScore: nat;
+   compliant: nat;
+   configVersion: nat;
+   devices: nat;
+   enrollConfigured: bool;
+   failingByCheck: vec record {
+                         text;
+                         text;
+                         nat;
+                         nat;
+                       };
+   onLatestConfig: nat;
+   ownersConfigured: bool;
+   unowned: nat;
+ };
+type File =
+ record {
+   body: text;
+   name: text;
+ };
+type DirectoryRow =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type DeviceView =
+ record {
+   assessment: Assessment;
+   configCurrent: bool;
+   demo: bool;
+   enrolledAt: int;
+   failing: nat;
+   failingChecks: vec text;
+   hardwareSerial: text;
+   hostname: text;
+   lastSeen: int;
+   nodeKey: text;
+   os: text;
+   osVersion: text;
+   owner: text;
+   ownerEmail: text;
+   ownerName: text;
+   ownerSource: text;
+   platform: text;
+   posture: vec record {
+                  text;
+                  bool;
+                  text;
+                };
+   postureAt: int;
+   score: nat;
+ };
+type DeviceDetail =
+ record {
+   checks:
+    vec
+     record {
+       category: text;
+       custom: bool;
+       detail: text;
+       id: text;
+       level: nat;
+       observedAt: int;
+       pass: bool;
+       state: text;
+       title: text;
+     };
+   device: DeviceView;
+   info: vec record {
+               text;
+               text;
+               text;
+             };
+ };
+type Context =
+ record {
+   checkedAt: int;
+   items: vec Item;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+   total: nat;
+ };
+type CheckView =
+ record {
+   category: text;
+   custom: bool;
+   enabled: bool;
+   id: text;
+   level: nat;
+   os: text;
+   rule: text;
+   sql: text;
+   title: text;
+ };
+type Assessment =
+ record {
+   errors: nat;
+   expected: nat;
+   failing: nat;
+   passed: nat;
+   pending: nat;
+   stale: nat;
+   state: text;
+ };
+type AiState =
+ record {
+   connectorId: nat;
+   keySet: bool;
+   laneGranted: bool;
+   model: text;
+   source: text;
+ };
+service : {
+  addAdminEmail: (email: text) -> (bool);
+  addCheck: (tok: text, args:
+   record {
+     category: text;
+     id: text;
+     level: nat;
+     os: text;
+     rule: text;
+     sql: text;
+     title: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  adminLogRows: (tok: text) -> (vec LogRow) query;
+  /// Plain language → osquery SQL. Extraction only: the admin reviews the SQL and runs it explicitly.
+  aiToQuery: (tok: text, question: text, os: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+      sql: text;
+    });
+  /// Let a removed identifier back in (the device re-appears when its agent next enrols, if still installed).
+  allowAgain: (tok: text, ids: vec text) -> (record {
+                                               detail: text;
+                                               ok: bool;
+                                             });
+  /// Every check, for everyone signed in — nothing is inspected in secret.
+  checksCatalog: (tok: text) -> (vec CheckView) query;
+  /// First-run claim: while nobody is admin yet, a signed-in hub owner/admin becomes one.
+  claimAdmin: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  createQuery: (tok: text, args:
+   record {
+     nodeKey: text;
+     source: text;
+     sql: text;
+     title: text;
+   }) -> (record {
+            detail: text;
+            id: text;
+            ok: bool;
+            targeted: nat;
+          });
+  createScopedQuery: (tok: text, input:
+   record {
+     nodeKey: text;
+     source: text;
+     sql: text;
+     title: text;
+   }, os: text) -> (record {
+                      detail: text;
+                      id: text;
+                      ok: bool;
+                      targeted: nat;
+                    });
+  deleteCheck: (tok: text, id: text) -> (record {
+                                           detail: text;
+                                           ok: bool;
+                                         });
+  deploymentFile: (tok: text, os: text, kind: text, quiet: bool) ->
+   (opt File) query;
+  deviceDetail: (tok: text, nodeId: text) -> (opt DeviceDetail) query;
+  /// Staff see the whole fleet; a member sees the devices that are theirs.
+  devices: (tok: text) -> (vec DeviceView) query;
+  directory: (tok: text, q: text) ->
+   (vec record {
+          department: text;
+          displayName: text;
+          email: text;
+        }) query;
+  flagsFile: (tok: text) -> (opt text) query;
+  fleetStats: (tok: text) -> (opt FleetStats) query;
+  generateEnroll: (tok: text) -> (record {
+                                    detail: text;
+                                    ok: bool;
+                                  });
+  getSettings: (tok: text) -> (opt Settings) query;
+  /// Agent routes use the gateway's consensus-verified update path. Plain query
+  /// bodies without HTTP certification are rejected by the normal gateway.
+  http_request: (req: HttpGwRequest) -> (HttpGwResponse) query;
+  http_request_update: (req: HttpGwRequest) -> (HttpGwResponse);
+  hub_deactivate: (emails: vec text) -> (nat);
+  hub_manifest: () -> (Manifest) query;
+  /// Aggregate-only read for Hub Operations; no session or records leave this app.
+  hub_operations: (viewer: text) -> (Snapshot) query;
+  hub_permissionStatus: () -> (PermissionStatus);
+  /// The Hub brokers this read for a signed-in Desk agent. The viewer retains
+  /// their ordinary app permissions; this endpoint never grants extra access.
+  hub_personContext: (viewer: text, subject: text, viewerRole: text) ->
+   (Context) query;
+  hub_ping: () -> (text) query;
+  hub_upsert: (rows: vec DirectoryRow) -> (nat);
+  hub_usesGroup: (_name: text) -> (vec text) query;
+  info: () ->
+   (record {
+      appUrl: text;
+      hubId: text;
+      hubSet: bool;
+      orgName: text;
+      version: text;
+    }) query;
+  installScript: (tok: text, os: text) -> (opt text) query;
+  loginWithTicket: (ticket: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
+  pullOwnersNow: (tok: text) -> (record {
+                                   count: nat;
+                                   detail: text;
+                                   ok: bool;
+                                 });
+  queryResults: (tok: text, id: text) ->
+   (opt
+     record {
+       answered: nat;
+       rows: vec record {
+                   text;
+                   text;
+                   text;
+                 };
+       sql: text;
+       targeted: nat;
+       title: text;
+     }) query;
+  /// The questions admins asked the fleet lately (plain text), for everyone signed in.
+  recentQueries: (tok: text) ->
+   (vec record {
+          createdAt: int;
+          source: text;
+          sql: text;
+          title: text;
+        }) query;
+  refreshAi: (tok: text) -> (record {
+                               detail: text;
+                               ok: bool;
+                               state: AiState;
+                             });
+  /// Opening a device page re-asks it for its facts (answered on the agent's next poll).
+  refreshDeviceInfo: (tok: text, nodeId: text) -> (bool);
+  removalRecords: (tok: text) -> (vec Removal) query;
+  removeDemo: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  removeDevices: (tok: text, nodeKeys: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+      removed: nat;
+    });
+  removedList: (tok: text) -> (vec record {
+                                     text;
+                                     int;
+                                   }) query;
+  seedDemo: (tok: text) -> (record {
+                              detail: text;
+                              ok: bool;
+                            });
+  setAdminEmails: (tok: text, emails: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Legacy endpoint retained for compatibility; endpoint versions are deployed by IT.
+  setAgentVersion: (tok: text, _mode: text, _pinned: text) ->
+   (record {
+      detail: text;
+      effective: text;
+      ok: bool;
+    });
+  setChecks: (tok: text, ids: vec text) -> (record {
+                                              detail: text;
+                                              ok: bool;
+                                            });
+  /// Name the person for a device assets does not know. Pick from the directory; "" clears.
+  setDeviceOwner: (tok: text, nodeId: text, email: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setEnroll: (tok: text, secret: text) -> (record {
+                                             detail: text;
+                                             ok: bool;
+                                           });
+  setHub: (id: text) -> (bool);
+  setSettings: (tok: text, args:
+   record {
+     adminGroup: text;
+     appUrl: text;
+     assetsId: text;
+     gatewayDomain: text;
+     orgName: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  setTuning: (tok: text, args:
+   record {
+     distInterval: nat;
+     splay: nat;
+     watchdogMem: nat;
+     watchdogUtil: nat;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  signOut: (tok: text) -> ();
+  syncNow: (tok: text) -> (record {
+                             detail: text;
+                             ok: bool;
+                           });
+  verifyRemoval: (tok: text, id: text, evidence: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  whoami: (tok: text) ->
+   (opt
+     record {
+       ai: AiState;
+       aiOn: bool;
+       displayName: text;
+       email: text;
+       enrollConfigured: bool;
+       hubId: text;
+       id: text;
+       needsClaim: bool;
+       orgName: text;
+       ownersConfigured: bool;
+       role: text;
+       roleSource: text;
+     }) query;
+}

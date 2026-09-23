@@ -1,0 +1,121 @@
+// Version: 1.0.0
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type FormStatus__74681354 = {#closed; #draft; #open};
+type Form__895203313 =
+  {
+    allowEdit : Bool;
+    cap : Nat;
+    createdAt : Int;
+    createdBy : Text;
+    description : Text;
+    id : Nat;
+    nextNum : Nat;
+    schema : Text;
+    slug : Text;
+    status : FormStatus__74681354;
+    title : Text;
+    updatedAt : Int
+  };
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LogRow__410755882 = {at : Int; what : Text; who : Text};
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Note__185454894 = {at : Int; author : Text; text : Text};
+type Review__85665861 = {at : Int; rating : Nat; reviewer : Text};
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type SubStatus__818101679 = {#accepted; #declined; #inReview; #received};
+type Submission__1039216767 =
+  {
+    answers : Text;
+    assignee : Text;
+    editToken : Text;
+    formId : Nat;
+    id : Nat;
+    notes : [Note__185454894];
+    num : Nat;
+    reviews : [Review__85665861];
+    status : SubStatus__818101679;
+    submittedAt : Int;
+    submitterEmail : Text;
+    submitterName : Text;
+    updatedAt : Int
+  };
+actor {
+  stable var adminClaimed : Bool;
+  stable var adminEmails : [Text];
+  stable var adminGroup : Text;
+  stable adminLog :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable var answerBytesCounted : Bool;
+  stable var answerBytesTotal : Nat;
+  stable var appUrl : Text;
+  stable var demoSeeded : Bool;
+  stable formDeadlines :
+    {var root : Node__430031793<Nat, Int>; var size : Nat__58649523};
+  stable formShares :
+    {
+      var root : Node__430031793<Nat, [(Text, Text)]>;
+      var size : Nat__58649523
+    };
+  stable formTrash :
+    {var root : Node__430031793<Nat, Int>; var size : Nat__58649523};
+  stable former :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable forms :
+    {
+      var root : Node__430031793<Nat, Form__895203313>;
+      var size : Nat__58649523
+    };
+  stable groupsCache :
+    {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable var hubId : Text;
+  stable var idMigration : Text;
+  stable ids :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var lastDirectoryPull : Int;
+  stable var nextFormId : Nat;
+  stable var nextLogId : Nat;
+  stable var nextSubId : Nat;
+  stable var orgName : Text;
+  stable var owner : ?Principal;
+  stable people :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__739831475>;
+      var size : Nat__58649523
+    };
+  stable slugIndex :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable subs :
+    {
+      var root : Node__430031793<Nat, Submission__1039216767>;
+      var size : Nat__58649523
+    };
+  stable var subsTotal : Nat
+};

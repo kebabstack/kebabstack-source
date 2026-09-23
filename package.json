@@ -1,0 +1,31 @@
+{
+  "name": "kebabstack-checks",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Reproducible local checks for the kebab-stack monorepo",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "devDependencies": {
+    "@dfinity/pic": "0.23.0",
+    "@resvg/resvg-js": "2.6.2",
+    "ic-mops": "3.2.0",
+    "jsdom": "30.0.1"
+  },
+  "scripts": {
+    "check": "python3 tools/check-all.py",
+    "test:security": "node --test --test-concurrency=1 tests/crumbs.test.mjs tests/security.test.mjs tests/permissions.test.mjs tests/lifecycle.test.mjs tests/customer-support.test.mjs tests/oncall.test.mjs tests/oncall-response.test.mjs tests/oncall-reporting.test.mjs tests/oncall-compensation.test.mjs tests/oncall-calendar-status.test.mjs tests/oncall-regional-reminders.test.mjs tests/oncall-alerts.test.mjs tests/hardware-offboarding.test.mjs tests/trust-workspace.test.mjs tests/operations.test.mjs tests/displays.test.mjs",
+    "test:tools": "python3 -m unittest discover -s tests -p \"test_*.py\"",
+    "test:publication": "python3 -m unittest discover -s tests -p 'test_public_source.py'",
+    "audit:public-source": "python3 tools/public-source.py --reviews docs/source-asset-reviews.json",
+    "brand:sync": "node design/logos/sync.mjs",
+    "brand:check": "node design/logos/sync.mjs --check",
+    "design:build": "node design/build.mjs",
+    "design:check": "node design/build.mjs --check && node --test design/test.mjs",
+    "runtime:sync": "node design/runtime/sync.mjs && python3 sdk/tools/sync-signin.py && python3 hub/tools/sync-sdk.py",
+    "runtime:check": "node design/runtime/sync.mjs --check && python3 sdk/tools/sync-signin.py --check && python3 sdk/tools/check-sdk.py"
+  },
+  "overrides": {
+    "smol-toml": "1.7.1"
+  }
+}

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>PayloadIdentifier</key>
+			<string>org.kebabstack.trust.background.payload</string>
+			<key>PayloadUUID</key>
+			<string>5DA9453B-8DA7-5D3B-B5CA-0C1E0040B94F</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>PayloadType</key>
+			<string>com.apple.servicemanagement</string>
+			<key>Rules</key>
+			<array>
+				<dict>
+					<key>RuleType</key>
+					<string>Label</string>
+					<key>RuleValue</key>
+					<string>org.kebabstack.trust.osqueryd</string>
+					<key>Comment</key>
+					<string>Trust monitoring</string>
+				</dict>
+				<dict>
+					<key>RuleType</key>
+					<string>Label</string>
+					<key>RuleValue</key>
+					<string>org.kebabstack.trust.update</string>
+					<key>Comment</key>
+					<string>Existing Trust updater during migration</string>
+				</dict>
+			</array>
+		</dict>
+	</array>
+	<key>PayloadIdentifier</key>
+	<string>org.kebabstack.trust.background</string>
+	<key>PayloadUUID</key>
+	<string>5E0A4F5F-AAE6-5BE3-9FB3-13B3EF6EC29C</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadScope</key>
+	<string>System</string>
+	<key>PayloadDisplayName</key>
+	<string>Trust · Background items</string>
+	<key>PayloadDescription</key>
+	<string>Manages only the named Trust background services.</string>
+</dict>
+</plist>

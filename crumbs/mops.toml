@@ -1,0 +1,25 @@
+[package]
+name = "kebabstack-crumbs"
+version = "0.6.1"
+description = "Crumbs — cookieless website analytics for kebab-stack"
+
+[toolchain]
+moc = "1.12.0"
+
+[moc]
+args = [ "-W=M0223,M0236,M0237" ]
+
+[canisters.backend]
+main = "backend/main.mo"
+
+[canisters.backend.migrations]
+chain = "backend/migrations"
+
+[build]
+outputDir = "backend/dist"
+
+[dependencies]
+core = "2.6.1"
+motoko = "../sdk/motoko"
+sha2 = "0.1.14"
+json = "1.4.0"

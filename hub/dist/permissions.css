@@ -1,0 +1,20 @@
+#permissions{max-width:1180px}.perm-eyebrow{font:11px var(--ks-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--ks-fg-muted)}.perm-heading h1{margin:10px 0}.perm-toolbar{display:flex;align-items:end;gap:14px;margin:24px 0 10px}.perm-toolbar label{flex:1;margin:0}.perm-toolbar .perm-search{flex:2}.perm-toolbar button{margin-bottom:1px}.perm-summary-top,.perm-section-head{display:flex;justify-content:space-between;align-items:center;gap:20px}.perm-summary-top>div{display:flex;gap:14px;align-items:center;flex-wrap:wrap}#permissions h2{font-size:19px;margin:0 0 10px}#permissions h3{font-size:15px;margin:14px 0 6px}#permissions p{line-height:1.6}#permissions .card{margin:16px 0;padding:22px}.perm-counts{display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--ks-rule)}.perm-counts b{font-size:21px;margin-right:5px}.perm-note{padding:12px 15px;background:var(--ks-bg);border-left:3px solid var(--ks-accent);border-radius:4px}.perm-table{width:100%}.perm-table td{vertical-align:middle}.perm-table small{display:block;color:var(--ks-fg-muted);margin-top:5px}.perm-table select{min-width:170px}.perm-person-link{border:0;background:none;padding:0;text-align:left;font:inherit;text-transform:none;letter-spacing:normal;color:inherit;cursor:pointer}.perm-person-link:hover{text-decoration:underline}.perm-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px}.perm-section-head>select{max-width:230px}.perm-meaning>div,.perm-person-app{border-top:1px solid var(--ks-rule);margin-top:16px;padding-top:6px}.perm-actions{display:flex;align-items:center;gap:18px;margin:20px 0 32px}.perm-review{border:1px solid var(--ks-accent)!important}.perm-confirm{display:flex;align-items:center;gap:10px;text-transform:none!important;letter-spacing:normal!important}.perm-confirm input{width:auto}#permissions summary{cursor:pointer;font-weight:600}#permissions [data-p=person]{border:1px solid var(--ks-rule-strong)}@media(max-width:700px){.perm-toolbar,.perm-section-head,.perm-summary-top,.perm-actions{flex-direction:column;align-items:stretch}.perm-toolbar{gap:10px}.perm-groups{grid-template-columns:1fr}.perm-section-head>select{max-width:none}.perm-counts{gap:14px}#permissions .card{padding:16px}.perm-table{min-width:680px}}
+/* Keep the console's flex main shrinkable; only the permission table scrolls. */
+.cbody>main{min-width:0}
+#permissions{width:100%;min-width:0}
+#permissions .table-scroll{overflow-x:auto;max-width:100%}
+#permissions .perm-table{min-width:650px}
+#permissions .perm-toolbar{flex-wrap:wrap}
+#permissions .perm-toolbar label{display:flex;flex-direction:column;gap:8px;min-width:150px}
+#permissions .perm-toolbar .perm-search{min-width:180px}
+#permissions input[type=search]{width:100%;padding:9px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-input);font:400 14px var(--ks-ui);background:var(--ks-bg-elev);color:var(--ks-fg)}
+#permissions .perm-summary-top,#permissions .perm-section-head{flex-wrap:wrap}
+#permissions [data-p=person]{width:100%;display:block}
+#permissions [data-p=person].hidden{display:none}
+#permissions .perm-verification{font-size:12px;color:var(--ks-fg-muted)}
+#permissions .perm-verification summary{font-weight:400}
+#permissions .perm-summary p{margin:9px 0}
+#permissions .perm-section-head h2{margin-bottom:0}
+#permissions [data-p=default-description]{margin-bottom:0;color:var(--ks-fg-secondary);font-size:14px}
+
+.perm-report-form{margin:24px 0}.perm-report-form .row{display:flex;gap:20px;flex-wrap:wrap}.perm-report-form .row label{flex:1;min-width:220px}.perm-report-form select{display:block;width:100%;margin-top:8px}.perm-report-form fieldset{border:1px solid var(--line);border-radius:10px;margin:20px 0;padding:15px}.perm-report-cap{display:flex;gap:12px;padding:10px;align-items:flex-start}.perm-report-cap small{display:block;color:var(--muted);margin-top:5px}.perm-report-cap input{width:auto;margin-top:4px}

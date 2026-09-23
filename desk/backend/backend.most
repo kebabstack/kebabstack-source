@@ -1,0 +1,248 @@
+// Version: 1.0.0
+type Approval__559070989 =
+  {approver : Text; at : Int; decidedBy : Text; note : Text; state : Text};
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Event__55031293 =
+  {
+    actorKind : Text;
+    at : Int;
+    body : Text;
+    id : Nat;
+    kind : Text;
+    meta : [(Text, Text)];
+    ticketId : Nat;
+    who : Text
+  };
+type FieldDef__537266714 =
+  {
+    key : Text;
+    kind : Text;
+    options : [Text];
+    required : Bool;
+    sensitive : Bool;
+    title : Text
+  };
+type File__569085171 =
+  {
+    at : Int;
+    by : Text;
+    data : Blob;
+    id : Nat;
+    mime : Text;
+    name : Text;
+    size : Nat;
+    ticketId : Nat
+  };
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LogRow__410755882 = {at : Int; what : Text; who : Text};
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type RequestType__639901818 =
+  {
+    approval : Text;
+    checklist : [Text];
+    defaultPriority : Text;
+    description : Text;
+    dueField : Text;
+    enabled : Bool;
+    fields : [FieldDef__537266714];
+    icon : Text;
+    id : Nat;
+    name : Text;
+    queue : Text;
+    resolveH : Nat;
+    respondH : Nat;
+    sortOrder : Nat;
+    visibility : Text
+  };
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type SlackAnchor__348620600 = {channel : Text; intakeId : Nat; ts : Text};
+type SlackCred__262947466 =
+  {
+    botUserId : Text;
+    name : Text;
+    signing : Text;
+    teamName : Text;
+    token : Text
+  };
+type SlackIntake__924387788 =
+  {
+    channel : Text;
+    channelName : Text;
+    createdAt : Int;
+    enabled : Bool;
+    hubBotId : Nat;
+    id : Nat;
+    lastEventAt : Int;
+    lastResult : Text;
+    name : Text;
+    typeId : Nat
+  };
+type SlackOut__37520524 =
+  {add : Bool; emoji : Text; kind : Text; text : Text; ticketId : Nat};
+type Task__1009919940 = {at : Int; by : Text; state : Text; title : Text};
+type Ticket__476694790 =
+  {
+    assignee : Text;
+    body : Text;
+    channel : Text;
+    closedAt : ?Int;
+    createdAt : Int;
+    dueAt : ?Int;
+    fields : [(Text, Text)];
+    firstResponseAt : ?Int;
+    id : Nat;
+    key : Text;
+    links : [(Text, Text)];
+    priority : Text;
+    queue : Text;
+    requester : Text;
+    resolvedAt : ?Int;
+    respondBy : ?Int;
+    status : Text;
+    subject : Text;
+    typeId : Nat;
+    updatedAt : Int;
+    waitingOn : Text
+  };
+actor {
+  stable D : Int;
+  stable H : Int;
+  stable MAX_FILE : Nat;
+  stable MAX_FILES_PER_TICKET : Nat;
+  stable MAX_FILE_BYTES_TOTAL : Nat;
+  stable var adminClaimed : Bool;
+  stable var adminEmails : [Text];
+  stable var adminGroup : Text;
+  stable adminLog :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable var agentGroup : Text;
+  stable var aiKey : Text;
+  stable var aiModel : Text;
+  stable var aiProvider : Text;
+  stable var aiTriage : Bool;
+  stable var aiUrl : Text;
+  stable var appUrl : Text;
+  stable approvals :
+    {
+      var root : Node__430031793<Nat, Approval__559070989>;
+      var size : Nat__58649523
+    };
+  stable var autoCloseDays : Nat;
+  stable var demoSeeded : Bool;
+  stable events :
+    {
+      var root : Node__430031793<Nat, Event__55031293>;
+      var size : Nat__58649523
+    };
+  stable var fileBytes : Nat;
+  stable files :
+    {
+      var root : Node__430031793<Nat, File__569085171>;
+      var size : Nat__58649523
+    };
+  stable former :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable groupsCache :
+    {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable var hubId : Text;
+  stable var idMigration : Text;
+  stable ids :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var keyPrefix : Text;
+  stable lastCreateAt :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable var lastDirectoryCount : Nat;
+  stable var lastDirectoryPull : Int;
+  stable var nextEventId : Nat;
+  stable var nextFileId : Nat;
+  stable var nextLogId : Nat;
+  stable var nextSlackIntakeId : Nat;
+  stable var nextTicketId : Nat;
+  stable var nextTypeId : Nat;
+  stable nudged :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable var orgName : Text;
+  stable var owner : ?Principal;
+  stable people :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__739831475>;
+      var size : Nat__58649523
+    };
+  stable slackAnchor :
+    {
+      var root : Node__430031793<Nat, SlackAnchor__348620600>;
+      var size : Nat__58649523
+    };
+  stable slackByTs :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable slackCreds :
+    {
+      var root : Node__430031793<Nat, SlackCred__262947466>;
+      var size : Nat__58649523
+    };
+  stable var slackCredsAt : Int;
+  stable var slackCredsError : Text;
+  stable var slackGateway : Text;
+  stable slackIntakes :
+    {
+      var root : Node__430031793<Nat, SlackIntake__924387788>;
+      var size : Nat__58649523
+    };
+  stable slackOutbox :
+    {
+      var blockIndex : Nat__58649523;
+      var blocks : [var [var ?SlackOut__37520524]];
+      var elementIndex : Nat__58649523
+    };
+  stable slackSeen :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable slackUserEmail :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable ticketEvents :
+    {var root : Node__430031793<Nat, [Nat]>; var size : Nat__58649523};
+  stable ticketFiles :
+    {var root : Node__430031793<Nat, [Nat]>; var size : Nat__58649523};
+  stable ticketTasks :
+    {
+      var root : Node__430031793<Nat, [Task__1009919940]>;
+      var size : Nat__58649523
+    };
+  stable tickets :
+    {
+      var root : Node__430031793<Nat, Ticket__476694790>;
+      var size : Nat__58649523
+    };
+  stable types :
+    {
+      var root : Node__430031793<Nat, RequestType__639901818>;
+      var size : Nat__58649523
+    }
+};

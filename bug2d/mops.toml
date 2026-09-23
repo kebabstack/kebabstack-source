@@ -1,0 +1,17 @@
+[package]
+name = "kebabstack-bug2d"
+version = "0.2.5"
+description = "kebab-stack bug — Ship the Bug: 2D pixel arcade with public play and an opt-in global scoreboard"
+
+[toolchain]
+moc = "1.12.0"
+
+[dependencies]
+core = "2.6.1"
+kebab-hub = "../sdk/motoko"
+
+[canisters.backend]
+main = "backend/main.mo"
+
+[build]
+outputDir = "backend/dist"

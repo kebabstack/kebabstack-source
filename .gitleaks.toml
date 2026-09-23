@@ -1,0 +1,12 @@
+title = "Kebabstack public source"
+[extend]
+useDefault = true
+
+# Verified SHA-256 integrity entries for public Mops dependency source files.
+# Match both this lockfile path and the exact digest, never all generic keys.
+[[allowlists]]
+description = "Public ecdsa 8.0.1 source integrity, not private key material"
+condition = "AND"
+paths = ['(^|/)hub/mops\.lock$']
+regexTarget = "secret"
+regexes = ['^(27a53135a251907f7fc9d6d529099a5d107bdd05e5488f26504bd86dbf9e1f4b|0b82ff7d19e7ff463717fa4e40989e23a594d8badfad3b3d4b58d480f951c0a9)$']

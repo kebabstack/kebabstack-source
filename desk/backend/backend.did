@@ -1,0 +1,1998 @@
+type Workspace =
+ record {
+   canManage: bool;
+   members: vec Person;
+   plans: vec Summary;
+   project: Project__1;
+ };
+type WorkInput =
+ record {
+   breakMinutes: nat;
+   endAt: int;
+   note: text;
+   startAt: int;
+ };
+type Work =
+ record {
+   at: int;
+   breakMinutes: nat;
+   endAt: int;
+   id: nat;
+   incidentId: nat;
+   name: text;
+   note: text;
+   personId: text;
+   projectId: nat;
+   requestKey: text;
+   startAt: int;
+   voidReason: text;
+   voidedAt: int;
+ };
+type Window =
+ record {
+   endAt: int;
+   layer: nat;
+   startAt: int;
+ };
+type View__1 =
+ record {
+   deliveries: vec Delivery;
+   events: vec Event;
+   handoff: opt Handoff;
+   incident: Incident;
+   monitoring: opt Monitoring;
+   work: vec Work;
+ };
+type View =
+ record {
+   adjustmentUnits: vec record {
+                          nat;
+                          Unit;
+                        };
+   lines: vec Line;
+   rule: opt Rule;
+ };
+type Update =
+ record {
+   at: int;
+   message: text;
+   phase: Phase;
+ };
+type Unit =
+ variant {
+   minutes;
+   money;
+ };
+type TypeView =
+ record {
+   approval: text;
+   checklist: vec text;
+   defaultPriority: text;
+   description: text;
+   dueField: text;
+   enabled: bool;
+   fields: vec FieldDef;
+   icon: text;
+   id: nat;
+   name: text;
+   queue: text;
+   resolveH: nat;
+   respondH: nat;
+   sortOrder: nat;
+   visibility: text;
+ };
+type TypeInput =
+ record {
+   approval: text;
+   checklist: vec text;
+   defaultPriority: text;
+   description: text;
+   dueField: text;
+   enabled: bool;
+   fields: vec FieldDef;
+   icon: text;
+   name: text;
+   queue: text;
+   resolveH: nat;
+   respondH: nat;
+   visibility: text;
+ };
+type Type =
+ record {
+   description: text;
+   enabled: bool;
+   fields: vec Field;
+   id: nat;
+   name: text;
+   priority: text;
+   projectId: nat;
+   resolveH: nat;
+   respondH: nat;
+   revision: nat;
+   steps: vec Step;
+ };
+type TicketRow =
+ record {
+   approval: text;
+   assignee: text;
+   assigneeEmail: text;
+   assigneeName: text;
+   breached: bool;
+   channel: text;
+   createdAt: int;
+   dueAt: opt int;
+   firstResponseAt: opt int;
+   id: nat;
+   key: text;
+   openTasks: nat;
+   priority: text;
+   projectId: nat;
+   queue: text;
+   requester: text;
+   requesterEmail: text;
+   requesterName: text;
+   respondBy: opt int;
+   status: text;
+   subject: text;
+   totalTasks: nat;
+   typeIcon: text;
+   typeId: nat;
+   typeName: text;
+   updatedAt: int;
+   waitingOn: text;
+   workflowStep: text;
+ };
+type TicketFull =
+ record {
+   approval: opt Approval;
+   canAct: bool;
+   canApprove: bool;
+   customer:
+    opt
+     record {
+       deleteAt: int;
+       email: text;
+       hold: opt Hold;
+       linkExpiresAt: int;
+       name: text;
+       projectId: nat;
+       projectName: text;
+     };
+   customerWorkflow: opt record {
+                           canProgress: bool;
+                           run: Run;
+                         };
+   events: vec Event__1;
+   files: vec FileMeta;
+   internal: bool;
+   lifecycle: opt LifecycleCase;
+   people: vec PersonCard;
+   requestType: opt RequestType;
+   requester: PersonCard;
+   role: text;
+   row: TicketRow;
+   slack: opt record {
+                channel: text;
+                channelName: text;
+              };
+   tasks: vec Task;
+   ticket: Ticket;
+ };
+type Ticket =
+ record {
+   assignee: text;
+   body: text;
+   channel: text;
+   closedAt: opt int;
+   createdAt: int;
+   dueAt: opt int;
+   fields: vec record {
+                 text;
+                 text;
+               };
+   firstResponseAt: opt int;
+   id: nat;
+   key: text;
+   links: vec record {
+                text;
+                text;
+              };
+   priority: text;
+   queue: text;
+   requester: text;
+   resolvedAt: opt int;
+   respondBy: opt int;
+   status: text;
+   subject: text;
+   typeId: nat;
+   updatedAt: int;
+   waitingOn: text;
+ };
+type Task =
+ record {
+   at: int;
+   by: text;
+   state: text;
+   title: text;
+ };
+type SwapState =
+ variant {
+   accepted;
+   cancelled;
+   declined;
+   pending;
+ };
+type Swap =
+ record {
+   decidedAt: int;
+   decidedBy: text;
+   fromPersonId: text;
+   id: nat;
+   planId: nat;
+   reason: text;
+   requestedAt: int;
+   requestedBy: text;
+   shift: nat;
+   state: SwapState;
+   toName: text;
+   toPersonId: text;
+ };
+type Summary =
+ record {
+   endAt: int;
+   id: nat;
+   published: bool;
+   revision: nat;
+   startAt: int;
+   timezone: text;
+ };
+type Step =
+ record {
+   approval: bool;
+   checklist: vec text;
+   group: text;
+   instructions: text;
+   name: text;
+ };
+type Source__1 =
+ variant {
+   cover: record {
+            coverId: nat;
+            interval: bool;
+            planId: nat;
+            urgent: bool;
+          };
+   planning: record {day: int;};
+ };
+type SourceView =
+ record {
+   accepted: nat;
+   createdAt: int;
+   enabled: bool;
+   expiresAt: int;
+   id: nat;
+   lastError: text;
+   name: text;
+   previousUntil: int;
+   projectId: nat;
+   receivedAt: int;
+   rejected: nat;
+   revision: nat;
+   revokedAt: int;
+   "service": text;
+   testedAt: int;
+ };
+type Source =
+ record {
+   app: text;
+   cid: nat;
+   name: text;
+   url: text;
+ };
+type Snapshot =
+ record {
+   checkedAt: int;
+   metrics: vec record {
+                  text;
+                  nat;
+                };
+   schema: nat;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+ };
+type SlackStatus =
+ record {
+   bots: vec SlackBotView;
+   credsAt: int;
+   credsError: text;
+   eventsUrl: text;
+   gateway: text;
+   intakes: vec SlackIntake;
+   outbox: nat;
+ };
+type SlackIntake =
+ record {
+   channel: text;
+   channelName: text;
+   createdAt: int;
+   enabled: bool;
+   hubBotId: nat;
+   id: nat;
+   lastEventAt: int;
+   lastResult: text;
+   name: text;
+   typeId: nat;
+ };
+type SlackBotView =
+ record {
+   botKnown: bool;
+   hasSigning: bool;
+   id: nat;
+   name: text;
+   teamName: text;
+ };
+type Shift =
+ record {
+   endAt: int;
+   layer: nat;
+   personId: text;
+   startAt: int;
+ };
+type Settings =
+ record {
+   adminCount: nat;
+   adminEmails: vec text;
+   adminGroup: text;
+   agentCount: nat;
+   agentGroup: text;
+   aiHubModel: text;
+   aiKeySet: bool;
+   aiModel: text;
+   aiProvider: text;
+   aiSource: text;
+   aiTriage: bool;
+   aiUrl: text;
+   appUrl: text;
+   autoCloseDays: nat;
+   demoSeeded: bool;
+   fileBytes: nat;
+   hubId: text;
+   keyPrefix: text;
+   lastDirectoryPull: int;
+   orgName: text;
+   peopleCount: nat;
+ };
+type Service =
+ record {
+   checkedAt: int;
+   name: text;
+   state: text;
+   validUntil: int;
+ };
+type Segment =
+ record {
+   endAt: int;
+   key: text;
+   layer: nat;
+   personId: text;
+   shift: nat;
+   startAt: int;
+ };
+type SecretResult =
+ variant {
+   err: text;
+   ok: record {
+         id: nat;
+         revision: nat;
+         secret: text;
+       };
+ };
+type Scope =
+ variant {
+   customer: nat;
+   internal: text;
+ };
+type Saved =
+ record {
+   edited: bool;
+   recipe: Recipe;
+ };
+type Run =
+ record {
+   checked: vec bool;
+   definition: Type;
+   outcome: text;
+   revision: nat;
+   step: nat;
+ };
+type Rule =
+ record {
+   at: int;
+   by: text;
+   effectiveAt: int;
+   holidays: vec text;
+   minimumMinutes: nat;
+   policy: PolicyInput;
+   readiness: vec Rates;
+   readinessBasis: variant {
+                     day;
+                     hour;
+                   };
+   readinessUnit: Unit;
+   revision: nat;
+   roundingMinutes: nat;
+   timezone: text;
+   withdrawnAt: int;
+   work: Rates;
+   workUnit: Unit;
+ };
+type Result =
+ variant {
+   err: Error;
+   ok: record {
+         id: nat;
+         revision: nat;
+       };
+ };
+type RequestType =
+ record {
+   approval: text;
+   checklist: vec text;
+   defaultPriority: text;
+   description: text;
+   dueField: text;
+   enabled: bool;
+   fields: vec FieldDef;
+   icon: text;
+   id: nat;
+   name: text;
+   queue: text;
+   resolveH: nat;
+   respondH: nat;
+   sortOrder: nat;
+   visibility: text;
+ };
+type ReportingScope =
+ record {
+   id: nat;
+   name: text;
+ };
+type Region =
+ record {
+   backup: vec text;
+   backupMode: variant {
+                 always;
+                 none;
+                 nonworking;
+               };
+   days: vec nat;
+   endMinute: nat;
+   holidays: vec text;
+   name: text;
+   primary: vec text;
+   startMinute: nat;
+   timezone: text;
+ };
+type RecordState =
+ variant {
+   approved;
+   confirmed;
+   disputed;
+   excluded;
+   pending;
+ };
+type Record =
+ record {
+   breakMinutes: nat;
+   confirmedAt: int;
+   confirmedBy: text;
+   delta: int;
+   endAt: int;
+   id: nat;
+   kind: Kind;
+   layer: nat;
+   name: text;
+   note: text;
+   periodId: nat;
+   personId: text;
+   reason: text;
+   reviewedAt: int;
+   reviewedBy: text;
+   sourceKey: text;
+   startAt: int;
+   state: RecordState;
+ };
+type Recipe =
+ record {
+   regions: vec Region;
+   requirement: variant {
+                  continuous;
+                  regional;
+                };
+   rotationDays: nat;
+   startDate: text;
+   timezone: text;
+   weeks: nat;
+ };
+type Rates =
+ record {
+   holiday: nat;
+   weekday: nat;
+   weekend: nat;
+ };
+type Publication =
+ record {
+   acceptedGaps: bool;
+   at: int;
+   by: text;
+   names: vec Person;
+ };
+type PublicNotice =
+ record {
+   endsAt: int;
+   id: nat;
+   impact: Impact;
+   phase: Phase;
+   services: vec text;
+   startsAt: int;
+   title: text;
+   updatedAt: int;
+   updates: vec Update;
+ };
+type Project__1 =
+ record {
+   createdAt: int;
+   createdBy: text;
+   description: text;
+   id: nat;
+   name: text;
+   requestKey: text;
+   scope: Scope;
+   services: vec text;
+ };
+type ProjectSettings =
+ record {
+   archivedAt: int;
+   retentionChangedAt: int;
+   retentionDays: nat;
+   revision: nat;
+ };
+type ProjectInput =
+ record {
+   description: text;
+   name: text;
+   scope: Scope;
+   services: vec text;
+ };
+type Project =
+ record {
+   capabilities: Capabilities;
+   id: nat;
+   name: text;
+   policy: opt Policy;
+ };
+type Progress =
+ record {
+   bindings: vec text;
+   checkedAt: int;
+   open: nat;
+   sources: nat;
+   state: text;
+   total: nat;
+ };
+type Policy__3 =
+ record {
+   completedDays: nat;
+   graceUntil: int;
+   inactiveDays: nat;
+   noticeUrl: text;
+   revision: nat;
+ };
+type Policy__2 =
+ record {
+   at: int;
+   by: text;
+   coordinators: vec text;
+   enabled: bool;
+   revision: nat;
+ };
+type Policy__1 =
+ record {
+   ackMinutes: nat;
+   at: int;
+   by: text;
+   enabled: bool;
+   fallback: text;
+   projectId: nat;
+   retentionDays: nat;
+   revision: nat;
+ };
+type PolicyInput__2 =
+ record {
+   coordinators: vec text;
+   enabled: bool;
+ };
+type PolicyInput__1 =
+ record {
+   ackMinutes: nat;
+   enabled: bool;
+   fallback: text;
+   retentionDays: nat;
+ };
+type PolicyInput =
+ record {
+   costCenter: text;
+   currency: text;
+   decimals: nat;
+   readinessCode: text;
+   readinessRates: vec nat;
+   retentionDays: nat;
+   workCode: text;
+   workRate: nat;
+ };
+type Policy =
+ record {
+   at: int;
+   by: text;
+   costCenter: text;
+   currency: text;
+   decimals: nat;
+   readinessCode: text;
+   readinessRates: vec nat;
+   retentionDays: nat;
+   revision: nat;
+   workCode: text;
+   workRate: nat;
+ };
+type PlanView =
+ record {
+   issues: vec Issue;
+   plan: Plan;
+   swaps: vec Swap;
+ };
+type PlanInput =
+ record {
+   endAt: int;
+   layers: vec text;
+   projectId: nat;
+   shifts: vec Shift;
+   startAt: int;
+   template: text;
+   timezone: text;
+   windows: vec Window;
+ };
+type Plan =
+ record {
+   createdAt: int;
+   createdBy: text;
+   id: nat;
+   input: PlanInput;
+   publication: opt Publication;
+   requestKey: text;
+   revision: nat;
+ };
+type Phase =
+ variant {
+   identified;
+   investigating;
+   maintenance;
+   monitoring;
+   resolved;
+   scheduled;
+ };
+type PersonCard =
+ record {
+   active: bool;
+   department: text;
+   displayName: text;
+   email: text;
+   groups: vec text;
+   id: text;
+   known: bool;
+   location: text;
+   manager: text;
+   title: text;
+ };
+type Person =
+ record {
+   id: text;
+   name: text;
+ };
+type PermissionStatus =
+ record {
+   app: text;
+   directoryAt: int;
+   legacy: vec LegacyGrant;
+   legacyGroups: vec record {
+                       name: text;
+                       role: text;
+                     };
+   model: nat;
+   revision: text;
+ };
+type PeriodInput =
+ record {
+   endAt: int;
+   projectId: nat;
+   startAt: int;
+   timezone: text;
+   title: text;
+ };
+type Page =
+ record {
+   audience: Audience;
+   checkedAt: int;
+   description: text;
+   notices: vec PublicNotice;
+   services: vec Service;
+   slug: text;
+   title: text;
+ };
+type Overview =
+ record {
+   canManage: bool;
+   deliveryReady: bool;
+   incidents: vec Incident;
+   policy: opt Policy__1;
+ };
+type Notice =
+ record {
+   at: int;
+   by: text;
+   endsAt: int;
+   generation: nat;
+   id: nat;
+   impact: Impact;
+   incidentId: nat;
+   message: text;
+   phase: Phase;
+   projectId: nat;
+   requestKey: text;
+   revision: nat;
+   services: vec text;
+   startsAt: int;
+   title: text;
+   updatedAt: int;
+   updates: vec Update;
+   withdrawnAt: int;
+ };
+type Monitoring =
+ record {
+   condition: text;
+   occurredAt: int;
+   receivedAt: int;
+   sourceName: text;
+ };
+type Mapping =
+ record {
+   payrollId: text;
+   personId: text;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type LogRow =
+ record {
+   at: int;
+   what: text;
+   who: text;
+ };
+type Line__1 =
+ record {
+   amount: int;
+   code: text;
+   costCenter: text;
+   currency: text;
+   decimals: nat;
+   endAt: int;
+   kind: Kind;
+   name: text;
+   payrollId: text;
+   personId: text;
+   rate: nat;
+   recordId: nat;
+   seconds: nat;
+   startAt: int;
+ };
+type Line =
+ record {
+   amount: int;
+   basis: variant {
+            adjustment;
+            day;
+            hour;
+          };
+   code: text;
+   costCenter: text;
+   currency: text;
+   date: text;
+   dayKind: DayKind;
+   decimals: nat;
+   divisorSeconds: nat;
+   endAt: int;
+   kind: Kind;
+   name: text;
+   payableSeconds: nat;
+   payrollId: text;
+   personId: text;
+   rate: nat;
+   recordId: nat;
+   recordIds: vec nat;
+   ruleRevision: nat;
+   seconds: nat;
+   startAt: int;
+   unit: Unit;
+ };
+type LifecycleCase =
+ record {
+   decidedBy: text;
+   detectedAt: int;
+   effectiveActive: bool;
+   email: text;
+   lastEvent: nat;
+   name: text;
+   note: text;
+   personId: text;
+   source: text;
+   state: variant {
+            notDeparture;
+            offboarding;
+            reactivated;
+            review;
+          };
+ };
+type LegacyGrant =
+ record {
+   email: text;
+   role: text;
+   source: text;
+ };
+type Kind =
+ variant {
+   adjustment;
+   readiness;
+   work;
+ };
+type Job =
+ record {
+   attempts: nat;
+   createdAt: int;
+   detail: text;
+   expiresAt: int;
+   key: text;
+   leaseUntil: int;
+   nextAttempt: int;
+   path: text;
+   projectId: nat;
+   recipient: text;
+   source: Source__1;
+   status: variant {
+             accepted;
+             cancelled;
+             failed;
+             pending;
+           };
+   title: text;
+ };
+type Item =
+ record {
+   detail: text;
+   historical: bool;
+   id: text;
+   kind: text;
+   path: text;
+   status: text;
+   title: text;
+ };
+type Issue =
+ record {
+   endAt: int;
+   kind: variant {
+           gap;
+           unavailable;
+         };
+   layer: nat;
+   startAt: int;
+ };
+type Input__4 =
+ record {
+   days: nat;
+   name: text;
+   projectId: nat;
+   "service": text;
+ };
+type Input__3 =
+ record {
+   detail: text;
+   projectId: nat;
+   "service": text;
+   severity: variant {
+               critical;
+               major;
+               minor;
+             };
+   title: text;
+ };
+type Input__2 =
+ record {
+   effectiveAt: int;
+   holidays: vec text;
+   minimumMinutes: nat;
+   policy: PolicyInput;
+   readiness: vec Rates;
+   readinessBasis: variant {
+                     day;
+                     hour;
+                   };
+   readinessUnit: Unit;
+   roundingMinutes: nat;
+   timezone: text;
+   work: Rates;
+   workUnit: Unit;
+ };
+type Input__1 =
+ record {
+   endsAt: int;
+   impact: Impact;
+   incidentId: nat;
+   message: text;
+   phase: Phase;
+   projectId: nat;
+   services: vec text;
+   startsAt: int;
+   title: text;
+ };
+type Input =
+ record {
+   description: text;
+   enabled: bool;
+   fields: vec Field;
+   name: text;
+   priority: text;
+   resolveH: nat;
+   respondH: nat;
+   steps: vec Step;
+ };
+type Incident =
+ record {
+   ackMinutes: nat;
+   acknowledgedAt: int;
+   detail: text;
+   fallback: text;
+   id: nat;
+   nextEscalation: int;
+   openedAt: int;
+   openedBy: text;
+   owner: text;
+   ownerName: text;
+   projectId: nat;
+   requestKey: text;
+   resolution: text;
+   resolvedAt: int;
+   retentionDays: nat;
+   revision: nat;
+   routeIssue: text;
+   "service": text;
+   severity: variant {
+               critical;
+               major;
+               minor;
+             };
+   stage: nat;
+   stageCount: nat;
+   status: variant {
+             acknowledged;
+             open;
+             resolved;
+           };
+   title: text;
+   updatedAt: int;
+ };
+type Impact =
+ variant {
+   degraded;
+   maintenance;
+   outage;
+ };
+type HttpGwResponse =
+ record {
+   body: blob;
+   headers: vec record {
+                  text;
+                  text;
+                };
+   status_code: nat16;
+   upgrade: opt bool;
+ };
+type HttpGwRequest =
+ record {
+   body: blob;
+   headers: vec record {
+                  text;
+                  text;
+                };
+   method: text;
+   url: text;
+ };
+type Hold =
+ record {
+   reason: text;
+   until: int;
+ };
+type History =
+ record {
+   revision: nat;
+   rules: vec Rule;
+ };
+type Header =
+ record {
+   adjustmentOf: nat;
+   approvedAt: int;
+   approvedBy: text;
+   batchId: text;
+   coverageIssues: nat;
+   coverageNote: text;
+   createdAt: int;
+   createdBy: text;
+   deleteAt: int;
+   endAt: int;
+   id: nat;
+   projectId: nat;
+   revision: nat;
+   sourceChanged: bool;
+   startAt: int;
+   timezone: text;
+   title: text;
+ };
+type Handoff =
+ record {
+   at: int;
+   decidedAt: int;
+   from: text;
+   status: variant {
+             accepted;
+             cancelled;
+             declined;
+             pending;
+           };
+   summary: text;
+   to: text;
+   toName: text;
+ };
+type Filter =
+ record {
+   assignee: text;
+   q: text;
+   queue: text;
+   status: text;
+   view: text;
+ };
+type FileMeta =
+ record {
+   at: int;
+   by: text;
+   id: nat;
+   mime: text;
+   name: text;
+   size: nat;
+ };
+type FieldDef =
+ record {
+   key: text;
+   kind: text;
+   options: vec text;
+   required: bool;
+   sensitive: bool;
+   title: text;
+ };
+type Field =
+ record {
+   key: text;
+   kind: text;
+   options: vec text;
+   required: bool;
+   sensitive: bool;
+   title: text;
+ };
+type Export =
+ variant {
+   err: text;
+   ok: record {
+         batchId: text;
+         csv: text;
+         filename: text;
+       };
+ };
+type Example =
+ record {
+   amount: nat;
+   divisorSeconds: nat;
+   payableSeconds: nat;
+   rate: nat;
+   seconds: nat;
+   title: text;
+   unit: Unit;
+ };
+type Event__1 =
+ record {
+   actorKind: text;
+   at: int;
+   body: text;
+   id: nat;
+   kind: text;
+   meta: vec record {
+               text;
+               text;
+             };
+   ticketId: nat;
+   who: text;
+ };
+type Event =
+ record {
+   at: int;
+   by: text;
+   kind: text;
+   name: text;
+   "text": text;
+ };
+type Error =
+ variant {
+   denied;
+   invalid: text;
+   limit: text;
+   missing;
+   stale;
+ };
+type DirectoryRow =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type Delivery =
+ record {
+   acceptedAt: int;
+   attempts: nat;
+   detail: text;
+   id: nat;
+   incidentId: nat;
+   leaseUntil: int;
+   name: text;
+   nextAttempt: int;
+   purpose: variant {
+              handoff;
+              response;
+            };
+   recipient: text;
+   stage: nat;
+   status: variant {
+             accepted;
+             cancelled;
+             failed;
+             pending;
+           };
+ };
+type DayKind =
+ variant {
+   holiday;
+   weekday;
+   weekend;
+ };
+type CustomerProjectInput =
+ record {
+   description: text;
+   enabled: bool;
+   fields: vec Field;
+   group: text;
+   name: text;
+   origins: vec text;
+   widgetEnabled: bool;
+ };
+type CustomerProject =
+ record {
+   description: text;
+   enabled: bool;
+   fields: vec Field;
+   group: text;
+   id: nat;
+   name: text;
+   origins: vec text;
+   revision: nat;
+   typeId: nat;
+   widgetEnabled: bool;
+   widgetId: text;
+ };
+type CustomerPrivacyInput =
+ record {
+   completedDays: nat;
+   inactiveDays: nat;
+   noticeUrl: text;
+ };
+type CustomerKeyView =
+ record {
+   createdAt: int;
+   expiresAt: int;
+   id: nat;
+   name: text;
+   projectId: nat;
+   revoked: bool;
+   scopes: vec text;
+ };
+type CustomerErasure =
+ record {
+   createdAt: int;
+   deletedAt: int;
+   projectId: nat;
+   reason: text;
+   ticketId: nat;
+ };
+type Cover =
+ record {
+   decidedAt: int;
+   decidedBy: text;
+   endAt: int;
+   fromPersonId: text;
+   id: nat;
+   planId: nat;
+   reason: text;
+   requestedAt: int;
+   requestedBy: text;
+   shift: nat;
+   startAt: int;
+   state: SwapState;
+   toName: text;
+   toPersonId: text;
+ };
+type Context =
+ record {
+   checkedAt: int;
+   items: vec Item;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+   total: nat;
+ };
+type ConfigInput =
+ record {
+   audience: Audience;
+   description: text;
+   enabled: bool;
+   retentionDays: nat;
+   services: vec text;
+   slug: text;
+   title: text;
+ };
+type Config =
+ record {
+   at: int;
+   audience: Audience;
+   by: text;
+   description: text;
+   enabled: bool;
+   generation: nat;
+   projectId: nat;
+   retentionDays: nat;
+   revision: nat;
+   services: vec text;
+   slug: text;
+   title: text;
+ };
+type Case =
+ record {
+   desk: text;
+   dueAt: opt int;
+   key: text;
+   person: text;
+   revision: int;
+   state: text;
+   ticket: nat;
+   url: text;
+ };
+type Capabilities =
+ record {
+   export: bool;
+   prepare: bool;
+   release: bool;
+   review: bool;
+ };
+type Cancellation =
+ record {
+   at: int;
+   by: text;
+   from: int;
+   reason: text;
+ };
+type Audit =
+ record {
+   action: text;
+   at: int;
+   by: text;
+   reason: text;
+   recordId: nat;
+ };
+type Audience =
+ variant {
+   public;
+   workspace;
+ };
+type Approval =
+ record {
+   approver: text;
+   at: int;
+   decidedBy: text;
+   note: text;
+   state: text;
+ };
+type Absence =
+ record {
+   at: int;
+   by: text;
+   cancelledAt: int;
+   endAt: int;
+   id: nat;
+   name: text;
+   personId: text;
+   projectId: nat;
+   startAt: int;
+ };
+service : {
+  acknowledgeOncallIncident: (tok: text, id: nat, revision: nat) -> (Result);
+  activateReportingCompensation: (tok: text, projectId: nat, revision:
+   nat, input: Input__2) -> (Result);
+  /// CLI bootstrap: name the first desk admin by e-mail (controller only).
+  addAdminEmail: (email: text) -> (bool);
+  addFile: (tok: text, id: nat, name: text, mime: text, data: blob) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+    });
+  addLink: (tok: text, id: nat, kind: text, ref: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  addNote: (tok: text, id: nat, body: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  addReportingAdjustment: (tok: text, id: nat, revision: nat, key: text,
+   person: text, delta: int, reason: text) -> (Result);
+  addReportingAdjustmentWithUnit: (tok: text, id: nat, revision: nat, key:
+   text, person: text, delta: int, unit: Unit, reason: text) -> (Result);
+  addReportingWork: (tok: text, id: nat, revision: nat, key: text, input:
+   WorkInput) -> (Result);
+  addSlackIntake: (tok: text, args:
+   record {
+     channel: text;
+     channelName: text;
+     hubBotId: nat;
+     name: text;
+     typeId: nat;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  addTask: (tok: text, id: nat, title: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  adminCatalog: (tok: text) -> (vec TypeView) query;
+  adminLogRows: (tok: text) -> (vec LogRow) query;
+  /// Agent files on someone's behalf (walk-up, phone, chat).
+  agentCreate: (tok: text, args:
+   record {
+     body: text;
+     channel: text;
+     fields: vec record {
+                   text;
+                   text;
+                 };
+     priority: text;
+     requester: text;
+     subject: text;
+     typeId: nat;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            key: text;
+            ok: bool;
+          });
+  agents: (tok: text) ->
+   (vec record {
+          displayName: text;
+          email: text;
+          id: text;
+        }) query;
+  aiDraft: (tok: text, id: nat, intent: text) ->
+   (record {
+      ok: bool;
+      "text": text;
+    });
+  aiSummary: (tok: text, id: nat) -> (record {
+                                        ok: bool;
+                                        "text": text;
+                                      });
+  aiTest: (tok: text) -> (record {
+                            detail: text;
+                            ok: bool;
+                          });
+  archiveOncallProject: (tok: text, id: nat, revision: nat, archived:
+   bool) -> (Result);
+  assign: (tok: text, id: nat, email: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  attestDepartedService: (tok: text, id: nat, recordId: nat, revision:
+   nat, reason: text) -> (Result);
+  cancelOffboarding: (tok: text, id: nat, revision: int, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  cancelOncallAbsence: (tok: text, id: nat) -> (Result);
+  cancelOncallPlan: (tok: text, id: nat, revision: nat, from: int, reason:
+   text) -> (Result);
+  catalog: (tok: text) -> (vec TypeView) query;
+  checkCustomerStep: (tok: text, id: nat, revision: nat, index: nat, checked:
+   bool) -> (record {
+               detail: text;
+               ok: bool;
+             });
+  /// First-run claim: while nobody is admin yet, the signed-in person becomes one.
+  claimAdmin: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  clearAiKey: (tok: text) -> (bool);
+  comment: (tok: text, id: nat, body: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  confirmReportingRecord: (tok: text, id: nat, recordId: nat, revision:
+   nat, confirm: bool, reason: text) -> (Result);
+  confirmServiceStatus: (tok: text, id: nat, revision: nat, services:
+   vec text, hours: nat) -> (Result);
+  createCustomerKey: (tok: text, projectId: nat, name: text, scopes:
+   vec text, days: nat) -> (record {
+                              detail: text;
+                              ok: bool;
+                              secret: text;
+                            });
+  createOncallAlertSource: (tok: text, key: text, input: Input__4) ->
+   (SecretResult);
+  createOncallProject: (tok: text, key: text, input: ProjectInput) ->
+   (Result);
+  /// Requester files a request from the catalog.
+  createRequest: (tok: text, typeId: nat, subject: text, body: text, fields:
+   vec record {
+         text;
+         text;
+       }) -> (record {
+                detail: text;
+                id: nat;
+                key: text;
+                ok: bool;
+              });
+  customerErasureJournal: (tok: text, projectId: nat, after: nat,
+   expectedRevision: nat) -> (opt text) query;
+  customerPrivacy: (tok: text, id: nat) ->
+   (opt
+     record {
+       due: nat;
+       held: nat;
+       journalEntries: nat;
+       lastSweep: int;
+       nextDeletion: int;
+       policy: Policy__3;
+       tickets: nat;
+     }) query;
+  customerProjectAgents: (tok: text, id: nat) ->
+   (vec record {
+          displayName: text;
+          email: text;
+          id: text;
+        }) query;
+  customerProjectKeys: (tok: text, id: nat) -> (vec CustomerKeyView) query;
+  customerProjectTickets: (tok: text, projectId: nat, f: Filter) ->
+   (vec TicketRow) query;
+  customerTicketLink: (tok: text, id: nat, revoke: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+      url: text;
+    });
+  customerWorkflowTeams: (tok: text, projectId: nat) ->
+   (vec record {
+          eligible: nat;
+          name: text;
+        }) query;
+  decideApproval: (tok: text, id: nat, approve: bool, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  decideLifecycle: (tok: text, id: nat, expectedEvent: nat, departure:
+   bool, note: text) -> (record {
+                           detail: text;
+                           ok: bool;
+                         });
+  decideOncallCover: (tok: text, id: nat, revision: nat, swapId: nat,
+   decision: variant {
+               accept;
+               cancel;
+               decline;
+             }) -> (Result);
+  decideOncallHandoff: (tok: text, id: nat, revision: nat, decision:
+   variant {
+     accept;
+     cancel;
+     decline;
+   }) -> (Result);
+  decideOncallInterval: (tok: text, id: nat, revision: nat, coverId:
+   nat, decision: variant {
+                    accept;
+                    cancel;
+                    decline;
+                  }) -> (Result);
+  directory: (tok: text, q: text) ->
+   (vec record {
+          department: text;
+          displayName: text;
+          email: text;
+        }) query;
+  discardOncallDraft: (tok: text, id: nat, revision: nat) -> (Result);
+  eraseCustomerTicket: (tok: text, id: nat, expectedUpdatedAt: int,
+   confirmation: text) -> (record {
+                             detail: text;
+                             ok: bool;
+                           });
+  explainReportingCoverage: (tok: text, id: nat, revision: nat, note:
+   text) -> (Result);
+  exportCustomerTicket: (tok: text, id: nat) -> (opt text) query;
+  exportReportingPeriod: (tok: text, id: nat) -> (Export);
+  fileData: (tok: text, fid: nat) ->
+   (opt record {
+          data: blob;
+          mime: text;
+          name: text;
+        }) query;
+  getSettings: (tok: text) -> (opt Settings) query;
+  getTicket: (tok: text, id: nat) -> (opt TicketFull) query;
+  handoffOncallIncident: (tok: text, id: nat, revision: nat, to: text,
+   summary: text) -> (Result);
+  holdCustomerTicket: (tok: text, id: nat, days: nat, reason: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  http_request: (req: HttpGwRequest) -> (HttpGwResponse) query;
+  http_request_update: (req: HttpGwRequest) -> (HttpGwResponse);
+  hub_deactivate: (emails: vec text) -> (nat);
+  hub_hardwareCase: (id: nat) -> (opt Case) query;
+  hub_manifest: () -> (Manifest) query;
+  /// Aggregate-only read for Hub Operations; no session or records leave this app.
+  hub_operations: (viewer: text) -> (Snapshot) query;
+  hub_permissionStatus: () -> (PermissionStatus);
+  hub_ping: () -> (text) query;
+  hub_reportingScopes: () -> (vec ReportingScope);
+  hub_upsert: (rows: vec DirectoryRow) -> (nat);
+  /// Optional contract: where this app uses a hub group — the hub shows it on
+  /// the group ("used by desk: queue of 4 open requests …"). Query, no auth:
+  /// group names are not secrets, and the hub calls it from an update.
+  hub_usesGroup: (name: text) -> (vec text) query;
+  info: () ->
+   (record {
+      appUrl: text;
+      hubId: text;
+      hubSet: bool;
+      orgName: text;
+      version: text;
+    }) query;
+  lifecycleHealth: (tok: text) ->
+   (opt record {
+          checkedAt: int;
+          detail: text;
+          gap: bool;
+        }) query;
+  listCustomerProjects: (tok: text) -> (vec CustomerProject) query;
+  listCustomerTypes: (tok: text, projectId: nat) -> (vec Type) query;
+  listTickets: (tok: text, f: Filter) -> (vec TicketRow) query;
+  loginWithTicket: (ticket: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
+  moveCustomerStep: (tok: text, id: nat, revision: nat, action: text, reason:
+   text) -> (record {
+               detail: text;
+               ok: bool;
+             });
+  myApprovals: (tok: text) -> (vec TicketRow) query;
+  myTickets: (tok: text) -> (vec TicketRow) query;
+  noteOncallIncident: (tok: text, id: nat, revision: nat, "text": text) ->
+   (Result);
+  offboardingEntry: (tok: text, personId: text) ->
+   (opt record {
+          person: PersonCard;
+          ticketId: opt nat;
+          typeId: opt nat;
+        }) query;
+  offboardingHardware: (tok: text, id: nat) ->
+   (opt record {
+          context: Case;
+          progress: Progress;
+        });
+  oncallAlertSources: (tok: text, projectId: nat) ->
+   (opt vec SourceView) query;
+  oncallCalendar: (tok: text, id: nat) ->
+   (opt record {
+          absences: vec Absence;
+          settings: ProjectSettings;
+        }) query;
+  oncallEffectivePlan: (tok: text, id: nat) ->
+   (opt
+     record {
+       cancellation: opt Cancellation;
+       covers: vec Cover;
+       segments: vec Segment;
+     }) query;
+  oncallIncident: (tok: text, id: nat) -> (opt View__1) query;
+  oncallPlan: (tok: text, id: nat) -> (opt PlanView) query;
+  oncallProjects: (tok: text) ->
+   (vec
+     record {
+       archived: bool;
+       createdAt: int;
+       createdBy: text;
+       description: text;
+       id: nat;
+       name: text;
+       requestKey: text;
+       scope: Scope;
+       services: vec text;
+     }) query;
+  oncallRegionalRecipe: (tok: text, id: nat) -> (opt Saved) query;
+  oncallReminders: (tok: text, id: nat) ->
+   (opt record {
+          full: bool;
+          jobs: vec Job;
+          policy: opt Policy__2;
+          ready: bool;
+        }) query;
+  oncallResponse: (tok: text, projectId: nat) -> (opt Overview) query;
+  oncallStatus: (tok: text, id: nat) ->
+   (opt record {
+          config: opt Config;
+          notices: vec Notice;
+          page: opt Page;
+        }) query;
+  oncallWorkspace: (tok: text, id: nat) -> (opt Workspace) query;
+  openOncallIncident: (tok: text, key: text, input: Input__3) -> (Result);
+  personContext: (tok: text, id: nat, cid: nat) -> (Context);
+  personContextSources: (tok: text, id: nat) -> (vec Source);
+  personOverview: (tok: text, id: nat) ->
+   (opt
+     record {
+       lifecycle: opt LifecycleCase;
+       person: PersonCard;
+       related: vec TicketRow;
+     }) query;
+  prepareReportingAdjustment: (tok: text, parentId: nat, key: text, reason:
+   text) -> (Result);
+  prepareReportingPeriod: (tok: text, key: text, input: PeriodInput) ->
+   (Result);
+  previewReportingCompensation: (tok: text, projectId: nat, input:
+   Input__2) -> (variant {
+                   err: text;
+                   ok: vec Example;
+                 }) query;
+  profilePictures: (tok: text, ticketId: opt nat, personIds: vec text) ->
+   (vec record {
+          text;
+          blob;
+        });
+  publicServiceStatus: (slug: text) -> (opt Page) query;
+  publishOncallPlan: (tok: text, id: nat, revision: nat, acceptGaps:
+   bool) -> (Result);
+  publishServiceNotice: (tok: text, key: text, id: nat, revision: nat, input:
+   Input__1) -> (Result);
+  recordOncallWork: (tok: text, id: nat, key: text, input: WorkInput) ->
+   (Result);
+  /// Settings page: ask the hub again right now (after an owner set or rotated the key there).
+  refreshAi: (tok: text) -> (record {
+                               detail: text;
+                               ok: bool;
+                             });
+  refreshReportingPeriod: (tok: text, id: nat, revision: nat) -> (Result);
+  releaseReportingPeriod: (tok: text, id: nat, revision: nat) -> (Result);
+  removeLink: (tok: text, id: nat, kind: text, ref: text) -> (bool);
+  removeSlackIntake: (tok: text, id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  removeType: (tok: text, id: nat) -> (record {
+                                         detail: text;
+                                         ok: bool;
+                                       });
+  replayCustomerErasures: (tok: text, canister: text, projectId: nat, rows:
+   vec CustomerErasure) -> (record {
+                              detail: text;
+                              ok: bool;
+                            });
+  reportingCompensationRules: (tok: text, projectId: nat) ->
+   (opt History) query;
+  reportingPeriod: (tok: text, id: nat) ->
+   (opt
+     record {
+       adjustmentPeople: vec record {
+                               id: text;
+                               name: text;
+                             };
+       audit: vec Audit;
+       blockers: vec text;
+       calculation: opt View;
+       capabilities: Capabilities;
+       departed: vec text;
+       lines: vec Line__1;
+       mappings: vec Mapping;
+       period: Header;
+       policy: opt Policy;
+       records: vec Record;
+     }) query;
+  reportingPeriods: (tok: text) -> (vec Header) query;
+  reportingProjects: (tok: text) -> (vec Project) query;
+  requestOncallCover: (tok: text, id: nat, revision: nat, shift: nat,
+   toPersonId: text, reason: text) -> (Result);
+  requestOncallInterval: (tok: text, id: nat, revision: nat, shift: nat,
+   startAt: int, endAt: int, toPersonId: text, reason: text) -> (Result);
+  /// Requester: self-resolve or reopen own ticket.
+  requesterSetStatus: (tok: text, id: nat, status: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  resetCatalogDefaults: (tok: text) -> (record {
+                                          detail: text;
+                                          ok: bool;
+                                        });
+  resolveOncallIncident: (tok: text, id: nat, revision: nat, resolution:
+   text) -> (Result);
+  reviewReportingRecord: (tok: text, id: nat, recordId: nat, revision:
+   nat, approve: bool, reason: text) -> (Result);
+  revokeCustomerKey: (tok: text, id: nat) -> (bool);
+  rotateCustomerWidget: (tok: text, id: nat) -> (bool);
+  rotateOncallAlertKey: (tok: text, id: nat, revision: nat, days: nat) ->
+   (SecretResult);
+  saveCustomerPrivacy: (tok: text, id: nat, revision: nat, input:
+   CustomerPrivacyInput, confirmShorter: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  saveCustomerProject: (tok: text, id: nat, revision: nat, input:
+   CustomerProjectInput) -> (record {
+                               detail: text;
+                               id: nat;
+                               ok: bool;
+                             });
+  saveCustomerType: (tok: text, projectId: nat, projectRevision: nat, id:
+   nat, input: Input) -> (record {
+                            detail: text;
+                            id: nat;
+                            ok: bool;
+                          });
+  saveOncallPlan: (tok: text, id: nat, revision: nat, key: text, input:
+   PlanInput) -> (Result);
+  saveOncallRegionalPlan: (tok: text, id: nat, revision: nat, key: text,
+   input: PlanInput, recipe: Recipe) -> (Result);
+  /// Demo data for evaluation instances: ~12 requests across all states,
+  /// requesters from the directory when present (otherwise demo people).
+  seedDemo: (tok: text) -> (record {
+                              detail: text;
+                              ok: bool;
+                            });
+  setAdminEmails: (tok: text, emails: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setAi: (tok: text, args:
+   record {
+     key: text;
+     model: text;
+     provider: text;
+     url: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  setAiTriage: (tok: text, on: bool) -> (bool);
+  /// Re-route a pending approval (admin), e.g. when the manager attribute is wrong.
+  setApprover: (tok: text, id: nat, approver: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setDue: (tok: text, id: nat, dueAt: opt int) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setFields: (tok: text, id: nat, fields: vec record {
+                                                text;
+                                                text;
+                                              }) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setHub: (id: text) -> (bool);
+  setOncallAbsence: (tok: text, projectId: nat, personId: text, startAt:
+   int, endAt: int) -> (Result);
+  setOncallAlertSource: (tok: text, id: nat, revision: nat, action:
+   variant {
+     enable;
+     pause;
+     revoke;
+   }) -> (Result);
+  setOncallReminders: (tok: text, id: nat, revision: nat, input:
+   PolicyInput__2) -> (Result);
+  setOncallResponse: (tok: text, projectId: nat, revision: nat, input:
+   PolicyInput__1) -> (Result);
+  setOncallStatus: (tok: text, id: nat, revision: nat, input: ConfigInput) ->
+   (Result);
+  setPriority: (tok: text, id: nat, priority: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setQueue: (tok: text, id: nat, queue: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setReportingMapping: (tok: text, id: nat, revision: nat, person: text,
+   payrollId: text) -> (Result);
+  setReportingPolicy: (tok: text, projectId: nat, revision: nat, input:
+   PolicyInput) -> (Result);
+  setSlackGateway: (tok: text, domain: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setStatus: (tok: text, id: nat, status: text, waitingOn: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setSubject: (tok: text, id: nat, subject: text, body: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setTask: (tok: text, id: nat, idx: nat, state: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setTypeOrder: (tok: text, ids: vec nat) -> (bool);
+  signOut: (tok: text) -> ();
+  /// Channels the bot was invited to — the picker for a new intake.
+  slackChannels: (tok: text, hubBotId: nat) ->
+   (record {
+      channels: vec record {
+                      text;
+                      text;
+                    };
+      detail: text;
+      ok: bool;
+    });
+  slackRefresh: (tok: text) -> (record {
+                                  count: nat;
+                                  detail: text;
+                                  ok: bool;
+                                });
+  /// Posts one line into the channel — proves token, channel membership and chat:write in one click.
+  slackSayHello: (tok: text, id: nat) -> (record {
+                                            detail: text;
+                                            ok: bool;
+                                          });
+  slackStatus: (tok: text) -> (opt SlackStatus) query;
+  stats: (tok: text) ->
+   (record {
+      approvals: nat;
+      breached: nat;
+      closed: nat;
+      mine: nat;
+      new: nat;
+      open: nat;
+      resolved: nat;
+      total: nat;
+      unassigned: nat;
+      waiting: nat;
+    }) query;
+  syncLifecycle: (tok: text) -> (bool);
+  syncNow: (tok: text) -> (record {
+                             detail: text;
+                             ok: bool;
+                           });
+  updateOncallProject: (tok: text, id: nat, revision: nat, name: text,
+   description: text, services: vec text, retentionDays: nat) -> (Result);
+  updateSettings: (tok: text, args:
+   record {
+     adminGroup: text;
+     agentGroup: text;
+     appUrl: text;
+     autoCloseDays: nat;
+     keyPrefix: text;
+     orgName: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  updateSlackIntake: (tok: text, id: nat, args:
+   record {
+     enabled: bool;
+     name: text;
+     typeId: nat;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  upsertType: (tok: text, id: nat, a: TypeInput) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+    });
+  voidOncallWork: (tok: text, id: nat, reason: text) -> (Result);
+  whoami: (tok: text) ->
+   (opt
+     record {
+       aiOn: bool;
+       displayName: text;
+       email: text;
+       groups: vec text;
+       hubId: text;
+       id: text;
+       needsClaim: bool;
+       orgName: text;
+       reporting: bool;
+       role: text;
+       roleSource: text;
+     }) query;
+  withdrawReportingCompensation: (tok: text, projectId: nat, revision:
+   nat, ruleRevision: nat) -> (Result);
+  withdrawServiceNotice: (tok: text, id: nat, revision: nat) -> (Result);
+  workspaceServiceStatus: (tok: text) -> (vec Page) query;
+}

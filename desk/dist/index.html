@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk · KebabStack</title>
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/tokens.css">
+<script>try{if(localStorage.getItem("ks-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
+<link rel="stylesheet" href="/desk.css">
+<link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./oncall.css">
+<link rel="stylesheet" href="./service-status.css">
+<link rel="stylesheet" href="./reporting.css">
+<link rel="stylesheet" href="./components.css">
+</head>
+<body class="ks-workspace">
+
+<section id="login" aria-busy="true" class="is-waiting app-auth">
+  <div class="auth-shell">
+    <aside class="auth-story">
+      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
+      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
+      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
+    </aside>
+    <section class="auth-main" aria-labelledby="loginTitle">
+      <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
+      <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
+      <h1 id="loginTitle"><span class="auth-ready">Welcome to Desk.</span><span class="auth-waiting">Opening Desk…</span></h1>
+      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
+      <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
+      <div id="loginStatus" class="status" role="alert"></div>
+      <div id="loginWarn" class="warnbox hidden"></div>
+      <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
+      <p class="lfoot">Access is managed by your company in the Hub.</p>
+    </section>
+  </div>
+</section>
+
+<div id="layout">
+  <div id="topbar"></div>
+  <div class="desk-shell">
+  <aside class="desk-nav" aria-label="Desk navigation">
+    <div class="nav-eyebrow" id="navCaption">Support workspace</div>
+    <div id="nav"></div>
+    <div class="navsep"></div>
+    <div class="navchip"><a href="#/docs" data-nav="docs">Help &amp; guide <span aria-hidden="true">↗</span></a></div><div class="nav-footer"><img class="service-mark" src="/favicon.svg" width="26" height="26" alt=""><div>Your work. Unblocked.<small>Powered by Kebabstack</small></div></div>
+  </aside>
+  <main id="mainContent"><div id="pageError" class="warnbox hidden" role="alert"></div>
+
+
+    <!-- ===== my requests (everyone) ===== -->
+    <section class="view" id="v-me">
+      <div class="portal-hero">
+        <div><span class="eyebrow" id="meGreeting">YOUR IT SUPPORT</span><h2>Good work starts<br>with great support.</h2><p>Everything you need to get back to what you do best.</p><a class="button primary" href="#/new">How can we help? <span aria-hidden="true">↗</span></a></div>
+        <div class="hero-art" aria-hidden="true"><div class="hero-orbit"></div><div class="hero-tile hero-tile-back">✦</div><div class="hero-tile hero-tile-front"><svg viewBox="0 0 48 48" fill="none"><path d="M11 24a13 13 0 0 1 26 0v10a6 6 0 0 1-6 6h-6M11 24v10M37 24v10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><rect x="7" y="23" width="9" height="13" rx="4" fill="currentColor"/><rect x="32" y="23" width="9" height="13" rx="4" fill="currentColor"/><rect x="19" y="37" width="9" height="6" rx="3" fill="currentColor"/></svg></div><span class="hero-spark">+</span></div>
+      </div>
+      <div id="meOverview" class="personal-stats"></div>
+      <div id="meApprovals" class="card approvalbox hidden"><h3>Your approval is needed</h3><p class="kv">A quick decision will help these requests move forward.</p><div class="table-scroll"><table><thead><tr><th>Request number</th><th>Request</th><th>Requested by</th><th>Submitted</th></tr></thead><tbody id="meApprovalRows"></tbody></table></div></div>
+      <div class="section-heading"><div><span class="eyebrow">WE'RE ON IT</span><h3>Your requests</h3></div><span id="meStatus" class="status" role="status"></span></div>
+      <div class="card flat request-list"><div class="table-scroll"><table><thead><tr><th>Request number</th><th>How we can help</th><th>Progress</th><th>Last update</th></tr></thead><tbody id="meRows"></tbody></table></div></div>
+    </section>
+
+    <!-- ===== new request (catalog + form) ===== -->
+    <section class="view" id="v-new">
+      <div class="page-heading"><div><span class="eyebrow">LET’S GET YOU SORTED</span><h2>What can we help you with?</h2><p class="lead">Choose a service. We’ll take it from here.</p></div></div>
+      <div id="catGrid" class="catgrid"></div>
+      <div id="newForm" class="card hidden">
+        <div style="display:flex;align-items:center;gap:12px"><span id="nfIcon" style="font-size:26px"></span><div><h3 id="nfName" style="margin:0"></h3><div class="kv" id="nfDesc"></div></div><a href="#/new" style="margin-left:auto"><button class="sm">Change type</button></a></div>
+        <div id="nfNotice" class="kv" style="margin-top:8px"></div>
+        <div><label for="nfSubject">A short summary</label><input type="text" id="nfSubject" required maxlength="160" placeholder="One line — what do you need?"></div>
+        <div id="nfFields"></div>
+        <div><label for="nfBody">Tell us a little more</label><textarea id="nfBody" placeholder="Anything that helps: what, since when, what you already tried…"></textarea></div>
+        <div class="btnrow"><button id="nfSubmit" class="primary">Send request</button><span id="nfStatus" class="status" role="status"></span></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-customers"></section>
+    <section class="view" id="v-service-status"></section>
+    <section class="view" id="v-reporting"></section>
+    <section class="view" id="v-oncall"></section>
+
+    <!-- ===== queue (staff) ===== -->
+    <section class="view" id="v-queue">
+      <div id="directoryFollowupHealth" class="card hidden" role="status"></div>
+      <div class="page-heading"><div><span class="eyebrow">INTERNAL SUPPORT</span><h2>Let’s move work forward.</h2><p class="lead">The right context. A clear next step. One request at a time.</p></div><a class="button primary" href="#/agent-new">Create a request <span aria-hidden="true">+</span></a></div>
+      <div class="statgrid" id="statGrid"></div>
+      <div class="filters">
+        <div class="seg" id="viewSeg">
+          <button data-v="open" class="active">Active</button><button data-v="mine">Assigned to me</button><button data-v="unassigned">Unassigned</button><button data-v="waiting">Waiting</button><button data-v="breached">Overdue</button><button data-v="done">Completed</button><button data-v="all">All</button>
+        </div>
+        <select id="fQueue" aria-label="Filter by support team"><option value="">All teams</option></select>
+        <select id="fStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="new">Received</option><option value="open">In progress</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
+        <input type="text" id="fQ" aria-label="Search requests" placeholder="Search requests, people or request numbers">
+
+        <span id="qStatus" class="status" role="status"></span>
+      </div>
+      <div class="card flat" style="padding:6px 14px 14px"><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Request</th><th>Requested by</th><th>Status</th><th>Assigned to</th><th>Target date</th></tr></thead><tbody id="qRows"></tbody></table></div></div>
+    </section>
+
+    <!-- ===== agent: file on behalf ===== -->
+    <section class="view" id="v-agent-new">
+      <h2>Create a request for someone</h2>
+      <p class="lead">Walk-up, phone, chat — capture it here on the requester's behalf.</p>
+      <div class="card">
+        <div class="row">
+          <div><label for="anReq">Requester (e-mail)</label><input type="text" id="anReq" required list="dirList" placeholder="name or e-mail"></div>
+          <div><label for="anType">Request type</label><select id="anType"></select></div>
+          <div><label for="anPrio">Priority</label><select id="anPrio"><option>low</option><option selected>normal</option><option>high</option><option>urgent</option></select></div>
+          <div><label for="anChannel">Channel</label><select id="anChannel"><option value="agent">walk-up</option><option value="phone">phone</option><option value="chat">chat</option><option value="email">e-mail</option></select></div>
+        </div>
+        <div><label for="anSubject">Subject</label><input type="text" id="anSubject" required maxlength="160"></div>
+        <div id="anFields"></div>
+        <div><label for="anBody">Details</label><textarea id="anBody"></textarea></div>
+        <div class="btnrow"><button id="anSubmit" class="primary">Create request</button><span id="anStatus" class="status" role="status"></span></div>
+      </div>
+    </section>
+
+    <!-- ===== conversation-first ticket workspace ===== -->
+    <section class="view" id="v-ticket">
+      <div class="ticket-toolbar"><a href="#" id="tBack" class="back-link">← All requests</a><div class="ticket-sync"><span id="tSync" role="status">Checking for updates</span><button class="icon-button" id="tRefresh" aria-label="Refresh request" title="Refresh request">↻</button></div></div>
+      <div id="tMissing" class="empty hidden">This request is unavailable. It may not exist, or your account may not have access.</div>
+      <div id="tWrap" class="hidden">
+        <header class="ticket-heading"><div><div class="ticket-kicker"><span id="tKey" class="request-key"></span><span id="tType"></span></div><h2 id="tSubject"></h2><div id="tMeta" class="tmeta"></div></div><div class="ticket-heading-actions"><button id="tReplyJump" class="primary sm">Reply ↓</button><button id="tEditBtn" class="subtle sm">Edit request</button></div></header>
+        <div id="tEdit" class="card hidden"><label for="teSubject">Summary</label><input type="text" id="teSubject" maxlength="160"><label for="teBody">Description</label><textarea id="teBody"></textarea><div class="btnrow"><button id="teSave" class="primary">Save changes</button><button id="teCancel">Cancel</button></div></div>
+        <section class="card workflow-ticket hidden" id="tWorkflow" aria-label="Request workflow"></section>
+        <div class="next-step" id="tNextStep"><div class="step-icon" id="tStepIcon" aria-hidden="true">◷</div><div class="step-copy"><strong id="tStepTitle"></strong><p id="tStepText"></p></div><div id="tStatusBtns" class="btnrow"></div></div>
+        <div id="tStatus" class="status" role="status"></div>
+        <div class="tgrid">
+          <div class="conversation-column">
+            <div id="tLifecycle" class="card lifecycle-card hidden"></div>
+            <div id="tApproval" class="card approvalbox hidden"></div>
+            <div class="section-heading conversation-heading"><h3>Conversation <span id="tCommentCount" class="count"></span></h3><span id="tOrigin" class="source-label"></span></div>
+            <div class="conversation-surface">
+              <article class="original-message"><div class="message-heading"><div id="tAuthorAvatar" class="avatar"></div><div><strong id="tAuthor"></strong><span class="message-subline">Original request · <time id="tCreated"></time></span></div></div><div class="rich-text" id="tBody"></div><div id="tFieldsView" class="request-fields"></div></article>
+              <div class="timeline" id="tTimeline"></div>
+              <div id="tComposer" class="composer">
+                <div class="composer-header"><div class="seg" id="cSeg"><button data-k="comment" class="active">Reply</button><button data-k="note" id="cNoteBtn">Internal note</button></div><span id="aiBtns"><button class="ai-button" id="aiDraft" title="Create a draft for you to review">✦ Draft with AI</button><button class="icon-button" id="aiSum" title="Summarise the conversation as an internal note" aria-label="Create AI summary">✦</button></span></div>
+                <label for="cBody" id="cHint" class="composer-audience">Reply to this request</label>
+                <textarea id="cBody" maxlength="20000" placeholder="Write a reply…"></textarea>
+                <div class="composer-footer"><button id="cAttach" class="subtle">＋ Attach file</button><input type="file" id="cFile" class="sr-only" tabindex="-1" aria-label="Attach a file"><span class="draft-state" id="cDraftState"></span><button id="cSend" class="primary">Send reply <span aria-hidden="true">↗</span></button></div>
+                <div id="cStatus" class="status" role="status"></div>
+                <div id="aiDraftReview" class="ai-review hidden"><strong>Your AI draft is ready</strong><div id="aiDraftText" class="rich-text"></div><button id="aiDraftUse">Use this draft</button></div>
+              </div>
+            </div>
+            <details id="tActivityCard" class="activity-card"><summary>Request activity <span id="tActivityCount"></span></summary><div id="tActivity"></div></details>
+          </div>
+          <div class="side">
+            <div class="card flat hidden" id="tCustomer"></div>
+            <div class="card flat person-context hidden" id="tPersonContext"></div>
+            <div class="card handling-card" id="tActions"><div id="tStaff"><h3>Request details</h3><label for="tState">Status</label><select id="tState"></select><div class="field-heading"><label for="tAssignee">Assigned to</label><button id="tAssignMe" class="text-button">Assign to me</button></div><select id="tAssignee"></select><label for="tPriority">Priority</label><select id="tPriority"><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><details class="routing-details"><summary>Routing &amp; target date</summary><label for="tQueue">Support team</label><div class="inline-control"><input type="text" id="tQueue" list="groupList" placeholder="Choose a team"><button id="tQueueSave" class="sm">Save team</button></div><label for="tDue">Target resolution date</label><input type="date" id="tDue"><button id="tDueSave" class="text-button">Save target date</button></details><button class="text-button" id="tAddChecklist">＋ Add a checklist</button></div></div>
+            <div class="card support-card" id="tSupportCard"><span class="eyebrow">YOU’RE IN GOOD HANDS</span><div id="tSupport"></div><p>Keep the conversation here. Your IT team has the context.</p></div>
+            <div class="card flat" id="tRequesterCard"><h3>Requested by</h3><div id="tRequester" class="requester-profile"></div></div>
+            <div class="card flat" id="tTasksCard"><h3>Checklist <span class="count" id="tTaskCount"></span></h3><div id="tTasks"></div><div id="tTaskAdd" class="inline-control"><input type="text" id="tTaskTitle" aria-label="New checklist item" placeholder="Add a task"><button id="tTaskAddBtn" class="sm">Add</button></div></div>
+            <details class="card flat" id="tFieldsCard"><summary>Request information</summary><button class="text-button" id="tFieldsEdit">Edit information</button><div id="tFieldsForm" class="hidden"></div></details>
+            <details class="card flat" id="tLinksCard"><summary>Related links</summary><div id="tLinks" class="related-links"></div><div id="tLinkAdd"><label for="tLinkKind">Link type</label><input type="text" id="tLinkKind" placeholder="For example, asset or document"><label for="tLinkRef">Address or reference</label><input type="text" id="tLinkRef"><button id="tLinkAddBtn" class="text-button">Add link</button></div></details>
+            <div class="card flat" id="tFilesCard"><h3>Attachments</h3><div id="tFiles" class="filelist"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== settings (admin) ===== -->
+    <section class="view" id="v-settings">
+      <h2>Settings</h2>
+      <p class="lead">Roles, catalog, AI and the hub wiring.</p>
+      <div class="stabs" id="stabs"><button class="stab active" data-tab="general">General</button><button class="stab" data-tab="catalog">Catalog</button><button class="stab" data-tab="ai">AI</button><button class="stab" data-tab="slack">Slack</button><button class="stab" data-tab="log">Log</button></div>
+
+      <div class="spane active" id="sp-general">
+        <div class="card">
+          <h3>Organization &amp; wiring</h3>
+          <div class="kvl" id="sgInfo" style="margin-bottom:8px"></div>
+          <div class="row">
+            <div><label for="sgOrg">Organization name</label><input type="text" id="sgOrg" maxlength="80"></div>
+            <div><label for="sgUrl">This desk's URL (deep links in notifications)</label><input type="text" id="sgUrl" placeholder="https://…"></div>
+          </div>
+          <div class="row">
+            <div><label for="sgPrefix">Ticket key prefix</label><input type="text" id="sgPrefix" maxlength="6"></div>
+            <div><label for="sgAutoClose">Auto-close resolved after (days, 0 = never)</label><input type="number" id="sgAutoClose" min="0" max="365"></div>
+          </div>
+          <div class="btnrow"><button id="sgSave" class="primary">Save</button><button id="sgSync">Sync directory now</button><span id="sgStatus" class="status" role="status"></span></div>
+        </div>
+        <div class="card"><h3>Permissions</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p><p id="sgRoleCounts" class="kv"></p></div>
+        <div class="card flat">
+          <h3>Demo data</h3>
+          <div class="kv">Evaluation instances: seeds ~13 requests across every state using people from your directory. One-shot.</div>
+          <div class="btnrow"><button id="sgSeed">Seed demo data</button><span id="sgSeedStatus" class="status" role="status"></span></div>
+        </div>
+      </div>
+
+      <div class="spane" id="sp-catalog">
+        <div class="card flat">
+          <h3>Request types</h3>
+          <div class="kv">What people can ask for. Each type carries its own fields, checklist, queue, approval rule and SLA.</div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th></th><th>Type</th><th>Queue</th><th>Approval</th><th>SLA</th><th>Fields</th><th>State</th><th></th></tr></thead><tbody id="ctRows"></tbody></table></div>
+          <div class="btnrow"><button id="ctNew" class="primary">New type</button><button id="ctDefaults" class="sm">Restore defaults (empty catalog only)</button><span id="ctStatus" class="status" role="status"></span></div>
+        </div>
+        <div class="card hidden" id="ctForm">
+          <h3 id="ctFormTitle">New request type</h3>
+          <div class="row">
+            <div><label for="ctName">Name</label><input type="text" id="ctName" maxlength="60"></div>
+            <div style="flex:0 0 90px"><label for="ctIcon">Icon</label><input type="text" id="ctIcon" maxlength="4" placeholder="🔧"></div>
+            <div><label for="ctQueue">Queue (hub group, empty = agents group)</label><input type="text" id="ctQueue" list="groupList"></div>
+          </div>
+          <div><label for="ctDesc">Description</label><input type="text" id="ctDesc" maxlength="200"></div>
+          <div class="row">
+            <div><label for="ctApproval">Approval</label><select id="ctApproval"><option value="none">none</option><option value="manager">requester's manager</option><option value="group">a hub group</option></select></div>
+            <div><label for="ctApprovalGroup">Approval group</label><input type="text" id="ctApprovalGroup" list="groupList" placeholder="e.g. Security"></div>
+            <div><label for="ctPrio">Default priority</label><select id="ctPrio"><option>low</option><option selected>normal</option><option>high</option><option>urgent</option></select></div>
+          </div>
+          <div class="row">
+            <div><label for="ctRespond">Reply target (hours, 0 = none)</label><input type="number" id="ctRespond" min="0"></div>
+            <div><label for="ctResolve">Resolution target (hours, 0 = none)</label><input type="number" id="ctResolve" min="0"></div>
+            <div><label for="ctDueField">Due from date field (key)</label><input type="text" id="ctDueField" placeholder="startDate"></div>
+            <div><label for="ctVis">Visibility</label><select id="ctVis"><option value="all">everyone</option><option value="agents">agents only</option></select></div>
+          </div>
+          <label>Fields</label>
+          <div class="fieldrow" style="margin-top:0"><span class="cb">key</span><span class="cb">label</span><span class="cb">kind</span><span class="cb">options (| separated)</span><span class="cb">Required</span><span class="cb">Sensitive</span><span></span></div>
+          <div id="ctFields"></div>
+          <div class="btnrow" style="margin-top:8px"><button class="sm" id="ctFieldAdd">+ field</button></div>
+          <div><label for="ctChecklist">Checklist (one item per line)</label><textarea id="ctChecklist"></textarea></div>
+          <div class="btnrow"><label style="margin:0;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0"><input type="checkbox" id="ctEnabled" checked> enabled</label></div>
+          <div class="btnrow"><button id="ctSave" class="primary">Save type</button><button id="ctCancel">Cancel</button><button id="ctDelete" class="sm hidden">Delete</button><span id="ctFormStatus" class="status" role="status"></span></div>
+        </div>
+      </div>
+
+      <div class="spane" id="sp-ai">
+        <div class="card">
+          <h3>AI (assistive)</h3>
+          <div class="kv" id="aiSourceLine" style="margin-bottom:8px">checking where the key comes from…</div>
+          <div class="kv">Triage note on new requests, summaries and reply drafts for agents. Nothing AI does changes a ticket without a human click. <b>Preferred:</b> the company's key from the hub (lane <i>AI</i> for this app, set once under the hub's Settings → AI). The fields below are a <b>local fallback</b> for a desk without a hub key; the hub key wins whenever it is there. Keys never reach a browser; calls go out from this engine as single-node requests.</div>
+          <div class="row">
+            <div><label for="aiProvider">Provider</label><select id="aiProvider"><option value="openai">OpenAI-compatible (chat/completions)</option><option value="anthropic">Anthropic (messages)</option></select></div>
+            <div><label for="aiModel">Model</label><input type="text" id="aiModel" placeholder="e.g. gpt-4o-mini / claude-sonnet-4-5"></div>
+          </div>
+          <div><label for="aiUrl">Endpoint URL</label><input type="text" id="aiUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
+          <div><label for="aiKey">API key (write-only; leave empty to keep)</label><input type="password" id="aiKey" autocomplete="off"></div>
+          <div class="btnrow"><label style="margin:0;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0"><input type="checkbox" id="aiTriageOn"> auto-triage note on every new request (sensitive fields are redacted, internal notes never leave)</label></div>
+          <div class="btnrow"><button id="aiSave" class="primary">Save fallback</button><button id="aiRefresh">Ask the hub again</button><button id="aiTestBtn">Test</button><button id="aiClear" class="sm">Clear key</button><span id="aiStatus" class="status" role="status"></span></div>
+        </div>
+      </div>
+
+      <div class="spane" id="sp-slack">
+        <div class="card">
+          <h3>Slack intake <span class="pill" id="skPill">…</span></h3>
+          <div class="kv" style="line-height:1.6">A support channel becomes a queue: a message from a colleague becomes a request, the bot answers in the thread with the key, replies go both ways, and a <b>✅</b> on the first message marks it resolved (removing it reopens). The Slack app itself lives in the hub — one bot for notifications and intake.</div>
+          <div class="kvl" id="skInfo" style="margin-top:10px"></div>
+          <div class="btnrow"><button id="skRefresh" class="sm">Refresh from the hub</button><span id="skStatus" class="status" role="status"></span></div>
+        </div>
+        <div class="card flat">
+          <h3>Channels</h3>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Channel</th><th>Workspace</th><th>Becomes</th><th>Last event</th><th></th></tr></thead><tbody id="skRows"><tr><td colspan="5" class="kv">none yet</td></tr></tbody></table></div>
+          <div id="skAdd" style="margin-top:12px;border-top:1px solid var(--ks-rule);padding-top:10px">
+            <div class="row">
+              <div><label for="skBot">Bot (from the hub)</label><select id="skBot"></select></div>
+              <div><label>Channel</label><div style="display:flex;gap:6px"><select id="skChannel" style="flex:1"><option value="">load channels first</option></select><button id="skLoad" class="sm">Load</button></div></div>
+              <div><label for="skType">Messages become</label><select id="skType"></select></div>
+            </div>
+            <div class="kv" id="skChanHint" style="margin-top:6px"></div>
+            <div class="btnrow"><button id="skAddBtn" class="primary sm">Add channel</button><span id="skAddStatus" class="status" role="status"></span></div>
+          </div>
+        </div>
+        <div class="card flat">
+          <h3>Set-up, once</h3>
+          <div class="kv" style="line-height:1.7">
+            <b>1 · In the hub</b> (as owner) — Settings → Slack: add the Slack app's bot token and signing secret, then under <i>Tool access</i> assign the bot to <i>desk</i>.<br>
+            <b>2 · In Slack</b> (api.slack.com → your app): <i>Event Subscriptions</i> → Request URL <code id="skUrl">…</code> <button id="skUrlCopy" class="sm">Copy</button> → subscribe to bot events <code>message.channels</code>, <code>message.groups</code>, <code>reaction_added</code>, <code>reaction_removed</code>. <i>OAuth &amp; Permissions</i> → bot scopes <code>channels:history</code>, <code>groups:history</code>, <code>channels:read</code>, <code>groups:read</code>, <code>chat:write</code>, <code>reactions:read</code>, <code>reactions:write</code>, <code>users:read</code>, <code>users:read.email</code>. Reinstall the app, then <code>/invite @bot</code> in the support channel.<br>
+            <b>3 · Here</b> — Refresh from the hub, Load channels, pick the channel and what its messages become, Add. <i>Say hello</i> proves the wiring.
+          </div>
+          <div class="row" style="margin-top:8px"><div><label for="skGateway">Gateway domain (advanced)</label><input type="text" id="skGateway" placeholder="icp.net"></div><div style="flex:0 0 auto"><label>&nbsp;</label><button id="skGatewaySave" class="sm">Save</button></div></div>
+        </div>
+      </div>
+
+      <div class="spane" id="sp-log">
+        <div class="card flat"><h3>Admin log</h3><div class="kv">Settings and catalog changes. Ticket history lives on each ticket.</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div></div>
+      </div>
+    </section>
+
+    <!-- ===== docs ===== -->
+    <section class="view docs" id="v-docs">
+      <h2>How desk works</h2>
+      <details><summary>How do on-call projects work?</summary><p>Choose an internal Hub team or a customer project. Coverage shows who is on duty and what needs attention. Review and publish each planning period; use Time off and accepted cover requests for changes. Incidents keep one owner until an accepted handoff. Settings contains response timing, alert sources and optional planning reminders.</p><p>Local and regional plans use explicit dates and timezones. Nothing extends itself automatically. Hub notification acceptance does not prove device delivery; mobile paging is not configured by this module.</p></details>
+      <details><summary>How do we communicate service status?</summary><p>Open On-call → project → Status page. An administrator chooses the services and whether the page is for signed-in Desk users or the public internet. Responders publish separate audience-specific updates; internal incident notes and identities are never copied. Changing audience starts a fresh page and keeps earlier notices private.</p><p>Employees use Service status in the menu; public readers need no Hub login. Customer widgets link to an enabled public page. Operational confirmations expire, and scheduled maintenance requires an explicit completion update. No measured uptime or subscriber notifications are implied. Keep an independent communication fallback for a Desk or engine outage.</p></details>
+      <details><summary>How does Time &amp; compensation work?</summary><p><strong>Time &amp; compensation.</strong> Participants confirm duty; reviewers check recorded work; HR prepares a statement and a different authorized person releases it for Finance. Hub → Permissions → Desk → Reporting access controls each project. Company rules support hourly or daily readiness, explicit holidays, money and time credits. Each statement keeps its calculation and deletion date. CSV is payroll input, not proof of payment.</p><p>Permissions come from Hub → Permissions → Desk → Reporting access. These grants do not give access to incidents or customer conversations. Statutory calculations and payment remain in your payroll system.</p></details>
+      <details><summary>What happens when a directory account is deactivated?</summary><p>Hub records the change independently of Desk. Desk checks every 30 seconds and adds it to an existing offboarding or creates a private Account review for centrally assigned agents. Confirm whether the person is leaving before continuing. Reactivation pauses completion until reviewed. Requests created later join the existing case. No device wipe, vendor cancellation or data deletion happens automatically.</p></details>
+      <details><summary>How does hardware offboarding stay in sync?</summary><p>A confirmed departure prepares hardware follow-up in Assets. In Person &amp; related work, Hardware shows the verified completion count. Open each device to plan a return, colleague handover or sale. Assets records physical receipt and preparation; the shipped Reclaim devices checklist item updates automatically. Custom checklist items keep their existing meaning. Desk checks again before closing and blocks completion while hardware or a source remains unverified. Reactivation pauses outstanding actions until reviewed.</p></details>
+      <details><summary>Where do the employee’s devices and related work appear?</summary><p>Agents see Person &amp; related work beside the ticket. For offboarding, the person selected in the request is shown, even when HR filed it. Open an app section for hardware, sales, licenses, responsibilities, forms, device checks or monitored domains. Previous items are collapsed. Your permissions in each app still apply. Documents, secrets, submission answers and message contents stay in their original apps. Unavailable and restricted sources are shown explicitly.</p></details>
+      <p class="lead">One page, kept current with the code. If something here disagrees with the product, the page is the bug.</p>
+      <div class="card flat">
+        <svg viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace" font-size="11">
+          <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ks-fg-muted)"/></marker></defs>
+          <!-- hub -->
+          <rect x="20" y="30" width="200" height="270" rx="10" fill="none" stroke="var(--ks-rule-strong)"/>
+          <text x="120" y="52" text-anchor="middle" fill="var(--ks-fg)" font-weight="600">HUB</text>
+          <text x="120" y="70" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="10">identity · directory · groups</text>
+          <rect x="36" y="86" width="168" height="34" rx="6" fill="var(--ks-bg-sunk)" stroke="var(--ks-rule)"/><text x="120" y="107" text-anchor="middle" fill="var(--ks-fg)">sign-in → ticket #uht</text>
+          <rect x="36" y="130" width="168" height="34" rx="6" fill="var(--ks-bg-sunk)" stroke="var(--ks-rule)"/><text x="120" y="151" text-anchor="middle" fill="var(--ks-fg)">people + attributes + groups</text>
+          <rect x="36" y="174" width="168" height="34" rx="6" fill="var(--ks-bg-sunk)" stroke="var(--ks-rule)"/><text x="120" y="195" text-anchor="middle" fill="var(--ks-fg)">hub_deactivate → sessions die</text>
+          <rect x="36" y="218" width="168" height="34" rx="6" fill="var(--ks-bg-sunk)" stroke="var(--ks-rule)"/><text x="120" y="239" text-anchor="middle" fill="var(--ks-fg)">hub_notify → bell / chat DM</text>
+          <text x="120" y="285" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="10">roles = Hub → Permissions</text>
+          <!-- desk -->
+          <rect x="300" y="30" width="360" height="270" rx="10" fill="none" stroke="var(--ks-accent)" stroke-width="1.5"/>
+          <text x="480" y="52" text-anchor="middle" fill="var(--ks-fg)" font-weight="600">DESK</text>
+          <text x="480" y="70" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="10">catalog · tickets · event log · approvals · SLA</text>
+          <rect x="316" y="86" width="150" height="30" rx="6" fill="var(--ks-bg-sunk)" stroke="var(--ks-rule)"/><text x="391" y="105" text-anchor="middle" fill="var(--ks-fg)">request type</text>
+          <rect x="494" y="86" width="150" height="30" rx="6" fill="var(--ks-bg-sunk)" stroke="var(--ks-rule)"/><text x="569" y="105" text-anchor="middle" fill="var(--ks-fg)">ticket DSK-42</text>
+          <path d="M466 101 L494 101" stroke="var(--ks-fg-muted)" marker-end="url(#arr)"/>
+          <rect x="316" y="132" width="328" height="30" rx="6" fill="var(--ks-bg-sunk)" stroke="var(--ks-rule)"/><text x="480" y="151" text-anchor="middle" fill="var(--ks-fg)">approval (manager | group) → queue (group) → agent</text>
+          <rect x="316" y="178" width="328" height="30" rx="6" fill="var(--ks-bg-sunk)" stroke="var(--ks-rule)"/><text x="480" y="197" text-anchor="middle" fill="var(--ks-fg)">events: comment · note · status · assign · task · file</text>
+          <rect x="316" y="224" width="150" height="30" rx="6" fill="none" stroke="var(--ks-rule-strong)" stroke-dasharray="4 3"/><text x="391" y="243" text-anchor="middle" fill="var(--ks-fg-secondary)">AI: triage · summary · draft</text>
+          <rect x="494" y="224" width="150" height="30" rx="6" fill="none" stroke="var(--ks-rule-strong)" stroke-dasharray="4 3"/><text x="569" y="243" text-anchor="middle" fill="var(--ks-fg-secondary)">SLA sweep · auto-close</text>
+          <text x="480" y="285" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="10">new → open → waiting(requester | third-party | approval) → resolved → closed</text>
+          <!-- people -->
+          <rect x="740" y="60" width="140" height="70" rx="10" fill="none" stroke="var(--ks-rule-strong)"/><text x="810" y="90" text-anchor="middle" fill="var(--ks-fg)" font-weight="600">REQUESTER</text><text x="810" y="108" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="10">portal · my requests</text>
+          <rect x="740" y="200" width="140" height="70" rx="10" fill="none" stroke="var(--ks-rule-strong)"/><text x="810" y="230" text-anchor="middle" fill="var(--ks-fg)" font-weight="600">AGENT</text><text x="810" y="248" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="10">queue · ticket · actions</text>
+          <!-- arrows -->
+          <path d="M220 103 L300 103" stroke="var(--ks-fg-muted)" marker-end="url(#arr)"/><text x="260" y="97" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="9">redeemTicket</text>
+          <path d="M300 147 L220 147" stroke="var(--ks-fg-muted)" marker-end="url(#arr)"/><text x="260" y="141" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="9">directory · 30 sec</text>
+          <path d="M220 191 L300 191" stroke="var(--ks-fg-muted)" marker-end="url(#arr)"/>
+          <path d="M300 235 L220 235" stroke="var(--ks-fg-muted)" marker-end="url(#arr)"/>
+          <path d="M740 95 L660 95" stroke="var(--ks-fg-muted)" marker-end="url(#arr)"/><text x="700" y="89" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="9">file · comment</text>
+          <path d="M660 235 L740 235" stroke="var(--ks-fg-muted)" marker-start="url(#arr)" marker-end="url(#arr)"/><text x="700" y="229" text-anchor="middle" fill="var(--ks-fg-muted)" font-size="9">work</text>
+        </svg>
+      </div>
+      <div class="card flat">
+        <h3>1 · Who is who</h3>
+        <p>Desk accepts its roles only from Hub → Permissions. Active Hub owners/admins and app-specific Admins manage all tickets and settings. Agents work internal tickets and customer projects whose Hub team they belong to. Requesters see their own tickets and explicitly assigned pending approvals. The directory refreshes every 30 seconds; protected access stops if it is 60 seconds old. Your role and its source are shown in the app.</p>
+        <h3>2 · Signing in</h3>
+        <p>Bootstrap: the installation controller connects Desk with <code>setHub</code>. Hub → Permissions supplies all administrator and agent roles; local email lists do not grant access. Regular access: you never sign in to desk. You sign in to the hub (passkey or SSO) and open the desk tile; the hub hands over a one-time ticket that desk redeems canister-to-canister. desk then mints its own 10-hour session token. When the Hub deactivates a person, Desk denies their access within 60 seconds and removes them from active pickers; their requests stay as history. Desk also denies access when its Hub directory snapshot expires.</p>
+        <h3>3 · The catalog</h3>
+        <p>Everything starts as a <b>request type</b>: name, the fields the form asks for, a checklist template, the queue it lands in, an approval rule, SLA targets and who may see it. Onboarding, access, hardware, "something is broken" are all just entries. Admins edit them under Settings → Catalog. Open checklist items block "resolved" — that is how a type enforces its procedure.</p>
+        <h3>4 · Approval</h3>
+        <p>A type can require approval by the requester's <b>manager</b> (from the hub attribute; e-mail, or an unambiguous display name) or by a <b>hub group</b>. The ticket waits on approval, the approver gets a notification with a deep link, decides in one click. Approved → the ticket becomes new in its queue and the SLA clocks start; rejected → closed for good (file a new one). Closing a waiting ticket cancels its approval. If no manager is on file, the Hub-assigned app admins are asked instead. Nobody can approve their own request — an admin re-routes it instead — and an approver's access to the ticket ends with the decision.</p>
+        <h3>5 · Working a ticket</h3>
+        <p>Status moves are explicit: <code>new → open → waiting → resolved → closed</code>, with <i>waiting on</i> requester, third party or approval. Replies never change status — except one case: the requester answers while we wait on them, which reopens. <b>Internal notes</b> and AI notes are never shown to the requester (filtered server-side, not in the UI). Every change is an event on the ticket's timeline; there is no other history.</p>
+        <h3>5b · Telling the hub what a group does</h3>
+        <p>desk answers the hub's <code>hub_usesGroup</code>: open a group in the hub and it shows what it drives here — default queues, approver groups, open requests and pending approvals. Hub separately lists central app-role grants.</p>
+        <h3>6 · Notifications</h3>
+        <p>desk holds no chat tokens. Assignment, replies, approvals and SLA breaches go to the hub as <code>hub_notify</code> (title + deep link only); the hub delivers to the bell and, if the person opted in, their chat DM. Queue notifications reach the group's members that desk knows from the directory.</p>
+        <h3>7 · AI</h3>
+        <p>Optional and assistive. On a new request (if auto-triage is on), a triage note (summary, suggested priority/type, clarifying questions) is added for agents. The model sees the request with <b>sensitive fields redacted</b> and never sees internal notes. Agents can request a summary of the timeline (stored as a note) or a reply draft (never stored, never sent). Configure any OpenAI-compatible or Anthropic endpoint under Settings → AI; the key stays in the canister.</p>
+        <h3>8 · SLA</h3>
+        <p>Each type sets <i>respond within</i> and <i>resolve within</i> hours; a date field (start date, last day) can override the due date. An hourly sweep nudges the assignee (or the queue) once per breach and marks it on the ticket. Resolved tickets auto-close after a configurable number of days.</p>
+        <h3>9 · Slack intake</h3>
+        <p>Optional. A support channel in Slack becomes a queue: every top-level message from a person becomes a request of the type chosen for that channel (the first line is the subject, the whole message the description, the sender the requester when Slack knows their e-mail). The bot answers in the thread with the key and a link; replies in the thread land on the request as comments, and replies from desk land in the thread. A <b>✅</b> on the first message resolves the request (blocked while checklist items are open, with a note in the thread); removing it reopens. Request types with sensitive fields point people to the portal form instead of asking for details in the channel. The Slack app is configured once in the hub (token and signing secret) and assigned to desk there; desk fetches the credentials every 15 minutes and verifies every incoming event against the signing secret. Several channels, even from different workspaces, can feed one desk.</p>
+        <h3>Secrets &amp; trust</h3>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Secret</th><th>Where</th><th>Scope</th></tr></thead><tbody>
+          <tr><td>Session token</td><td>browser localStorage + canister</td><td>10 hours, per person; ended by sign-out, deactivation or expiry</td></tr>
+          <tr><td>Hub ticket</td><td>URL fragment, removed on load</td><td>90 s, single use, only this backend can redeem it</td></tr>
+          <tr><td>AI API key</td><td>canister, write-only</td><td>outbound HTTPS only; cleared with one click</td></tr>
+          <tr><td>Slack bot token + signing secret</td><td>the hub; a copy in this canister, write-only, refreshed every 15 min</td><td>token: Slack API calls from this engine; secret: verifying Slack's events (5-minute timestamp window, replay-deduped)</td></tr>
+        </tbody></table></div>
+        <p style="margin-top:12px">Gates: hub contract methods accept the hub canister only. Every read of a ticket checks requester, approver or staff role; every write checks role and ticket. Files are capped at 1.5 MB × 20 per ticket and stored in the canister. Stable state is append-only; deploys run <code>moc --stable-compatible</code> first.</p>
+      </div>
+    </section>
+  </main>
+  </div>
+</div>
+
+<datalist id="dirList"></datalist>
+<datalist id="groupList"></datalist>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+[
+  {
+    "match": "**/*",
+    "headers": {
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+      "Cache-Control": "no-cache"
+    }
+  },
+  {
+    "match": "index.html",
+    "headers": {
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'sha256-GqsWfEjHm73zbHa7lGbVXfv95jxypKuCtjd6kntjIRA=' 'sha256-KZzoPODK0Ejshgkb/2Mbu4FA+Gk0ij7XBxBjZD+hPes='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://icp-api.io; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+      "X-Frame-Options": "DENY"
+    }
+  }
+]

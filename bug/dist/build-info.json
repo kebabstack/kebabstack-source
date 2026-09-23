@@ -1,0 +1,12 @@
+{
+  "version": "0.17.5",
+  "three": "0.185.1",
+  "builtAt": "2026-09-22T15:04:41.890Z",
+  "modes": [
+    "3d",
+    "2d"
+  ],
+  "mode": "unified-arcade",
+  "backend": "runtime-canister-env",
+  "score": "floor(meters) + coins * 50"
+}

@@ -1,0 +1,2871 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Crumbs API",
+    "version": "0.6.0",
+    "description": "Cookieless analytics on a Cloud Engine. Base URL is your native backend HTTPS origin (or optional Node collector). Report/resource integers from Candid are decimal strings; collection acknowledgments and collector-health counters are JSON numbers. Native acceptance commits directly to the canister; Node acceptance confirms a local queue. Native mode requires stable event IDs and has no GeoIP. Native raw HTTP requests including IP/UA enter replicated processing but are excluded from persisted analytics event fields. Sending an event requires a registered website, not a secret browser key. Public collection is not proof of a human visitor. Report credentials are always server-side authorized. UTC day/hour buckets and rotating daily visitor estimates; see metric definitions. Query/auth credentials do not grant the signed collector lane."
+  },
+  "servers": [
+    {
+      "url": "https://analytics.example.com",
+      "description": "Replace with the Collection API URL shown in Website settings (https://BACKEND_CANISTER_ID.icp.net by default)"
+    }
+  ],
+  "paths": {
+    "/api/v1/events": {
+      "post": {
+        "summary": "Commit up to 50 cookieless events (native) or queue them (optional Node)",
+        "operationId": "post_api_v1_events",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "accepted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "duplicates": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "ignored": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "durability": {
+                          "const": "canister"
+                        },
+                        "delivery": {
+                          "const": "committed"
+                        }
+                      },
+                      "required": [
+                        "accepted",
+                        "duplicates",
+                        "ignored",
+                        "durability",
+                        "delivery"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "ignored": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "durability": {
+                          "const": "collector"
+                        },
+                        "delivery": {
+                          "const": "asynchronous"
+                        }
+                      },
+                      "required": [
+                        "queued",
+                        "ignored",
+                        "durability",
+                        "delivery"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Event"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Event"
+                    },
+                    "minItems": 1,
+                    "maxItems": 50
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sites": {
+      "get": {
+        "summary": "List accessible websites",
+        "operationId": "get_api_v1_sites",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteView"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a site (Admin session) or update it (website Manage)",
+        "operationId": "post_api_v1_sites",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Site"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sites/{id}": {
+      "delete": {
+        "summary": "Delete a website permanently and revoke its keys",
+        "operationId": "delete_api_v1_sites__id_",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      }
+    },
+    "/api/v1/sites/{id}/access": {
+      "get": {
+        "summary": "Read website members (Manager/Admin session)",
+        "operationId": "get_api_v1_sites__id__access",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteAccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace named website access using its current revision (Manager/Admin session)",
+        "operationId": "put_api_v1_sites__id__access",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteAccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  "readers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "managers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "revision",
+                  "readers",
+                  "managers"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sites/{id}/people": {
+      "get": {
+        "summary": "Search Hub people; first 100 matches (Manager/Admin session)",
+        "operationId": "get_api_v1_sites__id__people",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "people": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AccessPerson"
+                      }
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "people",
+                    "truncated"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      }
+    },
+    "/api/v1/query": {
+      "post": {
+        "summary": "Query complete aggregate statistics",
+        "operationId": "post_api_v1_query",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funnels": {
+      "post": {
+        "summary": "Sequential funnel within a visit; unique daily visitors per step",
+        "operationId": "post_api_v1_funnels",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9]+$"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "site": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "integer",
+                    "description": "Inclusive Unix seconds."
+                  },
+                  "until": {
+                    "type": "integer",
+                    "description": "Exclusive Unix seconds; at most 1827 days after from."
+                  },
+                  "dimension": {
+                    "type": "string",
+                    "description": "channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "dimension": {
+                          "type": "string"
+                        },
+                        "values": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "exclude": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dimension",
+                        "values",
+                        "exclude"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "default": 100
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "enum": [
+                            "page",
+                            "event"
+                          ]
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 2,
+                    "maxItems": 10
+                  }
+                },
+                "required": [
+                  "site",
+                  "from",
+                  "until",
+                  "steps"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/journeys": {
+      "post": {
+        "summary": "Most frequent page transitions within visits",
+        "operationId": "post_api_v1_journeys",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "oneOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                          }
+                        ]
+                      }
+                    ],
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/goals/report": {
+      "post": {
+        "summary": "Goal completions, daily visitor estimates and revenue",
+        "operationId": "post_api_v1_goals_report",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "visitors": {
+                      "oneOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+$"
+                        }
+                      ]
+                    },
+                    "completions": {
+                      "oneOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+$"
+                        }
+                      ]
+                    },
+                    "revenue": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "oneOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              }
+                            ]
+                          }
+                        ],
+                        "minItems": 2,
+                        "maxItems": 2
+                      }
+                    }
+                  },
+                  "required": [
+                    "visitors",
+                    "completions",
+                    "revenue"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "site": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "integer",
+                    "description": "Inclusive Unix seconds."
+                  },
+                  "until": {
+                    "type": "integer",
+                    "description": "Exclusive Unix seconds; at most 1827 days after from."
+                  },
+                  "dimension": {
+                    "type": "string",
+                    "description": "channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "dimension": {
+                          "type": "string"
+                        },
+                        "values": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "exclude": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dimension",
+                        "values",
+                        "exclude"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "default": 100
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "site",
+                  "from",
+                  "until",
+                  "id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/goals": {
+      "get": {
+        "summary": "List website goals",
+        "operationId": "get_api_v1_goals",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Goal"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create or replace a goal",
+        "operationId": "post_api_v1_goals",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Goal"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a goal",
+        "operationId": "delete_api_v1_goals",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      }
+    },
+    "/api/v1/keys": {
+      "get": {
+        "summary": "List key metadata; requires website Manager/Admin session",
+        "operationId": "get_api_v1_keys",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Key"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an expiring key; requires website Manager/Admin session",
+        "operationId": "post_api_v1_keys",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "key": {
+                      "$ref": "#/components/schemas/Key"
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "key"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Revoke a key; requires website Manager/Admin session",
+        "operationId": "delete_api_v1_keys",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      }
+    },
+    "/api/v1/annotations": {
+      "get": {
+        "summary": "List website annotations",
+        "operationId": "get_api_v1_annotations",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnnotationRead"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create or replace an annotation",
+        "operationId": "post_api_v1_annotations",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Annotation"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export": {
+      "get": {
+        "summary": "Paginate retained normalized events (manage scope)",
+        "operationId": "get_api_v1_export",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StoredEvent"
+                      }
+                    },
+                    "cursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "cursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      }
+    },
+    "/api/v1/imports": {
+      "post": {
+        "summary": "Import historical aggregate rows idempotently (manage scope)",
+        "operationId": "post_api_v1_imports",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "description": "New rows inserted; duplicates are not counted."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ImportRow"
+                },
+                "minItems": 1,
+                "maxItems": 100
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Read historical aggregates separately from live events",
+        "operationId": "get_api_v1_imports",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HistoricalRow"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "summary": "Backend collection and authorization health (Hub Admin)",
+        "operationId": "get_api_v1_health",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accepted": {
+                      "oneOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+$"
+                        }
+                      ]
+                    },
+                    "duplicates": {
+                      "oneOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+$"
+                        }
+                      ]
+                    },
+                    "rejected": {
+                      "oneOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+$"
+                        }
+                      ]
+                    },
+                    "storedEvents": {
+                      "oneOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+$"
+                        }
+                      ]
+                    },
+                    "storageChargeBytes": {
+                      "oneOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+$"
+                        }
+                      ]
+                    },
+                    "collectors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "directoryAt": {
+                      "oneOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "accepted",
+                    "duplicates",
+                    "rejected",
+                    "storedEvents",
+                    "storageChargeBytes",
+                    "collectors",
+                    "directoryAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      }
+    },
+    "/api/v1/collector-health": {
+      "get": {
+        "summary": "Native acceptance or optional Node queue health (Hub Admin)",
+        "operationId": "get_api_v1_collector_health",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pending": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "rejected": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "oldestPendingAt": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "lastSuccess": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "lastError": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "const": "canister",
+                      "description": "Present for native mode; pending is always zero."
+                    }
+                  },
+                  "required": [
+                    "pending",
+                    "rejected",
+                    "oldestPendingAt",
+                    "lastSuccess",
+                    "lastError"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Bearer credential required"
+          },
+          "403": {
+            "description": "Access denied, expired key or stale Hub directory"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Capacity or report bounds; no sampled totals"
+          },
+          "429": {
+            "description": "Rate limited; honor Retry-After"
+          },
+          "503": {
+            "description": "Temporarily unavailable; retry events with their original IDs"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Hub app session or scoped Crumbs key. Never put report keys in website tracking scripts."
+      }
+    },
+    "schemas": {
+      "Site": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "timezone": {
+            "const": "UTC",
+            "default": "UTC"
+          },
+          "retentionDays": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "allowedProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludedPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "viewers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 0,
+            "deprecated": true,
+            "description": "Leave empty. Use the site access endpoints for members."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "domain",
+          "timezone",
+          "retentionDays",
+          "enabled",
+          "allowedProperties",
+          "excludedPaths",
+          "viewers"
+        ],
+        "additionalProperties": false
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable random ID for retry deduplication; UUID recommended."
+          },
+          "site": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "referrer": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "pageview",
+              "event",
+              "engagement"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "props": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            }
+          },
+          "interactive": {
+            "type": "boolean",
+            "default": true
+          },
+          "revenueMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "engagementMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scrollDepth": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "site",
+          "url",
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "ReportRequest": {
+        "type": "object",
+        "properties": {
+          "site": {
+            "type": "string"
+          },
+          "from": {
+            "type": "integer",
+            "description": "Inclusive Unix seconds."
+          },
+          "until": {
+            "type": "integer",
+            "description": "Exclusive Unix seconds; at most 1827 days after from."
+          },
+          "dimension": {
+            "type": "string",
+            "description": "channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dimension": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "exclude": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "dimension",
+                "values",
+                "exclude"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 100
+          }
+        },
+        "required": [
+          "site",
+          "from",
+          "until"
+        ],
+        "additionalProperties": false
+      },
+      "Metrics": {
+        "type": "object",
+        "properties": {
+          "visitors": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "visits": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "pageviews": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "events": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "bounces": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "durationSeconds": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "engagementMs": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "scrollDepthSum": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "scrollSamples": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "revenue": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^[0-9]+$"
+                    }
+                  ]
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        },
+        "required": [
+          "visitors",
+          "visits",
+          "pageviews",
+          "events",
+          "bounces",
+          "durationSeconds",
+          "engagementMs",
+          "scrollDepthSum",
+          "scrollSamples",
+          "revenue"
+        ],
+        "additionalProperties": false
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "totals": {
+            "$ref": "#/components/schemas/Metrics"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "metrics": {
+                  "$ref": "#/components/schemas/Metrics"
+                }
+              },
+              "required": [
+                "value",
+                "metrics"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "scanned": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "Only the breakdown row list was limited. Totals are complete; oversized scans fail explicitly."
+          }
+        },
+        "required": [
+          "totals",
+          "rows",
+          "scanned",
+          "truncated"
+        ],
+        "additionalProperties": false
+      },
+      "Goal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "page",
+              "event",
+              "scroll"
+            ]
+          },
+          "value": {
+            "type": "string"
+          },
+          "scrollDepth": {
+            "type": [
+              "integer",
+              "string",
+              "null"
+            ],
+            "description": "Required integer 1–100 for scroll goals; null otherwise."
+          }
+        },
+        "required": [
+          "id",
+          "site",
+          "name",
+          "kind",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "KeyRequest": {
+        "type": "object",
+        "properties": {
+          "site": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "read",
+              "manage",
+              "share"
+            ]
+          },
+          "days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          }
+        },
+        "required": [
+          "site",
+          "name",
+          "scope",
+          "days"
+        ],
+        "additionalProperties": false
+      },
+      "Annotation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "site",
+          "at",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "ImportRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "day": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/Metrics"
+          }
+        },
+        "required": [
+          "id",
+          "site",
+          "day",
+          "dimension",
+          "value",
+          "metrics"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "SiteInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "timezone": {
+            "const": "UTC",
+            "default": "UTC"
+          },
+          "retentionDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1827,
+            "default": 365
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "allowedProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludedPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "viewers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 0,
+            "deprecated": true,
+            "description": "Leave empty. Use the site access endpoints for members."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "domain"
+        ],
+        "additionalProperties": false
+      },
+      "SiteView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "timezone": {
+            "const": "UTC",
+            "default": "UTC"
+          },
+          "retentionDays": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "allowedProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludedPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "viewers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 0,
+            "deprecated": true,
+            "description": "Leave empty. Use the site access endpoints for members."
+          },
+          "accessRole": {
+            "enum": [
+              "read",
+              "manage",
+              "admin"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "domain",
+          "timezone",
+          "retentionDays",
+          "enabled",
+          "allowedProperties",
+          "excludedPaths",
+          "viewers",
+          "accessRole"
+        ],
+        "additionalProperties": false
+      },
+      "AccessPerson": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "automatic": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "active",
+          "eligible",
+          "automatic"
+        ],
+        "additionalProperties": false
+      },
+      "SiteAccess": {
+        "type": "object",
+        "properties": {
+          "site": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "readers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessPerson"
+            }
+          },
+          "managers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessPerson"
+            }
+          },
+          "legacyAllReaders": {
+            "type": "boolean"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "site",
+          "revision",
+          "readers",
+          "managers",
+          "legacyAllReaders",
+          "updatedBy",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "Key": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "read",
+              "manage",
+              "share"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        },
+        "required": [
+          "id",
+          "owner",
+          "site",
+          "name",
+          "scope",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "StoredEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable random ID for retry deduplication; UUID recommended."
+          },
+          "site": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "referrer": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "object",
+            "description": "Native Candid variant, e.g. {\"pageview\":null}"
+          },
+          "name": {
+            "type": "string"
+          },
+          "props": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "interactive": {
+            "type": "boolean",
+            "default": true
+          },
+          "revenueMinor": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "engagementMs": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "scrollDepth": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "visitor": {
+            "type": "string",
+            "description": "Daily pseudonym; potentially personal data."
+          },
+          "at": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "campaign": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "term": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "device": {
+            "type": "string"
+          },
+          "browser": {
+            "type": "string"
+          },
+          "os": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "site",
+          "visitor",
+          "at",
+          "order",
+          "kind",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "HistoricalRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "day": {
+            "type": "string"
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/Metrics"
+          }
+        },
+        "required": [
+          "id",
+          "site",
+          "day",
+          "dimension",
+          "value",
+          "metrics"
+        ],
+        "additionalProperties": false
+      },
+      "AnnotationRead": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "site",
+          "at",
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

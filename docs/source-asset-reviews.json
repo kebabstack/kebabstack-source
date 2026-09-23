@@ -1,0 +1,458 @@
+[
+  {
+    "path": "bug/dist/assets/apple-touch-icon.png",
+    "sha256": "4580d5564c9e093e4d2c414d2940019abcb91dd5b563cd54b0900bbba6f981ff",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "bug/dist/assets/two-d/deep-field.webp",
+    "sha256": "6cf263535d6ba5c6dc4b0448fca3f6963b50f94909c030452bf0f182c7cb6f25",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed original generated pixel-space scenery; no customer records or personal metadata."
+  },
+  {
+    "path": "bug/dist/assets/two-d/spiral-sea.webp",
+    "sha256": "07e0d0e699b9923acb6b19bdbf9ebc79bdeb7b042bdd1929ce226947abf8d1a3",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed original generated pixel-space scenery; no customer records or personal metadata."
+  },
+  {
+    "path": "bug/dist/assets/two-d/star-nursery.webp",
+    "sha256": "9b69453066f910f80f64b2ca59a935f52b5a76125a9ec59ba3955bf4aaeb3b6c",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed original generated pixel-space scenery; no customer records or personal metadata."
+  },
+  {
+    "path": "bug/dist/assets/webb/carina.jpg",
+    "sha256": "754a7c91bff500c1698501eb7f14e9ff6ef5c8816b0d463c98f9d604a813fb27",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed Webb scenery, original astronomy metadata, CC BY 4.0 source/credits retained in game and CREDITS.md."
+  },
+  {
+    "path": "bug/dist/assets/webb/deep-field.jpg",
+    "sha256": "2131f27daa43936415901502ccf0361908b9fa120b92a031c888465d84c4db3b",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed Webb scenery, original astronomy metadata, CC BY 4.0 source/credits retained in game and CREDITS.md."
+  },
+  {
+    "path": "bug/dist/assets/webb/phantom-galaxy.jpg",
+    "sha256": "6384c80f745065da0a725d88bcc65943a6aa3a9c9388c39e8cd9dc79d358f53c",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed Webb scenery, original astronomy metadata, CC BY 4.0 source/credits retained in game and CREDITS.md."
+  },
+  {
+    "path": "bug/src/assets/apple-touch-icon.png",
+    "sha256": "4580d5564c9e093e4d2c414d2940019abcb91dd5b563cd54b0900bbba6f981ff",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "bug/src/assets/two-d/deep-field.webp",
+    "sha256": "6cf263535d6ba5c6dc4b0448fca3f6963b50f94909c030452bf0f182c7cb6f25",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed original generated pixel-space scenery; no customer records or personal metadata."
+  },
+  {
+    "path": "bug/src/assets/two-d/spiral-sea.webp",
+    "sha256": "07e0d0e699b9923acb6b19bdbf9ebc79bdeb7b042bdd1929ce226947abf8d1a3",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed original generated pixel-space scenery; no customer records or personal metadata."
+  },
+  {
+    "path": "bug/src/assets/two-d/star-nursery.webp",
+    "sha256": "9b69453066f910f80f64b2ca59a935f52b5a76125a9ec59ba3955bf4aaeb3b6c",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed original generated pixel-space scenery; no customer records or personal metadata."
+  },
+  {
+    "path": "bug/src/assets/webb/carina.jpg",
+    "sha256": "754a7c91bff500c1698501eb7f14e9ff6ef5c8816b0d463c98f9d604a813fb27",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed Webb scenery, original astronomy metadata, CC BY 4.0 source/credits retained in game and CREDITS.md."
+  },
+  {
+    "path": "bug/src/assets/webb/deep-field.jpg",
+    "sha256": "2131f27daa43936415901502ccf0361908b9fa120b92a031c888465d84c4db3b",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed Webb scenery, original astronomy metadata, CC BY 4.0 source/credits retained in game and CREDITS.md."
+  },
+  {
+    "path": "bug/src/assets/webb/phantom-galaxy.jpg",
+    "sha256": "6384c80f745065da0a725d88bcc65943a6aa3a9c9388c39e8cd9dc79d358f53c",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed Webb scenery, original astronomy metadata, CC BY 4.0 source/credits retained in game and CREDITS.md."
+  },
+  {
+    "path": "bug2d/art/hub-tile.png",
+    "sha256": "8cb51c7082aad099824f5aaabafc6709fa59e986446c61800d73fb55f34e777b",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "bug2d/dist/assets/apple-touch-icon.png",
+    "sha256": "4580d5564c9e093e4d2c414d2940019abcb91dd5b563cd54b0900bbba6f981ff",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "bug2d/src/assets/apple-touch-icon.png",
+    "sha256": "4580d5564c9e093e4d2c414d2940019abcb91dd5b563cd54b0900bbba6f981ff",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/assets.png",
+    "sha256": "c899697dd778f753feafbf856fd2d0941270da8bff8d275eb85e5d8144aa7eb7",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/bug.png",
+    "sha256": "ad68ac59fab559c46fd9ec7c88e80977f087c68ed0fce3c6e382c0bc1aafa3e0",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/contracts.png",
+    "sha256": "7b1e68958bd0adc7e4d550aeee871e81fa6eae42f67a341082b634eb3b753e62",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/crumbs.png",
+    "sha256": "dd08b231a98f67653008d60f9051eb20ef63c41726ff277c40fae8c2dbbff510",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/desk.png",
+    "sha256": "92b67d97b0154460bcc956b1d71741ec3381bf3dd73a658308dbaebf63b16c0a",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/forms.png",
+    "sha256": "fea0a000db8c75cad78aa87c1910232d2a6e080278021dd90150304e278660d5",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/hub.png",
+    "sha256": "e33c63bd578bf0d8aa18f667463bd0deba8846f739af778483548b0170b26b51",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/kebab-mcp.png",
+    "sha256": "f15d8fa100886d0c4950058d9c7b813617c2e0afb7f5782ce27f48e4e4f79ed3",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/kitchen.png",
+    "sha256": "571ee5b38a7b35c234bb8d5d33775fd5dc8bad1daef8c9c8f1be87c9b1b35221",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/phone.png",
+    "sha256": "02a69245b8eb86a7181b0844753c69aa13b07dbdffef1be40131964f46e40dd3",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/sdk.png",
+    "sha256": "0def18200c9e04cea8a0a57b8b05f15def558cdb03d72d77553ee3158e5f1669",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/trust.png",
+    "sha256": "d88981521230844c172bf167c0623a391ede25e8e07e648b2153d30da12f9dce",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/vault.png",
+    "sha256": "99781478e9c89f919db1fc191e3084cbaa77e6534815ce555568b6429287d940",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "design/logos/png/watch.png",
+    "sha256": "38cf75a471cc72b24cbe832f235c5fe0e62bd47199f5ea46cdcc924804d140a1",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/assets.png",
+    "sha256": "c899697dd778f753feafbf856fd2d0941270da8bff8d275eb85e5d8144aa7eb7",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/bug.png",
+    "sha256": "ad68ac59fab559c46fd9ec7c88e80977f087c68ed0fce3c6e382c0bc1aafa3e0",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/contracts.png",
+    "sha256": "7b1e68958bd0adc7e4d550aeee871e81fa6eae42f67a341082b634eb3b753e62",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/crumbs.png",
+    "sha256": "dd08b231a98f67653008d60f9051eb20ef63c41726ff277c40fae8c2dbbff510",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/desk.png",
+    "sha256": "92b67d97b0154460bcc956b1d71741ec3381bf3dd73a658308dbaebf63b16c0a",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/forms.png",
+    "sha256": "fea0a000db8c75cad78aa87c1910232d2a6e080278021dd90150304e278660d5",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/hub.png",
+    "sha256": "e33c63bd578bf0d8aa18f667463bd0deba8846f739af778483548b0170b26b51",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/kebab-mcp.png",
+    "sha256": "f15d8fa100886d0c4950058d9c7b813617c2e0afb7f5782ce27f48e4e4f79ed3",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/kitchen.png",
+    "sha256": "571ee5b38a7b35c234bb8d5d33775fd5dc8bad1daef8c9c8f1be87c9b1b35221",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/phone.png",
+    "sha256": "02a69245b8eb86a7181b0844753c69aa13b07dbdffef1be40131964f46e40dd3",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/sdk.png",
+    "sha256": "0def18200c9e04cea8a0a57b8b05f15def558cdb03d72d77553ee3158e5f1669",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/trust.png",
+    "sha256": "d88981521230844c172bf167c0623a391ede25e8e07e648b2153d30da12f9dce",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/vault.png",
+    "sha256": "99781478e9c89f919db1fc191e3084cbaa77e6534815ce555568b6429287d940",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/dist/design/logos/png/watch.png",
+    "sha256": "38cf75a471cc72b24cbe832f235c5fe0e62bd47199f5ea46cdcc924804d140a1",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/assets.png",
+    "sha256": "c899697dd778f753feafbf856fd2d0941270da8bff8d275eb85e5d8144aa7eb7",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/bug.png",
+    "sha256": "ad68ac59fab559c46fd9ec7c88e80977f087c68ed0fce3c6e382c0bc1aafa3e0",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/contracts.png",
+    "sha256": "7b1e68958bd0adc7e4d550aeee871e81fa6eae42f67a341082b634eb3b753e62",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/crumbs.png",
+    "sha256": "dd08b231a98f67653008d60f9051eb20ef63c41726ff277c40fae8c2dbbff510",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/desk.png",
+    "sha256": "92b67d97b0154460bcc956b1d71741ec3381bf3dd73a658308dbaebf63b16c0a",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/forms.png",
+    "sha256": "fea0a000db8c75cad78aa87c1910232d2a6e080278021dd90150304e278660d5",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/hub.png",
+    "sha256": "e33c63bd578bf0d8aa18f667463bd0deba8846f739af778483548b0170b26b51",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/kitchen.png",
+    "sha256": "571ee5b38a7b35c234bb8d5d33775fd5dc8bad1daef8c9c8f1be87c9b1b35221",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/trust.png",
+    "sha256": "d88981521230844c172bf167c0623a391ede25e8e07e648b2153d30da12f9dce",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/vault.png",
+    "sha256": "99781478e9c89f919db1fc191e3084cbaa77e6534815ce555568b6429287d940",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "kitchen/art/watch.png",
+    "sha256": "38cf75a471cc72b24cbe832f235c5fe0e62bd47199f5ea46cdcc924804d140a1",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed generated canonical product marks or original legacy game tile; no personal metadata."
+  },
+  {
+    "path": "hub/test/smoke.mjs",
+    "sha256": "6458ea8d9b388e9e2c1777980eda2022d07e31dc4a826d32ed1fc15ef15ccbfc",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Obvious repeated-letter synthetic canister strings in isolated jsdom fixtures; no network connection or real installation."
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "name": "kebab-contracts-relay",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Email Worker that hands mail to the kebab-stack contracts canister (intake lane)",
+  "scripts": {
+    "test": "node --test",
+    "mint": "node scripts/mint-identity.mjs",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "@dfinity/agent": "3.4.3",
+    "@dfinity/candid": "3.4.3",
+    "@dfinity/identity": "3.4.3",
+    "@dfinity/principal": "3.4.3",
+    "postal-mime": "2.7.6",
+    "unpdf": "1.8.1"
+  },
+  "devDependencies": {
+    "wrangler": "4.129.0"
+  },
+  "overrides": {
+    "sharp": "0.35.4"
+  }
+}

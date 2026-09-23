@@ -1,0 +1,226 @@
+/* Kebabstack runtime tokens · generated from design/tokens.json.
+   Edit the registry and run npm run runtime:sync. Application palettes must
+   reference these semantic roles instead of redefining them. */
+:root {
+  color-scheme: light;
+  --ks-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ks-display: var(--ks-ui);
+  --ks-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --ks-fz-eyebrow: 12px; --ks-fz-body: 16px; --ks-fz-body-sm: 14px;
+  --ks-fz-h3: 20px; --ks-fz-h2: 30px; --ks-fz-h1: clamp(30px, 4vw, 40px); --ks-fz-marker: 12px;
+  --ks-lh-tight: 1.15; --ks-lh-display: 1.2; --ks-lh-body: 1.6; --ks-lh-meta: 1.5;
+  --ks-tracking-display: -.025em; --ks-tracking-h2: -.02em;
+  --ks-tracking-eyebrow: .1em; --ks-tracking-mono: .02em;
+  --ks-weight-display: 600; --ks-weight-body: 400; --ks-weight-ui: 400; --ks-weight-ui-strong: 600;
+  --ks-space-1: 4px;
+  --ks-space-2: 8px;
+  --ks-space-3: 12px;
+  --ks-space-4: 16px;
+  --ks-space-5: 24px;
+  --ks-space-6: 32px;
+  --ks-space-7: 48px;
+  --ks-space-8: 64px;
+  --ks-space-9: 96px; --ks-space-10: 128px; --ks-space-section: 96px;
+  --ks-container: 1280px; --ks-prose: 720px; --ks-gutter: 32px;
+  --ks-radius-inline: 8px; --ks-radius-card: 16px; --ks-radius-input: 8px; --ks-radius-pill: 9999px;
+  --ks-rule-w: 1px; --ks-card-stripe-w: 3px;
+  --ks-section-default: var(--ks-accent); --ks-border: var(--ks-rule);
+  --ks-bg-cta-inverse: var(--ks-fg); --ks-grid-line: #24352e0a; --ks-grid-tile: 24px;
+  --ks-button-height: 44px;
+  --ks-button-dense-height: 36px;
+  --ks-button-large-height: 48px;
+  --ks-button-padding-x: 16px;
+  --ks-button-dense-padding-x: 12px;
+  --ks-button-large-padding-x: 20px;
+  --ks-button-radius: 8px;
+  --ks-button-border: 1px;
+  --ks-button-font: 14px;
+  --ks-button-line: 20px;
+  --ks-button-icon: 18px;
+  --ks-button-gap: 8px;
+  --ks-button-group-gap: 8px;
+  --ks-button-focus-width: 3px;
+  --ks-button-focus-offset: 4px;
+  --ks-tabs-height: 44px;
+  --ks-tabs-padding-x: 16px;
+  --ks-tabs-gap: 8px;
+  --ks-tabs-font: 14px;
+  --ks-tabs-line: 20px;
+  --ks-tabs-indicator: 2px;
+  --ks-tabs-content-gap: 24px;
+  --ks-tabs-count-gap: 8px;
+  --ks-menu-width: 240px;
+  --ks-menu-height: 44px;
+  --ks-menu-padding-x: 12px;
+  --ks-menu-icon: 20px;
+  --ks-menu-gap: 12px;
+  --ks-menu-row-gap: 4px;
+  --ks-menu-group-gap: 24px;
+  --ks-menu-radius: 8px;
+  --ks-menu-font: 14px;
+  --ks-menu-line: 20px;
+  --ks-field-height: 44px;
+  --ks-field-padding-x: 12px;
+  --ks-field-label-gap: 8px;
+  --ks-field-help-gap: 8px;
+  --ks-field-group-gap: 24px;
+  --ks-field-radius: 8px;
+  --ks-field-font: 16px;
+  --ks-panel-padding: 24px;
+  --ks-panel-mobile-padding: 16px;
+  --ks-panel-gap: 24px;
+  --ks-panel-radius: 16px;
+  --ks-bg: #f8f7f1;
+  --ks-bg-card: #ffffff;
+  --ks-bg-elev: #ffffff;
+  --ks-bg-sunk: #f0f3ec;
+  --ks-fg: #24352e;
+  --ks-fg-body: #24352e;
+  --ks-fg-secondary: #53665a;
+  --ks-fg-muted: #617066;
+  --ks-fg-disabled: #617066;
+  --ks-fg-inverse: #ffffff;
+  --ks-rule: #dce3d8;
+  --ks-rule-strong: #7b8b7f;
+  --ks-accent: #255946;
+  --ks-accent-strong: #193f31;
+  --ks-accent-dim: #edf4ed;
+  --ks-on-accent: #ffffff;
+  --ks-focus: #b94a21;
+  --ks-logo: #77826b;
+  --ks-indicator-teal: #256039;
+  --ks-indicator-rust: #81500c;
+  --ks-section-teal: #256039;
+  --ks-section-blue: #285d89;
+  --ks-code-bg: #f0f3ec;
+  --ks-code-fg: #24352e;
+  --ks-danger: #a33029;
+  --ks-danger-bg: #fff0ed;
+  --ks-warning: #81500c;
+  --ks-warning-bg: #fff3dc;
+  --ks-success: #256039;
+  --ks-success-bg: #eaf4ed;
+  --ks-info: #285d89;
+  --ks-info-bg: #edf4fb;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ks-grid-line: #edf2ea0a;
+  --ks-bg: #17201b;
+  --ks-bg-card: #202b24;
+  --ks-bg-elev: #202b24;
+  --ks-bg-sunk: #26362c;
+  --ks-fg: #edf2ea;
+  --ks-fg-body: #edf2ea;
+  --ks-fg-secondary: #bdcbbf;
+  --ks-fg-muted: #a8b9ac;
+  --ks-fg-disabled: #a8b9ac;
+  --ks-fg-inverse: #17291e;
+  --ks-rule: #3d5043;
+  --ks-rule-strong: #82998b;
+  --ks-accent: #add4b9;
+  --ks-accent-strong: #c6e4cc;
+  --ks-accent-dim: #294635;
+  --ks-on-accent: #17291e;
+  --ks-focus: #ffb38d;
+  --ks-logo: #b5c2a7;
+  --ks-indicator-teal: #b3deba;
+  --ks-indicator-rust: #f3ce8c;
+  --ks-section-teal: #b3deba;
+  --ks-section-blue: #b3d5f3;
+  --ks-code-bg: #26362c;
+  --ks-code-fg: #edf2ea;
+  --ks-danger: #ffb4aa;
+  --ks-danger-bg: #4b2825;
+  --ks-warning: #f3ce8c;
+  --ks-warning-bg: #43371f;
+  --ks-success: #b3deba;
+  --ks-success-bg: #253d2b;
+  --ks-info: #b3d5f3;
+  --ks-info-bg: #243d50;
+}
+
+/* ===================================================================
+   Base element styling
+   =================================================================== */
+
+html {
+  background: var(--ks-bg);
+  color: var(--ks-fg);
+  font-family: var(--ks-ui);
+  font-size: 16px;
+  line-height: var(--ks-lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background: var(--ks-bg);
+  color: var(--ks-fg);
+}
+
+::selection {
+  background: var(--ks-accent);
+  color: var(--ks-on-accent);
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--ks-rule-strong);
+  text-underline-offset: 3px;
+}
+a:hover { color: var(--ks-accent); }
+
+:focus-visible {
+  outline: 3px solid var(--ks-focus);
+  outline-offset: 4px;
+}
+
+/* Readable UI headings; monospace is reserved for identifiers and code. */
+.ks-prose,
+.ks-display,
+h1, h2, h3, h4, h5 {
+  font-family: var(--ks-display);
+  letter-spacing: var(--ks-tracking-display);
+}
+
+/* ===================================================================
+   Surface utilities
+   =================================================================== */
+
+.ks-bg-sunk {
+  background: var(--ks-bg-sunk);
+}
+
+/* Nerd graph paper: two crossed hairline gradients, 24px tile. */
+.ks-grid-paper {
+  background-image:
+    linear-gradient(90deg, var(--ks-grid-line) 1px, transparent 1px),
+    linear-gradient(var(--ks-grid-line) 1px, transparent 1px);
+  background-size: var(--ks-grid-tile) var(--ks-grid-tile);
+  background-position: -1px -1px;
+  background-repeat: repeat;
+}
+
+.ks-grid-paper-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.8;
+  background-image:
+    linear-gradient(90deg, var(--ks-grid-line) 1px, transparent 1px),
+    linear-gradient(var(--ks-grid-line) 1px, transparent 1px);
+  background-size: var(--ks-grid-tile) var(--ks-grid-tile);
+  background-position: -1px -1px;
+  background-repeat: repeat;
+}
+
+/* The skewer divider: a dotted line with layers on it. Decorative. */
+.ks-skewer-rule {
+  border: 0;
+  height: 1px;
+  background: repeating-linear-gradient(90deg,
+    var(--ks-rule) 0 12px, transparent 12px 20px);
+  position: relative;
+}

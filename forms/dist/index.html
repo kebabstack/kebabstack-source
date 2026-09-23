@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>kebab-stack · forms</title>
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/tokens.css">
+<script>try{if(localStorage.getItem("ks-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--ks-bg);color:var(--ks-fg-body);font:400 15px/1.55 var(--ks-ui)}
+#layout{display:none;min-height:100vh;flex-direction:column}#layout.on{display:flex}
+.pagehead h2,.fwhead h2,.fillhead h2,.formrow .ttl{font-family:var(--ks-display)}
+#login{display:flex;min-height:88vh;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:20px}#login .mark{font:380 42px var(--ks-display);color:var(--ks-fg)}
+.kv{font:400 13px var(--ks-ui);color:var(--ks-fg-secondary)}.kv b{color:var(--ks-fg);font-weight:600}
+.status{font:500 var(--ks-fz-marker) var(--ks-mono);letter-spacing:.04em;padding:3px 11px;border-radius:var(--ks-radius-pill);background:var(--ks-bg-sunk);border:1px solid var(--ks-rule);color:var(--ks-fg-secondary)}.status:empty{display:none}.status.ok{border-color:var(--ks-indicator-teal);color:var(--ks-indicator-teal);background:transparent}.status.err{border-color:var(--ks-accent);color:var(--ks-accent);background:transparent}
+.warnbox{background:var(--ks-bg-sunk);border:1px solid var(--ks-rule);border-left:3px solid var(--ks-accent);border-radius:var(--ks-radius-card);padding:10px 14px;font:400 13.5px/1.5 var(--ks-ui);margin:14px 32px 0}
+.hidden{display:none!important}
+.fillbrand{display:flex;align-items:center;gap:10px;padding:14px 24px;border-bottom:1px solid var(--ks-rule);font:500 12px var(--ks-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ks-fg-secondary)}
+.pick{position:relative}.pick .list{position:absolute;left:0;right:0;top:100%;z-index:90;background:var(--ks-bg-card);border:1px solid var(--ks-rule-strong);border-radius:var(--ks-radius-card);max-height:220px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}.pick .list div{padding:9px 12px;cursor:pointer;font:400 14px var(--ks-ui);border-top:1px solid var(--ks-rule)}.pick .list div:first-child{border-top:0}.pick .list div:hover{background:var(--ks-accent-dim)}.pick .list small{display:block;color:var(--ks-fg-muted);font:400 11.5px var(--ks-mono)}
+.pill.primary{color:var(--ks-fg-inverse,#fff)}
+.scard{background:var(--ks-bg-card);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:16px 18px;margin-bottom:14px}.scard h3{font:500 18px/1.25 var(--ks-display);margin:0 0 10px}.scard label{display:block;font:500 var(--ks-fz-eyebrow) var(--ks-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ks-fg-secondary);margin:12px 0 5px}.scard input[type=text]{width:100%}.row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1;min-width:150px}.btnrow{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center}
+table.plain{width:100%;border-collapse:collapse;font:400 13.5px var(--ks-ui);margin-top:8px}table.plain th{text-align:left;color:var(--ks-fg-secondary);font:500 var(--ks-fz-eyebrow) var(--ks-ui);letter-spacing:.14em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--ks-rule)}table.plain td{padding:8px;border-bottom:1px solid var(--ks-rule);vertical-align:top}
+.docs p{max-width:720px;margin:0 0 12px}.docs h3{font:500 18px/1.25 var(--ks-display);margin:18px 0 6px}
+button{font-family:var(--ks-ui);cursor:pointer;background:none;border:none;color:inherit}
+input,select,textarea{font-family:var(--ks-ui);font-size:15px;color:var(--ks-fg);background:var(--ks-bg-elev);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-input);padding:10px 14px;transition:border-color .15s ease}
+textarea{resize:vertical;min-height:70px;line-height:1.5}
+input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--ks-focus);outline-offset:2px}
+a{color:inherit;text-decoration:none;transition:color .15s ease}
+a:hover{color:var(--ks-accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+.linkbtn{font-family:var(--ks-ui);font-size:12px;font-weight:500;letter-spacing:.06em;color:var(--ks-fg-secondary);padding:6px 10px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-pill);transition:border-color .15s ease,color .15s ease;background:none}
+.linkbtn:hover{border-color:var(--ks-rule-strong);color:var(--ks-fg)}
+.chip{font-family:var(--ks-mono);font-size:12px;color:var(--ks-fg-secondary);letter-spacing:.04em}
+
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:10px;font-family:var(--ks-ui);font-size:12px;font-weight:600;letter-spacing:.06em;border-radius:var(--ks-radius-pill);padding:12px 24px;transition:background .15s ease,color .15s ease,border-color .15s ease;border:1px solid transparent}
+.pill.primary{background:var(--ks-accent);color:#fff}
+.pill.primary:hover{background:var(--ks-accent-strong)}
+.pill.outline{border:1px solid var(--ks-rule-strong);color:var(--ks-fg)}
+.pill.outline:hover{border-color:var(--ks-fg)}
+.pill.sm{padding:8px 16px;font-size:11px}
+.pill[disabled]{opacity:.45;cursor:default}
+
+/* status dots + tags */
+.tag{display:inline-flex;align-items:center;gap:6px;font:500 10.5px var(--ks-mono);letter-spacing:.1em;padding:4px 10px;border-radius:var(--ks-radius-pill);border:1px solid var(--ks-rule);color:var(--ks-fg-secondary);text-transform:uppercase;white-space:nowrap}
+.tag .dot{width:7px;height:7px;border-radius:50%;background:var(--ks-fg-muted)}
+.tag.open .dot{background:var(--ks-indicator-teal)}
+.tag.draft .dot{background:var(--ks-fg-muted)}
+.tag.closed .dot{background:var(--ks-accent)}
+.tag.received .dot{background:#8a84ff}
+.tag.inReview .dot{background:#d9a03f}
+.tag.accepted .dot{background:var(--ks-indicator-teal)}
+.tag.declined .dot{background:var(--ks-accent)}
+.tag.clickable{cursor:pointer}
+.tag.clickable:hover{border-color:var(--ks-rule-strong)}
+.tag.sel{border-color:var(--ks-fg);color:var(--ks-fg)}
+
+
+/* dashboard */
+.wrap{max-width:1080px;margin:0 auto;padding:clamp(24px,5vh,56px) 32px 80px}
+.pagehead{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+.pagehead h2{font-weight:400;font-size:clamp(28px,4vw,42px);letter-spacing:-.01em;flex:1}
+.formrow{display:flex;align-items:center;gap:18px;padding:18px 20px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);margin-bottom:10px;cursor:pointer;transition:border-color .15s ease}
+.formrow:hover{border-color:var(--ks-rule-strong)}
+.formrow .ttl{font-family:var(--ks-display);font-size:20px;font-weight:500;flex:1;min-width:180px}
+.formrow .meta{font:400 12px var(--ks-mono);color:var(--ks-fg-muted);letter-spacing:.03em;white-space:nowrap}
+.counts{display:flex;gap:8px;flex-wrap:wrap}
+.cnt{font:500 11px var(--ks-mono);letter-spacing:.05em;color:var(--ks-fg-secondary);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-pill);padding:3px 9px;white-space:nowrap}
+.cnt b{color:var(--ks-fg)}
+.empty{border:1px dashed var(--ks-rule-strong);border-radius:var(--ks-radius-card);padding:44px 24px;text-align:center;color:var(--ks-fg-secondary);font-size:15px;font-family:var(--ks-ui)}
+
+/* form workspace */
+.fwhead{border-bottom:1px solid var(--ks-rule);background:var(--ks-bg-sunk)}
+.fwhead .in{max-width:1080px;margin:0 auto;padding:22px 32px 0}
+.fwhead .rowa{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fwhead h2{font-weight:400;font-size:clamp(24px,3vw,34px);letter-spacing:-.01em;flex:1;min-width:200px}
+.tabs{display:flex;gap:4px;margin-top:18px}
+.tabs button{font:500 12px var(--ks-ui);letter-spacing:.1em;padding:12px 18px;color:var(--ks-fg-secondary);border-bottom:2px solid transparent;text-transform:uppercase}
+.tabs button.on{color:var(--ks-fg);border-bottom-color:var(--ks-accent)}
+.tabs button:hover{color:var(--ks-fg)}
+.statusbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sharebox{display:flex;align-items:center;gap:8px;background:var(--ks-bg-elev);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-pill);padding:5px 6px 5px 14px;font:400 12px var(--ks-mono);color:var(--ks-fg-secondary);max-width:100%;overflow:hidden}
+.sharebox .url{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
+
+/* builder */
+.sect{border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);margin-bottom:18px;overflow:hidden}
+.sect>.shead{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--ks-bg-sunk);border-bottom:1px solid var(--ks-rule)}
+.sect>.shead .sno{font:500 10.5px var(--ks-mono);letter-spacing:.14em;color:var(--ks-fg-secondary);text-transform:uppercase;white-space:nowrap}
+.sect>.shead input{flex:1;background:transparent;border:none;font-family:var(--ks-display);font-size:19px;font-weight:500;padding:4px 6px}
+.q{padding:16px 18px;border-bottom:1px solid var(--ks-rule);position:relative}
+.q:last-child{border-bottom:none}
+.q .qrow{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.q .qrow input.qtitle{flex:1;min-width:200px;font-family:var(--ks-ui);font-weight:500}
+.q select.qtype{width:170px}
+.q .optline{display:flex;gap:8px;align-items:center;margin-top:8px}
+.q .optline input{flex:1}
+.q .optline select{width:210px;font-size:12px;padding:8px 10px;color:var(--ks-fg-secondary)}
+.qfoot{display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap}
+.qfoot label{font:500 12px var(--ks-ui);color:var(--ks-fg-secondary);display:flex;align-items:center;gap:6px;cursor:pointer}
+.iconbtn{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--ks-rule);border-radius:6px;color:var(--ks-fg-secondary);font:500 13px var(--ks-ui);flex-shrink:0}
+.iconbtn:hover{border-color:var(--ks-rule-strong);color:var(--ks-fg)}
+.addrow{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 26px}
+.scalerow{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap;font:400 13px var(--ks-ui);color:var(--ks-fg-secondary)}
+.scalerow input[type=number]{width:70px}
+.scalerow input[type=text]{width:150px}
+.savestate{font:400 11px var(--ks-mono);letter-spacing:.08em;color:var(--ks-fg-muted);text-transform:uppercase}
+
+/* settings drawer */
+.setgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);padding:20px;margin-bottom:22px}
+.setgrid label{font:500 12px var(--ks-ui);color:var(--ks-fg-secondary);display:block;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.setgrid .ck{display:flex;align-items:center;gap:8px;font:400 14px var(--ks-ui);color:var(--ks-fg);text-transform:none;letter-spacing:0;cursor:pointer}
+
+/* fill page */
+.fillwrap{max-width:720px;margin:0 auto;padding:clamp(24px,5vh,56px) 24px 90px}
+.fillhead{border-top:4px solid var(--ks-accent);border-radius:var(--ks-radius-card);border-right:1px solid var(--ks-rule);border-bottom:1px solid var(--ks-rule);border-left:1px solid var(--ks-rule);background:var(--ks-bg-card);padding:26px 28px;margin-bottom:16px}
+.fillhead h2{font-weight:420;font-size:clamp(26px,4vw,38px);line-height:1.12;letter-spacing:-.01em}
+.fillhead p{color:var(--ks-fg-secondary);margin-top:10px;font-size:16px}
+.fq{border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);padding:20px 24px;margin-bottom:12px}
+.fq .ft{font-family:var(--ks-ui);font-weight:500;font-size:16px}
+.fq .ft .req{color:var(--ks-accent)}
+.fq .fd{font-size:14px;color:var(--ks-fg-secondary);margin-top:2px;font-family:var(--ks-ui)}
+.fq .fbody{margin-top:14px}
+.fq.err{border-color:var(--ks-accent)}
+.fq .errmsg{display:none;font:500 12px var(--ks-ui);color:var(--ks-accent);margin-top:8px}
+.fq.err .errmsg{display:block}
+.opt-item{display:flex;align-items:center;gap:10px;padding:7px 0;font-family:var(--ks-ui);font-size:15px;cursor:pointer}
+.opt-item input{width:auto;padding:0;accent-color:var(--ks-accent)}
+.scale-wrap{display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap;font-family:var(--ks-ui)}
+.scale-wrap .sl{font-size:12.5px;color:var(--ks-fg-secondary);padding-bottom:8px}
+.scale-btn{width:38px;height:38px;border:1px solid var(--ks-rule);border-radius:50%;font:500 14px var(--ks-ui);color:var(--ks-fg-secondary)}
+.scale-btn:hover{border-color:var(--ks-rule-strong)}
+.scale-btn.sel{background:var(--ks-accent);border-color:var(--ks-accent);color:#fff}
+.fillnav{display:flex;align-items:center;gap:14px;margin-top:22px}
+.fillnav .spacer{flex:1}
+.progress{font:400 11.5px var(--ks-mono);letter-spacing:.08em;color:var(--ks-fg-muted);text-transform:uppercase}
+.notice{border:1px solid var(--ks-rule);border-left:3px solid var(--ks-accent);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);padding:18px 22px;font-family:var(--ks-ui);font-size:15px;color:var(--ks-fg-secondary)}
+
+/* submissions */
+.subtable{width:100%;border-collapse:collapse;font-family:var(--ks-ui);font-size:14px}
+.subtable th{font:500 10.5px var(--ks-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ks-fg-secondary);text-align:left;padding:10px 12px;border-bottom:1px solid var(--ks-rule-strong)}
+.subtable td{padding:12px;border-bottom:1px solid var(--ks-rule);vertical-align:middle}
+.subtable tr.rowlink{cursor:pointer}
+.subtable tr.rowlink:hover td{background:var(--ks-accent-dim)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.stars{display:inline-flex;gap:2px}
+.stars button{font-size:17px;color:var(--ks-fg-muted);padding:1px}
+.stars button.on{color:var(--ks-accent)}
+.stars.ro button{cursor:default}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(620px,100vw);background:var(--ks-bg);border-left:1px solid var(--ks-rule);box-shadow:-24px 0 60px rgba(0,0,0,.15);z-index:70;transform:translateX(105%);transition:transform .2s ease;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer .dhead{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--ks-rule);flex-wrap:wrap}
+.drawer .dbody{flex:1;overflow-y:auto;padding:20px 22px 60px}
+.ansitem{margin-bottom:16px}
+.ansitem .al{font:500 11px var(--ks-mono);letter-spacing:.1em;color:var(--ks-fg-secondary);text-transform:uppercase;margin-bottom:3px}
+.ansitem .av{font-family:var(--ks-ui);font-size:15px;white-space:pre-wrap;word-break:break-word}
+.ansitem .av.muted{color:var(--ks-fg-muted);font-style:italic}
+.dsec{font:500 11px var(--ks-mono);letter-spacing:.14em;color:var(--ks-fg-secondary);text-transform:uppercase;margin:26px 0 10px;border-top:1px solid var(--ks-rule);padding-top:18px}
+.noteitem{border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:10px 14px;margin-bottom:8px;font-family:var(--ks-ui);font-size:14px}
+.noteitem .nh{font:400 11px var(--ks-mono);color:var(--ks-fg-muted);margin-bottom:3px}
+.notebox{display:flex;gap:8px;margin-top:10px}
+.notebox input{flex:1}
+
+/* insights */
+.insq{border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);padding:18px 22px;margin-bottom:14px}
+.insq h4{font-family:var(--ks-ui);font-weight:500;font-size:15px;margin-bottom:12px}
+.bar{display:grid;grid-template-columns:minmax(80px,220px) 1fr 42px;gap:10px;align-items:center;margin-bottom:6px;font-family:var(--ks-ui);font-size:13.5px}
+.bar .bl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ks-fg-secondary)}
+.bar .bt{height:16px;background:var(--ks-bg-sunk);border-radius:4px;overflow:hidden}
+.bar .bt i{display:block;height:100%;background:var(--ks-accent);border-radius:4px;min-width:2px}
+.bar .bn{font:500 12px var(--ks-mono);color:var(--ks-fg-secondary);text-align:right}
+.textans{font-family:var(--ks-ui);font-size:14px;color:var(--ks-fg-secondary);border-left:2px solid var(--ks-rule);padding:2px 12px;margin-bottom:8px}
+
+/* toast + modal */
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--ks-bg-cta-inverse);color:var(--ks-bg);font:500 13px var(--ks-ui);padding:12px 22px;border-radius:var(--ks-radius-pill);transition:transform .25s ease;z-index:90;max-width:90vw}
+#toast.on{transform:translateX(-50%)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.modal .mbox{background:var(--ks-bg);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:26px;max-width:440px;width:100%}
+.modal .mbox .tt{font-family:var(--ks-ui);font-weight:600;font-size:14px;letter-spacing:.05em;margin-bottom:14px}
+.modal .mbox .ta{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+
+.view{display:none}
+.view.on{display:block}
+@media (max-width:640px){.wrap,.fwhead .in{padding-left:16px;padding-right:16px}.sharebox .url{max-width:150px}}
+
+.form-tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin:-8px 0 24px}.form-tools .linkbtn{color:var(--ks-fg-secondary)}
+
+.formrow .ttl{color:var(--ks-fg);text-decoration:none}.formrow .ttl:hover{text-decoration:underline}.form-tools .linkbtn{border-color:transparent;background:transparent}
+@media(max-width:760px){.formrow{flex-wrap:wrap;gap:12px;padding:16px}.formrow .ttl{flex:1 1 100%;min-width:0;overflow-wrap:anywhere}.formrow .meta{white-space:normal;flex:1 1 100%}.formrow .tag{max-width:100%;white-space:normal;overflow-wrap:anywhere}.form-tools{justify-content:flex-start}.pagehead h2{flex-basis:100%;margin-bottom:0}.sharebox{flex-wrap:wrap;border-radius:8px}.sharebox .url{max-width:100%;flex:1 1 100%}.sharebox button{flex:1}.tabs{overflow-x:auto}.fwhead .rowa{flex-wrap:wrap}}
+
+@media(max-width:600px){.q .optline{flex-wrap:wrap}.q .optline input{flex:1;min-width:0}.q .optline select{flex:1 1 100%;width:100%}.q .qrow input.qtitle{min-width:0;flex-basis:100%}.setgrid{grid-template-columns:minmax(0,1fr)}.sect>.shead input{min-width:0;width:100%}.q .scalerow input{min-width:0}}
+</style>
+<link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./components.css">
+</head>
+<body class="ks-workspace">
+
+<section id="login" aria-busy="true" class="is-waiting app-auth">
+  <div class="auth-shell">
+    <aside class="auth-story">
+      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
+      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
+      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
+    </aside>
+    <section class="auth-main" aria-labelledby="loginTitle">
+      <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
+      <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
+      <h1 id="loginTitle"><span class="auth-ready">Welcome to Forms.</span><span class="auth-waiting">Opening Forms…</span></h1>
+      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
+      <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
+      <div id="loginStatus" class="status" role="alert"></div>
+      <div id="loginWarn" class="warnbox hidden"></div>
+      <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
+      <p class="lfoot">Access is managed by your company in the Hub.</p>
+    </section>
+  </div>
+</section>
+
+<div id="layout">
+  <div id="topbar"></div>
+
+
+<section class="view" id="viewDash">
+  <div class="wrap">
+    <div class="pagehead">
+      <h2>Your forms</h2>
+      <button class="pill outline" id="importBtn">Import</button>
+      <button class="pill primary" id="newFormBtn">New form</button>
+    </div>
+    <nav class="form-tools" aria-label="Forms tools"><button class="linkbtn" id="trashBtn">Trash</button><button class="linkbtn hidden" id="settingsBtn">Settings</button><button class="linkbtn" id="docsBtn">How Forms works</button></nav>
+    <div id="formList"></div>
+  </div>
+</section>
+
+<section class="view" id="viewForm">
+  <div class="fwhead">
+    <div class="in">
+      <div class="rowa">
+        <button class="linkbtn" id="backToDash">← Forms</button>
+        <h2 id="fwTitle"></h2>
+        <div class="statusbar" id="fwStatusBar"></div>
+      </div>
+      <div class="rowa" style="margin-top:14px">
+        <div class="sharebox"><span>PUBLIC LINK</span><span class="url" id="fwLink"></span><button class="linkbtn" id="fwCopy">Copy link</button><button class="linkbtn" id="fwPrevBtn">Preview draft</button><button class="linkbtn" id="fwPreview">Open public form</button></div>
+        <span class="savestate" id="saveState"></span>
+      </div>
+      <div class="tabs">
+        <button data-tab="build" class="on">Build</button>
+        <button data-tab="subs">Submissions <span id="tabSubCount"></span></button>
+        <button data-tab="insights">Insights</button>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div id="tabBuild"></div>
+    <div id="tabSubs" style="display:none"></div>
+    <div id="tabInsights" style="display:none"></div>
+  </div>
+</section>
+
+<section class="view" id="viewTrash">
+  <div class="wrap">
+    <div class="pagehead">
+      <button class="linkbtn" id="trashBack">← Forms</button>
+      <h2>Trash</h2>
+    </div>
+    <div class="notice" style="margin-bottom:18px">Deleted forms stay here for 90 days, then they are removed for good. Restoring brings a form back exactly as it was, same public link included; shares with people who left are dropped silently.</div>
+    <div id="trashList"></div>
+  </div>
+</section>
+
+  <!-- ============================ settings (admins) ============================ -->
+  <section class="view" id="viewSettings">
+    <div class="wrap">
+      <div class="pagehead"><button class="linkbtn" id="settingsBack">← Forms</button><h2>Settings</h2></div>
+      <div class="scard">
+        <h3>Hub connection</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p>
+        <div class="kv">Employees build forms and review their own or shared forms. Admins can manage every form and these settings. Assign app roles in Hub → Permissions.</div>
+        <div class="row"><div><label>App address (deep links in notifications)</label><input type="text" id="sAppUrl" placeholder="https://…"></div></div>
+        <div class="row"><div><label>Company name</label><input type="text" id="sOrg"></div></div>
+        <div class="btnrow"><button id="sSave" class="pill primary sm">Save</button><button id="sSync" class="pill outline sm">SYNC PEOPLE FROM THE HUB</button><span id="sStatus" class="status"></span></div>
+        <div class="kv" id="sMeta" style="margin-top:10px"></div>
+      </div>
+      <div class="scard">
+        <h3>Sample form</h3>
+        <div class="kv">An open sample form with three submissions to try the review pipeline. Removable in one click.</div>
+        <div class="btnrow"><button id="sSeed" class="pill outline sm">ADD SAMPLE FORM</button><button id="sUnseed" class="pill outline sm">REMOVE SAMPLE FORM</button><span id="sSeedStatus" class="status"></span></div>
+      </div>
+      <div class="scard"><h3>Admin log</h3><table class="plain"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ============================ docs ============================ -->
+  <section class="view docs" id="viewDocs">
+    <div class="wrap">
+      <div class="pagehead"><button class="linkbtn" id="docsBack">← Forms</button><h2>How forms works</h2></div>
+      <p>A form builder with public links, and a review pipeline for what comes in. Build sections and questions (short and long text, multiple choice, checkboxes, dropdown, linear scale, date), mark them required, branch from a choice to another section. Every form has a random public link; anyone with it can submit while the form is open — no account, no sign-in. Submissions run through received → in review → accepted / declined, with a rating per reviewer, an assignee and internal notes. Charts under Insights, CSV export for the spreadsheet.</p>
+      <h3>Who sees what</h3>
+      <p>People from your hub directory sign in through the hub. A form belongs to whoever created it; the owner shares it with colleagues as editors (build and review) or viewers (read-only). Employees see their own and shared forms. Hub-assigned app admins can access all forms and settings; when someone leaves, the hub lists their forms and an admin reassigns them.</p>
+      <h3>Respondents</h3>
+      <p>Anonymous by default. A form can ask for a name and e-mail (optional or required, self-declared, shown in the review table). If the form allows it, a respondent can edit their answers later through a private edit link kept on their device. A response deadline and a submission limit close the form on their own; drafts and trashed forms are invisible on their public link.</p>
+      <h3>Notifications</h3>
+      <p>A new submission tells the form's owner and editors through the hub (bell, and Slack if they switched it on): title and link only, the content stays here behind sign-in.</p>
+      <h3>Import</h3>
+      <p>Paste the JSON of a Google Form (Forms API) or a plain text outline — tags like <code>[choice]</code>, <code>[scale 1-5]</code>, <code>[required]</code>. Got a PDF or a screenshot? The import dialog carries a prompt for your AI assistant that turns it into that outline. You get a report of what was imported before anything is created; imports land as drafts.</p>
+      <h3>Trash and limits</h3>
+      <p>Deleting a form moves it to the owner's trash for 90 days — restorable exactly as it was, public link included — then it is removed for good. Limits: 2 000 forms, 5 000 submissions per form, 50 000 in total, 600 public submissions per five minutes across all forms; CSV export defuses spreadsheet formulas in answers.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ============================ public fill (respondents, no sign-in) ============================ -->
+<div id="fillShell" class="hidden">
+  <div class="fillbrand"><span id="fillOrg"></span><span style="flex:1"></span><span style="opacity:.7">forms · kebab-stack</span></div>
+  <section class="view" id="viewFill">
+    <div class="fillwrap" id="fillWrap"></div>
+  </section>
+</div>
+
+<div class="drawer" id="subDrawer">
+  <div class="dhead">
+    <b style="font-family:var(--ks-ui);font-size:15px" id="dTitle"></b>
+    <span class="spacer" style="flex:1"></span>
+    <button class="linkbtn" id="dClose">Close</button>
+  </div>
+  <div class="dbody" id="dBody"></div>
+</div>
+
+<div class="modal" id="importModal">
+  <div class="mbox" style="max-width:680px">
+    <div class="tt">IMPORT A FORM</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <span class="tag clickable sel" data-imp="google">GOOGLE FORMS JSON</span>
+      <span class="tag clickable" data-imp="text">TEXT OUTLINE</span>
+    </div>
+    <div id="impHelpG" style="font:400 13px var(--ks-ui);color:var(--ks-fg-secondary);line-height:1.55;margin-bottom:10px">
+      Paste the JSON from the official Forms API (<span style="font-family:var(--ks-mono);font-size:12px">forms.get</span>).
+      No code needed: copy the form id from your edit URL (…/d/&lt;id&gt;/edit), open
+      <a href="https://developers.google.com/workspace/forms/api/reference/rest/v1/forms/get" target="_blank" rel="noopener" style="color:var(--ks-accent)">the forms.get reference ↗</a>,
+      use the "Try it" panel with your Google login, execute, copy the JSON here.
+    </div>
+    <div id="impHelpT" style="display:none;font:400 13px var(--ks-ui);color:var(--ks-fg-secondary);line-height:1.55;margin-bottom:10px">
+      One question per line, options as "- option" lines below it. Tags in brackets:
+      <span style="font-family:var(--ks-mono);font-size:12px">[choice] [checkboxes] [dropdown] [short] [paragraph] [date] [scale 1-5] [required]</span>.
+      "#&nbsp;Title" names the form, "##&nbsp;Title" starts a new section. A question with option lines and no tag becomes multiple choice.
+      <div style="margin-top:10px;padding:10px 14px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-sunk)">
+        <b style="font-weight:500">Got a PDF, Word file or screenshot of a form?</b> Drop it into your AI assistant together with this prompt, then paste the result here.
+        <button class="linkbtn" id="impCopyPrompt" style="margin-left:8px">COPY PROMPT</button>
+      </div>
+    </div>
+    <textarea id="impSrc" rows="8" style="width:100%;font-family:var(--ks-mono);font-size:12px" spellcheck="false" placeholder='{"formId":"…","info":{"title":"…"},"items":[…]}'></textarea>
+    <div class="ta" style="margin-top:12px">
+      <button class="pill outline sm" id="impAnalyze">ANALYZE</button>
+      <button class="pill primary sm" id="impCreate" disabled>CREATE DRAFT</button>
+      <button class="pill outline sm" id="impCancel">Cancel</button>
+    </div>
+    <div id="impReport" style="margin-top:14px;max-height:260px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<div class="modal" id="shareModal">
+  <div class="mbox" style="max-width:560px">
+    <div class="tt">SHARE THIS FORM</div>
+    <input id="shSearch" placeholder="Search people from the directory…" style="width:100%" autocomplete="off">
+    <div id="shResults" style="max-height:180px;overflow-y:auto;margin-top:6px"></div>
+    <div style="font:500 11px var(--ks-mono);letter-spacing:.12em;color:var(--ks-fg-secondary);text-transform:uppercase;margin:16px 0 8px">People with access</div>
+    <div id="shList" style="max-height:220px;overflow-y:auto"></div>
+    <div style="font:400 12px var(--ks-ui);color:var(--ks-fg-muted);margin-top:12px">Editors can build the form and review submissions, viewers are read-only. The form owner and app admins can delete or share.</div>
+    <div class="ta">
+      <button class="pill primary sm" id="shSave">Save</button>
+      <button class="pill outline sm" id="shCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="confirmModal">
+  <div class="mbox">
+    <div class="tt" id="cmText"></div>
+    <div class="ta">
+      <button class="pill primary sm" id="cmYes">CONFIRM</button>
+      <button class="pill outline sm" id="cmNo">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

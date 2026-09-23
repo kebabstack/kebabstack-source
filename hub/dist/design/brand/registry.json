@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "version": "1.0.0",
+  "source": "Existing kebabstack.dev header mark and favicon, captured unchanged on 2026-09-22.",
+  "name": "Kebabstack",
+  "wordmark": "kebab-stack",
+  "viewBox": "0 0 40 48",
+  "geometry": "<path d=\"M20 3v42\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"/><rect x=\"10\" y=\"9\" width=\"20\" height=\"6\" rx=\"3\" fill=\"#ffb23a\"/><rect x=\"4\" y=\"18\" width=\"32\" height=\"6\" rx=\"3\" fill=\"#ff8a3d\"/><rect x=\"7\" y=\"27\" width=\"26\" height=\"6\" rx=\"3\" fill=\"#ff6b4a\"/><rect x=\"12\" y=\"36\" width=\"16\" height=\"6\" rx=\"3\" fill=\"#f0503c\"/>",
+  "colors": {
+    "ink": "#222a25",
+    "paper": "#f6f5f1",
+    "darkSurface": "#202622",
+    "lightRod": "#f8f7f2",
+    "hyphen": "#d84b25",
+    "hyphenDark": "#ff8a3d",
+    "layers": [
+      "#ffb23a",
+      "#ff8a3d",
+      "#ff6b4a",
+      "#f0503c"
+    ]
+  },
+  "lockup": {
+    "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Helvetica, Arial, sans-serif",
+    "weight": 700,
+    "fontSize": 23,
+    "letterSpacing": -1.1,
+    "gap": 8,
+    "markBoxWidth": 27,
+    "markBoxHeight": 35,
+    "terminalDot": false
+  },
+  "usage": {
+    "minimumMarkHeight": 24,
+    "clearSpaceHeightRatio": 0.25,
+    "minimumLockupFontSize": 18,
+    "faviconSizes": [
+      16,
+      32,
+      48
+    ]
+  },
+  "faviconSource": "website/public/favicon.svg",
+  "legacy": [
+    "design/icon.svg",
+    "design/wordmark-light.svg",
+    "design/wordmark-dark.svg",
+    "design/github-avatar.svg"
+  ]
+}

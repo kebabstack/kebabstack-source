@@ -1,0 +1,1 @@
+{"name":"kebabstack-crumbs","version":"0.6.1","private":true,"type":"module","scripts":{"test":"node test/native-unit.mjs && node --test test/*.test.mjs"}}

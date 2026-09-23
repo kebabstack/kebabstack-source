@@ -1,0 +1,24 @@
+{
+  "timeZone": "Etc/UTC",
+  "runtimeVersion": "V8",
+  "dependencies": {},
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.external_request"
+  ],
+  "dataStudio": {
+    "name": "Crumbs",
+    "company": "Your organisation",
+    "companyUrl": "https://kebabstack.dev",
+    "logoUrl": "https://analytics.example.com/favicon.svg",
+    "addonUrl": "https://kebabstack.dev",
+    "supportUrl": "https://kebabstack.dev",
+    "description": "Daily website statistics from your own Crumbs deployment.",
+    "authType": [
+      "KEY"
+    ],
+    "forceViewersCredentials": true
+  },
+  "urlFetchWhitelist": [
+    "https://YOUR-BACKEND.icp.net/api/v1/"
+  ]
+}

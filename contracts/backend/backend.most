@@ -1,0 +1,410 @@
+// Version: 1.0.0
+type AuditRow__637388334 =
+  {
+    after : Text;
+    at : Int;
+    before : Text;
+    contractId : Nat;
+    id : Nat;
+    sourceId : ?Nat;
+    what : Text;
+    who : Text
+  };
+type Change__945032663 =
+  {
+    basis : Text;
+    evidence : [Evidence__62244100];
+    field : Text;
+    newValue : Text;
+    oldValue : Text
+  };
+type CommercialField__794798569 = {field : Text; value : Text};
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Contract__661336776 =
+  {
+    createdAt : Int;
+    createdBy : Text;
+    customerRef : Text;
+    deputy : Text;
+    futureTerms : ?Terms__90037886;
+    holders : [Text];
+    id : Nat;
+    origin : Text;
+    product : Text;
+    responsible : Text;
+    revision : Nat;
+    seats : ?Nat;
+    status : Text;
+    tags : [Text];
+    terms : Terms__90037886;
+    title : Text;
+    updatedAt : Int;
+    vendor : Text;
+    viewers : [Text];
+    visibility : Text
+  };
+type CostRevision__472408756 = {at : Int; terms : Terms__90037886};
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Document__1040112595 =
+  {
+    blobId : ?Nat;
+    createdAt : Int;
+    hash : Text;
+    id : Nat;
+    link : Text;
+    mime : Text;
+    name : Text;
+    size : Nat;
+    sourceId : Nat;
+    status : Text;
+    textBlob : ?Nat
+  };
+type Evidence__62244100 = {partId : Text; quote : Text};
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Job__24119603 =
+  {
+    attempts : Nat;
+    createdAt : Int;
+    doneAt : Int;
+    id : Nat;
+    lastError : Text;
+    lockedUntil : Int;
+    nextAt : Int;
+    ref : Nat;
+    step : Text
+  };
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LogRow__410755882 = {at : Int; what : Text; who : Text};
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Observation__173036872 =
+  {
+    createdAt : Int;
+    effectiveDate : Text;
+    fields : [Change__945032663];
+    id : Nat;
+    kind : Text;
+    model : Text;
+    promptVersion : Text;
+    sourceHash : Text;
+    sourceId : Nat;
+    summary : Text;
+    uncertainties : [Text]
+  };
+type Out__504509869 =
+  {
+    attempts : Nat;
+    createdAt : Int;
+    dedupeKey : Text;
+    id : Nat;
+    kind : Text;
+    lastError : Text;
+    nextAt : Int;
+    pid : Text;
+    sentAt : Int;
+    title : Text;
+    url : Text
+  };
+type Policy__999069306 =
+  {
+    days : [Nat];
+    enabled : Bool;
+    groups : [Text];
+    hubAdmins : Bool;
+    owner : Bool;
+    spaceOwners : Bool
+  };
+type Proposal__696394129 =
+  {
+    assignee : Text;
+    baseRevision : Nat;
+    candidates : [Nat];
+    changes : [Change__945032663];
+    contractId : ?Nat;
+    createdAt : Int;
+    decidedAt : Int;
+    decidedBy : Text;
+    id : Nat;
+    kind : Text;
+    note : Text;
+    observationId : Nat;
+    snoozedUntil : Int;
+    sourceId : Nat;
+    status : Text;
+    summary : Text;
+    uncertainties : [Text]
+  };
+type Rule__301660854 =
+  {
+    confirmed : Bool;
+    contractId : Nat;
+    createdAt : Int;
+    createdBy : Text;
+    id : Nat;
+    kind : Text;
+    value : Text
+  };
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type Source__407026386 =
+  {
+    cc : [Text];
+    contractId : ?Nat;
+    forwardComment : Text;
+    fromAddr : Text;
+    fromName : Text;
+    handedInBy : Text;
+    hash : Text;
+    htmlBlob : ?Nat;
+    id : Nat;
+    inReplyTo : Text;
+    kind : Text;
+    mailbox : Text;
+    messageId : Text;
+    note : Text;
+    providerId : Text;
+    receivedAt : Int;
+    references : Text;
+    sentAt : Text;
+    status : Text;
+    subject : Text;
+    textBlob : ?Nat;
+    to : [Text]
+  };
+type SpaceMember__1069550836 = {pid : Text; role : SpaceRole__531430210};
+type SpaceRole__531430210 = {#editor; #owner; #viewer};
+type Space__408570146 =
+  {
+    archived : Bool;
+    createdAt : Int;
+    description : Text;
+    id : Text;
+    members : [SpaceMember__1069550836];
+    name : Text;
+    revision : Nat;
+    updatedAt : Int
+  };
+type Task__1009919940 =
+  {
+    assignee : Text;
+    auto : Bool;
+    contractId : Nat;
+    createdAt : Int;
+    doneAt : Int;
+    doneBy : Text;
+    dueOn : Text;
+    id : Nat;
+    kind : Text;
+    remindersSent : [Nat];
+    snoozedUntil : Int;
+    title : Text
+  };
+type Terms__90037886 =
+  {
+    amountMinor : ?Int;
+    currency : Text;
+    decideBy : Text;
+    end : Text;
+    interval : Text;
+    note : Text;
+    noticeDate : Text;
+    noticeDays : ?Nat;
+    noticeMonths : ?Nat;
+    quantity : ?Nat;
+    renewalDate : Text;
+    renewalRule : Text;
+    start : Text;
+    taxBasis : Text;
+    unitMinor : ?Int
+  };
+type TrashMark__894860050 = {at : Int; by : Text};
+type VendorTerms__879330128 =
+  {
+    checkedAt : Int;
+    detail : Text;
+    noticeDays : ?Nat;
+    noticeMonths : ?Nat;
+    quote : Text;
+    renewalRule : Text;
+    status : Text;
+    url : Text
+  };
+actor {
+  stable var adminClaimed : Bool;
+  stable var adminEmails : [Text];
+  stable var adminGroup : Text;
+  stable adminLog :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable var aiCallsCount : Nat;
+  stable var aiCallsDay : Int;
+  stable var aiDailyBudget : Nat;
+  stable var appUrl : Text;
+  stable auditRows :
+    {
+      var root : Node__430031793<Nat, AuditRow__637388334>;
+      var size : Nat__58649523
+    };
+  stable var blobBytes : Nat;
+  stable blobs :
+    {var root : Node__430031793<Nat, Blob>; var size : Nat__58649523};
+  stable commercialDetails :
+    {
+      var root : Node__430031793<Nat, [CommercialField__794798569]>;
+      var size : Nat__58649523
+    };
+  stable contractSpaces :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable contracts :
+    {
+      var root : Node__430031793<Nat, Contract__661336776>;
+      var size : Nat__58649523
+    };
+  stable costRevisions :
+    {
+      var root : Node__430031793<Nat, [CostRevision__472408756]>;
+      var size : Nat__58649523
+    };
+  stable var demoSeeded : Bool;
+  stable docByHash :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable documents :
+    {
+      var root : Node__430031793<Nat, Document__1040112595>;
+      var size : Nat__58649523
+    };
+  stable var editorGroup : Text;
+  stable former :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable groupsCache :
+    {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable var hubId : Text;
+  stable ids :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable jobs :
+    {
+      var root : Node__430031793<Nat, Job__24119603>;
+      var size : Nat__58649523
+    };
+  stable var lastDirectoryPull : Int;
+  stable var lastReminderScan : Int;
+  stable var leadDays : Nat;
+  stable legacyAdmins : [Text];
+  stable legacyEditors : [Text];
+  stable licenseGroups :
+    {var root : Node__430031793<Nat, [Text]>; var size : Nat__58649523};
+  stable licenseSecrets :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable var mailboxAddress : Text;
+  stable var nextAuditId : Nat;
+  stable var nextBlobId : Nat;
+  stable var nextContractId : Nat;
+  stable var nextDocumentId : Nat;
+  stable var nextIntakeId : Nat;
+  stable var nextJobId : Nat;
+  stable var nextLogId : Nat;
+  stable var nextObservationId : Nat;
+  stable var nextOutId : Nat;
+  stable var nextProposalId : Nat;
+  stable var nextRuleId : Nat;
+  stable var nextSourceId : Nat;
+  stable var nextSpaceId : Nat;
+  stable var nextTaskId : Nat;
+  stable observations :
+    {
+      var root : Node__430031793<Nat, Observation__173036872>;
+      var size : Nat__58649523
+    };
+  stable var orgName : Text;
+  stable outbox :
+    {
+      var root : Node__430031793<Nat, Out__504509869>;
+      var size : Nat__58649523
+    };
+  stable var owner : ?Principal;
+  stable people :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable proposals :
+    {
+      var root : Node__430031793<Nat, Proposal__696394129>;
+      var size : Nat__58649523
+    };
+  stable var relayPrincipals : [Principal];
+  stable relaySpaces :
+    {var root : Node__430031793<Principal, Text>; var size : Nat__58649523};
+  stable var reminderDays : [Nat];
+  stable renewalMarks :
+    {var root : Node__430031793<Text, Bool>; var size : Nat__58649523};
+  stable renewalPolicies :
+    {
+      var root : Node__430031793<Text, Policy__999069306>;
+      var size : Nat__58649523
+    };
+  stable rules :
+    {
+      var root : Node__430031793<Nat, Rule__301660854>;
+      var size : Nat__58649523
+    };
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__739831475>;
+      var size : Nat__58649523
+    };
+  stable sourceIntakeSpaces :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable sourceSpaces :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable sources :
+    {
+      var root : Node__430031793<Nat, Source__407026386>;
+      var size : Nat__58649523
+    };
+  stable spaces :
+    {
+      var root : Node__430031793<Text, Space__408570146>;
+      var size : Nat__58649523
+    };
+  stable tasks :
+    {
+      var root : Node__430031793<Nat, Task__1009919940>;
+      var size : Nat__58649523
+    };
+  stable trashedContracts :
+    {
+      var root : Node__430031793<Nat, TrashMark__894860050>;
+      var size : Nat__58649523
+    };
+  stable trashedSources :
+    {
+      var root : Node__430031793<Nat, TrashMark__894860050>;
+      var size : Nat__58649523
+    };
+  stable var tzName : Text;
+  stable var tzOffsetMinutes : Int;
+  stable vendorTermChecks :
+    {
+      var root : Node__430031793<Nat, VendorTerms__879330128>;
+      var size : Nat__58649523
+    }
+};

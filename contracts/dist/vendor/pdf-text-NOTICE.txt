@@ -1,0 +1,6 @@
+pdf-text.js is built from unpdf 1.8.1 (MIT, Johann Schopplich) and its included
+serverless PDF.js build (Apache-2.0, Mozilla Foundation and PDF.js contributors).
+See unpdf-LICENSE.txt and pdfjs-LICENSE.txt. Upstream: https://github.com/unjs/unpdf
+and https://github.com/mozilla/pdf.js. Bundle rebuilt locally with esbuild;
+wrapper limits browser extraction to 50 pages / 60,000 characters, disables
+eval-based font compilation and destroys the loading task after extraction.

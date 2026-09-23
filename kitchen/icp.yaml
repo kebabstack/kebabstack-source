@@ -1,0 +1,30 @@
+# kebab-stack kitchen — installer/updater. Two canisters: the kitchen itself
+# (backend) and the pantry (frontend asset canister holding the recipes:
+# wasm modules + frontend files, produced by tools/pack-recipes.py).
+# The UI lives in the hub (Kitchen page, owners).
+
+# Deploy to your engine with the implicit `ic` environment: icp deploy -e ic --subnet <SUBNET-ID>
+# (no custom environment — the console labels below travel with the canisters).
+
+canisters:
+  - name: backend
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+    settings:
+      environment_variables:
+        __META_PROJECT: "KebabStack Kitchen"
+        __META_PROJECT_ID: "kebabstack-kitchen"
+        __META_NAME: "Kitchen"
+
+  - name: frontend
+    recipe:
+      type: "@dfinity/asset-canister@v2.2.1"
+      configuration:
+        dir: dist
+    settings:
+      environment_variables:
+        __META_PROJECT: "KebabStack Kitchen"
+        __META_PROJECT_ID: "kebabstack-kitchen"
+        __META_NAME: "Pantry (recipes)"
+        __META_MAIN_CANISTER: "true"
+        __META_ICON_PATH: "/favicon.svg"

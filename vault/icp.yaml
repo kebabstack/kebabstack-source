@@ -1,0 +1,17 @@
+# kebab-stack vault — backend only (the UI lives in the hub under Backups).
+# Deploy, then make the vault a co-controller of every canister it should
+# protect (INSTALL.md) and register it in the hub: Backups → Setup (owners).
+
+# Deploy to your engine with the implicit `ic` environment: icp deploy -e ic --subnet <SUBNET-ID>
+# (no custom environment — the console labels below travel with the canisters).
+
+canisters:
+  - name: backend
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+    settings:
+      environment_variables:
+        __META_PROJECT: "KebabStack Vault"
+        __META_PROJECT_ID: "kebabstack-vault"
+        __META_NAME: "Vault"
+        __META_MAIN_CANISTER: "true"

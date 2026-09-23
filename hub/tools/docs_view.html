@@ -1,0 +1,376 @@
+    <div class="view" id="howit">
+      <h2>How this hub works</h2>
+      <p class="lead">The reference for the hub — written for the owner who wants to understand it and for the expert who wants to check it. Plain words on the working pages, precise words here. Numbers on this page are read from the code, not from memory; where the hub falls short, it says so.</p>
+      <div class="stabs" data-tabs="howit"><button class="stab active" data-tab="overview">Overview</button><button class="stab" data-tab="people">People &amp; sign-in</button><button class="stab" data-tab="apps">Apps &amp; data</button><button class="stab" data-tab="backups">Backups &amp; kitchen</button><button class="stab" data-tab="security">Security</button><button class="stab" data-tab="compare">Compared with…</button><button class="stab" data-tab="status">Not yet · roadmap</button><button class="stab" data-tab="developers">Developers</button></div>
+
+      <!-- ================= OVERVIEW ================= -->
+      <div class="spane active" data-pane="howit-overview">
+        <div class="card">
+          <h3>In six sentences</h3>
+          <p class="muted">Current access rule: Desk, Assets and Watch refresh a complete directory every 30 seconds, revoke missing people and fail closed when its request-start age reaches 60 seconds. Pushes are best effort. External IdP changes must first reach the Hub.</p>
+          <div class="kv" style="line-height:1.8">
+          The hub is two canisters on your cloud engine: one keeps your company's <b>people</b>, the other serves this UI. People come from three places — typed in here, pushed by your HR or sign-in system (SCIM 2.0), or pulled from Okta — and the <b>e-mail address is the identity</b>. Every app you connect asks the hub who is signing in, receives only the slice of the directory you allow (<b>lanes</b>), and receives best-effort lock-out notifications; bundled apps also enforce the 60-second directory limit. People sign in with the key on their own device (a passkey) or, optionally, through your company's Okta or Google. A separate <b>vault</b> canister snapshots individual canisters for owner-triggered restore; recovery must be tested, and a <b>kitchen</b> canister installs and updates the apps from recipes through this console; platform setup and recovery still need an operator. Software not built for the hub (Grafana, GitLab, Nextcloud …) signs people in through it as an <b>OpenID Connect provider</b>.
+          </div>
+        </div>
+        <div class="card">
+          <h3>Architecture</h3>
+          <!-- ARCH-SVG START -->
+          <!-- ARCH-SVG END -->
+          <div class="kv" style="margin-top:10px">Generated from <code>hub/tools/archsvg.py</code>: boxes are sized from their text and a checker refuses any layout in which a label touches a box or another label — the diagram cannot drift out of shape when the content changes.</div>
+        </div>
+        <div class="card">
+          <h3>The eight lanes, one line each</h3>
+          <div class="kv" style="line-height:1.9">
+          <b>1 · People in</b> — added here, pushed via SCIM, or pulled from Okta; one store, e-mail is the key. <a href="#/docs/people">details →</a><br>
+          <b>2 · Sign-in</b> — passkeys by invite; optional company SSO; who a person <i>is</i> stays separate from <i>how</i> they sign in. <a href="#/docs/people/signin">details →</a><br>
+          <b>3 · Access gate</b> — bundled apps enforce fresh Hub directory permissions; a lock-out wins over every source. <a href="#/docs/apps/access">details →</a><br>
+          <b>4 · Apps contract</b> — connect with the wizard; lanes decide what leaves the hub; tickets sign people in. <a href="#/docs/apps">details →</a><br>
+          <b>5 · Return lane</b> — apps notify people through the hub, never on their own. <a href="#/docs/apps/notify">details →</a><br>
+          <b>6 · Backups</b> — the vault snapshots, schedules and restores. <a href="#/docs/backups">details →</a><br>
+          <b>7 · Kitchen</b> — installs apps from recipes and updates hub and apps, snapshot first. <a href="#/docs/backups/kitchen">details →</a><br>
+          <b>8 · Sign-in for other apps</b> — the hub is an OpenID Connect provider for software not built for it; same people, same lock-out. <a href="#/docs/apps/oidc">details →</a>
+          </div>
+        </div>
+        <div class="card" id="doc-glossary">
+          <h3>Two vocabularies, one thing</h3>
+          <div class="kv" style="margin-bottom:8px">The working pages speak plainly; this page and the developer tab use the technical words. Same things:</div>
+          <table>
+            <thead><tr><th>On the pages</th><th>Technically</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>service, service id</td><td>canister, canister id</td><td>one running program on your engine; every app is one or two of them</td></tr>
+              <tr><td>app / connected app</td><td>connector</td><td>an app that trusts the hub for sign-in, people and lock-outs</td></tr>
+              <tr><td>what the app may know</td><td>lanes</td><td>which data about people the hub releases to that app</td></tr>
+              <tr><td>the menu, menu entry</td><td>portal, tile</td><td>the page your people open; each line on it</td></tr>
+              <tr><td>sign-in key / passkey</td><td>passkey via Internet Identity → principal</td><td>Face ID, Touch ID, Windows Hello on the person's own device</td></tr>
+              <tr><td>key id</td><td>principal</td><td>the technical id of one sign-in key (or of a canister)</td></tr>
+              <tr><td>lock out</td><td>kill switch / deactivate</td><td>bundled app access ends within 60 seconds of the Hub change; data stays</td></tr>
+              <tr><td>sync from HR / sign-in system</td><td>SCIM 2.0 (RFC 7643/7644)</td><td>the standard Okta, Entra, Google, Workday, Personio … use to push people</td></tr>
+              <tr><td>company sign-in</td><td>OIDC + PKCE (Okta SPA, Google web client)</td><td>optional; the hub is the client, your provider is the server</td></tr>
+              <tr><td>sign-in for other apps</td><td>OpenID Connect provider (code + PKCE, RS256/ES256)</td><td>the hub is the server; Grafana, GitLab, Nextcloud … are its clients</td></tr>
+              <tr><td>ask for access · give access for a while · access review</td><td>access request · time-boxed grant · access review campaign (IGA)</td><td>the three governance moves; all of them edit the one access rule per app</td></tr>
+              <tr><td>AI for your apps</td><td>lane <code>ai</code> · <code>hub_aiCredentials</code></td><td>the one AI key of the company, handed to apps that may use it</td></tr>
+              <tr><td>who answers for this app</td><td>app owner (connector owner)</td><td>the reviewer of that app's access lines; without one, the hub admins</td></tr>
+              <tr><td>who runs this hub</td><td>owner / admin / helpdesk</td><td>the three staff roles, held by people</td></tr>
+              <tr><td>cloud engine</td><td>dedicated Internet Computer subnet</td><td>the infrastructure your canisters run on; you choose it, you pay for it</td></tr>
+              <tr><td>kitchen · pantry · recipe</td><td>installer canister · its asset canister · a manifest with wasm + frontend files</td><td>how new layers get onto the skewer without a terminal</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================= PEOPLE & SIGN-IN ================= -->
+      <div class="spane" data-pane="howit-people">
+        <div class="toc"><span>On this page:</span> <a href="#/docs/people/sources">sources</a> · <a href="#/docs/people/identity">identity &amp; roles</a> · <a href="#/docs/people/signin">passkeys &amp; invites</a> · <a href="#/docs/people/sso">company SSO</a> · <a href="#/docs/people/groups">groups</a> · <a href="#/docs/people/sample">sample company</a></div>
+        <div class="card" id="doc-sources">
+          <h3>Where people come from</h3>
+          <div class="kv" style="line-height:1.8">
+          <b>Added here.</b> Typed in under People (or CSV import), with the org profile (title, department, manager, location …) editable in the hub. Can be switched off under Sources once a sync is the single source of truth — enforced in the backend, not only hidden in the UI.<br>
+          <b>SCIM 2.0 push</b> from a compatible SCIM client (validate your tenant’s operations): <code>/scim/v2/Users</code> and <code>/Groups</code>, bearer token (512-bit, generated here, shown once). Creates, updates and deactivations land in seconds; a SCIM <code>DELETE</code> deactivates and never deletes. Changing an existing <code>userName</code> is refused with HTTP 409; address migration is not implemented. Filter support is <code>userName eq</code> only; pagination is not implemented yet. Groups pushed this way are read-only in the hub while the token is active — revoke the token and they become ordinary groups.<br>
+          <b>Okta pull (optional, advanced).</b> The hub reads the Okta directory itself (OAuth <code>private_key_jwt</code>, keys generated in-canister) on a schedule: default hourly, owner-configurable, can be off; the scheduler ticks every 5 minutes, so a due run starts within ≤ 5 min. Okta event hooks can deliver deactivations between scheduled runs; the hook is authenticated by a 256-bit secret in its URL path only (Okta's HMAC header is not verified).<br>
+          A person may exist in several sources at once and is <b>active if at least one source says so</b> — unless a manual lock-out says otherwise.
+          </div>
+        </div>
+        <div class="card" id="doc-identity">
+          <h3>Identity and roles</h3>
+          <div class="kv" style="line-height:1.8">
+          The lowercased e-mail address is the identity across all sources and all apps. Display names are never used to merge anything.<br>
+          Three staff roles are held by <b>people</b>: <b>owner</b> (everything — sources, tokens, roles, backups), <b>admin</b> (people, groups, apps, branding, undoing lock-outs), <b>helpdesk</b> (lock-outs, invites, read-only otherwise). Every sign-in key linked to a person inherits the person's role; a locked-out person's keys lose it in the same moment. Connected apps receive the role (<code>hubRole</code>) if you grant them the <i>roles</i> lane. Roles are enforced per method in the canister, not in the UI.<br>
+          <b>Controllers are owners.</b> Whoever controls the hub canister at the platform level (the identity that deployed it; the vault, once it is a co-controller) passes every owner check. When changing roles the hub refuses to demote the last owner (people and legacy key-level owners count, controllers do not, and a controller may override); deleting or locking out the last owner is <b>not</b> guarded yet.<br>
+          <b>First run.</b> Until the hub is claimed, the first non-anonymous sign-in on its URL becomes the owner (name, e-mail, company). There is no deploy-time secret: the protection is that only the deployer knows the URL in that minute. Claim it right after deploying.
+          </div>
+        </div>
+        <div class="card" id="doc-signin">
+          <h3>Passkeys and invites</h3>
+          <div class="kv" style="line-height:1.8">
+          Who a person <i>is</i> (the directory entry) is kept apart from <i>how they sign in</i> (their keys). A staff member (helpdesk or higher) mints a one-time invite link — 256-bit code, single use, valid 7 days, revocable, re-minting replaces the older one. The person opens it and signs in with a passkey created on their own device through Internet Identity; the resulting principal is linked to their entry. A person can hold several keys; admins can unlink any of them.<br>
+          Passkeys are phishing-resistant by construction (origin-bound public-key credentials). Their principal is derived per web origin, so the hub pins its canonical origin (<code>.well-known/ii-alternative-origins</code>) — set a custom domain up before the first sign-ins; retrofitting orphans accounts.<br>
+          Hub staff can link their own key to their directory entry from the menu switch; a key cannot link itself to a person who holds a <b>higher</b> role than the caller (no escalation through linking).
+          </div>
+        </div>
+        <div class="card" id="doc-sso">
+          <h3>Company sign-in (optional)</h3>
+          <div class="kv" style="line-height:1.8">
+          OIDC authorization code + PKCE against Okta (SPA app, no secret) or Google (web client, secret stored write-only, shown masked except its last four characters). The code exchange happens inside the canister via an HTTPS outcall. Only ACTIVE people get a session: 512-bit token, <b>8 h</b>, ends on logout. There is no admin-side "kill all sessions": a locked-out person's token is refused on every call instead, and expired records are pruned every 5 minutes.<br>
+          Token validation: RS256 signature using replicated JWKS retrieval; exact issuer and single audience, expiry, issued-at, subject, nonce bound to PKCE and <code>email_verified=true</code>. Unverified email addresses are refused. Rate limit on the exchange: 300 attempts per 5 minutes for the whole hub (transient, resets on upgrade) — it protects the provider's quota, not seats.
+          </div>
+        </div>
+        <div class="card" id="doc-groups">
+          <h3>Groups</h3>
+          <div class="kv" style="line-height:1.8">
+          Flat groups, a person in any number of them. Created here or pushed via SCIM (Okta "Push Groups", Entra group provisioning). Groups are the scoping primitive: who may use an app, and — inside the apps — queues, approvers, roles. Open a group to see <b>where it has an effect</b>: the hub lists its own access policies and asks every connected app (<code>hub_usesGroup</code>, 10 s timeout, apps without the method are skipped).
+          </div>
+        </div>
+        <div class="card" id="doc-sample">
+          <h3>The sample company</h3>
+          <div class="kv" style="line-height:1.8">
+          Home can load 24 fictional people at <code>example.com</code> (departments, managers, one already locked out), three groups and two menu entries, and remove them again in one click. Honest limits: sample people are ordinary local entries — they <b>do</b> appear in the directory your connected apps receive and count on Home; they can <b>not</b> get an invite (the hub refuses), so nobody ever signs in as one. Remove the sample before real people arrive.
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= APPS & DATA ================= -->
+      <div class="spane" data-pane="howit-apps">
+        <div class="toc"><span>On this page:</span> <a href="#/docs/apps/connect">connecting</a> · <a href="#/docs/apps/lanes">lanes</a> · <a href="#/docs/apps/access">access &amp; tickets</a> · <a href="#/docs/apps/push">directory &amp; lock-out</a> · <a href="#/docs/apps/notify">notifications</a> · <a href="#/docs/apps/menu">the menu</a> · <a href="#/docs/apps/oidc">sign-in for other apps</a></div>
+        <div class="card" id="doc-connect">
+          <h3>Connecting an app</h3>
+          <div class="kv" style="line-height:1.8">
+          Apps is one list — every hub app, every external app and every plain link — with four things per row: who may use it, what it may know, whether it is on the menu, and Edit. 🍢 Connect an app first asks <b>what</b> you are connecting. <b>An app built for the hub:</b> paste its backend canister id; the hub calls <code>hub_ping</code> and <code>hub_manifest</code> (name, version, the lanes it <i>needs</i> and <i>wants</i>), pins the needed lanes on the skewer, lets you grant more, choose who may use it and create the bound menu entry — one call at the end; apps without a manifest are connected by hand. <b>Other software</b> with OpenID Connect: pick the preset, paste the address (<a href="#/docs/apps/oidc">details</a>). <b>Just a link:</b> name and address. Self-service alternative: a developer files a request from the menu; on approval the lanes come from the manifest. Both sides verify each other by canister principal — no shared secret, no API key. Edit opens one panel per app: who may use it, what it may know, on the menu (switch + address), technical (service id or client id, redirect URIs, secret, remove).
+          </div>
+        </div>
+        <div class="card" id="doc-lanes">
+          <h3>Lanes — what leaves the hub</h3>
+          <div class="kv" style="line-height:1.8">
+          Per app, enforced server-side on every read: <i>identity</i> (always: e-mail, first/last/display name, active flag, source name and source id) · <i>profile</i> · <i>groups</i> · <i>roles</i> · <i>avatars</i> · <i>notify</i> · <i>push</i> · <i>ai</i>.<br>
+          The <b>ai</b> lane carries no people data at all: an app with it may fetch the company's AI key (<code>hub_aiCredentials</code>, Settings → AI) for its own calls to the vendor — one key for the suite, rotated in one place, usage counted per app. External (OpenID Connect) apps never get it.<br>
+          The <b>profile</b> lane forwards a fixed whitelist only: title, department, division, organization, businessUnit, city, state, countryCode, entity, manager, managerName, employeeNumber, mobilePhone, primaryPhone, startDate. The hub <i>stores</i> every scalar field a source sends (cost center, birth date, phone extension …); only those fifteen ever leave it.<br>
+          <b>groups</b> and <b>roles</b> ride along as pseudo-attributes (<code>groups = "a;b"</code>, <code>hubRole</code>) only when granted. A per-person group lookup (<code>groupsOf</code>) is answered only for people inside the app's own population.<br>
+          Apps connected before lanes existed have no lane record and are treated as "all lanes" for reads — but see the push note below.
+          </div>
+        </div>
+        <div class="card" id="doc-access">
+          <h3>Who may use it — and how sign-in works</h3>
+          <div class="kv" style="line-height:1.8">
+          One policy per app: everyone in the directory, or only selected groups, hub roles and people. It is applied on tickets, <code>checkAccess</code>, the directory the app receives, avatars, notifications, and which menu entries a person sees. Source scope and attribute filters remain as advanced knobs underneath.<br>
+          <b>Tickets.</b> A click on a menu entry mints a one-time ticket — 90 seconds, single use, bound to the person and to the entry's app; only that app's backend can redeem it, canister-to-canister. Unbound (legacy) entries may be redeemed by any connected app. Logging out does not invalidate a ticket minted seconds before (the 90-second window applies). Open tickets are transient and vanish on a hub upgrade.<br>
+          <b>Live gate.</b> Suite apps refresh their directory permission snapshot at least every 60 seconds and deny access when it expires. A Hub lock-out wins over every directory source; external OIDC apps may keep their own sessions.
+          </div>
+        </div>
+        <div class="card" id="doc-governance">
+          <h3>Access governance — asking, lending, checking</h3>
+          <div class="kv" style="line-height:1.8">
+          Three things every auditor asks for, built on the access policy above so no second rule system exists (page: <b>Access</b>).<br>
+          <b>Asking.</b> An app with a people-based rule that a person may not use appears on their menu under <i>Not on your menu — ask for access</i>. They say why and for how long; hub admins (owner/admin) get a notification and decide with a duration — approve creates a grant, deny carries a note. The person is told either way. Apps open to everyone need no request; apps outside a person's source scope are not offered.<br>
+          <b>Lending (temporary access).</b> A grant puts a person on the app's people list, or into an editable group, and records who gave it, why and until when (4 h · 1 d · 7 d · 30 d · until taken away). Authorization stops honoring a grant at its deadline. The 5-minute tick then records expiry: the entry is removed again, the journal gets a line, the person a notification. Taking access away by hand ends it at once. Grants never touch groups pushed by SCIM.<br>
+          <b>Checking (access reviews).</b> A review freezes, per chosen app, one line per rule entry: each named person, each group (with member count), each hub role — or the single line "everyone" for open apps. The app's <b>owners</b> (Apps → Edit → who answers for this app; up to five) get the lines in their menu and keep or remove each one; lines without an owner land with the hub admins on the Access page. <b>Remove is effective at once</b>: the entry leaves the app's rule (a person also loses a running grant) and the person is told. An "everyone" line can only be confirmed — restricting an open app is a policy change, made deliberately under Apps. A review closes itself when every line is decided, or an admin closes it early; the record stays and exports as CSV (spreadsheet-safe cells).<br>
+          <b>Not yet.</b> Reviews of group <i>membership</i> (only of group → app assignments), manager-based reviewers, reminders before the due date, separation-of-duties rules, requests routed to app owners instead of admins. Kept small on purpose: the owner sees what the rule <i>is</i>, not a second copy of it.
+          </div>
+        </div>
+        <div class="card" id="doc-push">
+          <h3>Directory and lock-out delivery</h3>
+          <div class="kv" style="line-height:1.8">
+          Apps pull the scoped directory (<code>connectorDirectory</code>) on their own timer — the SDK example pulls every 15 minutes — and on unknown sign-ins. With the <b>push</b> lane the hub additionally pushes it into <code>hub_upsert</code> every 15 minutes, for directories up to 5 000 people; larger ones are pull-only. The push loop iterates apps with an explicit lane record — an app connected before lanes existed is pushed only after you saved its lanes once. Push failures are not journaled yet.<br>
+          <b>Lock-out</b> is pushed to every connected app the moment it happens (<code>hub_deactivate</code>, one call per app, 30 s timeout) — <b>best effort, no retry, not journaled</b>. An app that was unreachable in that second learns of it on its next <code>checkAccess</code> or directory pull, which is why the SDK guide asks for both. Offboarding is one guided flow: lock out → unlink keys → hand over their work (apps that hold owned objects implement <code>hub_ownedObjects</code> / <code>hub_reassign</code>).
+          </div>
+        </div>
+        <div class="card" id="doc-notify">
+          <h3>Notifications — the return lane</h3>
+          <div class="kv" style="line-height:1.8">
+          Apps never e-mail or DM people themselves; they call <code>hub_notify</code> (needs the <i>notify</i> lane; admins may call it for tests). The hub stores it in the person's inbox (the bell on the menu) and — if Slack delivery is switched on, a bot is configured and the person has not opted out — sends a Slack DM. Payload policy: <b>title + deep link only</b> — title ≤ 200 characters, https URL ≤ 500 — content stays behind the app's own sign-in.<br>
+          Limits: 120 calls per 5 minutes per app; 200 stored notifications per person (oldest evicted); 90-day retention; a repeated <code>dedupeKey</code> within 48 h is silently dropped (the call still returns ok).
+          </div>
+        </div>
+        <div class="card" id="doc-oidc">
+          <h3>Sign-in for other apps (OpenID Connect provider) <span class="pill">alpha</span></h3>
+          <div class="kv" style="line-height:1.8">
+          Software not built for the hub — Grafana, GitLab, Nextcloud, Outline, oauth2-proxy, most vendor tools with an "OpenID Connect" switch — can use the hub as its <b>identity provider</b>. Apps → Connect an app → <b>Other software</b>: <b>pick the app (Grafana, GitLab, Nextcloud, Outline, oauth2-proxy or "other"), paste its address</b> — the callback URI and the menu entry are prefilled, and after Connect the wizard shows the exact settings block to paste into that app. Provider values and signing keys live under Settings → Sign-in for other apps. Underneath: name, redirect URIs (exact match), server app (client secret, shown once, stored as a SHA-256 fingerprint) or browser app (no secret, PKCE mandatory), token signature RS256 (default — mandatory in the standard, accepted everywhere) or ES256. The client is an ordinary connector underneath: <b>lanes</b> decide which claims it receives (who signed in → <code>sub, email, email_verified, name, given_name, family_name, preferred_username</code>; job profile → <code>title, department, division, organization, city, countryCode, managerName, employeeNumber</code>; groups → <code>groups</code>; hub role → <code>hub_role</code>), the <b>access policy</b> decides who may sign in, and a lock-out refuses the code, the token and userinfo within seconds. <b>Where it shows up:</b> in the Apps list like every other app (type "other software"; Edit → Technical holds client id, redirect URIs, secret) and on <b>the menu</b> as "signed in" — opening the entry opens the app, whose login sends the person through the hub without a second prompt (consent once).<br>
+          <b>Flow.</b> Authorization Code only (<code>response_type=code</code>), PKCE S256 supported and required for public clients. The app sends the browser to <code>&lt;issuer&gt;/oidc/authorize</code> (the backend forwards it to the sign-in view on the frontend); the person signs in with their passkey (or existing session), sees one consent card — which app, as whom, which lanes — and is sent back with a 32-byte single-use <b>code</b> bound to client, redirect URI, nonce, PKCE challenge and person, valid 60 s. The app's backend posts it to <code>&lt;issuer&gt;/oidc/token</code> (<code>client_secret_basic</code>, <code>client_secret_post</code> or <code>none</code> + <code>code_verifier</code>) and receives an <b>id_token</b> (15 min; <code>iss, aud, iat, exp, auth_time, nonce, amr:["passkey"]</code> + claims) and an opaque <b>access token</b> (1 h) for <code>/oidc/userinfo</code>. Discovery at <code>&lt;issuer&gt;/.well-known/openid-configuration</code>, keys at <code>/oidc/jwks</code>. All HTTP endpoints run as update calls (consensus, no certification gap); the token endpoint allows 600 successful exchanges per client per 5 minutes (what bounds signing work — secrets and codes are 256-bit, guessing is not the threat). Codes and access tokens are stored under their SHA-256, so a state dump holds no live credential; a code that arrives with a verifier although it was issued without a challenge is refused (PKCE-downgrade protection); the token endpoint refuses repeated parameters and mixed client authentication; the sign-in page refuses to work inside another site's frame (<code>frame-ancestors 'none'</code> + a runtime check), honours <code>prompt=consent</code>/<code>login</code> by always asking, and rejects <code>prompt=none</code>. Failed exchanges (wrong secret, unknown code, PKCE failure, foreign code) are journaled, throttled per client.<br>
+          <b>Keys.</b> One RSA-2048 key and one P-256 key per hub, generated in-canister from IC randomness: the RSA key by a resumable prime search that runs in the background (≈ 60 candidates per slice, one to three minutes, once — see <a href="#/docs/security/keys">keys</a>). Owners can rotate; the previous RSA key stays in the JWKS for 24 hours. The <b>issuer</b> is the backend canister's URL until an owner sets a custom domain under Settings → Sign-in for other apps → Addresses — set it before the first app, changing it later means reconfiguring every app.<br>
+          <b>Identity lifecycle.</b> Email is the current identity key in bundled apps. Do not reassign a former employee’s address to a different person: app history can follow that address even after deleting the Hub entry. Use a distinct address until immutable person IDs and migration are implemented.<br><b>Subject.</b> <code>sub</code> is an opaque random id allocated once per e-mail address — because the e-mail <i>is</i> the hub's identity. Consequence, stated plainly: an address re-issued to a new hire inherits the old subject at every app unless the old person was purged from the hub first (purging retires the subject); an e-mail change gives a new subject. <code>amr</code> says <code>passkey</code> for passkey sessions and <code>fed</code> for company-SSO sessions.<br><b>Not yet.</b> No refresh tokens (apps re-authorise silently; passkey sessions make that a redirect without a prompt), no <code>end_session_endpoint</code> or back-channel logout — an app's own session lives as long as the app decides, the same limit Okta has —, <code>max_age</code> is ignored and <code>prompt=login</code> cannot force a fresh passkey (it asks for consent instead), no <code>picture</code> claim, no PS256/HS256, the ES256 key cannot be rotated yet, no dynamic client registration ever, no SAML ever. SCIM <i>out</i> (the hub provisioning people into other apps) is the planned second step.
+          </div>
+        </div>
+        <div class="card" id="doc-menu">
+          <h3>The menu</h3>
+          <div class="kv" style="line-height:1.8">
+          What your people open: greeting, their entries (only the apps their policy allows, and only those switched <b>on the menu</b>), pins and recents, the bell, sign-out. The order is alphabetical for everyone — there is no admin-set order; people pin their own favourites ("Your favourites") and the menu remembers what they used recently. Each entry shows a <b>picture</b> if an admin set one (Apps → Edit → On the menu → Picture; scaled to 128 px, stored in the hub, no outside requests) — otherwise two letters from the name in a fixed colour. The same picture appears in the Apps list and on the sign-in card of external software. Three kinds of entry: a hub app (signs in by one-time ticket), other software (opens the app, which signs the person in through the hub), a link (opens a page). Reached with a passkey or a company SSO session — one person plane, two ways in. Hub staff flip to the same view with "Your team's menu ↗" after linking their own key, and open every app exactly as an employee would — real tickets, no test mode.
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= BACKUPS ================= -->
+      <div class="spane" data-pane="howit-backups">
+        <div class="card">
+          <h3>The vault</h3>
+          <div class="kv" style="line-height:1.8">
+          A separate canister that holds no business data — only its target list, schedules, snapshot notes and a journal. It takes canister <b>snapshots</b> of every canister you add as a target — the Backups page registers the hub's two canisters and every connected app automatically — keeps them on a schedule (daily at an hour you pick, or every N hours; keep 1–10, the platform maximum is 10 per canister) and restores them. It can do that only because you make it a <i>co</i>-controller of each canister — the Setup (IT) tab prints the exact commands; you keep your own controller.<br>
+          <b>Why a separate canister.</b> Snapshots are a controller operation and the canister must be stopped for take and load. A canister cannot stop itself and carry on, and a hub → vault → stop(hub) chain would deadlock. So the browser talks to the vault directly; the vault asks the hub <code>vaultAuth(principal)</code> — only the configured vault may ask, only owners pass.<br>
+          <b>Who may operate it.</b> Hub owners, checked live at the hub for every state change (reads use a 5-minute cache), plus the vault's own platform controllers, who bypass the hub check.
+          </div>
+        </div>
+        <div class="card">
+          <h3>What a snapshot and a restore do</h3>
+          <div class="kv" style="line-height:1.8">
+          Every snapshot — manual or scheduled — and every restore runs <b>stop → act → start</b>: users hit a "canister is stopped" reply for a few seconds; the stop waits up to 300 s for the canister's open calls. A canister that was already stopped on purpose is left stopped; one that was running is started again — three attempts; if all fail the reply says so and names the CLI command (a stop that times out is cancelled by a start). Before taking, the vault trims to "keep" (deletes the oldest extras) and replaces the oldest atomically when full. A manual snapshot on a canister without a schedule uses keep = 5.<br>
+          <b>Restore</b> replaces Wasm <i>and</i> memory with the snapshot — everything after that moment is gone. By default the vault first takes a safety snapshot of the current state (a checkbox you can untick); it verifies the target snapshot exists and never evicts it; one lock covers the whole operation. If the platform reply is lost, the result is flagged "MAY have happened" rather than guessed; failed takes are re-checked against the snapshot list before being reported. Restoring the hub backend also rolls back people, roles, apps and the vault link — re-enter the vault id under Setup if the snapshot predates it.<br>
+          A recipe may ship a picture (<code>kitchen/art/&lt;id&gt;.png</code>): it shows on the kitchen card and becomes the app's menu picture after install. Limits: the vault cannot protect itself (it holds nothing worth restoring); snapshots stay inside the platform (no download yet, see roadmap); locks self-expire after 40 minutes; journal keeps 1 000 actions, shows the newest 200; a failed scheduled run is visible on Home and under Schedules but is not yet pushed as a notification.
+          </div>
+        </div>
+        <div class="card" id="doc-kitchen">
+          <h3>The kitchen — installing and updating without a terminal</h3>
+          <div class="kv" style="line-height:1.8">
+          A second small canister, sibling of the vault. Its asset canister — the <b>pantry</b> — holds <b>recipes</b>: an app's backend module, its frontend files (the committed versions with placeholders), the asset-canister module, and a manifest (<code>recipes/index.json</code>, produced by <code>kitchen/tools/pack-recipes.py</code> from the repo). On <b>Install</b> the kitchen creates two canisters (controllers: yours, the kitchen, the vault), installs the backend (directly up to 1.9 MB, through the management canister's chunk store above), installs the asset canister and copies the frontend files in — patching placeholders such as the backend id and the hub URL — calls the app's <code>setHub</code>, registers it in the hub (<code>kitchenConnect</code>: exactly the lanes the app's manifest <i>needs</i>, everyone may use it, a bound menu entry), sets the console labels plus <code>PUBLIC_CANISTER_ID:*</code> and registers both canisters in the vault. A failed install leaves a "failed" record with "Remove leftovers" (stops and deletes the half-installed canisters). On <b>Update</b> it takes a vault snapshot (mandatory when a vault is configured), upgrades the backend keeping memory (<code>wasm_memory_persistence = keep</code>) and refreshes the frontend files, dropping stale encodings and keys. <b>Up to date</b> is decided by the running module hash versus the recipe's sha256, never by version strings. The hub itself can be updated the same way once the kitchen is a co-controller of the hub's two canisters (a one-time add-controller, Setup (IT) prints it). Apps deployed by hand are <b>adopted</b>: the kitchen checks it controls both canisters and that the backend's <code>hub_ping</code> equals the recipe id (services: the running module hash equals the recipe's).<br>
+          <b>Cooking a whole stack.</b> A kitchen without a hub shows "Cook your hub" on its pantry page: sign in, enter the setup code, press Cook, and it creates the vault and the hub's two canisters from recipes, wires them (<code>vault.setHub / setKitchen</code>, <code>hub.bootstrapWire</code>), registers the hub in the vault with a default schedule (one backup a day at 03:00 UTC, keep 3 — the vault accepts this from the kitchen only where no schedule exists yet; owners change it under Backups → Schedules) and labels everything for the Console — thirteen visible steps. The hub is born protected: a 256-bit <b>claim code</b> is planted as its <code>KEBAB_CLAIM_CODE</code> environment variable at creation, before any code runs, manual Hub deployments also require a code or controller authorization; only the person who cooked sees the code (once, via a certified call) and the hub's claim form takes it from the URL fragment and scrubs it. Cooking requires the operator’s <code>KEBAB_SETUP_CODE</code>; there is no open first-hour window. After a reload the same login can recover its accepted job and claim link. Install = one <code>icp deploy</code> (or one uploaded bundle), everything else in the browser.<br>
+          <b>Who may cook.</b> Owners, checked live at the hub (<code>kitchenAuth</code>) for every action; the kitchen's platform controllers bypass that. The kitchen is a controller of everything it installs — the second most privileged canister after the vault — and journals every job. One job at a time; progress is polled step by step from the UI, each step with its exact error text if it fails.<br>
+          <b>Honest limits.</b> The kitchen itself is still deployed with the CLI (one command); the <code>.icp</code> bundle upload is experimental in icp-cli. Recipes travel with the kitchen deploy; there is no online catalogue yet. The kitchen cannot update itself. Verified on a cloud engine on 2026-09-03: canister creation and installation from a canister work without cycles.
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SECURITY ================= -->
+      <div class="spane" data-pane="howit-security">
+        <div class="toc"><span>On this page:</span> <a href="#/docs/security/keys">keys &amp; secrets</a> · <a href="#/docs/security/trust">trust model</a> · <a href="#/docs/security/hardening">hardening</a> · <a href="#/docs/security/limits">limits &amp; retention</a> · <a href="#/docs/security/upgrade">upgrades</a></div>
+        <div class="card" id="doc-keys">
+          <h3>Keys &amp; secrets</h3>
+          <table>
+            <thead><tr><th>Material</th><th>Where</th><th>Exposure</th></tr></thead>
+            <tbody>
+              <tr><td>Invite codes</td><td>256-bit from IC randomness, in the invite link</td><td>single use, 7-day expiry, revocable; re-minting replaces the old code</td></tr>
+              <tr><td>SCIM bearer token</td><td>512-bit from IC randomness, held by your HR / sign-in system</td><td>shown once at generation; rotatable and revocable under Sources; wrong token → 401; the only authentication on that public HTTP path (no rate limit)</td></tr>
+              <tr><td>SSO session tokens</td><td>512-bit from IC randomness, stored in canister state</td><td>bearer token in the person's browser; 8 h; ends on logout; refused after lock-out; no admin-side revocation list</td></tr>
+              <tr><td>App tickets</td><td>minted per click, bound to person + menu entry</td><td>90 seconds, single use, redeemable only by the bound app (unbound entries: any connected app); transient</td></tr>
+              <tr><td>OIDC provider keys <span class="pill">sign-in for other apps</span></td><td>RSA-2048 (resumable in-canister prime search from IC randomness) + P-256, canister state</td><td>never leave the canister; apps fetch public JWKs from <code>/oidc/jwks</code>; owner-rotatable, previous RSA key served for 24 h</td></tr>
+              <tr><td>OIDC client secrets</td><td>256-bit from IC randomness, shown once</td><td>hub stores the SHA-256 fingerprint only; rotatable per client; public clients have none (PKCE)</td></tr>
+              <tr><td>OIDC codes &amp; access tokens</td><td>256-bit, transient maps with TTL sweeps</td><td>code 60 s single-use, bound to client + redirect URI + PKCE + person; access token 1 h; both refused after lock-out; ≤ 1 000 codes in flight</td></tr>
+              <tr><td>ES256 signing keys <span class="pill">Okta pull</span></td><td>generated in-canister from IC randomness</td><td>never leave the canister; Okta gets the public JWK only; rotatable</td></tr>
+              <tr><td>Event-hook secrets <span class="pill">Okta pull</span></td><td>256-bit, in the hook URL path</td><td>known to your Okta admins only; rotatable; wrong secret → 403; no HMAC verification of Okta's header</td></tr>
+              <tr><td>Okta API client secret <span class="pill">Okta pull, fallback lane</span></td><td>canister state, write-only</td><td>only if you choose <code>client_secret_basic</code> instead of <code>private_key_jwt</code>; masked in the UI</td></tr>
+              <tr><td>Google client secret <span class="pill">optional</span></td><td>canister state, write-only</td><td>masked in the UI except its last four characters; Okta SSO uses PKCE without any secret</td></tr>
+              <tr><td>AI API key <span class="pill">optional</span></td><td>canister state, write-only</td><td><b>does leave the hub</b>: apps with the <i>ai</i> lane fetch it via <code>hub_aiCredentials</code> and send it to the AI vendor from your engine; the browser never sees it; owners set and rotate it under Settings → AI</td></tr>
+              <tr><td>Slack bot tokens &amp; signing secrets <span class="pill">optional</span></td><td>canister state</td><td><b>do leave the hub</b>: apps you assign to a bot fetch them via <code>hub_slackCredentials</code> so that one rotation here reaches every app</td></tr>
+              <tr><td>Also in canister state</td><td colspan="2">the people directory and org profiles, group memberships, notifications (90 days), avatars, OAuth client ids, the vault id, the journal</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card" id="doc-trust">
+          <h3>Trust model &amp; accepted risks</h3>
+          <div class="kv" style="line-height:1.8">
+          <b>Engine subnet nodes.</b> The hub runs on your cloud engine, a dedicated Internet Computer subnet. <b>All</b> HTTPS outcalls — SSO token exchanges, the Okta directory pull, Slack DMs — run non-replicated (<code>is_replicated=false</code>), because auth codes and DM sends are single-use and would otherwise fire once per replica. Consequence: a malicious node on the engine could in principle forge an outcall response (a forged Okta pull could flip statuses, subject to the lock-out-wins rule). This is the platform trust base of everything on the engine, not specific to this app.<br>
+          <b>Canister state is readable by node operators</b> of the engine subnet (standard IC property today). Everything in the table above is stored in clear inside the canister. Encrypting it with platform-derived keys (vetKD) is possible in principle but is <b>not designed or scheduled</b>; treat the engine's operator trust as your trust base.<br>
+          <b>ID token verification.</b> Incoming Google/Okta SSO verifies RS256 against replicated provider JWKS, exact issuer and single audience, expiry/issued-at, subject, verified email and a nonce bound to the PKCE verifier. Test the actual tenant configuration before adoption.<br>
+          <b>Passkeys &amp; origins.</b> Principals are origin-bound; the canonical origin is pinned via <code>.well-known/ii-alternative-origins</code>. Internet Identity is a dependency for passkey sign-in (a public system canister, not a vendor server).<br>
+          <b>First setup.</b> The operator configures a private one-time setup code with <code>tools/setup-code.py</code>. Without a configured code only the actual canister controller can initialize the backend. A public URL does not confer ownership.<br>
+          <b>Vault and kitchen are controllers.</b> Both hold controller rights over the canisters they protect or install: whoever can call them as an owner can restore old state or install code. They accept only the configured hub's owners (<code>vaultAuth</code>, <code>kitchenAuth</code>) plus their own platform controllers, journal every action, and hold no business data — but they are the two canisters to guard most.<br>
+          <b>Claiming a cooked hub.</b> The claim code is 256 bits from IC randomness, planted as a canister environment variable before the hub's code is installed, returned only to the cook's principal through an update call (certified), carried to the hub in the URL fragment (never sent to a server), scrubbed from the address bar on arrival, and consumed on the first successful claim. Job progress and the ids of a cooking stack are visible only to the cook and to controllers.
+          </div>
+        </div>
+        <div class="card" id="doc-hardening">
+          <h3>Hardening in place</h3>
+          <div class="kv" style="line-height:1.8">
+          · Roles enforced per method (owner / admin / helpdesk; helpdesk may lock out and invite, only admins may undo a lock-out — single or bulk); app-facing queries assert registered canister principals; user endpoints are session-token based; linking a key cannot escalate a role.<br>
+          · Invites: single active code per person, single use, 7-day expiry, revocable; claiming requires a non-anonymous caller.<br>
+          · <code>ssoExchange</code>: input size caps, https-only redirect URI, global rate limit (300 / 5 min).<br>
+          · Sync reentrancy guard per connection, self-expiring; a lock-out arriving <i>during</i> a sync wins over that sync's stale data.<br>
+          · Journal: denied sign-ins and admin actions (nearly all — a handful of toggles were added to the journal only in September 2026), admin-only.<br>
+          · The frontend loads its crypto/agent bundle exclusively from its own asset canister — no CDN, no third-party script; the hub makes no third-party calls for decoration (the former price chart proxy is retired).<br>
+          · SCIM: bearer-gated, every mutation journaled, Users and Groups, deactivations pushed to apps at once; stored attributes pass a denylist (<code>password</code>, <code>schemas</code>, <code>id</code>, <code>meta</code>, <code>active</code>, <code>userName</code>, <code>groups</code>, <code>x509Certificates</code> are never stored; everything else in the body is kept) — forwarding to apps stays whitelist-only.<br>
+          · Backups: only the configured vault may ask <code>vaultAuth</code>, only owners pass it, every vault action journaled; restore takes a safety snapshot by default.<br>
+          · The hub is read-only towards its identity sources (Okta, SCIM clients); its only outbound writes are Slack DMs and the OIDC code exchange. Deprovisioning flows one way (source → hub → apps).
+          </div>
+        </div>
+        <div class="card" id="doc-limits">
+          <h3>Limits, caps and retention</h3>
+          <table>
+            <thead><tr><th>What</th><th>Value</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td>Hub journal</td><td>trimmed to the newest 500 once it passes 800; UI shows 250</td><td>older history is gone; no export yet</td></tr>
+              <tr><td>Vault journal</td><td>1 000 kept, 200 shown</td><td></td></tr>
+              <tr><td>Notifications</td><td>120 per app per 5 min · 200 per person · 90 days · 48 h dedupe</td><td>title ≤ 200 chars, https URL ≤ 500</td></tr>
+              <tr><td>SSO exchanges</td><td>300 per 5 min, hub-wide</td><td>transient window</td></tr>
+              <tr><td>Directory push</td><td>≤ 5 000 people, every 15 min</td><td>larger directories: pull only</td></tr>
+              <tr><td>Groups / bulk edits</td><td>≤ 500 member changes per call · 60-char names</td><td></td></tr>
+              <tr><td>Avatars</td><td>≤ 400 KB each · at most 5 000 pictures hub-wide</td><td>count cap, no byte-total cap</td></tr>
+              <tr><td>Snapshots</td><td>≤ 10 per canister (platform); keep 1–10</td><td>count towards the canister's storage</td></tr>
+              <tr><td>Public HTTP paths (SCIM, hooks)</td><td>no rate limit</td><td>authentication by bearer / URL secret only</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card" id="doc-upgrade">
+          <h3>What an upgrade does</h3>
+          <div class="kv" style="line-height:1.8">
+          Persistent state (people, groups, apps, sessions, invites, notifications, journal, keys, tokens) survives a backend upgrade; stable variables are append-only and <code>moc --stable-compatible</code> guards every deploy. Transient state is lost: open app tickets, sync guards, rate-limit windows, the Okta bearer cache. Timers re-arm automatically. Vault locks are persistent and self-expire after 40 minutes. Take a snapshot before every live upgrade — that is what the vault is for.
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= COMPARED WITH ================= -->
+      <div class="spane" data-pane="howit-compare">
+        <div class="card"><h3>Would this save your company money?</h3>
+          <div class="kv" style="line-height:1.8">Compare the capabilities you actually need and contracts you can cancel. The MIT licence has no kebab-stack seat fee. The engine, external APIs, migration and your team's operating time still cost money. No kebab-stack capacity or monthly cost benchmark is available yet.</div>
+        </div>
+        <div class="card"><h3>Use total cost, not a seat-price headline</h3>
+          <div class="kv" style="line-height:1.8">Monthly total = licences + engine infrastructure + external APIs + operating hours × hourly cost + migration cost spread over an agreed period. Use your provider quote and pilot measurements. Existing SaaS may remain cheaper when support, missing integrations and service levels matter.</div>
+        </div>
+        <div class="card"><h3>What control means here</h3>
+          <div class="kv" style="line-height:1.8">You can inspect the source, control canister upgrades and choose an engine configuration. ICP, gateways and any enabled identity/AI/chat providers remain dependencies. Node location is a deployment decision; replication is not end-to-end encryption. Vault snapshots remain on the platform and cover individual canisters. There is no atomic suite-wide or off-site backup.</div>
+        </div>
+        <div class="card"><h3>What to try first</h3>
+          <div class="kv" style="line-height:1.8">Use test people to run onboarding, a request with approval, a device assignment, offboarding, a Hub outage and restore. Bundled apps refresh permissions every 30 seconds and deny access when the complete directory lease reaches 60 seconds. Upstream sync delay and external OIDC sessions have separate limits. Device trust, outbound SCIM and full external backups remain gaps.</div>
+        </div>
+      </div>
+
+      <!-- ================= NOT YET · ROADMAP ================= -->
+      <div class="spane" data-pane="howit-status">
+        <div class="card">
+          <h3>State: alpha, in motion</h3>
+          <div class="kv" style="line-height:1.8">The stack is alpha and has no production-user validation established for this review. This list is maintained with every release; if something you need is here, it is not done.</div>
+        </div>
+        <div class="card">
+          <h3>Known gaps</h3>
+          <div class="kv" style="line-height:1.8">
+          · <b>One person, one row.</b> The store is keyed per source record; the same human can appear twice in People (e.g. added here + SCIM). Access already merges by e-mail; the list view does not yet.<br>
+          · <b>No admin-side session revocation</b> for company SSO (lock-out refuses the token instead).<br>
+          · <b>Lock-out push is best effort</b> — no retry, not journaled; apps must keep re-checking (the SDK does).<br>
+          · <b>Push failures not journaled</b>; legacy apps need their lanes saved once before they are pushed.<br>
+          · <b>Sign-in for other apps (OpenID Connect)</b>: no refresh tokens, no back-channel logout, no <code>picture</code> claim, ES256 key not rotatable, no SCIM <i>out</i> (provisioning people into those apps) yet, never SAML.<br>
+          · <b>SCIM</b>: no pagination, only <code>userName eq</code> filtering, no <code>externalId</code> echo, unsafe userName/email renames are refused because email-keyed state cannot yet migrate atomically.<br>
+          · <b>Journal</b>: capped, admin actions and activity mixed, no export, no paging.<br>
+          · <b>Directory scans are O(n)</b>; capacity and latency have not been benchmarked; measure the intended workload.<br>
+          · <b>SSO</b>: local signature/claim regressions pass; actual tenant and relying-party interoperability still need a disposable-engine pilot. Public HTTP abuse controls and durable notification retries remain limited.<br>
+          · <b>No encryption of canister state</b> beyond the platform; vetKD not designed.<br>
+          · <b>Vault</b>: no snapshot download, failed schedules do not notify, cannot protect itself.<br>
+          · <b>First install needs the CLI</b>: tools, build, deploy and private setup-code generation. Keep controller access for recovery and Kitchen upgrades. Hand-deployed stacks still wire the kitchen by hand (add-controller).
+          </div>
+        </div>
+        <div class="card">
+          <h3>Roadmap</h3>
+          <div class="kv" style="line-height:1.8">
+          · <b>Kitchen</b>: one uploadable <code>.icp</code> bundle as the documented install path (today: one <code>icp deploy</code>), an online recipe catalogue with hash verification, update notifications on Home, kitchen self-update.<br>
+          · Device trust layer (osquery-native) remains planned. Assets is implemented in alpha.<br>
+          · <b>Access governance</b>: group-membership reviews, due-date reminders, manager as reviewer, requests to app owners, separation-of-duties.<br>
+          · Split <code>main.mo</code> into modules before the public launch; journal split + export; SCIM pagination and filters; notification retries; vault download and failure notifications; one-person view.
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= DEVELOPERS ================= -->
+      <div class="spane" data-pane="howit-developers">
+        <div class="card" id="doc-contract">
+          <h3>The connector contract in four lines</h3>
+          <div class="kv" style="line-height:1.8;margin-bottom:8px">Every hub app implements three methods; the hub is their only caller and both sides verify each other by canister principal — no shared secret. The hub pushes <code>hub_deactivate</code> the moment someone is locked out; apps additionally gate every session with <code>checkAccess</code>. The full playbook (manifest, tickets, directory cache, notifications, ownership hand-over) is <code>onboard-app.md</code> above.</div>
+          <div class="out">// implemented by each app's backend
+type ConnectorUser = record { email : text; displayName : text; firstName : text; lastName : text;
+                             active : bool; source : text; externalId : text; attributes : vec record { text; text } };
+service Connector : {
+  hub_upsert     : (vec ConnectorUser) -> (nat);
+  hub_deactivate : (vec text) -> (nat);          // e-mails
+  hub_ping       : () -> (text) query;           // returns the recipe id for the kitchen
+  hub_manifest   : () -> (record { name : text; version : text; needs : vec text; wants : vec text }) query;
+}
+// provided by the hub — call on login and on every session check:
+checkAccess : (email : text) -> (variant { active; inactive; unknown }) query</div>
+        </div>
+        <div class="card">
+          <h3>The hub serves its own SDK</h3>
+          <div class="kv" style="line-height:1.8;margin-bottom:10px">Everything an app needs is published by this very hub under <code>/sdk/</code> — so a developer, or a coding agent, fetches the current contract from the hub it is about to talk to, never from a stale copy. <span id="sdkVersion" class="mono" style="font-size:11px"></span></div>
+          <table>
+            <thead><tr><th>File</th><th>What it is</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="mono">kebab-hub.mo</td><td>the Motoko module <code>mo:kebab-hub</code>: typed hub interface, ticket sign-in, sessions, directory cache, contract gate, manifest type</td><td><button class="sm" data-sdk="kebab-hub.mo">View</button> <a class="sm" href="sdk/kebab-hub.mo" download style="text-decoration:none">Raw</a></td></tr>
+              <tr><td class="mono">hub-client.js</td><td>the browser client: ticket pick-up from the URL, jump back to the menu, session store, initials</td><td><button class="sm" data-sdk="hub-client.js">View</button> <a class="sm" href="sdk/hub-client.js" download style="text-decoration:none">Raw</a></td></tr>
+              <tr><td class="mono">onboard-app.md</td><td>the prompt-ready onboarding guide — paste it into any coding agent, it wires the app and runs the acceptance checklist</td><td><button class="sm" data-sdk="onboard-app.md">View</button> <a class="sm" href="sdk/onboard-app.md" download style="text-decoration:none">Raw</a></td></tr>
+              <tr><td class="mono">hub.did</td><td>the hub's live Candid interface, exactly what this backend exposes</td><td><button class="sm" data-sdk="hub.did">View</button> <a class="sm" href="sdk/hub.did" download style="text-decoration:none">Raw</a></td></tr>
+              <tr><td class="mono">README.md</td><td>SDK readme: backend in five steps, frontend in three lines, the rules that keep the suite coherent</td><td><button class="sm" data-sdk="README.md">View</button> <a class="sm" href="sdk/README.md" download style="text-decoration:none">Raw</a></td></tr>
+            </tbody>
+          </table>
+          <div class="kv" style="margin-top:10px">Agent prompt that works: <code>Fetch &lt;this hub's URL&gt;/sdk/onboard-app.md and /sdk/kebab-hub.mo, then wire my app to the hub at &lt;backend canister id&gt;.</code></div>
+          <pre id="sdkView" class="out hidden" style="margin-top:12px;max-height:60vh;overflow:auto;white-space:pre-wrap"></pre>
+        </div>
+        <div class="card">
+          <h3>How it stays current</h3>
+          <div class="kv" style="line-height:1.8">
+          The SDK lives in the same repository as the hub (<code>sdk/</code>) and is released with it. Two checks run before every hub deploy (<code>hub/test/run-smoke.sh</code>): <code>sdk/tools/check-sdk.py</code> compares every hub method the SDK promises with the hub's live Candid — name, arity, query vs. update — and refuses a deploy whose served <code>/sdk/</code> copies differ from the sources; <code>hub/tools/sync-sdk.py</code> refreshes those copies and stamps <code>/sdk/VERSION</code>. Contract changes are additive: methods are never renamed or removed, new ones are optional for apps.<br>
+          <b>Cookable apps.</b> Four conventions make an app installable from the Kitchen page: <code>hub_ping()</code> returns the recipe id, <code>setHub(Text)</code> is controller-gated, the backend takes no init argument, <code>dist/</code> carries the placeholders <code>__BACKEND&#95;CANISTER_ID__</code> / <code>__HUB&#95;URL__</code>. Then one entry in <code>kitchen/tools/pack-recipes.py</code> — <code>onboard-app.md</code> § 10 has the table.<br>
+          The live contract (Candid) is above; the onboarding playbook is <code>onboard-app.md</code> in the table. Deploy discipline for every layer: <code>moc --stable-compatible</code> against the committed <code>.most</code>, a vault snapshot, then <code>icp deploy</code>. Stable variables are append-only; never <code>--mode reinstall</code> a live canister.
+          </div>
+        </div>
+      </div>
+    </div>

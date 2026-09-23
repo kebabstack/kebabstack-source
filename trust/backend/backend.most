@@ -1,0 +1,152 @@
+// Version: 1.0.0
+type Check__562235997 =
+  {
+    category : Text;
+    id : Text;
+    interval : Nat;
+    level : Nat;
+    os : Text;
+    rule : Text;
+    sql : Text;
+    title : Text
+  };
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type DistQuery__627148252 =
+  {
+    createdAt : Int;
+    createdBy : Text;
+    id : Text;
+    source : Text;
+    sql : Text;
+    title : Text
+  };
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LogRow__410755882 = {at : Int; what : Text; who : Text};
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Node__902994017 =
+  {
+    enrolledAt : Int;
+    hardwareSerial : Text;
+    hostIdentifier : Text;
+    hostname : Text;
+    lastSeen : Int;
+    nodeKey : Text;
+    osVersion : Text;
+    platform : Text;
+    posture : [(Text, Bool, Text)];
+    postureAt : Int
+  };
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+actor {
+  stable var adminClaimed : Bool;
+  stable var adminEmails : [Text];
+  stable var adminGroup : Text;
+  stable adminLog :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable var agentVersion : Text;
+  stable var appUrl : Text;
+  stable var assetsId : Text;
+  stable var checksCustomized : Bool;
+  stable var configVersion : Nat;
+  stable customChecks :
+    {
+      var root : Node__430031793<Text, Check__562235997>;
+      var size : Nat__58649523
+    };
+  stable decommissioned :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable var demoSeeded : Bool;
+  stable distQueries :
+    {
+      var root : Node__430031793<Text, DistQuery__627148252>;
+      var size : Nat__58649523
+    };
+  stable distResults :
+    {var root : Node__430031793<Text, (Text, Int)>; var size : Nat__58649523};
+  stable var distSeq : Nat;
+  stable var enabledChecks : [Text];
+  stable var enrollCount : Nat;
+  stable var enrollSecret : Text;
+  stable former :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable var gatewayDomain : Text;
+  stable groupsCache :
+    {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable var hubId : Text;
+  stable var idMigration : Text;
+  stable ids :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable keyPool :
+    {
+      var blockIndex : Nat__58649523;
+      var blocks : [var [var ?Text]];
+      var elementIndex : Nat__58649523
+    };
+  stable var keySalt : Text;
+  stable var keySeq : Nat;
+  stable var lastDirectoryPull : Int;
+  stable manualOwner :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var nextLogId : Nat;
+  stable nodeConfigVer :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable nodes :
+    {
+      var root : Node__430031793<Text, Node__902994017>;
+      var size : Nat__58649523
+    };
+  stable notifyQueue :
+    {
+      var blockIndex : Nat__58649523;
+      var blocks : [var [var ?(Text, Text)]];
+      var elementIndex : Nat__58649523
+    };
+  stable var orgName : Text;
+  stable var owner : ?Principal;
+  stable var ownersLastError : Text;
+  stable var ownersPulledAt : Int;
+  stable pendingByNode :
+    {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable people :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable serialOwner :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__739831475>;
+      var size : Nat__58649523
+    };
+  stable var stableResolvedAt : Int;
+  stable var stableVersion : Text;
+  stable var tuneDistInterval : Nat;
+  stable var tuneScheduleSplay : Nat;
+  stable var tuneWatchdogMem : Nat;
+  stable var tuneWatchdogUtil : Nat;
+  stable var versionMode : Text
+};

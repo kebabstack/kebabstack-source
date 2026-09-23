@@ -1,0 +1,515 @@
+type User =
+ record {
+   displayName: text;
+   email: text;
+   id: text;
+   role: text;
+ };
+type SiteView =
+ record {
+   accessRole: SiteRole;
+   allowedProperties: vec text;
+   domain: text;
+   enabled: bool;
+   excludedPaths: vec text;
+   id: text;
+   name: text;
+   retentionDays: nat;
+   timezone: text;
+   viewers: vec text;
+ };
+type SiteRole =
+ variant {
+   admin;
+   manage;
+   none;
+   read;
+ };
+type Site =
+ record {
+   allowedProperties: vec text;
+   domain: text;
+   enabled: bool;
+   excludedPaths: vec text;
+   id: text;
+   name: text;
+   retentionDays: nat;
+   timezone: text;
+   viewers: vec text;
+ };
+type SearchSnapshot =
+ record {
+   fetchedAt: int;
+   from: int;
+   pages: vec SearchRow;
+   property: text;
+   queries: vec SearchRow;
+   site: text;
+   totals: SearchRow;
+   truncated: bool;
+   until: int;
+ };
+type SearchRow =
+ record {
+   clicks: nat;
+   impressions: nat;
+   positionMilli: nat;
+   value: text;
+ };
+type SavedReport =
+ record {
+   filters: vec Filter;
+   id: text;
+   name: text;
+   revision: nat;
+   site: text;
+   steps: vec FunnelStep;
+   updatedAt: int;
+ };
+type Row =
+ record {
+   metrics: Metrics;
+   value: text;
+ };
+type Result_9 =
+ variant {
+   err: Error;
+   ok: vec record {
+             text;
+             text;
+             nat;
+           };
+ };
+type Result_8 =
+ variant {
+   err: Error;
+   ok: vec Key;
+ };
+type Result_7 =
+ variant {
+   err: Error;
+   ok: Report;
+ };
+type Result_6 =
+ variant {
+   err: Error;
+   ok: SavedReport;
+ };
+type Result_5 =
+ variant {
+   err: Error;
+   ok;
+ };
+type Result_4 =
+ variant {
+   err: Error;
+   ok: Site;
+ };
+type Result_3 =
+ variant {
+   err: Error;
+   ok: vec SavedReport;
+ };
+type Result_20 =
+ variant {
+   err: Error;
+   ok: record {
+         people: vec AccessPerson;
+         truncated: bool;
+       };
+ };
+type Result_2 =
+ variant {
+   err: Error;
+   ok: Connection;
+ };
+type Result_19 =
+ variant {
+   err: Error;
+   ok: vec Annotation;
+ };
+type Result_18 =
+ variant {
+   err: Error;
+   ok: record {
+         key: Key;
+         token: text;
+       };
+ };
+type Result_17 =
+ variant {
+   err: Error;
+   ok: record {
+         cursor: text;
+         events: vec Event;
+       };
+ };
+type Result_16 =
+ variant {
+   err: Error;
+   ok: vec nat;
+ };
+type Result_15 =
+ variant {
+   err: Error;
+   ok:
+    record {
+      completions: nat;
+      revenue: vec record {
+                     text;
+                     int;
+                   };
+      visitors: nat;
+    };
+ };
+type Result_14 =
+ variant {
+   err: Error;
+   ok: vec Goal;
+ };
+type Result_13 =
+ variant {
+   err: Error;
+   ok:
+    record {
+      accepted: nat;
+      collectors: vec text;
+      directoryAt: int;
+      duplicates: nat;
+      rejected: nat;
+      storageChargeBytes: nat;
+      storedEvents: nat;
+    };
+ };
+type Result_12 =
+ variant {
+   err: Error;
+   ok: nat;
+ };
+type Result_11 =
+ variant {
+   err: Error;
+   ok: vec ImportRow;
+ };
+type Result_10 =
+ variant {
+   err: Error;
+   ok: record {
+         accepted: nat;
+         duplicates: nat;
+       };
+ };
+type Result_1 =
+ variant {
+   err: Error;
+   ok: opt SearchSnapshot;
+ };
+type Result =
+ variant {
+   err: Error;
+   ok: AccessView;
+ };
+type ReportRequest =
+ record {
+   dimension: text;
+   filters: vec Filter;
+   from: int;
+   limit: nat;
+   site: text;
+   until: int;
+ };
+type Report =
+ record {
+   rows: vec Row;
+   scanned: nat;
+   totals: Metrics;
+   truncated: bool;
+ };
+type PermissionStatus =
+ record {
+   app: text;
+   directoryAt: int;
+   legacy: vec LegacyGrant;
+   legacyGroups: vec record {
+                       name: text;
+                       role: text;
+                     };
+   model: nat;
+   revision: text;
+ };
+type Metrics =
+ record {
+   bounces: nat;
+   durationSeconds: nat;
+   engagementMs: nat;
+   events: nat;
+   pageviews: nat;
+   revenue: vec record {
+                  text;
+                  int;
+                };
+   scrollDepthSum: nat;
+   scrollSamples: nat;
+   visitors: nat;
+   visits: nat;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type LegacyGrant =
+ record {
+   email: text;
+   role: text;
+   source: text;
+ };
+type Key =
+ record {
+   expiresAt: int;
+   id: text;
+   name: text;
+   owner: text;
+   scope: variant {
+            manage;
+            read;
+            share;
+          };
+   site: text;
+ };
+type ImportRow =
+ record {
+   day: int;
+   dimension: text;
+   id: text;
+   metrics: Metrics;
+   site: text;
+   value: text;
+ };
+type HttpResponse =
+ record {
+   body: blob;
+   headers: vec record {
+                  text;
+                  text;
+                };
+   status_code: nat16;
+   streaming_strategy:
+    opt
+     variant {
+       Callback:
+        record {
+          callback:
+           func (text) -> (record {
+                             body: blob;
+                             token: opt text;
+                           }) query;
+          token: text;
+        };};
+   upgrade: opt bool;
+ };
+type HttpRequest =
+ record {
+   body: blob;
+   certificate_version: opt nat16;
+   headers: vec record {
+                  text;
+                  text;
+                };
+   method: text;
+   url: text;
+ };
+type Goal =
+ record {
+   id: text;
+   kind: variant {
+           event;
+           page;
+           scroll: nat;
+         };
+   name: text;
+   site: text;
+   value: text;
+ };
+type FunnelStep =
+ record {
+   kind: variant {
+           event;
+           page;
+         };
+   value: text;
+ };
+type Filter =
+ record {
+   dimension: text;
+   exclude: bool;
+   values: vec text;
+ };
+type Event =
+ record {
+   at: int;
+   browser: text;
+   campaign: text;
+   city: text;
+   content: text;
+   country: text;
+   currency: text;
+   device: text;
+   engagementMs: nat;
+   hostname: text;
+   id: text;
+   interactive: bool;
+   kind: variant {
+           engagement;
+           event;
+           pageview;
+         };
+   medium: text;
+   name: text;
+   order: nat;
+   os: text;
+   path: text;
+   props: vec record {
+                text;
+                text;
+              };
+   region: text;
+   revenueMinor: int;
+   scrollDepth: nat;
+   site: text;
+   source: text;
+   term: text;
+   visitor: text;
+ };
+type Error =
+ variant {
+   capacity: text;
+   conflict: text;
+   invalid: text;
+   notFound;
+   unauthorized;
+ };
+type DirectoryRow =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type Connection =
+ record {
+   clientId: text;
+   property: text;
+   revision: nat;
+ };
+type Annotation =
+ record {
+   at: int;
+   id: text;
+   site: text;
+   "text": text;
+ };
+type AccessView =
+ record {
+   legacyAllReaders: bool;
+   managers: vec AccessPerson;
+   readers: vec AccessPerson;
+   revision: nat;
+   site: text;
+   updatedAt: int;
+   updatedBy: text;
+ };
+type AccessPerson =
+ record {
+   active: bool;
+   automatic: bool;
+   displayName: text;
+   eligible: bool;
+   email: text;
+   id: text;
+ };
+service : {
+  accessPeople: (token: text, site: text, search: text) -> (Result_20) query;
+  annotations: (token: text, site: text) -> (Result_19) query;
+  collectorSites: () -> (vec Site) query;
+  configureCollectors: (collectors: vec principal) -> ();
+  createKey: (token: text, site: text, name: text, scope:
+   variant {
+     manage;
+     read;
+     share;
+   }, days: nat) -> (Result_18);
+  deleteGoal: (token: text, site: text, id: text) -> (Result_5);
+  deleteReport: (token: text, site: text, id: text, revision: nat) ->
+   (Result_5);
+  deleteSite: (token: text, id: text) -> (Result_5);
+  exportEvents: (token: text, site: text, after: text, limit: nat) ->
+   (Result_17) query;
+  funnel: (token: text, request: ReportRequest, steps: vec FunnelStep) ->
+   (Result_16) query;
+  getSiteAccess: (token: text, site: text) -> (Result) query;
+  goalReport: (token: text, request: ReportRequest, id: text) ->
+   (Result_15) query;
+  goals: (token: text, site: text) -> (Result_14) query;
+  health: (token: text) -> (Result_13) query;
+  http_request: (_req: HttpRequest) -> (HttpResponse) query;
+  http_request_update: (req: HttpRequest) -> (HttpResponse);
+  hub_deactivate: (emails: vec text) -> (nat);
+  hub_manifest: () -> (Manifest) query;
+  hub_permissionStatus: () -> (PermissionStatus);
+  hub_ping: () -> (text) query;
+  hub_upsert: (rows: vec DirectoryRow) -> (nat);
+  importAggregates: (token: text, rows: vec ImportRow) -> (Result_12);
+  imported: (token: text, site: text, from: int, until: int) ->
+   (Result_11) query;
+  info: () ->
+   (record {
+      hubId: text;
+      hubSet: bool;
+      name: text;
+      orgName: text;
+      version: text;
+    }) query;
+  ingestBatch: (batch: vec Event) -> (Result_10);
+  journeys: (token: text, request: ReportRequest) -> (Result_9) query;
+  listKeys: (token: text) -> (Result_8) query;
+  listSites: (token: text) -> (vec SiteView) query;
+  loginWithTicket: (ticket: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
+  report: (token: text, request: ReportRequest) -> (Result_7) query;
+  revokeKey: (token: text, id: text) -> (Result_5);
+  saveAnnotation: (token: text, item: Annotation) -> (Result_5);
+  saveGoal: (token: text, goal: Goal) -> (Result_5);
+  saveReport: (token: text, item: SavedReport) -> (Result_6);
+  saveSearchConnection: (token: text, site: text, config: Connection) ->
+   (Result_2);
+  saveSearchSnapshot: (token: text, revision: nat, snapshot:
+   SearchSnapshot) -> (Result_5);
+  saveSite: (token: text, site: Site) -> (Result_4);
+  savedReports: (token: text, site: text) -> (Result_3) query;
+  searchConnection: (token: text, site: text) -> (Result_2) query;
+  searchSnapshot: (token: text, site: text) -> (Result_1) query;
+  setHub: (id: text) -> ();
+  setSiteAccess: (token: text, site: text, expectedRevision: nat, readers:
+   vec text, managers: vec text) -> (Result);
+  signOut: (token: text) -> ();
+  whoami: (token: text) -> (opt User) query;
+}

@@ -1,0 +1,245 @@
+type TracePt =
+ record {
+   nat;
+   nat;
+ };
+type Submission =
+ record {
+   coins: vec nat;
+   durationMs: nat;
+   meters: nat;
+   runId: nat;
+   version: text;
+ };
+type Settings =
+ record {
+   adminCount: nat;
+   adminEmails: vec text;
+   adminGroup: text;
+   appUrl: text;
+   hubId: text;
+   lastDirectoryPull: int;
+   orgName: text;
+   peopleCount: nat;
+   players: nat;
+   published: nat;
+   throws: nat;
+ };
+type Run =
+ record {
+   day: nat;
+   id: nat;
+   startedAt: int;
+ };
+type Row =
+ record {
+   at: int;
+   coins: nat;
+   meters: nat;
+   name: text;
+   score: nat;
+ };
+type Reply_3 =
+ variant {
+   err: text;
+   ok: Run;
+ };
+type Reply_2 =
+ variant {
+   err: text;
+   ok: bool;
+ };
+type Reply_1 =
+ variant {
+   err: text;
+   ok: Pilot;
+ };
+type Reply =
+ variant {
+   err: text;
+   ok: Row;
+ };
+type Pilot =
+ record {
+   hub: bool;
+   hubId: text;
+   name: text;
+   suiteToken: text;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type LogRow =
+ record {
+   at: int;
+   what: text;
+   who: text;
+ };
+type Ghost =
+ record {
+   dm: nat;
+   name: text;
+   trace: vec TracePt;
+ };
+type DirectoryRow =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type BoardEntry =
+ record {
+   at: int;
+   dm: nat;
+   name: text;
+   zone: text;
+ };
+/// kebab-stack bug — Ship the Bug, the office mini-game.
+///
+/// Throw a bug off the company roof and see how far it gets through the
+/// software-delivery journey: localhost, dev, staging, production … all the
+/// way to the internet. Pixel game in the browser; this canister keeps the
+/// scoreboards (daily, weekly, all-time), the daily ghost (today's best run,
+/// replayed as a translucent chaser) and a player's chosen board name.
+///
+/// Privacy model: publishing a run is OPT-IN, asked after every throw. Private
+/// runs only bump an anonymous counter. Players may remove their published
+/// scores anytime. The board shows the name a player chose (their hub name or
+/// a unique handle) and is only visible to signed-in people. Scores are archive
+/// data — deliberately no hub_ownedObjects/hub_reassign.
+///
+/// Sign-in and people come from the hub (mo:kebab-hub).
+///
+/// Stable-state rules: every top-level let/var is stable and append-only —
+/// never remove or rename one; new data goes into new side tables.
+service : {
+  addAdminEmail: (email: text) -> (bool);
+  adminLogRows: (tok: text) -> (vec LogRow) query;
+  arcadeArchive: () -> (vec Row) query;
+  arcadeBegin: () -> (Reply_3);
+  arcadeLeaderboard: () -> (vec Row) query;
+  arcadeLogin: (ticket: text) -> (Reply_1);
+  arcadeLogout: () -> ();
+  arcadeProfile: () -> (Reply_1);
+  arcadeRemove: () -> (Reply_2);
+  arcadeSetName: (name: text) -> (Reply_1);
+  arcadeSubmit: (s: Submission) -> (Reply);
+  claimAdmin: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  getSettings: (tok: text) -> (opt Settings) query;
+  hub_deactivate: (emails: vec text) -> (nat);
+  hub_manifest: () -> (Manifest) query;
+  hub_ping: () -> (text) query;
+  hub_upsert: (rows: vec DirectoryRow) -> (nat);
+  hub_usesGroup: (name: text) -> (vec text) query;
+  info: () ->
+   (record {
+      appUrl: text;
+      hubId: text;
+      hubSet: bool;
+      orgName: text;
+      version: text;
+    }) query;
+  /// Signed-in only: the board shows names, so it stays inside the company.
+  leaderboard: (tok: text) ->
+   (opt
+     record {
+       allTime: vec BoardEntry;
+       daily: vec BoardEntry;
+       day: int;
+       ghost: opt Ghost;
+       myBest: nat;
+       throws: nat;
+       weekly: vec BoardEntry;
+     }) query;
+  loginWithTicket: (ticket: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
+  /// Opt-in implies opt-out: a player removes their own published scores (and their ghost).
+  removeMyScores: (tok: text) -> (record {
+                                    detail: text;
+                                    ok: bool;
+                                  });
+  /// Admins: wipe every board (a new season). Players' name choices stay.
+  resetBoards: (tok: text) -> (record {
+                                 detail: text;
+                                 ok: bool;
+                               });
+  setAdminEmails: (tok: text, emails: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setHub: (id: text) -> (bool);
+  setPlayerName: (tok: text, useReal: bool, alias: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+      player: text;
+    });
+  setSettings: (tok: text, args:
+   record {
+     adminGroup: text;
+     appUrl: text;
+     orgName: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  signOut: (tok: text) -> ();
+  /// dm = distance in decimetres; durMs + trace: run duration for the plausibility check and the daily ghost.
+  submitScore: (tok: text, args:
+   record {
+     dm: nat;
+     durMs: nat;
+     publish: bool;
+     trace: vec TracePt;
+     zone: text;
+   }) ->
+   (record {
+      detail: text;
+      ok: bool;
+      publishedBest: nat;
+      rankAllTime: nat;
+      rankWeekly: nat;
+    });
+  syncNow: (tok: text) -> (record {
+                             detail: text;
+                             ok: bool;
+                           });
+  /// player = the chosen board name ("" until chosen — the frontend asks on the first visit).
+  whoami: (tok: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       hubId: text;
+       needsClaim: bool;
+       orgName: text;
+       player: text;
+       role: text;
+       roleSource: text;
+     }) query;
+}

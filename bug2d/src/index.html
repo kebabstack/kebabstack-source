@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="stylesheet" href="./tokens.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0912">
+  <meta name="description" content="Ship the Bug 2D. Launch from Zürich into a hand-drawn arcade universe: five boosts, lasers, Motoko and your own arcade high score.">
+  <title>Ship the Bug 2D — Modern Retro Arcade</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./arcade.css">
+  <link rel="stylesheet" href="./retro.css">
+</head>
+<body>
+  <div id="world" aria-label="2D arcade flight world"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <header class="game-header">
+    <a class="brand" href="./" aria-label="Ship the Bug home"><img src="./favicon.svg" alt="" width="36" height="36"><span>DFINITY<span class="brand-sub">2D ARCADE</span></span></a>
+    <div class="edition"><i></i> SHIP THE BUG <span> / </span> 2D / MODERN RETRO</div>
+    <nav aria-label="Game controls">
+      <button id="profileBtn" class="icon-button profile-button" aria-label="Player profile"><span id="playerChip">PLAY AS GUEST</span></button>
+      <button id="soundBtn" class="icon-button" title="Sound (M)" aria-label="Enable sound" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5ZM16 8l6 8m0-8-6 8"/></svg></button>
+      <button id="scoresBtn" class="icon-button" title="Global leaderboard" aria-label="Global leaderboard"><svg viewBox="0 0 24 24"><path d="M7 3h10v7a5 5 0 0 1-10 0ZM7 5H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4M12 15v6m-5 0h10"/></svg></button>
+      <button id="helpBtn" class="icon-button" title="How to play" aria-label="How to play">?</button>
+    </nav>
+  </header>
+  <main>
+    <section id="intro" aria-labelledby="gameTitle">
+      <div class="eyebrow">KEBABSTACK ARCADE · VOL. 02</div>
+      <h1 id="gameTitle">SHIP<br>THE <em>BUG.</em><span>2D</span></h1>
+      <p>ZÜRICH → INFINITY</p>
+      <div class="insert-coin">HOLD SPACE TO LAUNCH</div>
+      <div class="retro-stripes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </section>
+    <div id="flightHud" class="flight-hud" aria-label="Flight statistics">
+      <div class="distance-block"><span class="eyebrow">TOTAL SCORE</span><div><b id="score">0</b><span>pts</span></div></div>
+      <div class="flight-stat"><span>COINS / +50</span><strong id="coins">0</strong></div>
+      <div class="flight-stat"><span>DISTANCE</span><strong><span id="distance">0</span> m</strong></div>
+      <div class="flight-stat"><span>AIRSPEED</span><strong id="speed">0 m/s</strong></div>
+      <button id="pauseBtn" class="round-button" aria-label="Pause flight" title="Pause (P / Escape)">Ⅱ</button>
+    </div>
+    <aside id="commander" class="commander" aria-label="DFINITY mission commander" data-mood="calm" data-visible="false" aria-hidden="true">
+      <div class="commander-head"><span><i></i> MISSION CONTROL</span><span>LIVE / ∞</span></div>
+      <div class="commander-body"><div class="commander-portrait"><img src="./assets/apple-touch-icon.png" alt="Ship the Bug guide"><span>CMD. INFINITY</span></div><div class="commander-copy" role="status" aria-live="polite" aria-atomic="true"><b id="commanderTitle">READY WHEN YOU ARE</b><p id="commanderMessage">Zürich to infinity. Let's ship.</p></div></div>
+      <div id="stageCard" class="stage-card"><span id="dayLabel">DAILY FLIGHT</span><div><i id="stageDot"></i><b id="zoneName">DFINITY HQ</b></div><p id="zoneTag"></p><div class="stage-progress"><i id="zoneProgress"></i></div><small id="nextZone"></small></div>
+    </aside>
+    <aside class="burn-panel" aria-label="Simulated arcade cycle burn"><span>SIM CYCLE BURN <i>↗</i></span><strong><b id="burnRate">0</b><small> K / s</small></strong><div class="burn-track"><i id="burnFill"></i></div><small id="burnMood">COMPUTE WITH PURPOSE</small></aside>
+    <div id="abilityHud" class="ability-hud" aria-label="Active abilities"></div>
+    <div class="bottom-area">
+      <div class="flight-path"><span id="flightWeather">ZÜRICH</span><div id="journeyLine" class="journey-line"></div><span id="flightPressure">MAINNET</span></div>
+      <div class="control-dock">
+        <div class="dock-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m16 3 10 24-10-5-10 5Z"/><path d="M16 11v11"/></svg></div>
+        <div id="launchControls" class="launch-controls"><label for="angle">LAUNCH ANGLE <strong id="angleValue">38°</strong></label><input type="range" id="angle" min="25" max="60" value="38" aria-label="Launch angle"><div class="range-labels"><span>LOW & FAST</span><span>HIGH & HOPEFUL</span></div></div>
+        <div id="boostControls" class="boost-controls"><span class="control-label">PROMPTS REMAINING</span><div id="boostPips" role="img" aria-label="5 prompt boosts remaining"><i></i><i></i><i></i><i></i><i></i></div><div class="flow-status"><span id="flowLabel">FLOW 0%</span><div id="flowMeter" role="progressbar" aria-label="Overdrive energy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="flowFill"></i></div></div></div>
+        <div class="action-area"><button id="actionBtn" class="action-button"><span id="actionFill"></span><span id="actionText">HOLD TO CHARGE</span><svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button><span id="actionHint">RELEASE TO LAUNCH · OR HOLD SPACE</span></div>
+        <div class="fire-controls"><button id="fireBtn" class="fire-button" aria-label="Fire pulse" title="Fire pulse (hold F / J)"><span class="fire-symbol" aria-hidden="true">⌖</span><span>FIRE <kbd>F</kbd></span></button><div id="weaponMeter" class="weapon-meter" role="progressbar" aria-label="Blaster heat" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="weaponHeat"></i></div><small id="fireStatus">BURSTS &gt; SPAM</small></div>
+        <button id="restartBtn" class="restart-button" title="New run (R)" aria-label="Restart run"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></svg><span>R</span></button>
+      </div>
+      <div class="footer-meta"><span id="controlHint"><kbd>SPACE</kbd> CHARGE / BOOST <span>·</span> <kbd>F</kbd> FIRE</span><span>MODERN RETRO ARCADE <i></i> PUBLIC CREW <span id="version"></span></span></div>
+    </div>
+  </main>
+  <dialog id="resultDialog" aria-labelledby="resultTitle">
+    <div class="result-layout">
+      <section class="result-overview">
+        <span class="eyebrow">FLIGHT COMPLETE · 2D · SEASON 1</span>
+        <h2 id="resultTitle" tabindex="-1">Well, it shipped.</h2>
+        <div class="result-distance"><b id="resultScore">0</b><span>POINTS THIS FLIGHT</span></div>
+        <p id="resultBonus" class="bonus-report"></p>
+        <div class="result-grid"><div><small>DISTANCE</small><strong id="resultDistance"></strong></div><div><small>REACHED</small><strong id="resultZone"></strong></div><div><small>FLIGHT TIME</small><strong id="resultTime"></strong></div></div>
+        <p id="resultQuip"></p><p id="resultCombat" class="combat-report"></p><div id="resultSeals" class="result-seals" aria-label="Ecosystem discoveries"></div>
+      </section>
+      <section class="result-board" aria-labelledby="resultBoardTitle">
+        <div class="result-board-heading"><div><span class="eyebrow">GLOBAL FLIGHT CREW</span><h3 id="resultBoardTitle">You vs. the crew.</h3></div><div class="result-rank"><b id="resultRank">—</b><span id="resultRankLabel">PRIVATE PREVIEW</span></div></div>
+        <p id="resultBoardStatus" role="status">Loading the leaderboard…</p>
+        <div id="resultScoreList" aria-label="Leaderboard comparison"></div>
+        <p id="resultBoardNote"></p><button id="resultBoardRetry" class="text-button" hidden>Retry leaderboard</button>
+      </section>
+      <section class="result-choice" aria-label="Choose what happens to this flight">
+        <div class="result-name"><label for="resultName">YOUR PUBLIC CALLSIGN</label><input id="resultName" maxlength="20" minlength="3" autocomplete="nickname" placeholder="Choose a name to publish" aria-describedby="resultNameHint"><small id="resultNameHint">3–20 letters, numbers, spaces, dots, hyphens or underscores.</small></div>
+        <div class="result-actions"><button id="publishBtn" class="primary-button">PUBLISH SCORE</button><button id="againBtn" class="secondary-button">PLAY AGAIN · KEEP PRIVATE</button></div>
+        <p id="saveNote" role="status">Your flight stays private until you choose Publish score.</p>
+        <div class="result-local"><button id="saveBtn" class="text-button">Save only on this device</button><span id="localSaveNote" role="status"></span></div>
+      </section>
+    </div>
+  </dialog>
+  <dialog id="helpDialog" aria-labelledby="helpTitle"><button class="dialog-close" data-close="helpDialog" aria-label="Close help">×</button><span class="eyebrow">FLIGHT SCHOOL / ECOSYSTEM ATLAS</span><h2 id="helpTitle">From Zürich to infinity.</h2><ol class="help-list"><li><b>Choose your angle.</b><span>A low launch travels fast. A high launch buys airtime.</span></li><li><b>Hold. Release. Hope.</b><span>Hold SPACE or the gold button. Release near full for a perfect launch; the meter swings back if you hold too long.</span></li><li><b>Follow the arc.</b><span>The flight follows its launch angle automatically. Time your boosts to stay in the air.</span></li><li><b>Five prompts. Use them wisely.</b><span>Press SPACE or the gold button mid-flight to boost. Every launch remixes the route. Gold rings are coins: every coin adds 50 points to your distance score. Coffee, compiler crystals and gates boost. Red firewalls cost serious momentum. Exploit mines guard the floor and some hover in the air. Their red rings mark danger: find a gap, fly over or clear one with a pulse. A mine hit costs 40% momentum; an Identity shield absorbs one hazard hit. Orange armor needs two pulses. Lift pickups get weaker as pressure rises; floor rescues are lucky finds. The glowing data stream carries you into cyberspace.</span></li><li><b>Find your FLOW.</b><span>Each coin adds 4 FLOW; every fifth coin in a series adds 8 more. Keep coins within 2.5 seconds of each other for the series. A genuinely close pass of a mine or firewall adds 20 FLOW after you clear it. At 100, a 3.2-second Overdrive starts automatically with extra thrust and a gold/mint trail. Hits break your FLOW; a shield protects it. A five-second recovery prevents endless Overdrive chains. Your five prompt boosts stay separate.</span></li><li><b>Outsmart the Motoko ghost.</b><span>The armoured Motoko ghost joins at 500 m, circles and follows into canister airspace. From 2,200 m it returns on later patrols, with quiet stretches between encounters. A pink cannon charges for 1.25 seconds, then fires a visible pulse at the locked lane. Time a boost or hit Motoko with two pulses. Only a projectile hit costs 33% momentum; touching its body does not. Debugging it buys eight seconds of peace and 75 K simulated cycles.</span></li><li><b>Patch the firewall. With lasers.</b><span>Hold F or J, use the FIRE button, or click the scene to shoot. Nearby firewalls, mines and Motoko get a little aim assistance. The blaster aims at nearby threats automatically. Fire in bursts: holding FIRE overheats the blaster. A target outline means lock-on. Each cleared firewall gives 25 K simulated cycles and a mine gives 15 K; these do not add leaderboard points. Releasing FIRE cools the weapon. Flight notices announce new chapters and your last-chance boost. The bug stops its final crawl below 6 m/s; you have 1.6 seconds to use a remaining boost. Wind is announced before it arrives; tailwinds and updrafts can save a run.</span></li></ol><div class="atlas-heading">YOUR ECOSYSTEM FIELD GUIDE <span>REAL TECHNOLOGY · FICTIONAL FLIGHT POWERS</span></div><div id="atlas" class="atlas"></div><p class="privacy-note">P / Escape pauses · R starts a new run · M toggles sound. Every launch has a new route and wind sequence. Faster flight, automatic trajectory and five well-timed boosts; this cartridge has its own leaderboard. The global 2D board is open to everyone. Publishing is your choice after every run. Cycle burn is fictional arcade telemetry, with no real token spending.</p><button class="primary-button" data-close="helpDialog">GOT IT. LET'S SHIP.</button></dialog>
+  <dialog id="scoresDialog" aria-labelledby="scoresTitle"><button class="dialog-close" data-close="scoresDialog" aria-label="Close leaderboard">×</button><span class="eyebrow">ONE INTERNET COMPUTER · EVERYONE WELCOME</span><h2 id="scoresTitle">Global flight crew.</h2><div class="board-tabs"><button id="globalTab" aria-pressed="true">2D Season 1</button><button hidden id="archiveTab" aria-pressed="false">Early flights</button><button id="localTab" aria-pressed="false">This device</button></div><p id="boardStatus" role="status"></p><div id="scoreList"></div><p class="privacy-note">1 point per meter + 50 per coin. Your best 2D Season 1 run ranks here under your chosen name. Scores are separate from the 3D game. Guest and Kebabstack pilots share the same board.</p><button id="removeScoresBtn" class="text-button">Remove my published scores</button><button class="primary-button" data-close="scoresDialog">BACK TO THE FLIGHT</button></dialog>
+  <dialog id="profileDialog" aria-labelledby="profileTitle"><button class="dialog-close" data-close="profileDialog" aria-label="Close player profile">×</button><span class="eyebrow">YOUR CALLSIGN</span><h2 id="profileTitle">Everyone can fly.</h2><div id="suiteTopbar" hidden></div>
+<p id="profileDescription">Play instantly as a guest. Pick a name to join the global leaderboard, or sign in through Kebabstack.</p><label class="name-label" for="playerName">Player name</label><input id="playerName" maxlength="20" minlength="3" autocomplete="nickname" placeholder="e.g. MotokoMaverick"><p class="privacy-note">3–20 letters, numbers, spaces, dots, hyphens or underscores. Guest names belong to this browser and website address. Clearing browser data loses access; Kebabstack login can recover its own profile.</p><p id="profileStatus" role="status"></p><button id="nameSaveBtn" class="primary-button">SAVE CALLSIGN</button><button id="hubLoginBtn" class="secondary-button">Sign in with Kebabstack ↗</button><button id="logoutBtn" class="text-button" hidden>Sign out of Kebabstack</button></dialog>
+  <dialog id="pauseDialog" aria-labelledby="pauseTitle"><span class="eyebrow">DEPLOYMENT ON HOLD</span><h2 id="pauseTitle">Take a breath.</h2><p>Your bug will wait right here.</p><button id="resumeBtn" class="primary-button">RESUME FLIGHT</button><button id="abortBtn" class="secondary-button">Start a new run</button></dialog>
+  <div id="loading"><div class="loader-bug">∞</div><b>PREPARING FLIGHT…</b><span id="loadMessage">Ship the Bug / 2D Arcade</span></div>
+  <script type="module" src="./main.js"></script>
+  <script>window.addEventListener('error',function(e){if(!document.body.classList.contains('loaded'))document.getElementById('loadMessage').textContent='Could not start the game. Reload and try again.'});</script>
+</body>
+</html>

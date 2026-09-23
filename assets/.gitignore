@@ -1,0 +1,3 @@
+# Installation-specific custom-domain ownership and manual upload configuration.
+/dist/.well-known/
+/dist/.ic-assets.json5

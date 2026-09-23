@@ -1,0 +1,13 @@
+[package]
+name = "kebab-hub"
+version = "0.12.4"
+description = "kebab-stack hub client for app canisters: ticket sign-in, sessions, directory cache, connector contract"
+repository = "https://github.com/kebabstack/kebabstack"
+license = "MIT"
+keywords = ["kebab-stack", "hub", "sso", "directory", "cloud-engine"]
+
+[toolchain]
+moc = "1.12.0"
+
+[dependencies]
+core = "2.6.1"

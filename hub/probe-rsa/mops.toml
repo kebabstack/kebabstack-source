@@ -1,0 +1,16 @@
+[package]
+name = "kebabstack-rsa-probe"
+version = "0.0.1"
+description = "feasibility probe: RS256 signing and 2048-bit RSA key generation in-canister — instruction counts"
+
+[toolchain]
+moc = "1.12.0"
+
+[dependencies]
+core = "2.6.1"
+
+[canisters.backend]
+main = "backend/main.mo"
+
+[build]
+outputDir = "backend/dist"

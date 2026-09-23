@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>PayloadIdentifier</key>
+			<string>org.kebabstack.trust.notifications.payload</string>
+			<key>PayloadUUID</key>
+			<string>86C72C44-0FAB-50D1-894C-F47641E2B165</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>PayloadType</key>
+			<string>com.apple.notificationsettings</string>
+			<key>NotificationSettings</key>
+			<array>
+				<dict>
+					<key>BundleIdentifier</key>
+					<string>com.apple.BTMNotificationAgent</string>
+					<key>NotificationsEnabled</key>
+					<false/>
+				</dict>
+			</array>
+		</dict>
+	</array>
+	<key>PayloadIdentifier</key>
+	<string>org.kebabstack.trust.notifications</string>
+	<key>PayloadUUID</key>
+	<string>7F221382-FBA5-5802-AE32-B5FDB92C2399</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadScope</key>
+	<string>System</string>
+	<key>PayloadDisplayName</key>
+	<string>Trust · Quiet notifications (all background items)</string>
+	<key>PayloadDescription</key>
+	<string>Suppresses ALL macOS background-item notifications, including other applications. Optional company policy, not a Trust-only setting.</string>
+</dict>
+</plist>

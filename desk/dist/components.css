@@ -1,0 +1,45 @@
+/* Shared workspace controls. Layout and domain-specific visualizations remain
+   with their app. All values resolve through the canonical runtime tokens. */
+.ks-workspace :is(button,input,select,textarea){font-family:var(--ks-ui);touch-action:manipulation}
+.ks-workspace :is(button,.button,.button-link,.pill.primary,.pill.outline,.linkbtn){text-transform:none;letter-spacing:normal}
+.ks-workspace :is(#layout,#portal,main) button:not(.cat):not(.stat):not(.tstat):not(.ks-app):not(.document-link){min-height:var(--ks-button-height);border-radius:var(--ks-button-radius);font-size:var(--ks-button-font);line-height:1.45;letter-spacing:0;text-transform:none}
+.ks-workspace :is(.button,.button-link,button.pill,.pill.primary,.pill.outline,.linkbtn){min-height:var(--ks-button-height);padding:10px var(--ks-button-padding-x);border-radius:var(--ks-button-radius);font:550 14px/20px var(--ks-ui);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.ks-workspace :is(button.primary,.button.primary,.pill.primary,.button-link.primary){background:var(--ks-accent);border-color:var(--ks-accent);color:var(--ks-on-accent)}
+.ks-workspace :is(button.primary,.button.primary,.pill.primary):hover:not(:disabled){background:var(--ks-accent-strong);border-color:var(--ks-accent-strong);color:var(--ks-on-accent)}
+.ks-workspace :is(button.danger,.button.danger,.linkbtn.danger){color:var(--ks-danger);border-color:var(--ks-danger);background:var(--ks-danger-bg)}
+.ks-workspace :is(button:disabled,[aria-disabled=true]){cursor:not-allowed}
+.ks-workspace :is(#layout,#portal,main) :is(button.sm,.pill.sm,.icon-button,.stars button){min-height:var(--ks-button-dense-height);font-size:14px}
+.ks-workspace :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]),select,textarea){min-height:var(--ks-field-height);border-radius:var(--ks-field-radius);border-color:var(--ks-rule-strong);font-size:var(--ks-field-font);color:var(--ks-fg);background:var(--ks-bg-card);padding:10px var(--ks-field-padding-x);box-sizing:border-box;max-width:100%}
+.ks-workspace :is(input[type=checkbox],input[type=radio]){accent-color:var(--ks-accent)}
+.ks-workspace :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:var(--ks-button-focus-width) solid var(--ks-focus);outline-offset:var(--ks-button-focus-offset)}
+.ks-workspace :is(.btnrow,.actions,.toolbar){gap:var(--ks-button-group-gap)}
+.ks-workspace :is(.status.err,.error,.err-text){color:var(--ks-danger)}
+.ks-workspace :is(.card,.scard,.panel){border-radius:var(--ks-panel-radius)}
+.ks-workspace :is(h1,h2,h3,h4){font-family:var(--ks-ui);text-wrap:pretty}
+.ks-workspace :is(.lead,.subtle,.muted,.kv){color:var(--ks-fg-secondary)}
+
+/* Horizontal navigation retains its route/state semantics in each app. */
+.ks-workspace :is(.tabs,#nav:has(>.tab),#nav:has(>button[data-view])){gap:var(--ks-tabs-gap);scroll-padding-inline:16px}
+.ks-workspace :is(#layout,main) :is(.tabs>button,.tabs>.tab,#nav>button[data-view]:not(.navstep),#viewSeg>button){min-height:var(--ks-tabs-height);padding:10px var(--ks-tabs-padding-x);font:500 var(--ks-tabs-font)/var(--ks-tabs-line) var(--ks-ui);border-radius:0;letter-spacing:0;text-transform:none;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--ks-fg-secondary);white-space:nowrap;flex-shrink:0}
+.ks-workspace :is(#layout,main) :is(.tabs>button,.tabs>.tab,#nav>button[data-view]:not(.navstep),#viewSeg>button):is(.on,.active,[aria-selected=true]){color:var(--ks-accent);border-bottom-color:var(--ks-accent);background:transparent}
+.ks-workspace :is(.tabs .n,.tab .n){margin-left:var(--ks-tabs-count-gap);font:500 12px/1.4 var(--ks-ui)}
+
+/* Consistent vertical navigation: quiet selected row, fixed label/icon slots. */
+.ks-workspace :is(#consoleNav .navstep,.desk-nav .navstep,.mainnav button,.workspace>#nav a){display:flex;align-items:center;gap:var(--ks-menu-gap);min-height:var(--ks-menu-height);padding:10px var(--ks-menu-padding-x);border:0;border-radius:var(--ks-menu-radius);font:500 var(--ks-menu-font)/var(--ks-menu-line) var(--ks-ui);letter-spacing:0;text-transform:none;color:var(--ks-fg-secondary);text-align:left;background:transparent;box-sizing:border-box}
+.ks-workspace :is(#consoleNav .navstep,.desk-nav .navstep,.mainnav button,.workspace>#nav a):is(.active,.on,[aria-current=page]){background:var(--ks-accent-dim);color:var(--ks-accent);box-shadow:none}
+.ks-workspace :is(#consoleNav .navstep,.desk-nav .navstep,.mainnav button,.workspace>#nav a):hover{background:var(--ks-bg-sunk);color:var(--ks-fg)}
+.ks-workspace :is(.mainnav .nav-icon,.desk-nav .navstep>svg){width:var(--ks-menu-icon);height:var(--ks-menu-icon);flex:0 0 var(--ks-menu-icon)}
+.ks-workspace :is(#consoleNav .nav-label,.nav-group-label){font:600 11px/1.4 var(--ks-ui);letter-spacing:.1em}
+.ks-workspace .mainnav button .n{color:var(--ks-accent);background:var(--ks-accent-dim)}
+.ks-workspace :is(.section-nav,.subnav){gap:8px;flex-wrap:wrap}
+.ks-workspace :is(.section-nav button,.subnav button):is(.on,.active){color:var(--ks-accent);background:var(--ks-accent-dim);border-color:var(--ks-rule)}
+.ks-workspace .mono,.ks-workspace code,.ks-workspace pre{font-family:var(--ks-mono)}
+@media(max-width:760px){.ks-workspace :is(.btnrow,.actions){flex-wrap:wrap}.ks-workspace :is(input,select,textarea){font-size:16px}.ks-workspace :is(.mainnav button,.desk-nav .navstep){flex-shrink:0}.ks-workspace .card{max-width:100%;box-sizing:border-box}}
+@media(prefers-reduced-motion:reduce){.ks-workspace *, .ks-workspace *::before,.ks-workspace *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+.ks-workspace .desk-nav .navstep .nav-label{font:inherit;letter-spacing:0;text-align:left;min-height:0}
+
+/* Project and settings navigation share the same spacing as top-level tabs. */
+.ks-workspace :is(.stabs,.oc-module-nav,.oc-settings-nav){gap:var(--ks-tabs-gap);padding-bottom:0}
+.ks-workspace :is(.stabs>button,.stabs>a,.oc-module-nav>a,.oc-settings-nav>a){display:inline-flex;align-items:center;min-height:var(--ks-tabs-height);padding:10px var(--ks-tabs-padding-x);box-sizing:border-box;font:500 var(--ks-tabs-font)/var(--ks-tabs-line) var(--ks-ui);letter-spacing:0;text-transform:none;text-decoration:none;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--ks-fg-secondary)}
+.ks-workspace :is(.stabs>button,.stabs>a,.oc-module-nav>a,.oc-settings-nav>a):is(.on,.active,[aria-current=page],[aria-selected=true]){color:var(--ks-accent);border-bottom-color:var(--ks-accent)}

@@ -1,0 +1,8 @@
+{
+  "version": "0.2.5",
+  "renderer": "Canvas2D",
+  "builtAt": "2026-09-22T15:04:54.761Z",
+  "mode": "kebabstack-2d-modern-retro",
+  "backend": "runtime-canister-env",
+  "score": "floor(meters) + coins * 50"
+}

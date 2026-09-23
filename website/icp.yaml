@@ -1,0 +1,29 @@
+networks:
+  - name: local
+    mode: managed
+    gateway:
+      port: 4180
+
+canisters:
+  - name: website
+    recipe:
+      type: "@dfinity/static-site@v0.3.3"
+      configuration:
+        dir: dist
+        build:
+          - npm run build
+        metadata:
+          - name: service:git:sha
+            value: $(git rev-parse HEAD)$(git diff --quiet HEAD 2>/dev/null || echo +dirty)
+          - name: service:git:updated_at
+            value: $(git log -1 --format=%cI)
+          - name: service:version
+            value: "0.5.1"
+    settings:
+      environment_variables:
+        __META_PROJECT: "kebabstack website"
+        __META_PROJECT_ID: "kebabstack-website"
+        __META_NAME: "Product website"
+        __META_MAIN_CANISTER: "true"
+        __META_BASE_URL: "https://kebabstack.dev"
+        __META_ICON_PATH: "/favicon.svg"

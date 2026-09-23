@@ -1,0 +1,1144 @@
+type VendorTerms =
+ record {
+   checkedAt: int;
+   detail: text;
+   noticeDays: opt nat;
+   noticeMonths: opt nat;
+   quote: text;
+   renewalRule: text;
+   status: text;
+   url: text;
+ };
+type TrashRow =
+ record {
+   canRestore: bool;
+   deletedAt: int;
+   deletedBy: text;
+   id: nat;
+   kind: text;
+   title: text;
+ };
+type Terms =
+ record {
+   amountMinor: opt int;
+   currency: text;
+   decideBy: text;
+   end: text;
+   interval: text;
+   note: text;
+   noticeDate: text;
+   noticeDays: opt nat;
+   noticeMonths: opt nat;
+   quantity: opt nat;
+   renewalDate: text;
+   renewalRule: text;
+   start: text;
+   taxBasis: text;
+   unitMinor: opt int;
+ };
+type TaskRow =
+ record {
+   assignee: text;
+   assigneeName: text;
+   auto: bool;
+   contractId: nat;
+   contractTitle: text;
+   daysLeft: opt int;
+   doneAt: int;
+   dueOn: text;
+   id: nat;
+   kind: text;
+   overdue: bool;
+   snoozedUntil: int;
+   title: text;
+ };
+type Task =
+ record {
+   assignee: text;
+   auto: bool;
+   contractId: nat;
+   createdAt: int;
+   doneAt: int;
+   doneBy: text;
+   dueOn: text;
+   id: nat;
+   kind: text;
+   remindersSent: vec nat;
+   snoozedUntil: int;
+   title: text;
+ };
+type SpaceView =
+ record {
+   archived: bool;
+   description: text;
+   id: text;
+   kind: text;
+   name: text;
+   revision: nat;
+   role: SpaceRole;
+ };
+type SpaceRole =
+ variant {
+   editor;
+   owner;
+   viewer;
+ };
+type SpaceMember =
+ record {
+   pid: text;
+   role: SpaceRole;
+ };
+type Space =
+ record {
+   archived: bool;
+   createdAt: int;
+   description: text;
+   id: text;
+   members: vec SpaceMember;
+   name: text;
+   revision: nat;
+   updatedAt: int;
+ };
+type SourceRow =
+ record {
+   contractId: opt nat;
+   contractTitle: text;
+   documents: nat;
+   fromAddr: text;
+   fromName: text;
+   handedInByName: text;
+   id: nat;
+   kind: text;
+   note: text;
+   proposals: nat;
+   receivedAt: int;
+   sentAt: text;
+   status: text;
+   subject: text;
+ };
+type Source =
+ record {
+   cc: vec text;
+   contractId: opt nat;
+   forwardComment: text;
+   fromAddr: text;
+   fromName: text;
+   handedInBy: text;
+   hash: text;
+   htmlBlob: opt nat;
+   id: nat;
+   inReplyTo: text;
+   kind: text;
+   mailbox: text;
+   messageId: text;
+   note: text;
+   providerId: text;
+   receivedAt: int;
+   references: text;
+   sentAt: text;
+   status: text;
+   subject: text;
+   textBlob: opt nat;
+   to: vec text;
+ };
+type Snapshot =
+ record {
+   checkedAt: int;
+   metrics: vec record {
+                  text;
+                  nat;
+                };
+   schema: nat;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+ };
+type Settings =
+ record {
+   adminCount: nat;
+   adminEmails: vec text;
+   adminGroup: text;
+   aiCallsToday: nat;
+   aiDailyBudget: nat;
+   aiSource: text;
+   appUrl: text;
+   blobBytes: nat;
+   contracts: nat;
+   demoSeeded: bool;
+   editorGroup: text;
+   hubId: text;
+   lastDirectoryPull: int;
+   leadDays: nat;
+   mailboxAddress: text;
+   openProposals: nat;
+   openTasks: nat;
+   orgName: text;
+   peopleCount: nat;
+   relayPrincipals: vec text;
+   reminderDays: vec nat;
+   sources: nat;
+   tzName: text;
+   tzOffsetMinutes: int;
+   version: text;
+ };
+type Rule =
+ record {
+   confirmed: bool;
+   contractId: nat;
+   createdAt: int;
+   createdBy: text;
+   id: nat;
+   kind: text;
+   value: text;
+ };
+type Record =
+ record {
+   audit: vec AuditRow;
+   canEdit: bool;
+   commercialDetails: vec CommercialField;
+   contract: Contract;
+   deputyName: text;
+   documents: vec DocumentRow;
+   holderNames: vec record {
+                      text;
+                      text;
+                      bool;
+                    };
+   proposals: vec ProposalView;
+   responsibleName: text;
+   row: ContractRow;
+   rules: vec Rule;
+   sources: vec SourceRow;
+   tasks: vec TaskRow;
+   viewerNames: vec record {
+                      text;
+                      text;
+                    };
+ };
+type ProposalView =
+ record {
+   assignee: text;
+   assigneeName: text;
+   baseRevision: nat;
+   candidates: vec nat;
+   changes: vec Change;
+   contractId: opt nat;
+   contractTitle: text;
+   createdAt: int;
+   currentRevision: nat;
+   decidedAt: int;
+   decidedBy: text;
+   decidedByName: text;
+   id: nat;
+   kind: text;
+   note: text;
+   snoozedUntil: int;
+   sourceId: nat;
+   sourceSubject: text;
+   status: text;
+   summary: text;
+   uncertainties: vec text;
+ };
+type Proposal =
+ record {
+   assignee: text;
+   baseRevision: nat;
+   candidates: vec nat;
+   changes: vec Change;
+   contractId: opt nat;
+   createdAt: int;
+   decidedAt: int;
+   decidedBy: text;
+   id: nat;
+   kind: text;
+   note: text;
+   observationId: nat;
+   snoozedUntil: int;
+   sourceId: nat;
+   status: text;
+   summary: text;
+   uncertainties: vec text;
+ };
+type PortfolioRow =
+ record {
+   assigned: nat;
+   canEdit: bool;
+   commercial: vec CommercialField;
+   contract: Contract;
+   groups: vec text;
+   hasKey: bool;
+   history: vec CostRevision;
+   ownerName: text;
+ };
+type Policy =
+ record {
+   days: vec nat;
+   enabled: bool;
+   groups: vec text;
+   hubAdmins: bool;
+   owner: bool;
+   spaceOwners: bool;
+ };
+type PermissionStatus =
+ record {
+   app: text;
+   directoryAt: int;
+   legacy: vec LegacyGrant;
+   legacyGroups: vec record {
+                       name: text;
+                       role: text;
+                     };
+   model: nat;
+   revision: text;
+ };
+type OwnedObject =
+ record {
+   id: text;
+   kind: text;
+   meta: text;
+   title: text;
+   updatedAt: int;
+ };
+type Observation =
+ record {
+   createdAt: int;
+   effectiveDate: text;
+   fields: vec Change;
+   id: nat;
+   kind: text;
+   model: text;
+   promptVersion: text;
+   sourceHash: text;
+   sourceId: nat;
+   summary: text;
+   uncertainties: vec text;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type LogRow =
+ record {
+   at: int;
+   what: text;
+   who: text;
+ };
+type LegacyGrant =
+ record {
+   email: text;
+   role: text;
+   source: text;
+ };
+type Job =
+ record {
+   attempts: nat;
+   createdAt: int;
+   doneAt: int;
+   id: nat;
+   lastError: text;
+   lockedUntil: int;
+   nextAt: int;
+   ref: nat;
+   step: text;
+ };
+type Item =
+ record {
+   detail: text;
+   historical: bool;
+   id: text;
+   kind: text;
+   path: text;
+   status: text;
+   title: text;
+ };
+type IntakeMeta =
+ record {
+   attachments: vec IntakeAttachment;
+   cc: vec text;
+   fromAddr: text;
+   fromName: text;
+   html: text;
+   inReplyTo: text;
+   kind: text;
+   mailbox: text;
+   messageId: text;
+   providerId: text;
+   references: text;
+   sentAt: text;
+   subject: text;
+   "text": text;
+   to: vec text;
+ };
+type IntakeAttachment =
+ record {
+   link: text;
+   mime: text;
+   name: text;
+   sha256: text;
+   size: nat;
+   textExtract: text;
+ };
+type ImportRow =
+ record {
+   exists: opt nat;
+   line: nat;
+   ok: bool;
+   problems: vec text;
+   title: text;
+   vendor: text;
+ };
+type Evidence =
+ record {
+   partId: text;
+   quote: text;
+ };
+type DocumentRow =
+ record {
+   createdAt: int;
+   hasText: bool;
+   hash: text;
+   id: nat;
+   link: text;
+   mime: text;
+   name: text;
+   size: nat;
+   sourceId: nat;
+   status: text;
+ };
+type Document =
+ record {
+   blobId: opt nat;
+   createdAt: int;
+   hash: text;
+   id: nat;
+   link: text;
+   mime: text;
+   name: text;
+   size: nat;
+   sourceId: nat;
+   status: text;
+   textBlob: opt nat;
+ };
+type DirectoryRow =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type CostRevision =
+ record {
+   at: int;
+   terms: Terms;
+ };
+type ContractRow =
+ record {
+   amount: text;
+   complete: bool;
+   daysToDecide: opt int;
+   decideBy: text;
+   end: text;
+   holders: nat;
+   id: nat;
+   interval: text;
+   noticeDate: text;
+   openProposals: nat;
+   openTasks: nat;
+   product: text;
+   renewalDate: text;
+   responsible: text;
+   responsibleName: text;
+   seats: opt nat;
+   status: text;
+   title: text;
+   unusedSeats: opt int;
+   updatedAt: int;
+   vendor: text;
+ };
+type ContractInput =
+ record {
+   customerRef: text;
+   deputy: text;
+   holders: vec text;
+   product: text;
+   responsible: text;
+   seats: opt nat;
+   tags: vec text;
+   title: text;
+   vendor: text;
+   viewers: vec text;
+   visibility: text;
+ };
+type Contract =
+ record {
+   createdAt: int;
+   createdBy: text;
+   customerRef: text;
+   deputy: text;
+   futureTerms: opt Terms;
+   holders: vec text;
+   id: nat;
+   origin: text;
+   product: text;
+   responsible: text;
+   revision: nat;
+   seats: opt nat;
+   status: text;
+   tags: vec text;
+   terms: Terms;
+   title: text;
+   updatedAt: int;
+   vendor: text;
+   viewers: vec text;
+   visibility: text;
+ };
+type Context =
+ record {
+   checkedAt: int;
+   items: vec Item;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+   total: nat;
+ };
+type CommercialField =
+ record {
+   field: text;
+   value: text;
+ };
+type Change =
+ record {
+   basis: text;
+   evidence: vec Evidence;
+   field: text;
+   newValue: text;
+   oldValue: text;
+ };
+type AuditRow =
+ record {
+   after: text;
+   at: int;
+   before: text;
+   contractId: nat;
+   id: nat;
+   sourceId: opt nat;
+   what: text;
+   who: text;
+ };
+type AiTestResult =
+ record {
+   at: int;
+   detail: text;
+   model: text;
+   ok: bool;
+ };
+type AiStatus =
+ record {
+   callsToday: nat;
+   canTest: bool;
+   checked: bool;
+   checkedAt: int;
+   credentialsReady: bool;
+   dailyBudget: nat;
+   detail: text;
+   hubSet: bool;
+   keySet: bool;
+   laneGranted: bool;
+   lastTest: opt AiTestResult;
+   model: text;
+   provider: text;
+   registered: bool;
+   testRunning: bool;
+ };
+service : {
+  /// Controller only: a bootstrap admin by address (the hub's owner/admin role does the same without it).
+  addAdminEmail: (email: text) -> (bool);
+  /// Staff: a confirmed matching rule (senderAddress | senderDomain | customerRef | subjectContains) that files future mail to a contract without asking.
+  addRule: (tok: text, kind: text, value: text, contractId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// A manual task on a contract (e.g. "ask vendor for the signed copy"), with an optional due date.
+  addTask: (tok: text, contractId: nat, title: text, dueOn: text, assignee:
+   text) -> (record {
+               detail: text;
+               id: nat;
+               ok: bool;
+             });
+  /// Admin log (last 200 lines).
+  adminLogRows: (tok: text) -> (vec LogRow) query;
+  /// Hand the review of a proposal to a colleague (staff) — they get a notification; nothing hidden opens up: the assignee must be allowed to see the contract.
+  assignProposal: (tok: text, id: nat, assignee: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Hand a task to a colleague (staff, or the contract's responsible person); they are notified through the hub.
+  assignTask: (tok: text, id: nat, assignee: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// First run: a hub owner/admin claims administration once, while nothing is stored yet.
+  claimAdmin: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  /// Done. For an automatic "decide" task: also say what was decided (continue | cancel) — it is written to the contract's history.
+  completeTask: (tok: text, id: nat, decision: text, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Operating state for the Connection page (staff): what the relay handed in, the oldest open job, failures, AI usage, outbox backlog.
+  connectionStatus: (tok: text) ->
+   (opt
+     record {
+       aiCallsToday: nat;
+       aiDailyBudget: nat;
+       aiSource: text;
+       blobBytes: nat;
+       failedJobs: nat;
+       failedSources: nat;
+       jobs: vec Job;
+       lastDirectoryPull: int;
+       lastReceivedAt: int;
+       mailboxAddress: text;
+       oldestOpenJobAt: int;
+       openJobs: nat;
+       outboxFailed: nat;
+       outboxFailures:
+        vec record {
+              attempts: nat;
+              id: nat;
+              lastError: text;
+              title: text;
+            };
+       outboxPending: nat;
+       relayCount: nat;
+       sourcesToday: nat;
+     }) query;
+  /// Create a contract (draft). Staff, or any member — a member becomes its responsible person.
+  createContract: (tok: text, a: ContractInput) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+    });
+  /// Document-first filing: facts, evidence and destination are committed together. No hidden draft on validation failure.
+  createContractFromSource: (tok: text, sid: nat, d:
+   record {
+     destination: text;
+     fields: vec record {
+                   field: text;
+                   value: text;
+                 };
+     proposalId: opt nat;
+   }) -> (record {
+            contractId: nat;
+            detail: text;
+            ok: bool;
+          });
+  /// Every active Hub member can create a teamspace and becomes its first owner.
+  createSpace: (tok: text, name: text, description: text) ->
+   (record {
+      detail: text;
+      id: text;
+      ok: bool;
+    });
+  /// Decide a proposal: accept some fields (with the value as shown or corrected), reject the rest. Atomic against the contract's revision.
+  /// target: the contract to apply to — the proposal's, one of its candidates, or (staff only) `newContract = true` to create a draft from it.
+  decideProposal: (tok: text, id: nat, d:
+   record {
+     accept: vec record {
+                   field: text;
+                   value: text;
+                 };
+     expectedRevision: nat;
+     newContract: bool;
+     note: text;
+     target: opt nat;
+   }) -> (record {
+            contractId: nat;
+            detail: text;
+            ok: bool;
+            revision: nat;
+          });
+  /// Permanently remove one explicitly trashed item. No await: access, trash state and cleanup are atomic.
+  deletePermanently: (tok: text, kind: text, id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// People picker (responsible, viewers, seat holders): active directory members matching q — id, address, name, department.
+  directory: (tok: text, q: text) ->
+   (vec record {
+          department: text;
+          displayName: text;
+          email: text;
+          id: text;
+        }) query;
+  directoryGroups: (tok: text) ->
+   (vec record {
+          members: nat;
+          name: text;
+        }) query;
+  /// The bytes of a stored document — session-gated like everything else (no public URLs).
+  documentData: (tok: text, id: nat) ->
+   (opt record {
+          bytes: blob;
+          mime: text;
+          name: text;
+        }) query;
+  /// The extracted text of a document (what the AI read), for the side-by-side view.
+  documentText: (tok: text, id: nat) -> (opt text) query;
+  /// Admins: the versioned full export for restore — contracts, proposals, observations, sources (meta), documents (meta + hashes), tasks, rules, audit. No files, no sessions, no secrets.
+  exportAll: (tok: text) ->
+   (opt
+     record {
+       audit: vec AuditRow;
+       commercialDetails:
+        vec record {
+              contractId: nat;
+              fields: vec CommercialField;
+            };
+       contracts: vec Contract;
+       documents: vec Document;
+       exportedAt: int;
+       observations: vec Observation;
+       proposals: vec Proposal;
+       rules: vec Rule;
+       schemaVersion: nat;
+       settings: Settings;
+       sources: vec Source;
+       spaceId: text;
+       tasks: vec Task;
+     }) query;
+  /// CSV of the contracts the person may see (confirmed values only).
+  exportCsv: (tok: text) -> (text) query;
+  /// Safe connection metadata only; no credentials or other workspaces' jobs or documents.
+  getAiStatus: (tok: text) -> (opt AiStatus) query;
+  /// Everything about one contract: confirmed terms, future terms, open proposals, sources, documents, tasks, history, rules.
+  getContract: (tok: text, id: nat) -> (opt Record) query;
+  /// One proposal with its changes, evidence and candidates — for people who may see its contract (or were handed it).
+  getProposal: (tok: text, id: nat) -> (opt ProposalView) query;
+  /// Settings and operating counters (admins).
+  getSettings: (tok: text) -> (opt Settings) query;
+  /// One source in full: headers, the message text (new part first), documents, its proposals and observations.
+  getSource: (tok: text, id: nat) ->
+   (opt
+     record {
+       candidates: vec ContractRow;
+       cc: vec text;
+       documents: vec DocumentRow;
+       forwardComment: text;
+       messageId: text;
+       proposals: vec ProposalView;
+       source: SourceRow;
+       "text": text;
+       to: vec text;
+     }) query;
+  /// Membership is visible inside its teamspace only.
+  getSpace: (tok: text) ->
+   (opt
+     record {
+       members:
+        vec record {
+              active: bool;
+              name: text;
+              pid: text;
+              role: SpaceRole;
+            };
+       space: Space;
+     }) query;
+  groupMembers: (tok: text, group: text) ->
+   (vec record {
+          displayName: text;
+          email: text;
+          id: text;
+        }) query;
+  /// Hub contract: lock these people out at once (their sessions end; their contracts stay until an admin reassigns them).
+  hub_deactivate: (emails: vec text) -> (nat);
+  hub_manifest: () -> (Manifest) query;
+  /// Aggregate-only read for Hub Operations; no session or records leave this app.
+  hub_operations: (viewer: text) -> (Snapshot) query;
+  /// Hub contract (offboarding): the contracts a person is responsible for, listed in the hub's ownership view.
+  hub_ownedObjects: (email: text) -> (vec OwnedObject) query;
+  /// Hub contract: what this app needs (identity, notify) and would like (roles, groups, ai, avatars) — read by the hub's connect wizard.
+  hub_permissionStatus: () -> (PermissionStatus);
+  /// Hub contract: the app name — the hub checks this is the backend canister of a kebab-stack app.
+  /// The Hub brokers this read for a signed-in Desk agent. The viewer retains
+  /// their ordinary app permissions; this endpoint never grants extra access.
+  hub_personContext: (viewer: text, subject: text, viewerRole: text) ->
+   (Context) query;
+  hub_ping: () -> (text) query;
+  /// Hub contract (offboarding): hand the listed contracts from one person to another; deadlines follow the new responsible person.
+  hub_reassign: (idsIn: vec text, from: text, to: text) -> (nat);
+  /// Hub contract (lane identity): a partial directory push — new or changed people; a re-issued address parks the previous holder.
+  hub_upsert: (rows: vec DirectoryRow) -> (nat);
+  /// Hub contract: where a hub group is used here (editors/admins group, a contract's group deputy) — shown before a group is deleted.
+  hub_usesGroup: (name: text) -> (vec text) query;
+  /// Write the rows: new contracts become drafts (or the sheet's status) with origin import:<batch>; rows that match an existing contract (vendor+product+ref) are skipped — never overwritten. Responsible by address; unknown → an "assign" task.
+  importCommit: (tok: text, csv: text, delimiter: text, mapping:
+   vec record {
+         text;
+         text;
+       }, batch: text) ->
+   (record {
+      created: nat;
+      detail: text;
+      ok: bool;
+      problems: nat;
+      skipped: nat;
+    });
+  /// Parse a spreadsheet export with a column mapping (header → field) and say what would happen — nothing is written. Unknown columns must be mapped to "ignore" explicitly.
+  importPreview: (tok: text, csv: text, delimiter: text, mapping:
+   vec record {
+         text;
+         text;
+       }) ->
+   (record {
+      detail: text;
+      headers: vec text;
+      ok: bool;
+      rows: vec ImportRow;
+      total: nat;
+      unmapped: vec text;
+    }) query;
+  /// Public: who runs here (org, versions, hub) — for the sign-in page.
+  info: () ->
+   (record {
+      appUrl: text;
+      hubId: text;
+      hubSet: bool;
+      orgName: text;
+      version: text;
+    }) query;
+  /// Step 1 of 3: announce a message. Returns an intake id for the attachment chunks. Caps are checked here, so the relay learns early.
+  intakeBegin: (tok: text, meta: IntakeMeta) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+    });
+  /// Step 2 of 3: one chunk of one attachment (≤ 1.5 MB per call, in order).
+  intakeChunk: (tok: text, id: nat, attachment: nat, bytes: blob) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Step 3 of 3: commit. Hashes are verified, files sniffed and stored, the source created, dedupe applied, processing queued.
+  intakeCommit: (tok: text, id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      sourceId: nat;
+      status: text;
+    });
+  licenseAssignment: (tok: text, id: nat) ->
+   (opt
+     record {
+       groups: vec text;
+       people: vec record {
+                     active: bool;
+                     direct: bool;
+                     id: text;
+                     name: text;
+                   };
+     }) query;
+  /// Staff: link a source to a contract by hand (or unlink with null), optionally confirming a rule for next time.
+  linkSource: (tok: text, id: nat, contractId: opt nat, rule:
+   opt record {
+         kind: text;
+         value: text;
+       }) -> (record {
+                detail: text;
+                ok: bool;
+              });
+  /// The contracts this person may see, filtered: q (title/vendor/product/ref), status, responsible id, onlyIncomplete, onlyDue (decision within 60 days).
+  listContracts: (tok: text, f:
+   record {
+     includeArchived: bool;
+     onlyDue: bool;
+     onlyIncomplete: bool;
+     q: text;
+     responsible: text;
+     status: text;
+   }) -> (vec ContractRow) query;
+  /// Open proposals the person may decide (staff: all; others: their contracts), oldest first. status "" = open, else that status.
+  listProposals: (tok: text, status: text, contractId: opt nat) ->
+   (vec ProposalView) query;
+  /// Staff: the matching rules (all, or one contract's).
+  listRules: (tok: text, contractId: opt nat) -> (vec Rule) query;
+  /// The inbox: sources by status (received | processing | review | filed | ignored | failed | "" = everything not filed/ignored). Members see their own uploads and the sources of their contracts.
+  listSources: (tok: text, status: text, contractId: opt nat) ->
+   (vec SourceRow) query;
+  /// Personal/team memberships stay private. Only the shared intake follows Hub admin/owner roles.
+  listSpaces: (tok: text) -> (vec SpaceView) query;
+  /// Open tasks the person may see (staff: everything; others: their contracts), soonest first. includeSnoozed shows snoozed ones too.
+  listTasks: (tok: text, includeSnoozed: bool, contractId: opt nat) ->
+   (vec TaskRow) query;
+  listTrash: (tok: text) -> (vec TrashRow) query;
+  /// Redeem a hub ticket for an app session (10 h). The hub decides who may sign in; the 60-second lease decides who stays.
+  loginWithTicket: (ticket: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
+  lookupVendorTerms: (tok: text, sid: nat, urlHint: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Deliberate transfer: source and destination owners approve through this action; related evidence follows atomically.
+  moveContract: (tok: text, id: nat, revision: nat, destination: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Route an unfiled message before matching it against the destination's contracts.
+  /// Evidence stays together; obsolete AI work cannot write into the new context.
+  moveIncomingSource: (tok: text, id: nat, destination: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Open a space with a session bound to that space. Tabs cannot change each other's scope.
+  openSpace: (tok: text, sid: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+      token: text;
+    });
+  portfolio: (tok: text) ->
+   (opt
+     record {
+       canManage: bool;
+       directoryAt: int;
+       people: nat;
+       policy: Policy;
+       rows: vec PortfolioRow;
+     }) query;
+  /// A person proposes a change themselves (typed, with an optional source as evidence) — goes through the same confirmation.
+  proposeChange: (tok: text, contractId: nat, sourceId: opt nat, changes:
+   vec record {
+         field: text;
+         value: text;
+       }, summary: text) -> (record {
+                               detail: text;
+                               id: nat;
+                               ok: bool;
+                             });
+  /// Explicit config refresh. This never sends a document or calls the AI provider.
+  refreshAiStatus: (tok: text) -> (opt AiStatus);
+  /// Admins: remove the sample data (contracts with origin "sample" and everything hanging off them).
+  removeDemo: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  /// Staff: drop a matching rule — mail from that sender asks again which contract it belongs to.
+  removeRule: (tok: text, id: nat) -> (record {
+                                         detail: text;
+                                         ok: bool;
+                                       });
+  /// Staff: re-run the extraction for a source (after a failure, or with a new prompt version). Creates proposals, never silent corrections.
+  reprocessSource: (tok: text, id: nat) -> (record {
+                                              detail: text;
+                                              ok: bool;
+                                            });
+  /// Staff: retry a failed notification now.
+  retryNotification: (tok: text, id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  revealLicenseKey: (tok: text, id: nat) -> (opt text);
+  saveLicenseKey: (tok: text, id: opt nat, rev: nat, input:
+   record {
+     expires: text;
+     key: text;
+     note: text;
+     ownerId: text;
+     seats: opt nat;
+     tool: text;
+     vendor: text;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  /// Admins: a handful of fictional contracts, a message in the inbox and a proposal, so the first look is not empty. Removable with removeDemo.
+  seedDemo: (tok: text) -> (record {
+                              detail: text;
+                              ok: bool;
+                            });
+  /// Admins: bootstrap admin addresses (kept alongside the hub roles).
+  setAdminEmails: (tok: text, emails: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setCommercialDetails: (tok: text, id: nat, expectedRevision: nat, fields:
+   vec CommercialField) -> (record {
+                              detail: text;
+                              ok: bool;
+                              revision: nat;
+                            });
+  /// Future terms (an agreed change that starts later) — set, or clear with null.
+  setFutureTerms: (tok: text, id: nat, expectedRevision: nat, t:
+   opt Terms) -> (record {
+                    detail: text;
+                    ok: bool;
+                    revision: nat;
+                  });
+  /// Controller only: wire this app to its hub (also done by the kitchen after install).
+  setHub: (id: text) -> (bool);
+  setLicenseAssignments: (tok: text, id: nat, rev: nat, holders: vec text,
+   groups: vec text) -> (record {
+                           detail: text;
+                           ok: bool;
+                         });
+  /// Admins: the relay identities allowed to hand in mail (the worker's principal). Add before deploying the worker, remove to rotate.
+  setRelayPrincipals: (tok: text, principals: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setRenewalPolicy: (tok: text, p: Policy) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Admins: groups, address, time zone, deadline defaults, AI budget. Unknown time zones are a label + a fixed offset (DST is not modelled).
+  setSettings: (tok: text, args:
+   record {
+     adminGroup: text;
+     aiDailyBudget: nat;
+     appUrl: text;
+     editorGroup: text;
+     leadDays: nat;
+     mailboxAddress: text;
+     orgName: text;
+     reminderDays: vec nat;
+     tzName: text;
+     tzOffsetMinutes: int;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  /// Staff: mark a source as ignored (spam, unrelated) or back to review. Nothing is deleted.
+  setSourceStatus: (tok: text, id: nat, status: text, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// A space owner authorizes a trusted intake identity for this space. Global relay trust alone never grants content access.
+  setSpaceRelay: (tok: text, "principal": text, enabled: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Contract status — a person's decision, never the AI's. "endConfirmed" needs an end date; "ended" is for a date that has passed.
+  setStatus: (tok: text, id: nat, expectedRevision: nat, status: text, note:
+   text) -> (record {
+               detail: text;
+               ok: bool;
+               revision: nat;
+             });
+  /// Set the confirmed terms by hand (a person typing what they know). Atomic against the revision; unknown stays unknown.
+  setTerms: (tok: text, id: nat, expectedRevision: nat, t: Terms, note:
+   text) -> (record {
+               detail: text;
+               ok: bool;
+               revision: nat;
+             });
+  setTrashed: (tok: text, kind: text, id: nat, deleted: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// End this app session now (the hub session is separate).
+  signOut: (tok: text) -> ();
+  /// Remind me later: hides the proposal from Today until then; the contract's deadlines do not move.
+  snoozeProposal: (tok: text, id: nat, days: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Remind me later (1–60 days). The deadline stays where it is; a snooze past the due date is refused.
+  snoozeTask: (tok: text, id: nat, days: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// App administrators can test a fixed neutral prompt, using the same provider path as extraction.
+  testAiConnection: (tok: text) -> (AiTestResult);
+  /// Today: what needs the person — proposals to decide, tasks due or overdue, contracts without a responsible person, processing failures (staff).
+  today: (tok: text) ->
+   (opt
+     record {
+       aiOn: bool;
+       contracts: nat;
+       dueSoon: nat;
+       failed: vec SourceRow;
+       inboxOpen: nat;
+       lastReceivedAt: int;
+       proposals: vec ProposalView;
+       tasks: vec TaskRow;
+       unassigned: vec ContractRow;
+     }) query;
+  /// Edit the record fields (not the terms — those go through proposals or setTerms). Atomic against the revision.
+  updateContract: (tok: text, id: nat, expectedRevision: nat, a:
+   ContractInput) -> (record {
+                        detail: text;
+                        ok: bool;
+                        revision: nat;
+                      });
+  /// Space owners manage their space; an active owner must always remain.
+  updateSpace: (tok: text, revision: nat, name: text, description: text,
+   members: vec SpaceMember, archived: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Build what the model sees for a source: headers, new part, quoted rest, each document's text, the candidate contracts.
+  vendorTermsStatus: (tok: text, sid: nat) -> (opt VendorTerms) query;
+  /// Who am I here: id (hub person id), address, role (admin | editor | member) and why.
+  whoami: (tok: text) ->
+   (opt
+     record {
+       aiChecked: bool;
+       aiOn: bool;
+       displayName: text;
+       email: text;
+       hubId: text;
+       id: text;
+       needsClaim: bool;
+       orgName: text;
+       role: text;
+       roleSource: text;
+       space: text;
+       spaceRole: opt SpaceRole;
+     }) query;
+}

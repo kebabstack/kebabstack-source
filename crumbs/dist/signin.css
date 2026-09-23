@@ -1,0 +1,77 @@
+/* One stable sign-in surface, from provider selection through verification. */
+#login{max-width:none;margin:0;width:100%;--auth-bg:var(--ks-bg);--auth-card:var(--ks-bg-card);--auth-ink:var(--ks-fg);--auth-muted:var(--ks-fg-secondary);--auth-line:var(--ks-rule);--auth-soft:var(--ks-bg-sunk);display:grid;place-items:center;justify-content:stretch;align-content:center;gap:0;min-height:100vh;min-height:100svh;padding:clamp(18px,4vw,64px);background:var(--auth-bg);color:var(--auth-ink);font-family:var(--ks-ui);font-size:14px;line-height:1.5;text-align:left;box-sizing:border-box}
+#login *,#login *::before,#login *::after{box-sizing:border-box}
+#login .auth-shell{display:grid;grid-template-columns:1fr 1fr;width:min(1060px,100%);min-height:min(650px,max(580px,calc(100svh - 2 * clamp(18px,4vw,64px))));border:1px solid var(--auth-line);border-radius:28px;overflow:hidden;background:var(--auth-card);box-shadow:0 20px 70px #111a2a0c}
+#login .auth-story{width:auto;min-width:0;border:0;position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:48px;padding:46px;background:#213d31;color:#f1f4fa;overflow:hidden}
+#login .auth-story::after{content:"";position:absolute;width:420px;height:420px;right:-230px;bottom:25px;border:1px solid #ffffff12;border-radius:50%;box-shadow:0 0 0 55px #ffffff04,0 0 0 110px #ffffff03;pointer-events:none}
+#login .auth-brand{display:flex;align-items:center;gap:8px;z-index:1}
+#login .mark{font:700 23px/1.2 var(--ks-ui);white-space:nowrap;letter-spacing:-1.1px;color:inherit;margin:0;order:initial}
+#login .lstage{display:flex;align-items:center;justify-content:center;width:27px;height:35px;flex:0 0 27px}
+#login #lgSvg{display:block;width:27px;height:35px;transform:none}
+#login .lg-stick{color:#f1f4fa!important}
+#login .auth-story h2{position:relative;z-index:1;font:500 clamp(32px,4vw,46px)/1.12 var(--ks-ui);letter-spacing:-1.8px;margin:0 0 20px;color:#f1f4fa;max-width:340px}
+#login .auth-story h2 em{font-style:normal;color:#ffb695}
+#login .auth-story p{position:relative;z-index:1;max-width:330px;font:400 15px/1.65 var(--ks-ui);color:#bfd2c5;margin:0}
+#login .auth-path{position:relative;z-index:1;display:flex;align-items:center;gap:10px;font-size:12px;color:#bfd2c5}
+#login .auth-path span:first-child{color:#ffbd9f}
+#login .auth-path i{height:1px;flex:1;max-width:38px;background:#ffffff30}
+#login .auth-main{padding:48px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+#login .auth-org{display:flex;align-items:center;gap:12px;min-height:44px;margin-bottom:30px}
+#login #loginLogo{width:44px;height:44px;max-height:none;max-width:none;object-fit:contain}
+#login .lorg{font:500 13px/1.5 var(--ks-ui);color:var(--auth-muted);margin:0}
+#login h1{font:600 30px/1.2 var(--ks-ui);letter-spacing:-1px;margin:0 0 10px;color:var(--auth-ink)}
+#login .auth-intro{font-size:14px;line-height:1.6;color:var(--auth-muted);margin:0 0 26px}
+#login #ssoButtons{display:grid;gap:10px}
+#login .auth-provider,#login #loginBtn{display:flex;align-items:center;gap:13px;width:100%;min-height:66px;padding:14px 17px;border:1px solid var(--ks-rule-strong);border-radius:8px;background:var(--auth-card);color:var(--auth-ink);text-align:left;font:500 14px/1.4 var(--ks-ui);letter-spacing:0;text-transform:none;transition:border-color .18s ease,background .18s ease}
+#login .auth-provider:hover:not(:disabled),#login #loginBtn:hover:not(:disabled){border-color:var(--ks-rule-strong);background:var(--auth-soft)}
+#login .auth-provider:first-child{border-color:var(--ks-accent);background:var(--ks-accent-dim)}
+#login .auth-provider>span:first-child{display:grid;place-items:center;width:33px;height:33px;border-radius:9px;background:var(--auth-soft);color:var(--auth-ink);font-size:14px;flex-shrink:0}
+#login .auth-provider b{font-weight:600;display:block}
+#login .auth-provider small{font-size:12px;font-weight:400;display:block;color:var(--auth-muted);margin-top:1px}
+#login .auth-provider .auth-arrow{margin-left:auto;font-size:20px;color:var(--auth-muted)}
+#login .auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--auth-muted);font-size:12px}
+#login .auth-divider::before,#login .auth-divider::after{content:"";height:1px;background:var(--auth-line);flex:1}
+#login:not(.has-providers) .auth-divider{display:none}
+#login #loginBtn{min-height:49px;justify-content:center;background:var(--auth-soft)}
+#login button:disabled{opacity:.55;cursor:default}
+#login button:focus-visible,#login a:focus-visible{outline:3px solid var(--ks-focus);outline-offset:4px}
+#login .auth-progress{min-height:58px;display:flex;align-items:center;gap:10px;padding:16px 0;font-size:13px;line-height:1.5;color:var(--auth-muted)}
+#login .auth-progress-dot{width:7px;height:7px;border-radius:50%;background:var(--ks-fg-muted);flex-shrink:0}
+#login[aria-busy=true] .auth-progress-dot{background:var(--ks-accent);animation:authBreathe 1.3s ease-in-out infinite}
+#login[aria-busy=true] .lg-piece{animation:authBreathe 1.3s ease-in-out infinite}
+#login[aria-busy=true] .lg-piece:nth-child(3){animation-delay:.12s}
+#login[aria-busy=true] .lg-piece:nth-child(4){animation-delay:.24s}
+#login .status{font:400 13px/1.6 var(--ks-ui);letter-spacing:0;background:transparent;border:0;padding:0;white-space:normal;margin:0}
+#login .status.err{color:var(--ks-danger);background:var(--ks-danger-bg);padding:12px;border-radius:10px;margin:4px 0 14px}
+
+#login .lhint{font:400 12px/1.6 var(--ks-ui);color:var(--auth-muted);text-align:left;margin:0;max-width:none}
+#login .lfoot{font:400 11px/1.5 var(--ks-ui);color:var(--auth-muted);opacity:1;margin-top:24px;border-top:1px solid var(--auth-line);padding-top:18px}
+#login .warnbox{font:400 13px/1.6 var(--ks-ui);overflow-wrap:anywhere;margin:12px 0 0;padding:14px;background:var(--auth-soft);border:1px solid var(--auth-line);border-radius:10px}
+#login .auth-retry{margin:0 0 16px;font:500 13px var(--ks-ui);text-decoration:underline;background:none;border:0;padding:4px;color:var(--auth-ink);text-transform:none}
+@keyframes authBreathe{0%,100%{opacity:1}50%{opacity:.38}}
+@media(max-width:760px){#login .auth-shell{grid-template-columns:1fr;min-height:0;max-width:520px;border-radius:22px}#login .auth-story{padding:25px 28px;gap:25px}#login .auth-story h2{font-size:28px;letter-spacing:-.9px;max-width:none;margin-bottom:0}#login .auth-story p,#login .auth-path{display:none}#login .auth-main{padding:30px 28px}#login .auth-org{margin-bottom:20px}#login h1{font-size:26px}#login .lfoot{margin-top:18px}}
+@media(prefers-reduced-motion:reduce){#login *,#login *::after{animation:none!important;transition:none!important}}
+
+#login #loginLogo.hidden{display:block!important;visibility:hidden}
+
+/* A returning Hub ticket is a handoff, not a second sign-in form. This state
+   is present in the HTML before the agent bundle or network calls can load. */
+#login .auth-waiting{display:none}
+#login[aria-busy=true] .auth-shell{grid-template-columns:1fr;width:min(480px,100%);min-height:0}
+#login[aria-busy=true] .auth-story,#login[aria-busy=true] .auth-ready,#login[aria-busy=true] #loginBtn,#login[aria-busy=true] .auth-intro,#login[aria-busy=true] .lhint,#login[aria-busy=true] .lfoot{display:none}
+#login[aria-busy=true] .auth-waiting{display:inline}
+#login[aria-busy=true] .auth-main{padding:40px}
+#login[aria-busy=true] .auth-progress{padding-bottom:0}
+
+#login.hidden,.ks-handoff.hidden{display:none!important}
+.ks-handoff{position:fixed;inset:0;z-index:200;background:var(--ks-bg,#f8f7f1);color:var(--ks-fg,#24352e);display:grid;place-items:center;padding:24px;font-family:var(--ks-ui)}.handoff-card{width:min(480px,100%);padding:40px;border:1px solid var(--ks-rule);border-radius:22px;background:var(--ks-bg-card);box-shadow:0 15px 55px #17332308;text-align:center}.handoff-mark{width:56px;height:56px;display:grid;place-items:center;margin:0 auto 26px;background:var(--ks-accent-dim);color:var(--ks-accent);border-radius:16px;font-size:25px}.handoff-card .eyebrow{font-size:10px;letter-spacing:.16em;color:var(--ks-fg-secondary)}.handoff-card h1{font:500 29px/1.2 var(--ks-ui);letter-spacing:-1px;margin:16px 0}.handoff-card p{font-size:14px;line-height:1.7;color:var(--ks-fg-secondary)}.handoff-card small{display:block;margin-top:24px;font-size:11px;color:var(--ks-fg-secondary)}.handoff-card .btnrow{justify-content:center}.handoff-track{height:3px;background:var(--ks-rule);overflow:hidden;border-radius:3px;margin:26px 0}.handoff-track span{display:block;height:100%;width:35%;background:var(--ks-accent);animation:handoff 1.5s ease-in-out infinite}.ks-handoff[aria-busy=false] .handoff-track{display:none}@keyframes handoff{from{transform:translateX(-100%)}to{transform:translateX(390%)}}@media(prefers-reduced-motion:reduce){.handoff-track span{animation:none;width:100%;opacity:.6}}@media(max-width:520px){.handoff-card{padding:30px 24px}}
+
+#login:not(.app-auth)[aria-busy=true] #loginTitle,#login[aria-busy=true] #ssoButtons,#login[aria-busy=true] .auth-divider{display:none}
+
+/* Product mark is decorative; the heading names the destination. */
+.auth-app-logo{display:block;width:36px;height:36px;margin-bottom:18px}
+
+#login .brand-hyphen{color:#ff8a3d}
+
+#login.app-auth #loginBtn{min-height:48px;background:var(--ks-accent);color:var(--ks-on-accent);border-color:var(--ks-accent)}
+#login.app-auth #loginBtn:hover:not(:disabled){background:var(--ks-accent-strong);border-color:var(--ks-accent-strong)}

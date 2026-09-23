@@ -1,0 +1,122 @@
+// Version: 1.0.0
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Ghost__183183947 = {dm : Nat; name : Text; trace : [TracePt__311935217]};
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type Link__699605019 =
+  {expiresAt : Int; hub : Text; suiteToken : Text; token : Text};
+type LogRow__410755882 = {at : Int; what : Text; who : Text};
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Profile__684968484 = {name : Text};
+type Run__504670633 = {day : Nat; id : Nat; startedAt : Int};
+type Score__58557709 =
+  {at : Int; dm : Nat; email : Text; name : Text; zone : Text};
+type Score__91171516 =
+  {at : Int; coins : Nat; meters : Nat; owner : Text; score : Nat};
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type TracePt__311935217 = (Nat, Nat);
+actor {
+  stable var adminClaimed : Bool;
+  stable var adminEmails : [Text];
+  stable var adminGroup : Text;
+  stable adminLog :
+    {
+      var root : Node__430031793<Nat, LogRow__410755882>;
+      var size : Nat__58649523
+    };
+  stable aliasOwner :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var appUrl : Text;
+  stable arcadeAliases :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable arcadeCounters : {var nextId : Nat};
+  stable arcadeLinks :
+    {
+      var root : Node__430031793<Principal, Link__699605019>;
+      var size : Nat__58649523
+    };
+  stable arcadePilotKeys :
+    {var root : Node__430031793<Principal, Text>; var size : Nat__58649523};
+  stable arcadeProfiles :
+    {
+      var root : Node__430031793<Text, Profile__684968484>;
+      var size : Nat__58649523
+    };
+  stable arcadeRuns :
+    {
+      var root : Node__430031793<Text, Run__504670633>;
+      var size : Nat__58649523
+    };
+  stable arcadeScores :
+    {
+      var root : Node__430031793<Text, Score__91171516>;
+      var size : Nat__58649523
+    };
+  stable bestAllTime :
+    {
+      var root : Node__430031793<Text, Score__58557709>;
+      var size : Nat__58649523
+    };
+  stable bestDaily :
+    {
+      var root : Node__430031793<Text, Score__58557709>;
+      var size : Nat__58649523
+    };
+  stable bestWeekly :
+    {
+      var root : Node__430031793<Text, Score__58557709>;
+      var size : Nat__58649523
+    };
+  stable dailyGhost :
+    {
+      var root : Node__430031793<Text, Ghost__183183947>;
+      var size : Nat__58649523
+    };
+  stable former :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable ghostOwner :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable groupsCache :
+    {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable var hubId : Text;
+  stable var idMigration : Text;
+  stable ids :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var lastDirectoryPull : Int;
+  stable var nextLogId : Nat;
+  stable var orgName : Text;
+  stable var owner : ?Principal;
+  stable people :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable playerNames :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var publishedTotal : Nat;
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__739831475>;
+      var size : Nat__58649523
+    };
+  stable var throwsTotal : Nat
+};

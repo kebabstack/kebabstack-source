@@ -1,0 +1,1052 @@
+type Snapshot =
+ record {
+   checkedAt: int;
+   metrics: vec record {
+                  text;
+                  nat;
+                };
+   schema: nat;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+ };
+type Settings =
+ record {
+   adminCount: nat;
+   adminEmails: vec text;
+   adminGroup: text;
+   ai: AiState;
+   aiModel: text;
+   aiSource: text;
+   appUrl: text;
+   hubId: text;
+   lastDirectoryPull: int;
+   orgName: text;
+   peopleCount: nat;
+   photoBytes: nat;
+   tagPrefix: text;
+   trustId: text;
+   trustLastPull: int;
+ };
+type SaleView =
+ record {
+   acceptedByName: text;
+   checksByName: text;
+   createdByName: text;
+   creditNote: opt InvoiceData;
+   deviceName: text;
+   deviceSerial: text;
+   deviceTag: text;
+   handedOverAt: int;
+   invoice: opt InvoiceData;
+   phase: text;
+   proposal: opt record {
+                   basis: text;
+                   proposedMinor: nat;
+                 };
+   sale: Sale;
+   stillInAbm: text;
+   waiverText: text;
+   waiverVersion: nat;
+ };
+type SaleSummary =
+ record {
+   assetId: nat;
+   buyerName: text;
+   creditNoteNo: text;
+   currency: text;
+   deviceName: text;
+   deviceTag: text;
+   grossMinor: nat;
+   id: nat;
+   invoiceNo: text;
+   mdmRemoved: bool;
+   phase: text;
+   receiptPending: bool;
+   status: text;
+   updatedAt: int;
+   wiped: bool;
+ };
+type Sale =
+ record {
+   acceptedAt: int;
+   acceptedBy: text;
+   acceptedHow: text;
+   assetId: nat;
+   buyer: Buyer;
+   cancelReason: text;
+   cancelledAt: int;
+   checksBy: text;
+   createdAt: int;
+   createdBy: text;
+   creditNoteNo: text;
+   creditPdfId: nat;
+   currency: text;
+   description: text;
+   dueOn: text;
+   grossMinor: nat;
+   id: nat;
+   invoiceNo: text;
+   issuedAt: int;
+   issuedOn: text;
+   mdmRemoved: bool;
+   netMinor: nat;
+   paidAt: int;
+   paidNote: text;
+   pdfHash: text;
+   pdfId: nat;
+   priceNote: text;
+   proposedMinor: opt nat;
+   reference: text;
+   status: text;
+   updatedAt: int;
+   vatMinor: nat;
+   vatRateBp: nat;
+   waiverVersion: nat;
+   wiped: bool;
+ };
+type ReadResult =
+ record {
+   detail: text;
+   kind: text;
+   model: text;
+   notes: text;
+   ok: bool;
+   reads: vec Read;
+   sticker: text;
+   vendor: text;
+ };
+type Read =
+ record {
+   confidence: float64;
+   kind: text;
+   value: text;
+ };
+type Purchase =
+ record {
+   at: int;
+   by: text;
+   currency: text;
+   date: text;
+   note: text;
+   priceMinor: nat;
+ };
+type Progress =
+ record {
+   bindings: vec text;
+   checkedAt: int;
+   open: nat;
+   sources: nat;
+   state: text;
+   total: nat;
+ };
+type PhotoMeta =
+ record {
+   assetId: nat;
+   at: int;
+   by: text;
+   eventId: nat;
+   id: nat;
+   mime: text;
+   size: nat;
+ };
+type PermissionStatus =
+ record {
+   app: text;
+   directoryAt: int;
+   legacy: vec LegacyGrant;
+   legacyGroups: vec record {
+                       name: text;
+                       role: text;
+                     };
+   model: nat;
+   revision: text;
+ };
+type OwnedObject =
+ record {
+   id: text;
+   kind: text;
+   meta: text;
+   title: text;
+   updatedAt: int;
+ };
+type NotifyState =
+ record {
+   at: int;
+   detail: text;
+   ok: bool;
+   title: text;
+   to: text;
+ };
+type MdmView =
+ record {
+   clientId: text;
+   created: nat;
+   createdAt: int;
+   devices: nat;
+   enabled: bool;
+   id: nat;
+   kind: text;
+   lastResult: text;
+   lastSync: int;
+   matched: nat;
+   name: text;
+   secretSet: bool;
+   url: text;
+ };
+type MdmMeta =
+ record {
+   compliance: text;
+   connId: nat;
+   connName: text;
+   deviceName: text;
+   externalId: text;
+   kind: text;
+   lastSeen: text;
+   osVersion: text;
+   syncedAt: int;
+   userEmail: text;
+   userName: text;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type LogRow =
+ record {
+   at: int;
+   what: text;
+   who: text;
+ };
+type LegacyGrant =
+ record {
+   email: text;
+   role: text;
+   source: text;
+ };
+type Item =
+ record {
+   detail: text;
+   historical: bool;
+   id: text;
+   kind: text;
+   path: text;
+   status: text;
+   title: text;
+ };
+type InvoiceData =
+ record {
+   acceptedLine: text;
+   buyer: Buyer;
+   creditOf: text;
+   currency: text;
+   description: text;
+   dueOn: text;
+   footer: text;
+   gross: text;
+   grossMinor: nat;
+   ibanPretty: text;
+   issuedOn: text;
+   kind: text;
+   lang: text;
+   net: text;
+   netMinor: nat;
+   number: text;
+   qrPayload: text;
+   reference: text;
+   referencePretty: text;
+   seller:
+    record {
+      country: text;
+      houseNo: text;
+      name: text;
+      postalCode: text;
+      street: text;
+      town: text;
+      uid: text;
+      vatRegistered: bool;
+    };
+   vat: text;
+   vatMinor: nat;
+   vatRate: text;
+   vatRateBp: nat;
+   waiverText: text;
+   waiverVersion: nat;
+ };
+type HandoverView =
+ record {
+   context: Case;
+   device: text;
+   done: bool;
+   identifier: text;
+   ownerName: text;
+   personName: text;
+   plan: Handover;
+   progress: text;
+   recipientEmail: text;
+ };
+type HandoverInput =
+ record {
+   choice: text;
+   dueOn: text;
+   note: text;
+   owner: text;
+   recipient: text;
+ };
+type Handover =
+ record {
+   assetId: nat;
+   caseKey: text;
+   choice: text;
+   dueOn: text;
+   note: text;
+   owner: text;
+   person: text;
+   recipient: text;
+   revision: nat;
+   saleId: nat;
+   stage: text;
+   updatedAt: int;
+ };
+type Event =
+ record {
+   assetId: nat;
+   at: int;
+   by: text;
+   detail: text;
+   id: nat;
+   kind: text;
+   photoId: nat;
+   to: text;
+ };
+type DirectoryRow =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type DealView =
+ record {
+   acceptedAt: int;
+   acceptedHow: text;
+   buyer: Buyer;
+   changed: bool;
+   completedAt: int;
+   currency: text;
+   description: text;
+   device: text;
+   expiresAt: int;
+   grossMinor: nat;
+   handedOverAt: int;
+   id: nat;
+   invoice: opt InvoiceData;
+   paidAt: int;
+   pdfHash: text;
+   pdfReady: bool;
+   quote: text;
+   sellerName: text;
+   serial: text;
+   status: text;
+   terms: text;
+   termsVersion: nat;
+   vatRate: text;
+ };
+type DealStatus =
+ record {
+   active: bool;
+   completedAt: int;
+   downloadedAt: int;
+   exists: bool;
+   expiresAt: int;
+   generation: nat;
+   handedOverAt: int;
+   history: vec DealEvent;
+   notification: text;
+   openedAt: int;
+ };
+type DealEvent =
+ record {
+   action: text;
+   actorLabel: text;
+   at: int;
+   detail: text;
+ };
+type Context =
+ record {
+   checkedAt: int;
+   items: vec Item;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+   total: nat;
+ };
+type Case =
+ record {
+   desk: text;
+   dueAt: opt int;
+   key: text;
+   person: text;
+   revision: int;
+   state: text;
+   ticket: nat;
+   url: text;
+ };
+type Candidate =
+ record {
+   row: AssetRow;
+   score: nat;
+   why: text;
+ };
+type Buyer =
+ record {
+   country: text;
+   email: text;
+   houseNo: text;
+   name: text;
+   pid: text;
+   postalCode: text;
+   street: text;
+   town: text;
+ };
+type Billing =
+ record {
+   country: text;
+   currency: text;
+   depreciationMonths: nat;
+   floorPct: nat;
+   footer: text;
+   houseNo: text;
+   iban: text;
+   lang: text;
+   legalName: text;
+   minPriceMinor: nat;
+   paymentDays: nat;
+   postalCode: text;
+   prefix: text;
+   street: text;
+   town: text;
+   uid: text;
+   vatRateBp: nat;
+   vatRegistered: bool;
+   waiverText: text;
+   waiverVersion: nat;
+   yearInNumber: bool;
+ };
+type AssetRow =
+ record {
+   asset: Asset;
+   assigneeEmail: text;
+   assigneeName: text;
+   createdByName: text;
+   lastAt: int;
+   lastEvent: text;
+   mdm: text;
+   mdmMismatch: bool;
+   mdmUser: text;
+   photoCount: nat;
+ };
+type AssetInput =
+ record {
+   kind: text;
+   model: text;
+   note: text;
+   serial: text;
+   tag: text;
+   vendor: text;
+ };
+type Asset =
+ record {
+   archived: bool;
+   assignee: text;
+   createdAt: int;
+   createdBy: text;
+   holder: text;
+   id: nat;
+   kind: text;
+   model: text;
+   note: text;
+   serial: text;
+   status: text;
+   tag: text;
+   updatedAt: int;
+   vendor: text;
+ };
+type AiState =
+ record {
+   connectorId: nat;
+   keySet: bool;
+   laneGranted: bool;
+   model: text;
+   source: text;
+ };
+type AbmView =
+ record {
+   clientId: text;
+   createdAt: int;
+   devices: nat;
+   enabled: bool;
+   id: nat;
+   keyId: text;
+   lastResult: text;
+   lastSync: int;
+   matched: nat;
+   name: text;
+   noMdm: nat;
+   scope: text;
+   signedUntil: int;
+   unmatched: nat;
+ };
+type AbmRow =
+ record {
+   assetId: opt nat;
+   assetStatus: text;
+   assetTag: text;
+   assigneeName: text;
+   device: AbmDevice;
+ };
+type AbmDevice =
+ record {
+   addedAt: text;
+   capacity: text;
+   color: text;
+   connId: nat;
+   connName: text;
+   family: text;
+   mdmServer: text;
+   model: text;
+   orderDate: text;
+   orderNo: text;
+   productType: text;
+   serial: text;
+   source: text;
+   status: text;
+   syncedAt: int;
+   updatedAt: text;
+ };
+service : {
+  /// Admins: take ABM devices into the register — status unknown (nobody has seen them), vendor Apple, model from ABM, order details in the history. Serials already in the register are skipped; an MDM sync later links them by serial.
+  abmAdopt: (tok: text, serials: vec text) ->
+   (record {
+      created: nat;
+      detail: text;
+      ok: bool;
+    });
+  acceptDeal: (id: nat, key: text, quoted: text, address:
+   record {
+     country: text;
+     houseNo: text;
+     postalCode: text;
+     street: text;
+     town: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  /// The buyer accepts the hand-over terms (the version they were shown) with their own hub sign-in — this is the signature on page 2 of the invoice.
+  /// The buyer also gives (or confirms) the postal address for the invoice; it lives on this sale only, never in the directory.
+  acceptOffer: (tok: text, id: nat, waiverVersion: nat, address:
+   opt
+    record {
+      country: text;
+      houseNo: text;
+      postalCode: text;
+      street: text;
+      town: text;
+    }) -> (record {
+             detail: text;
+             ok: bool;
+           });
+  /// Admins: connect an ABM/ASM organisation — client id (BUSINESSAPI.… or SCHOOLAPI.…), the key id shown next to the key,
+  /// and the client assertion the browser signed from the downloaded .pem (the key itself never arrives here).
+  addAbm: (tok: text, args:
+   record {
+     assertion: opt text;
+     clientId: text;
+     keyId: text;
+     name: text;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  addAdminEmail: (email: text) -> (bool);
+  addEventTo: (tok: text, id: nat, action: text, to: text, note: text) ->
+   (record {
+      detail: text;
+      eventId: nat;
+      ok: bool;
+    });
+  addMdm: (tok: text, args:
+   record {
+     clientId: text;
+     kind: text;
+     name: text;
+     secret: text;
+     url: text;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
+  addPhoto: (tok: text, assetId: nat, img: blob, mime: text, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  adminLogRows: (tok: text) -> (vec LogRow) query;
+  archiveAsset: (tok: text, id: nat, archived: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Admins: archive the rendered PDF exactly as handed to the buyer (kind invoice | creditNote). Once stored it is never replaced.
+  attachSaleDocument: (tok: text, id: nat, kind: text, bytes: blob) ->
+   (record {
+      detail: text;
+      docId: nat;
+      ok: bool;
+    });
+  /// Admins: cancel. Before the invoice: the sale just ends. After: a numbered credit note is created (the invoice number stays used — ranges are gapless) and the device goes back to stock unless it was already paid.
+  cancelSale: (tok: text, id: nat, reason: text) ->
+   (record {
+      creditNoteNo: text;
+      detail: text;
+      ok: bool;
+    });
+  /// First-run claim: while nobody is admin yet, the signed-in person becomes one.
+  claimAdmin: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  completeDealHandover: (tok: text, id: nat, abmReleased: bool, note:
+   text) -> (record {
+               detail: text;
+               ok: bool;
+             });
+  completeSaleHandover: (tok: text, id: nat, abmReleased: bool, note:
+   text) -> (record {
+               detail: text;
+               ok: bool;
+             });
+  confirmDeal: (id: nat, key: text, invoiceNo: text, pdfHash: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  continueFormerBuyerSale: (tok: text, id: nat, privateEmail: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  createAsset: (tok: text, x: AssetInput) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+    });
+  createDealLink: (tok: text, id: nat) ->
+   (record {
+      detail: text;
+      expiresAt: int;
+      ok: bool;
+      url: text;
+    });
+  /// Admins: start a sale of a device to a colleague or an outside buyer. Price = what the buyer pays (gross, incl. VAT); the rule's proposal is kept alongside.
+  createSale: (tok: text, assetId: nat, buyer: Buyer, grossMinor: nat,
+   priceNote: text) -> (record {
+                          detail: text;
+                          id: nat;
+                          ok: bool;
+                        });
+  dealDocument: (id: nat, key: text) ->
+   (opt record {
+          bytes: blob;
+          hash: text;
+          mime: text;
+          name: text;
+        });
+  dealStatus: (tok: text, id: nat) -> (opt DealStatus) query;
+  declineDeal: (id: nat, key: text, quoted: text, reason: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// The buyer declines the offer (with a word why).
+  declineOffer: (tok: text, id: nat, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  deviceUnlockPin: (tok: text, assetId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+      pin: text;
+    });
+  directory: (tok: text, q: text) ->
+   (vec record {
+          department: text;
+          displayName: text;
+          email: text;
+        }) query;
+  exportCsv: (tok: text) -> (text) query;
+  formerBuyerStatus: (tok: text, id: nat) ->
+   (opt record {
+          eligible: bool;
+          person: text;
+          privateEmail: text;
+        }) query;
+  /// events come display-resolved (by/to as names); asset.assignee is the person id, assigneeEmail its current address
+  getAsset: (tok: text, id: nat) ->
+   (opt
+     record {
+       abm: opt AbmDevice;
+       asset: Asset;
+       assigneeEmail: text;
+       assigneeName: text;
+       createdByName: text;
+       events: vec Event;
+       mdm: opt MdmMeta;
+       mdmMismatch: bool;
+       photos: vec PhotoMeta;
+     }) query;
+  /// Admins: the billing settings (the company as creditor, VAT, number range, payment terms, pricing rule, hand-over terms).
+  getBilling: (tok: text) -> (opt Billing) query;
+  getDeal: (id: nat, key: text) -> (opt DealView) query;
+  /// One sale with everything the pages need — admins, or the buyer for their own.
+  getSale: (tok: text, id: nat) -> (opt SaleView) query;
+  getSettings: (tok: text) -> (opt Settings) query;
+  handoverOf: (tok: text, assetId: nat) -> (opt HandoverView) query;
+  handoverOwners: (tok: text) -> (vec record {
+                                        id: text;
+                                        name: text;
+                                      }) query;
+  hub_deactivate: (emails: vec text) -> (nat);
+  hub_manifest: () -> (Manifest) query;
+  /// Aggregate-only read for Hub Operations; no session or records leave this app.
+  hub_operations: (viewer: text) -> (Snapshot) query;
+  hub_ownedObjects: (email: text) -> (vec OwnedObject) query;
+  hub_permissionStatus: () -> (PermissionStatus);
+  /// The Hub brokers this read for a signed-in Desk agent. The viewer retains
+  /// their ordinary app permissions; this endpoint never grants extra access.
+  hub_personContext: (viewer: text, subject: text, viewerRole: text) ->
+   (Context) query;
+  hub_ping: () -> (text) query;
+  hub_reassign: (_ids: vec text, _from: text, _to: text) -> (nat);
+  hub_syncHardware: (c: Case) -> (Progress);
+  hub_upsert: (rows: vec DirectoryRow) -> (nat);
+  hub_usesGroup: (_name: text) -> (vec text) query;
+  /// Columns (header row, any order, case-insensitive): tag, serial, vendor, model, kind, status, assignee, holder, note. Unknown columns are ignored; a device already known by serial or tag is updated, not duplicated.
+  importCsv: (tok: text, "text": text) ->
+   (record {
+      created: nat;
+      detail: text;
+      ok: bool;
+      skipped: nat;
+      updated: nat;
+    });
+  info: () ->
+   (record {
+      appUrl: text;
+      hubId: text;
+      hubSet: bool;
+      orgName: text;
+      version: text;
+    }) query;
+  /// The wizard's last step: an existing device or a new one, what happened, the photo as evidence.
+  intakeCommit: (tok: text, args:
+   record {
+     action: text;
+     assetId: opt nat;
+     create: opt AssetInput;
+     mime: text;
+     note: text;
+     photo: opt blob;
+     to: text;
+   }) -> (record {
+            assetId: nat;
+            detail: text;
+            eventId: nat;
+            ok: bool;
+          });
+  /// Fuzzy match of read codes against tags and serials. Scores: 100 exact · 90 after confusable folding · 75 tail/head match · 60 one edit · 50 two edits.
+  intakeMatch: (tok: text, values: vec text) -> (vec Candidate) query;
+  intakeRead: (tok: text, img: blob, mime: text) -> (ReadResult);
+  /// Admins: issue the invoice — the number comes out of the gapless range now (drafts never use one), the reference is derived from it, the device stays reserved until hand-over. Needs accepted terms and complete billing settings.
+  issueInvoice: (tok: text, id: nat) ->
+   (record {
+      detail: text;
+      invoiceNo: text;
+      ok: bool;
+    });
+  /// Admins: the Apple Business Manager connections (keys never leave the canister).
+  listAbm: (tok: text) -> (vec AbmView) query;
+  /// Admins: what ABM knows, joined with the register by serial. filter: all · matched · unmatched · nomdm · sold (gone from the company but still in Apple's register — release them there); conn 0 = every connection.
+  listAbmDevices: (tok: text, filter: text, conn: nat) -> (vec AbmRow) query;
+  listAssets: (tok: text, q: text, status: text, archived: bool) ->
+   (vec AssetRow) query;
+  listMdm: (tok: text) -> (vec MdmView) query;
+  /// Admins: the sales, newest first; status "" = everything, else that status, "open" = draft/offered/accepted/issued.
+  listSales: (tok: text, status: text) -> (vec SaleView) query;
+  loginWithTicket: (ticket: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
+  /// Admins: the money arrived (finance says so) — a note for the record; the books stay with finance.
+  markPaid: (tok: text, id: nat, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// The buyer's own offers and invoices (a colleague signed in through the hub).
+  myOffers: (tok: text) -> (vec SaleView) query;
+  /// Admins: how the last notification went — the quickest way to see a missing notify lane.
+  notifyStatus: (tok: text) -> (opt NotifyState) query;
+  /// Admins: put the offer to the buyer. A colleague gets a hub notification and accepts the hand-over terms online; for an outside buyer staff record the signed copy (recordWaiver).
+  offerSale: (tok: text, id: nat) -> (record {
+                                        detail: text;
+                                        ok: bool;
+                                      });
+  pendingHandoverCount: (tok: text) -> (nat) query;
+  pendingHandovers: (tok: text) -> (vec HandoverView) query;
+  photo: (tok: text, photoId: nat) ->
+   (opt record {
+          bytes: blob;
+          mime: text;
+        }) query;
+  /// Admins: the rule's price proposal for a device (null when no purchase details are known).
+  priceProposal: (tok: text, assetId: nat) ->
+   (opt record {
+          basis: text;
+          proposedMinor: nat;
+        }) query;
+  /// Admins: an outside buyer (no hub account) signed the terms on paper — record it, so the invoice can be issued. The note says where the signed copy is.
+  recordWaiver: (tok: text, id: nat, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  refreshAi: (tok: text) -> (record {
+                               detail: text;
+                               ok: bool;
+                               state: AiState;
+                             });
+  /// Admins: remove the connection and what it reported; devices already in the register stay.
+  removeAbm: (tok: text, id: nat) -> (record {
+                                        detail: text;
+                                        ok: bool;
+                                      });
+  removeDemo: (tok: text) -> (record {
+                                detail: text;
+                                ok: bool;
+                              });
+  removeMdm: (tok: text, id: nat) -> (record {
+                                        detail: text;
+                                        ok: bool;
+                                      });
+  removePhoto: (tok: text, photoId: nat) -> (record {
+                                               detail: text;
+                                               ok: bool;
+                                             });
+  revokeDealLink: (tok: text, id: nat) -> (record {
+                                             detail: text;
+                                             ok: bool;
+                                           });
+  /// The archived document — for admins and the buyer (their own). Session-gated, no public link.
+  saleDocument: (tok: text, docId: nat) ->
+   (opt record {
+          bytes: blob;
+          hash: text;
+          mime: text;
+          name: text;
+        }) query;
+  /// Admins: the device's purchase details (if any) and its open sale — for the device page.
+  saleOfDevice: (tok: text, assetId: nat) ->
+   (record {
+      billingReady: text;
+      proposal: opt record {
+                      basis: text;
+                      proposedMinor: nat;
+                    };
+      purchase: opt Purchase;
+      sale: opt SaleView;
+    }) query;
+  salesBoard: (tok: text, phase: text, search: text, offset: nat) ->
+   (record {
+      counts: vec record {
+                    text;
+                    nat;
+                  };
+      hasMore: bool;
+      matched: nat;
+      rows: vec SaleSummary;
+      total: nat;
+    }) query;
+  /// Admins: the invoices and credit notes of a year (or all) for finance — number, dates, buyer, device, net/VAT/gross, status, archived document hash.
+  salesExportCsv: (tok: text, year: text) -> (text) query;
+  seedDemo: (tok: text) -> (record {
+                              detail: text;
+                              ok: bool;
+                            });
+  setAdminEmails: (tok: text, emails: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// Admins: save the billing settings. The IBAN must pass the mod-97 check; a changed hand-over text bumps its version (open offers are re-offered on that text).
+  setBilling: (tok: text, b: Billing) -> (record {
+                                            detail: text;
+                                            ok: bool;
+                                          });
+  setHub: (id: text) -> (bool);
+  /// Admins: what the company paid for a device (basis of the price proposal); null price clears it.
+  setPurchase: (tok: text, assetId: nat, priceMinor: opt nat, currency:
+   text, date: text, note: text) -> (record {
+                                       detail: text;
+                                       ok: bool;
+                                     });
+  /// Admins: the two things that must be true before hand-over: the device is wiped, and it left the company's device management.
+  setSaleChecks: (tok: text, id: nat, wiped: bool, mdmRemoved: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setSettings: (tok: text, args:
+   record {
+     adminGroup: text;
+     appUrl: text;
+     orgName: text;
+     tagPrefix: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  /// Which trust app may ask "who has which serial?" — its backend canister id (Trust → Settings shows it). "" switches the export off.
+  setTrustCanister: (tok: text, id: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  signOut: (tok: text) -> ();
+  stats: (tok: text) ->
+   (record {
+      byStatus: vec record {
+                      text;
+                      nat;
+                    };
+      photoBytes: nat;
+      photos: nat;
+      recent: vec record {
+                    event: Event;
+                    name: text;
+                  };
+      total: nat;
+    }) query;
+  /// Admins: sync now (the timer does it every 6 hours).
+  syncAbm: (tok: text, id: nat) -> (record {
+                                      detail: text;
+                                      ok: bool;
+                                    });
+  syncMdm: (tok: text, id: nat) -> (record {
+                                      detail: text;
+                                      ok: bool;
+                                    });
+  syncNow: (tok: text) -> (record {
+                             detail: text;
+                             ok: bool;
+                           });
+  /// Admins: sign, fetch a token, read the first page — proves key, id and role without changing anything.
+  testAbm: (tok: text, id: nat) -> (record {
+                                      detail: text;
+                                      ok: bool;
+                                    });
+  /// Reach the MDM once, read one page, report what it sees — nothing is written.
+  testMdm: (tok: text, id: nat) -> (record {
+                                      detail: text;
+                                      ok: bool;
+                                    });
+  /// For the trust app only: every device with a serial and a person (serial, person id — hub ≥ 0.17; trust ≥ 0.2.0 resolves it) — so it can show people their own devices.
+  /// An update call on purpose: the last read is recorded, so Settings can show that the wiring works.
+  trust_serialOwners: () -> (vec record {
+                                   text;
+                                   text;
+                                 });
+  /// Admins: rename, renew the signed assertion (null keeps the stored one), pause or resume.
+  updateAbm: (tok: text, id: nat, args:
+   record {
+     assertion: opt text;
+     clientId: text;
+     enabled: bool;
+     keyId: text;
+     name: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  updateAsset: (tok: text, id: nat, x: AssetInput) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  updateHandover: (tok: text, assetId: nat, revision: nat, action: text,
+   input: HandoverInput, confirmation: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  updateMdm: (tok: text, id: nat, args:
+   record {
+     clientId: text;
+     enabled: bool;
+     name: text;
+     secret: text;
+     url: text;
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
+  /// Admins: change buyer, price, note or line text while nothing is issued. A change after the buyer accepted puts the offer back to them.
+  updateSale: (tok: text, id: nat, buyer: Buyer, grossMinor: nat, priceNote:
+   text, description: text) -> (record {
+                                  detail: text;
+                                  ok: bool;
+                                });
+  visitDeal: (id: nat, key: text) -> (bool);
+  whoami: (tok: text) ->
+   (opt
+     record {
+       ai: AiState;
+       aiOn: bool;
+       aiSource: text;
+       displayName: text;
+       email: text;
+       hubId: text;
+       id: text;
+       needsClaim: bool;
+       orgName: text;
+       role: text;
+       roleSource: text;
+     }) query;
+}

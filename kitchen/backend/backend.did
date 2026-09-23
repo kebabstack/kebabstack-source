@@ -1,0 +1,188 @@
+type Step =
+ record {
+   detail: text;
+   name: text;
+   status: text;
+ };
+type RecipeView =
+ record {
+   backendSize: nat;
+   canUpdate: bool;
+   description: text;
+   detail: text;
+   downgrade: bool;
+   files: nat;
+   frontendMatches: opt bool;
+   icon: text;
+   id: text;
+   image: text;
+   installed: opt Install;
+   kind: text;
+   name: text;
+   notes: text;
+   releaseId: text;
+   runningSha: text;
+   runningVersion: text;
+   sourceCommit: text;
+   state: text;
+   upToDate: opt bool;
+   version: text;
+ };
+type LogRow =
+ record {
+   at: int;
+   ok: bool;
+   what: text;
+   who: text;
+ };
+type Job =
+ record {
+   by: text;
+   endedAt: int;
+   id: nat;
+   kind: text;
+   recipeId: text;
+   startedAt: int;
+   state: text;
+   steps: vec Step;
+   version: text;
+ };
+type Install =
+ record {
+   adopted: bool;
+   backend: text;
+   connectorId: nat;
+   frontend: text;
+   installedAt: int;
+   recipeId: text;
+   state: text;
+   tileId: nat;
+   updatedAt: int;
+   version: text;
+ };
+/// kebab-stack kitchen — the installer and updater.
+///
+/// One canister that cooks the others. It reads RECIPES (wasm modules +
+/// frontend files + a small manifest) from its own asset canister — the
+/// pantry — and, on an owner's click in the hub, creates the app's two
+/// canisters, installs the code, copies the frontend (patching placeholders
+/// such as the backend id and the hub URL), tells the app where the hub is,
+/// registers it in the hub (lanes from the app's manifest, a bound menu
+/// entry), and hands both canisters to the vault for backups. Updates run the
+/// same way with a vault snapshot first. Nothing here needs a terminal.
+///
+/// Trust: the kitchen is a CONTROLLER of everything it installs, so it is the
+/// second most privileged canister of the suite after the vault. Every action
+/// is owner-only (the hub answers kitchenAuth) and journaled.
+///
+/// Verified on a cloud engine 2026-09-03: create_canister / install_code /
+/// update_settings / stop / delete work from a canister without cycles.
+/// Stable state is append-only (never remove or rename a top-level var).
+service : {
+  /// Register canisters that were deployed by hand as an installed recipe, so
+  /// the kitchen can update them from now on. Requires the kitchen to be a
+  /// controller of both (add-controller once, like for the vault).
+  adopt: (recipeId: text, backend: text, frontend: text, version: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  applyRelease: (request:
+   record {
+     id: text;
+     install: bool;
+     releaseId: text;
+   }) -> (record {
+            detail: text;
+            jobId: nat;
+            ok: bool;
+          });
+  checkForUpdates: () -> (vec RecipeView);
+  cook: () -> (record {
+                 detail: text;
+                 jobId: nat;
+                 ok: bool;
+               });
+  cookResult: () -> (opt record {
+                           claimCode: text;
+                           hubUrl: text;
+                           jobId: nat;
+                         });
+  cookWithCode: (code: text) -> (record {
+                                   detail: text;
+                                   jobId: nat;
+                                   ok: bool;
+                                 });
+  forget: (recipeId: text) -> (record {
+                                 detail: text;
+                                 ok: bool;
+                               });
+  /// Are we a controller of the hub's canisters (→ we may update the hub)? Of the vault?
+  hubStatus: () ->
+   (record {
+      detail: text;
+      frontendId: text;
+      hubBackend: bool;
+      hubFrontend: bool;
+      hubId: text;
+      vault: bool;
+      vaultId: text;
+    });
+  info: () ->
+   (record {
+      hubId: text;
+      installed: nat;
+      me: text;
+      pantryId: text;
+      version: text;
+    });
+  install: (recipeId: text) -> (record {
+                                  detail: text;
+                                  jobId: nat;
+                                  ok: bool;
+                                });
+  /// progress polling — for the person who started the job (or a controller); canister ids of a cooking stack stay private
+  job: (id: nat) -> (opt Job) query;
+  listInstalled: () -> (vec Install);
+  listJobs: () -> (vec Job);
+  listJournal: () -> (vec LogRow);
+  /// the result, for the person who cooked — hub URL and the one-time claim code (an update call, so the reply is certified;
+  /// once the hub reports the code as used, the kitchen forgets it)
+  /// Recover progress after reload without exposing another installer's job.
+  myCook: () -> (opt Job) query;
+  recipes: () -> (vec RecipeView);
+  /// "Re-check with the hub": the hub-side steps alone, for an app that is already up to date (picture, lanes). No code is touched.
+  refresh: (recipeId: text) -> (record {
+                                  detail: text;
+                                  jobId: nat;
+                                  ok: bool;
+                                });
+  removeLeftovers: (recipeId: text) -> (record {
+                                          detail: text;
+                                          ok: bool;
+                                        });
+  setHub: (id: text) -> (record {
+                           detail: text;
+                           ok: bool;
+                         });
+  setPantry: (id: text) -> (record {
+                              detail: text;
+                              ok: bool;
+                            });
+  update: (recipeId: text) -> (record {
+                                 detail: text;
+                                 jobId: nat;
+                                 ok: bool;
+                               });
+  updateHub: () -> (record {
+                      detail: text;
+                      jobId: nat;
+                      ok: bool;
+                    });
+  verifyInstalled: (recipeId: text) ->
+   (record {
+      detail: text;
+      jobId: nat;
+      ok: bool;
+    });
+}

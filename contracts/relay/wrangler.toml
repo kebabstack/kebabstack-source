@@ -1,0 +1,20 @@
+# contracts relay — Cloudflare Email Worker (RUNBOOK.md is the operating truth)
+name = "kebab-contracts-relay"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+# agent-js expects Node globals — nodejs_compat provides them
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets (set with `npx wrangler secret put …`, never written here):
+#   RELAY_SECRET — base64 ed25519 secret from `npm run mint`
+
+[vars]
+# the contracts BACKEND canister (Connection → Status shows it; INSTALL.md)
+CONTRACTS_CANISTER_ID = "__CONTRACTS_BACKEND_CANISTER_ID__"
+# only this envelope recipient is handed in (comma-separated for more than one); empty rejects all mail
+ALLOWED_RECIPIENTS = "subscriptions@your-relay-domain.example"
+# recommended for production: a verified Email Routing destination that receives the original when the canister could not take it
+# FALLBACK_ADDRESS = "it@your-company.example"
+
+# Public Google Workspace address (deduplication and loop prevention)
+# MAILBOX_ADDRESS = "contracts@your-company.example"
