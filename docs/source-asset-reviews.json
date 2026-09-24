@@ -449,7 +449,7 @@
   },
   {
     "path": "hub/test/smoke.mjs",
-    "sha256": "6458ea8d9b388e9e2c1777980eda2022d07e31dc4a826d32ed1fc15ef15ccbfc",
+    "sha256": "5a6ac022adb5312ab0d8975488d2519fc41e0565cb6e5cef4955cfd1d3f1d0b2",
     "rules": [
       "canister-reference"
     ],
