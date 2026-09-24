@@ -2461,9 +2461,9 @@ persistent actor Assets {
   };
   func salePhase(s : Sale) : Text {
     if (s.status == "cancelled") "cancelled"
+    else if (s.status == "issued") "invoice"
     else if (handedOverAt(s.id) != 0) "complete"
     else if (s.status == "paid") "paid"
-    else if (s.status == "issued") "invoice"
     else "offer";
   };
   public type SaleSummary = {
@@ -2495,7 +2495,7 @@ persistent actor Assets {
   public shared query func listSales(tok : Text, status : Text) : async [SaleView] {
     switch (finance(tok)) { case null return []; case (?_) {} };
     let out = List.empty<SaleView>();
-    for ((_, s) in Map.entries(sales)) if (status == "" or s.status == status or (status == "open" and (s.status != "cancelled" and handedOverAt(s.id) == 0))) List.add(out, saleView(s));
+    for ((_, s) in Map.entries(sales)) if (status == "" or s.status == status or (status == "open" and (s.status != "cancelled" and (s.status == "issued" or handedOverAt(s.id) == 0)))) List.add(out, saleView(s));
     let arr = Array.sort<SaleView>(List.toArray(out), func(a, b) = Int.compare(b.sale.updatedAt, a.sale.updatedAt));
     Array.tabulate<SaleView>(Nat.min(arr.size(), 500), func i = arr[i]);
   };

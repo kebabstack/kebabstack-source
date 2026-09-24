@@ -6,7 +6,7 @@ export const PHASES = [
   ['complete', 'Complete', 'Hand-over recorded'],
   ['cancelled', 'Cancelled', 'Closed separately'],
 ];
-export const phaseOf = (row) => row.phase || (row.sale.status === 'cancelled' ? 'cancelled' : Number(row.handedOverAt) ? 'complete' : row.sale.status === 'paid' ? 'paid' : row.sale.status === 'issued' ? 'invoice' : 'offer');
+export const phaseOf = (row) => row.phase || (row.sale.status === 'cancelled' ? 'cancelled' : row.sale.status === 'issued' ? 'invoice' : Number(row.handedOverAt) ? 'complete' : row.sale.status === 'paid' ? 'paid' : 'offer');
 export function nextStep(row) {
   const s = row.sale || row;
   switch (phaseOf(row)) {
