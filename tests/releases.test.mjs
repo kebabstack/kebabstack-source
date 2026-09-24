@@ -21,7 +21,15 @@ async function fixture(baseline=false,hubBaseline=false){
  for(const [name,version] of [['old','1.0.0'],['new','1.1.0']]){writeFileSync(temp+'/'+name+'.mo',readFileSync('tests/fixtures/release/app.mo','utf8').replace('1.0.0',version));execFileSync(moc,['--enhanced-orthogonal-persistence','--idl','-o',temp+'/'+name+'.wasm',temp+'/'+name+'.mo']);}
  const app=await pic.setupCanister({sender:owner,controllers:[owner,k.canisterId,v.canisterId],wasm:temp+'/old.wasm',idlFactory:await idl(temp+'/old.did')});app.actor.setPrincipal(owner);await app.actor.put('Existing company data');
  await pic.updateCanisterSettings({sender:owner,canisterId:frontend.canisterId,controllers:[owner,k.canisterId,v.canisterId]});
- const store=async(a,key,content,type='text/plain')=>{content=Buffer.from(content);await a.actor.store({key,content_type:type,content_encoding:'identity',content,sha256:[Buffer.from(sha(content),'hex')]});};
+ const store=async(a,key,content,type='text/plain')=>{
+  content=Buffer.from(content);const hash=Buffer.from(sha(content),'hex');
+  if(content.length<=1000000){await a.actor.store({key,content_type:type,content_encoding:'identity',content,sha256:[hash]});return;}
+  // Real release publishing chunks large Wasm/files; keep fixtures within ingress limits too.
+  const exists=(await listAssets((method,args)=>a.actor[method](...args))).some(file=>file.key===key);
+  const batch=(await a.actor.create_batch({})).batch_id,chunks=[];
+  for(let offset=0;offset<content.length;offset+=1000000)chunks.push((await a.actor.create_chunk({batch_id:batch,content:content.subarray(offset,offset+1000000)})).chunk_id);
+  await a.actor.commit_batch({batch_id:batch,operations:[...(!exists?[{CreateAsset:{key,content_type:type,max_age:[],headers:[],enable_aliasing:[],allow_raw_access:[]}}]:[]),{SetAssetContent:{key,content_encoding:'identity',chunk_ids:chunks,last_chunk:[],sha256:[hash]}}]});
+ };
  const original='const BACKEND_CANISTER_ID = "'+app.canisterId+'"; const HUB_URL = "https://company.example.test"; // old';
  await store(frontend,'/app.js',original,'text/javascript');await store(frontend,'/.well-known/ic-domains','company.example.test');
  await frontend.actor.set_asset_properties({key:'/app.js',max_age:[[93n]],headers:[[[["X-Company","preserve"]]]],allow_raw_access:[[false]],is_aliased:[]});
