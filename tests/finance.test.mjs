@@ -1,0 +1,86 @@
+import assert from 'node:assert/strict';
+import {test,before,after} from 'node:test';
+import {execFileSync} from 'node:child_process';
+import {resolve} from 'node:path';
+import {PocketIc,PocketIcServer,createIdentity} from '@dfinity/pic';
+import {candidateBackend} from './packaged-wasm.mjs';
+const names=['controller','owner','admin','finance','employee','buyer'];
+const principals=Object.fromEntries(names.map(n=>[n,createIdentity('finance-'+n).getPrincipal()]));
+const code='fa'.repeat(32);let server;
+before(async()=>{server=await PocketIcServer.start();});after(async()=>{await server?.stop();});
+async function idl(app,baseline=false){const path=baseline?resolve(process.env.KEBAB_FINANCE_BASELINE,app,'backend.did'):`${app}/backend/dist/backend.did`,js=execFileSync('python3',['sdk/tools/did2idl.py',path],{encoding:'utf8'});return (await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'))).idlFactory;}
+async function setup(baseline=false){
+ const pic=await PocketIc.create(server.getUrl());await pic.setTime(Date.parse('2026-09-24T12:00:00Z'));
+ const install=async name=>pic.setupCanister({sender:principals.controller,controllers:[principals.controller],wasm:baseline?resolve(process.env.KEBAB_FINANCE_BASELINE,name,'backend.wasm'):candidateBackend(name),idlFactory:await idl(name,baseline),environmentVariables:name==='hub'?[{name:'KEBAB_CLAIM_CODE',value:code}]:[]});
+ const h=await install('hub'),a=await install('assets');let hub=h.actor,app=a.actor;hub.setPrincipal(principals.owner);assert.ok((await hub.claimHubWithCode(code,{email:'owner@finance.test',displayName:'Owner',orgName:'Finance fixture'})).ok);
+ for(const name of names.filter(n=>!['controller','owner'].includes(n))){hub.setPrincipal(principals.owner);assert.ok(await hub.addLocalUser(name+'@finance.test',name,'',''));const [invite]=await hub.createInvite(name+'@finance.test');hub.setPrincipal(principals[name]);assert.ok(await hub.claimInvite(invite));}
+ hub.setPrincipal(principals.owner);assert.ok((await hub.setPersonRole('admin@finance.test','admin')).ok);await pic.tick(15);
+ app.setPrincipal(principals.controller);await app.setHub(h.canisterId.toText());
+ const c=await hub.connectApp({name:'assets',canisterId:a.canisterId.toText(),note:'',lanes:['identity','roles','groups','notify'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[{name:'Assets',kind:'app',url:'https://assets.finance.test'}]});assert.ok(c.ok,c.detail);
+ const policy={app:'assets',defaultRole:'member',people:[],groups:[]};assert.ok((await hub.setAppPermissions(c.id,0n,policy)).ok);
+ const ids={};for(const n of names.filter(n=>n!=='controller'))ids[n]=(await hub.personCard(n+'@finance.test'))[0].pid;
+ const ctx={pic,h,a,c,hub,app,ids,policy};
+ ctx.login=async name=>{ctx.hub.setPrincipal(principals[name]);const ticket=await ctx.hub.mintAppTicket('',c.tileId);assert.ok(ticket.ok,ticket.detail);const [s]=await ctx.app.loginWithTicket(ticket.ticket);assert.ok(s);return s;};
+ ctx.configure=async override=>{ctx.hub.setPrincipal(principals.owner);const view=await ctx.hub.getFinanceTeam();const result=await ctx.hub.setFinanceTeam({...view.config,mode:'team',people:[ids.finance],groups:[],apps:[{cid:c.id,canisterId:a.canisterId}],...override});assert.ok(result.ok,result.detail);await pic.tick(15);if(ctx.admin)assert.ok((await ctx.app.syncNow(ctx.admin.token)).ok);return result;};
+ ctx.admin=await ctx.login('owner');await app.setSettings(ctx.admin.token,{orgName:'Finance fixture',appUrl:'https://assets.finance.test/',tagPrefix:'INV-',adminGroup:''});
+ ctx.billing={legalName:'Fixture AG',street:'Example street',houseNo:'1',postalCode:'8000',town:'Zurich',country:'CH',uid:'CHE-123.456.789',vatRegistered:true,vatRateBp:810n,iban:'CH9300762011623852957',currency:'CHF',prefix:'TEST-',yearInNumber:true,paymentDays:14n,lang:'en',depreciationMonths:36n,floorPct:10n,minPriceMinor:5000n,waiverText:'Synthetic fixture terms.',waiverVersion:1n,footer:'TEST ONLY'};
+ assert.ok((await app.setBilling(ctx.admin.token,ctx.billing)).ok);let seq=0;
+ ctx.sale=async(email='outside@finance.test')=>{const asset=await ctx.app.createAsset(ctx.admin.token,{tag:'INV-'+(++seq),serial:'FINANCE-'+seq,vendor:'Example',model:'Hardware',kind:'laptop',note:'Technical context is restricted'});assert.ok(asset.ok,asset.detail);const sale=await ctx.app.createSale(ctx.admin.token,asset.id,{pid:'',name:'Outside buyer',email,street:'Example road',houseNo:'2',postalCode:'8001',town:'Zurich',country:'CH'},10000n,'');assert.ok(sale.ok,sale.detail);assert.ok((await ctx.app.offerSale(ctx.admin.token,sale.id)).ok);assert.ok((await ctx.app.recordWaiver(ctx.admin.token,sale.id,'Fixture signed acceptance')).ok);assert.ok((await ctx.app.issueInvoice(ctx.admin.token,sale.id)).ok);return {id:sale.id,assetId:asset.id};};
+ ctx.upgrade=async()=>{for(const[name,f]of [['hub',h],['assets',a]])await pic.upgradeCanister({sender:principals.controller,canisterId:f.canisterId,wasm:candidateBackend(name),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});ctx.hub=pic.createActor(await idl('hub'),h.canisterId);ctx.app=pic.createActor(await idl('assets'),a.canisterId);await pic.tick(15);};
+ return ctx;
+}
+test('Finance grants are owner managed, scoped, deny-aware, group protected and reversible',async()=>{const x=await setup();try{
+ const {hub,app,ids,c}=x;hub.setPrincipal(principals.owner);assert.equal((await hub.getFinanceTeam()).config.mode,'unconfigured');
+ const view=await hub.getFinanceTeam();hub.setPrincipal(principals.admin);assert.equal((await hub.setFinanceTeam({...view.config,mode:'it'})).ok,false);hub.setPrincipal(principals.employee);await assert.rejects(hub.getFinanceTeam());
+ hub.setPrincipal(principals.owner);assert.equal((await hub.setAppPermissions(c.id,1n,{...x.policy,people:[{id:ids.finance,role:'finance'}]})).ok,false,'Finance cannot be assigned outside company teams');
+ const g=await hub.addGroup('Accounting','');assert.ok(g.ok);assert.ok((await hub.setGroupMembers(g.id,['finance@finance.test'],[])).ok);
+ await x.configure({people:[],groups:[g.id]});let f=await x.login('finance');assert.equal(f.role,'finance');
+ hub.setPrincipal(principals.admin);assert.equal((await hub.setGroupMembers(g.id,['employee@finance.test'],[])).ok,false,'manual Finance groups become owner managed');
+ const sale=await x.sale();assert.equal((await app.getSale(f.token,sale.id)).length,1);assert.equal((await app.getAsset(f.token,sale.assetId)).length,0,'Finance cannot read technical device projection');assert.equal((await app.financeInventory(f.token,'2026-09-24','',0n))[0].matched,1n);
+ assert.equal((await app.createAsset(f.token,{tag:'NO',serial:'NO',vendor:'',model:'',kind:'laptop',note:''})).ok,false);assert.equal((await app.setSaleChecks(f.token,sale.id,true,true)).ok,false);assert.equal((await app.completeSaleHandover(f.token,sale.id,true,'')).ok,false);assert.deepEqual(await app.getSettings(f.token),[]);
+ const employee=await x.login('employee');assert.deepEqual(await app.financeInventory(employee.token,'2026-09-24','',0n),[]);assert.deepEqual(await app.salePaymentHistory(employee.token,sale.id),[]);assert.equal(await app.paymentsExportCsv(employee.token),'');
+ hub.setPrincipal(principals.owner);assert.ok((await hub.setAppPermissions(c.id,1n,{...x.policy,people:[{id:ids.finance,role:'none'}]})).ok);await x.pic.tick(20);assert.ok((await app.syncNow(x.admin.token)).ok);assert.equal((await hub.getAppPermissions(c.id))[0].people.find(p=>p.id===ids.finance).role,'none');assert.deepEqual(await app.salePaymentHistory(f.token,sale.id),[]);
+ hub.setPrincipal(principals.owner);const adminGroup=await hub.addGroup('Asset administrators','');assert.ok(adminGroup.ok);assert.ok((await hub.setGroupMembers(adminGroup.id,['finance@finance.test'],[])).ok);
+ assert.ok((await hub.setAppPermissions(c.id,2n,{...x.policy,people:[{id:ids.finance,role:'member'}],groups:[{id:adminGroup.id,role:'admin'}]})).ok);await x.pic.tick(20);assert.ok((await app.syncNow(x.admin.token)).ok);assert.equal((await x.login('finance')).role,'finance','Finance supplements an explicit employee assignment even when it overrides an admin group');
+ hub.setPrincipal(principals.owner);assert.ok((await hub.setAppPermissions(c.id,3n,{...x.policy,groups:[{id:adminGroup.id,role:'admin'}]})).ok);await x.pic.tick(20);assert.ok((await app.syncNow(x.admin.token)).ok);assert.equal((await x.login('finance')).role,'admin','unrestricted group administrators retain their access');
+ hub.setPrincipal(principals.owner);const before=await hub.getFinanceTeam();await x.configure({mode:'it'});const after=await hub.getFinanceTeam();assert.equal(after.config.mode,'it');assert.equal(after.apps[0].enabled,false);assert.equal((await hub.setFinanceTeam({...before.config,mode:'team'})).ok,false,'stale team edits are rejected');
+ }finally{await x.pic.tearDown();}});
+test('Finance payments preserve invoices, reject self confirmation and duplicates, and support audited partial payments and corrections',async()=>{const x=await setup();try{
+ await x.configure();const f=await x.login('finance'),s=await x.sale(),a=x.app;
+ const before=(await a.getSale(f.token,s.id))[0].invoice;
+ const input={amountMinor:4000n,paidOn:'2026-09-24',reference:'BANK-01',reason:'',reverses:[],requestId:'test-payment-0001'};
+ assert.ok((await a.recordSalePayment(f.token,s.id,0n,input)).ok);assert.ok((await a.recordSalePayment(f.token,s.id,0n,input)).ok,'same request is idempotent');assert.equal((await a.recordSalePayment(f.token,s.id,0n,{...input,requestId:'test-payment-0002'})).ok,false);
+ assert.ok(!JSON.stringify((await a.getAsset(x.admin.token,s.assetId))[0].events,(_,v)=>typeof v==='bigint'?String(v):v).includes('BANK-01'),'bank references stay out of technical hardware history');
+ assert.equal((await a.getSale(f.token,s.id))[0].sale.status,'issued');assert.equal((await a.salePaymentHistory(f.token,s.id))[0].outstandingMinor,6000n);assert.deepEqual((await a.getSale(f.token,s.id))[0].invoice,before);
+ assert.equal((await a.recordSalePayment(f.token,s.id,1n,{...input,amountMinor:6001n,requestId:'over-payment-0001'})).ok,false);assert.equal((await a.recordSalePayment(f.token,s.id,1n,{...input,paidOn:'2026-02-30',requestId:'bad-date-0000001'})).ok,false);
+ assert.ok((await a.recordSalePayment(f.token,s.id,1n,{...input,amountMinor:6000n,requestId:'test-payment-0002'})).ok);assert.equal((await a.getSale(f.token,s.id))[0].sale.status,'paid');
+ assert.ok((await a.attachSaleDocument(x.admin.token,s.id,'invoice',Buffer.from('%PDF-1.4\n'+'sample '.repeat(30)))).ok);assert.ok((await a.setSaleChecks(x.admin.token,s.id,true,true)).ok);assert.ok((await a.completeSaleHandover(x.admin.token,s.id,false,'Physical delivery fixture')).ok);
+ const correction={...input,reverses:[1n],reason:'Duplicate statement entry',requestId:'reverse-payment-01'};assert.ok((await a.recordSalePayment(f.token,s.id,2n,correction)).ok);assert.equal((await a.salePaymentHistory(f.token,s.id))[0].outstandingMinor,4000n);assert.equal((await a.recordSalePayment(f.token,s.id,3n,{...correction,requestId:'reverse-payment-02'})).ok,false,'cannot reverse twice');
+ const own=await x.sale('finance@finance.test');assert.equal((await a.markPaid(f.token,own.id,'self')).ok,false);assert.equal((await a.salePaymentHistory(f.token,own.id))[0].canRecord,false);assert.ok((await a.markPaid(x.admin.token,own.id,'Another person confirmed')).ok);
+ const invoice=await a.getSale(f.token,s.id),history=await a.salePaymentHistory(f.token,s.id);await x.upgrade();assert.deepEqual(await x.app.getSale(f.token,s.id),invoice);assert.deepEqual(await x.app.salePaymentHistory(f.token,s.id),history);x.hub.setPrincipal(principals.owner);assert.deepEqual((await x.hub.getFinanceTeam()).config.people,[x.ids.finance]);assert.ok((await x.app.cancelSale(x.admin.token,s.id,'Invoice correction after hand-over')).ok);assert.equal((await x.app.getAsset(x.admin.token,s.assetId))[0].asset.status,'sold','credit note after a payment correction must not undo physical custody');
+ }finally{await x.pic.tearDown();}});
+test('Finance valuation keeps currencies separate, uses calendar months and preserves amendments',async()=>{const x=await setup();try{
+ await x.configure();const f=await x.login('finance'),s=await x.sale(),a=x.app;
+ const input={priceMinor:120000n,currency:'CHF',purchasedOn:'2025-09-01',inServiceOn:'2025-09-15',months:36n,residualMinor:12000n,reason:'Capitalization policy agreed'};
+ assert.ok((await a.saveAssetValuation(f.token,s.assetId,0n,input)).ok);assert.equal((await a.financeAsset(f.token,s.assetId,'2026-09-24'))[0].asset.bookMinor[0],84000n);assert.deepEqual((await a.financeAsset(f.token,s.assetId,'2025-09-01'))[0].asset.bookMinor,[]);
+ assert.equal((await a.financeAsset(f.token,s.assetId,'2030-09-24'))[0].asset.bookMinor[0],12000n);assert.equal((await a.saveAssetValuation(f.token,s.assetId,0n,input)).ok,false);assert.equal((await a.saveAssetValuation(f.token,s.assetId,1n,{...input,inServiceOn:'2025-02-31'})).ok,false);
+ assert.ok((await a.setValuationDefaults(f.token,0n,[{kind:'laptop',months:48n}])).ok);assert.equal((await a.financeAsset(f.token,s.assetId,'2026-09-24'))[0].asset.valuation[0].input.months,36n,'defaults do not rewrite existing valuations');
+ const second=await x.sale();assert.ok((await a.saveAssetValuation(f.token,second.assetId,0n,{...input,currency:'EUR'})).ok);const totals=(await a.financeInventory(f.token,'2026-09-24','',0n))[0].totals;assert.equal(totals.length,2);assert.deepEqual(totals.map(t=>t[0]).sort(),['CHF','EUR']);
+ const before=await a.financeAsset(f.token,s.assetId,'2026-09-24');await x.upgrade();assert.deepEqual(await x.app.financeAsset(f.token,s.assetId,'2026-09-24'),before);
+ assert.match(await x.app.financeInventoryCsv(f.token,'2026-09-24'),/840.00/);assert.ok((await x.app.setPurchase(x.admin.token,s.assetId,[130000n],'CHF','2025-09-01','Corrected purchase')).ok);assert.deepEqual((await x.app.financeAsset(f.token,s.assetId,'2026-09-24'))[0].asset.bookMinor,[],'outdated valuation cannot silently use a different purchase basis');
+ }finally{await x.pic.tearDown();}});
+test('production Hub and Assets upgrade with legacy paid invoices, archived PDFs, custody and Lunch unaffected',{skip:!process.env.KEBAB_FINANCE_BASELINE},async()=>{const x=await setup(true);try{
+ const s=await x.sale(),a=x.app;assert.ok((await a.markPaid(x.admin.token,s.id,'Legacy bank record')).ok);const pdf=Buffer.from('%PDF-1.4\n'+ 'legacy invoice fixture '.repeat(15));assert.ok((await a.attachSaleDocument(x.admin.token,s.id,'invoice',pdf)).ok);
+ const old=await a.getSale(x.admin.token,s.id),settings=await a.getSettings(x.admin.token),inventory=await a.getAsset(x.admin.token,s.assetId);
+ x.hub.setPrincipal(principals.owner);const lunchPrincipal=createIdentity('finance-lunch').getPrincipal(),lunch=await x.hub.connectApp({name:'Lunch',canisterId:lunchPrincipal.toText(),note:'',lanes:['identity'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[]});assert.ok(lunch.ok);x.hub.setPrincipal(lunchPrincipal);const roster=await x.hub.team_members();
+ await x.upgrade();assert.deepEqual(await x.app.getSale(x.admin.token,s.id),old);const persisted = rows => rows.map(({ai,...rest})=>rest);assert.deepEqual(persisted(await x.app.getSettings(x.admin.token)),persisted(settings));assert.deepEqual(await x.app.getAsset(x.admin.token,s.assetId),inventory);x.hub.setPrincipal(lunchPrincipal);assert.deepEqual(await x.hub.team_members(),roster);
+ x.hub.setPrincipal(principals.owner);assert.equal((await x.hub.getFinanceTeam()).config.mode,'unconfigured');await x.configure();const f=await x.login('finance');const history=(await x.app.salePaymentHistory(f.token,s.id))[0];assert.equal(history.paidMinor,10000n);assert.match(history.entries[0].reason,/before the Finance ledger/);assert.deepEqual(Buffer.from((await x.app.saleDocument(f.token,old[0].sale.pdfId))[0].bytes),pdf);
+ x.hub.setPrincipal(lunchPrincipal);assert.deepEqual(await x.hub.team_members(),roster,'enabling Finance must not alter Lunch');
+ }finally{await x.pic.tearDown();}});
+test('issued invoices notify effective Finance once; empty teams warn and access follows deactivation',async()=>{const x=await setup();try{
+ await x.configure();const f=await x.login('finance'),s=await x.sale();
+ for(let i=0;i<2;i++){await x.pic.advanceTime(61000);await x.pic.tick(40);}
+ x.hub.setPrincipal(principals.finance);const first=await x.hub.myNotifications(f.suiteToken,50n);const notes=first.items.filter(n=>n.kind==='assets.finance'&&n.url===`https://assets.finance.test/#/sale/${s.id}`);assert.equal(notes.length,1,'invoice notification arrives once with internal URL');assert.ok(!notes[0].url.includes('deal.html'));
+ await x.pic.advanceTime(310000);await x.pic.tick(40);assert.equal((await x.hub.myNotifications(f.suiteToken,50n)).items.filter(n=>n.kind==='assets.finance').length,1,'completed notice does not resend');
+ x.hub.setPrincipal(principals.owner);assert.ok(await x.hub.setLocalUserActive('finance@finance.test',false));assert.equal((await x.hub.getFinanceTeam()).apps[0].recipients,0n);await x.pic.advanceTime(31000);await x.pic.tick(30);assert.deepEqual(await x.app.financeInventory(f.token,'2026-09-24','',0n),[]);
+ }finally{await x.pic.tearDown();}});

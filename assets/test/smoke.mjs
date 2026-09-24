@@ -103,6 +103,10 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "setBilling": return { ok: true, detail: "saved" };
     case "salesExportCsv": return "number,kind\nIT-2026-0001,invoice\n";
     case "setPurchase": return { ok: true, detail: "" };
+    case "financeSetup": return [{mode:"it",enabled:false,activeMembers:0n}];
+    case "salePaymentHistory": return [{entries:[],revision:0n,paidMinor:saleStatus==='paid'?65000n:0n,outstandingMinor:saleStatus==='paid'?0n:65000n,canRecord:true}];
+    case "saleFinanceNotification": return [];
+    case "recordSalePayment": saleStatus="paid";return {ok:true,detail:"Recorded"};
     case "markPaid": saleStatus = "paid"; return { ok: true, detail: "" };
     case "setSaleChecks": case "recordWaiver": case "updateSale": return { ok: true, detail: "" };
     case "cancelSale": return { ok: true, detail: "cancelled", creditNoteNo: "" };
@@ -132,7 +136,7 @@ if (flow && flow !== "admin-deal") {
   }
 }
 globalThis.setInterval = () => 0; window.scrollTo = () => {}; window.Element.prototype.scrollIntoView = () => {}; globalThis.confirm = () => true; globalThis.alert = (m) => { throw new Error("alert: " + m) };
-globalThis.Blob = window.Blob; globalThis.URL = window.URL; window.URL.createObjectURL = () => "blob:smoke"; globalThis.URL.createObjectURL = () => "blob:smoke";
+globalThis.FormData = window.FormData; globalThis.Blob = window.Blob; globalThis.URL = window.URL; window.URL.createObjectURL = () => "blob:smoke"; globalThis.URL.createObjectURL = () => "blob:smoke";
 // createImageBitmap + canvas are not in jsdom: the intake's shrink() is stubbed by injecting a ready photo
 const errors = [];
 window.addEventListener("error", (e) => errors.push(e.message));
@@ -172,7 +176,7 @@ if (flow === "admin-deal") {
   $("dealRefresh").click();for(let i=0;i<5;i++)await tick();
   check(!$("ckWiped").disabled&&$("sChecksTitle").textContent==="Prepare for hand-over","preparation remains editable after automatic invoice");
   $("pinRead").click(); for(let i=0;i<4;i++)await tick(); check($("pinValue").textContent==="001234","PIN keeps leading zeros"); $("pinHide").click(); check($("pinValue").textContent==="","hide clears PIN from DOM");
-  document.querySelector('[data-act="paid"]').click();await tick();$("sPaidGo").click();for(let i=0;i<5;i++)await tick();
+  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true}));await tick();document.querySelector("[data-payment-save]").click();for(let i=0;i<5;i++)await tick();
   check(!$("sChecksCard").classList.contains("hidden")&&!$("handoverCard").classList.contains("hidden"),"paid deal still requires hand-over");
   check(!$("handoverGo").disabled && /does not block/.test($("handoverHelp").textContent),"unconfirmed invoice receipt does not block a prepared paid hand-over");
   $("handoverAbm").checked=true;$("handoverGo").click();for(let i=0;i<5;i++)await tick();
@@ -255,9 +259,9 @@ if (role === "admin") {
   check(attached && attached.bytes instanceof Uint8Array && attached.bytes.length > 8000 && String.fromCharCode(...attached.bytes.slice(0, 5)) === "%PDF-", "archived bytes are a PDF: " + (attached && attached.bytes.length));
   check(/IT-2026-0001/.test($("sKv").textContent) && /invoiced/.test($("sPills").textContent) && /RF94 IT20 2600 01/.test($("sKv").textContent), "sale page after issue: " + $("sTitle").textContent);
   check(/archived as IT-2026-0001\.pdf/.test($("sDocStatus").textContent), "doc status: " + $("sDocStatus").textContent);
-  check(!!document.querySelector('#sActions [data-act="paid"]') && !!document.querySelector('#sActions [data-act="cancel"]'), "paid + cancel actions after issue");
-  document.querySelector('#sActions [data-act="paid"]').click(); await tick(); check(!$("sPaidRow").classList.contains("hidden"), "paid note row opens");
-  $("sPaidNote").value = "bank 2026-09-10"; $("sPaidGo").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("markPaid"), "markPaid called");
+  check(!!document.querySelector("[data-payment]") && !!document.querySelector('#sActions [data-act="cancel"]'), "payment ledger + cancel actions after issue");
+  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true})); await tick(); check(!!document.querySelector("[data-payment-save]"), "payment review opens");
+  document.querySelector("[data-payment-save]").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("recordSalePayment"), "payment recorded through ledger");
   check(/still in ABM/.test($("sPills").textContent) && /released the device in Apple Business Manager/.test($("handoverAbmRow").textContent), "paid sale reminds to release the device in ABM: " + $("sPills").textContent.slice(0, 120));
   // sales list + export
   await go("#/d/1"); for (let i = 0; i < 3; i++) await tick(); check(!$("dAbm").classList.contains("hidden") && /Apple Business Manager · Group/.test($("dAbm").textContent) && /Iru · Group/.test($("dAbm").textContent) && /2024-03-12/.test($("dAbm").textContent), "device card shows the Apple Business Manager box");

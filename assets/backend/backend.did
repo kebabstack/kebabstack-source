@@ -1,3 +1,20 @@
+type ValuationInput =
+ record {
+   currency: text;
+   inServiceOn: text;
+   months: nat;
+   priceMinor: nat;
+   purchasedOn: text;
+   reason: text;
+   residualMinor: nat;
+ };
+type Valuation =
+ record {
+   at: int;
+   by: text;
+   input: ValuationInput;
+   revision: nat;
+ };
 type Snapshot =
  record {
    checkedAt: int;
@@ -164,6 +181,27 @@ type PermissionStatus =
    model: nat;
    revision: text;
  };
+type PaymentInput =
+ record {
+   amountMinor: nat;
+   paidOn: text;
+   reason: text;
+   reference: text;
+   requestId: text;
+   reverses: opt nat;
+ };
+type PaymentEntry =
+ record {
+   amountMinor: nat;
+   at: int;
+   by: text;
+   id: nat;
+   paidOn: text;
+   reason: text;
+   reference: text;
+   requestId: text;
+   reverses: opt nat;
+ };
 type OwnedObject =
  record {
    id: text;
@@ -313,6 +351,21 @@ type Handover =
    saleId: nat;
    stage: text;
    updatedAt: int;
+ };
+type FinanceAsset =
+ record {
+   archived: bool;
+   assignee: text;
+   bookMinor: opt nat;
+   id: nat;
+   kind: text;
+   name: text;
+   purchase: opt Purchase;
+   revision: nat;
+   serial: text;
+   status: text;
+   tag: text;
+   valuation: opt Valuation;
  };
 type Event =
  record {
@@ -707,6 +760,56 @@ service : {
           email: text;
         }) query;
   exportCsv: (tok: text) -> (text) query;
+  financeAsset: (tok: text, id: nat, asOf: text) ->
+   (opt record {
+          asset: FinanceAsset;
+          history: vec Valuation;
+        }) query;
+  financeInventory: (tok: text, asOf: text, search: text, offset: nat) ->
+   (opt
+     record {
+       defaults: vec record {
+                       kind: text;
+                       months: nat;
+                     };
+       defaultsRevision: nat;
+       matched: nat;
+       missing: nat;
+       rows: vec FinanceAsset;
+       totals: vec record {
+                     text;
+                     nat;
+                   };
+     }) query;
+  financeInventoryCsv: (tok: text, asOf: text) -> (text) query;
+  financePayments: (tok: text, overdueOnly: bool, offset: nat) ->
+   (opt
+     record {
+       matched: nat;
+       open: nat;
+       overdue: nat;
+       rows:
+        vec
+         record {
+           buyer: text;
+           currency: text;
+           device: text;
+           dueOn: text;
+           id: nat;
+           number: text;
+           outstandingMinor: nat;
+         };
+       totals: vec record {
+                     text;
+                     nat;
+                   };
+     }) query;
+  financeSetup: (tok: text) ->
+   (opt record {
+          activeMembers: nat;
+          enabled: bool;
+          mode: text;
+        });
   formerBuyerStatus: (tok: text, id: nat) ->
    (opt record {
           eligible: bool;
@@ -829,6 +932,7 @@ service : {
                                         detail: text;
                                         ok: bool;
                                       });
+  paymentsExportCsv: (tok: text) -> (text) query;
   pendingHandoverCount: (tok: text) -> (nat) query;
   pendingHandovers: (tok: text) -> (vec HandoverView) query;
   photo: (tok: text, photoId: nat) ->
@@ -842,6 +946,11 @@ service : {
           basis: text;
           proposedMinor: nat;
         }) query;
+  recordSalePayment: (tok: text, id: nat, revision: nat, input:
+   PaymentInput) -> (record {
+                       detail: text;
+                       ok: bool;
+                     });
   /// Admins: an outside buyer (no hub account) signed the terms on paper — record it, so the invoice can be issued. The note says where the signed copy is.
   recordWaiver: (tok: text, id: nat, note: text) ->
    (record {
@@ -882,6 +991,12 @@ service : {
           mime: text;
           name: text;
         }) query;
+  saleFinanceNotification: (tok: text, id: nat) ->
+   (vec record {
+          complete: bool;
+          detail: text;
+          kind: text;
+        }) query;
   /// Admins: the device's purchase details (if any) and its open sale — for the device page.
   saleOfDevice: (tok: text, assetId: nat) ->
    (record {
@@ -893,6 +1008,15 @@ service : {
       purchase: opt Purchase;
       sale: opt SaleView;
     }) query;
+  salePaymentHistory: (tok: text, id: nat) ->
+   (opt
+     record {
+       canRecord: bool;
+       entries: vec PaymentEntry;
+       outstandingMinor: nat;
+       paidMinor: nat;
+       revision: nat;
+     }) query;
   salesBoard: (tok: text, phase: text, search: text, offset: nat) ->
    (record {
       counts: vec record {
@@ -906,6 +1030,11 @@ service : {
     }) query;
   /// Admins: the invoices and credit notes of a year (or all) for finance — number, dates, buyer, device, net/VAT/gross, status, archived document hash.
   salesExportCsv: (tok: text, year: text) -> (text) query;
+  saveAssetValuation: (tok: text, id: nat, revision: nat, input:
+   ValuationInput) -> (record {
+                         detail: text;
+                         ok: bool;
+                       });
   seedDemo: (tok: text) -> (record {
                               detail: text;
                               ok: bool;
@@ -949,6 +1078,14 @@ service : {
       detail: text;
       ok: bool;
     });
+  setValuationDefaults: (tok: text, revision: nat, input:
+   vec record {
+         kind: text;
+         months: nat;
+       }) -> (record {
+                detail: text;
+                ok: bool;
+              });
   signOut: (tok: text) -> ();
   stats: (tok: text) ->
    (record {

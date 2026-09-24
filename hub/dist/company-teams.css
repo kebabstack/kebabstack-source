@@ -1,0 +1,11 @@
+/* Company-team layout uses the existing shared controls and semantic colours. */
+#companyTeams fieldset{border:0;padding:0;margin:var(--ks-space-4,16px) 0}
+#companyTeams legend{padding:0;margin-bottom:var(--ks-space-2,8px)}
+#companyTeams label.ck{display:flex;align-items:center;gap:var(--ks-space-2,8px);min-height:44px;margin:0}
+#companyTeams label.ck input{flex:0 0 auto;width:auto;margin:0}
+#companyTeams .row{align-items:end;justify-content:flex-start}
+#companyTeams .row>label{flex:0 1 28rem;min-width:0;max-width:100%}
+#companyTeams .row>button{flex:0 0 auto;margin:0}
+#companyTeams [data-team-list]>p{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ks-space-2,8px)}
+#companyTeams [data-team-list] button{margin-left:auto}
+#companyTeams [data-team-list]{max-width:42rem}

@@ -6,6 +6,8 @@
 <script src="/brand.js"></script>
 <link rel="stylesheet" href="/tokens.css">
 <script src="./permissions.js"></script>
+<script src="./company-teams.js"></script>
+<link rel="stylesheet" href="./company-teams.css">
 <script src="./updates.js"></script>
 <script src="./operations.js"></script>
 <script src="./displays.js"></script>
@@ -668,7 +670,7 @@ city^=Remote"></textarea>
       <div class="guide-flow">
         <article class="guide-step"><h3>Sign in as yourself</h3><p>Use your company login or a linked passkey. The Hub connects that sign-in to your work profile and checks which apps you can use.</p></article>
         <article class="guide-step"><h3>Open your app</h3><p>Choose a connected app and the Hub signs you into it. Website links open separately and may have their own login.</p></article>
-        <article class="guide-step"><h3>Keep work moving</h3><p>The Apps button follows you between tools. The bell brings together Hub notifications, with links back to the work that needs your attention.</p></article>
+        <article class="guide-step"><h3>Finance, managed centrally</h3><p>Owners assign Finance people and groups in Company teams and select the Assets connections they serve. Finance handles payments and values; IT keeps technical control. Choose management through IT to dismiss the shared setup reminder.</p><a href="#/settings/teams">Company teams →</a></article><article class="guide-step"><h3>Keep work moving</h3><p>The Apps button follows you between tools. The bell brings together Hub notifications, with links back to the work that needs your attention.</p></article>
       </div>
       <h3 class="guide-title">Make it work for you</h3>
       <div class="guide-detail-grid">
@@ -728,7 +730,7 @@ city^=Remote"></textarea>
         <div class="pulse" id="pulseText">Loading…</div>
         <div class="kv" id="pulseSub"></div>
       </div>
-      <div class="statgrid" id="statgrid"></div><div class="quick-actions"><a href="#/operations">Open Operations <span>→</span></a><a href="#/people">Find a person <span>→</span></a><a href="#/permissions">Manage app access <span>→</span></a><a href="#/apps">Manage apps <span>→</span></a></div>
+      <div id="financeHomeBanner"></div><div class="statgrid" id="statgrid"></div><div class="quick-actions"><a href="#/operations">Open Operations <span>→</span></a><a href="#/people">Find a person <span>→</span></a><a href="#/permissions">Manage app access <span>→</span></a><a href="#/apps">Manage apps <span>→</span></a></div>
 
       <div class="card" id="attnCard">
         <h3>Needs attention</h3>
@@ -1002,7 +1004,7 @@ city^=Remote"></textarea>
 <div class="spane active" data-pane="howit-overview"><div class="guide-flow">
 <article class="guide-step"><h3>Bring in your people</h3><p>Connect your directory or add people manually. Company SSO and passkeys are two ways to sign into the same profile.</p><a href="#/people">Open People →</a></article>
 <article class="guide-step"><h3>Decide who can do what</h3><p>Choose an app, find a person and review their effective role. Hub shows where that role comes from.</p><a href="#/permissions">Open Permissions →</a></article>
-<article class="guide-step"><h3>Keep work moving</h3><p>Connect apps, check sync and backups, and handle the items that need your attention.</p><a href="#/home">Open Overview →</a></article></div>
+<article class="guide-step"><h3>Finance, managed centrally</h3><p>Owners assign Finance people and groups in Company teams and select the Assets connections they serve. Finance handles payments and values; IT keeps technical control. Choose management through IT to dismiss the shared setup reminder.</p><a href="#/settings/teams">Company teams →</a></article><article class="guide-step"><h3>Keep work moving</h3><p>Connect apps, check sync and backups, and handle the items that need your attention.</p><a href="#/home">Open Overview →</a></article></div>
 <div class="card guide-faq"><details id="doc-operations"><summary>Operations: what needs attention across the stack?</summary><p><a href="#/operations">Open Operations</a> for current Desk, Trust, Assets, Contracts and Watch totals. Only apps where you have Admin access contribute. Each card shows its own scope and checked time. Failed or old checks stay visibly unverified; customer-project tickets stay separate from internal support. Continue in the source app to do the work. Owners can open <a href="#/screens">Screens</a> to pair a TV using selected aggregate sources and a fixed expiry. The TV uses a separate read-only key and never signs into your Owner account. Revoke it here when sharing should stop. Historical trends are planned separately.</p></details><details id="doc-where"><summary>Where should I make a change?</summary><p><b>People</b>: profiles, global Hub roles, groups and invitations. <b>Permissions</b>: roles in the six suite tools. <b>Apps</b>: connections, shared data and menu entries. <b>Directory sync</b>: people sources. <b>Settings</b>: company identity, sign-in and shared services.</p></details><details id="doc-menu"><summary>What do employees see?</summary><p>The employee workspace lists available apps. People can search, star favourites and open an app. The Apps button follows them between tools. The console is for Hub staff; an app login does not expose the console while it redirects.</p></details></div></div>
 <div class="spane" data-pane="howit-people"><div class="card guide-faq">
 <details id="doc-identity"><summary>One person, several ways to sign in</summary><p>The Hub keeps a stable person ID. Email changes follow that person; reusing a departed person’s address must not transfer their access. A company account or an invited passkey connects the sign-in to that profile.</p></details>
@@ -1178,8 +1180,8 @@ icp canister call backend setHub '("<span id="bkHubId"></span>")' -e ic</div>
 
 
 
-      <button class="stab active" data-stab="general">Company</button><button class="stab" data-stab="admins">Hub administrators</button><button class="stab" data-stab="sso">Company sign-in</button><button class="stab" data-stab="notify">Notifications</button><button class="stab" data-stab="ai">AI &amp; assistants</button><button class="stab" data-stab="oidc">External app sign-in</button></div>
-      <div class="spane active" data-spane="general">
+      <button class="stab active" data-stab="general">Company</button><button class="stab" data-stab="teams">Company teams</button><button class="stab" data-stab="admins">Hub administrators</button><button class="stab" data-stab="sso">Company sign-in</button><button class="stab" data-stab="notify">Notifications</button><button class="stab" data-stab="ai">AI &amp; assistants</button><button class="stab" data-stab="oidc">External app sign-in</button></div>
+      <div class="spane active" data-spane="general"><div id="financeSetupBanner"></div>
       <div class="card">
         <h3>Your company</h3>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
@@ -1206,6 +1208,7 @@ icp canister call backend setHub '("<span id="bkHubId"></span>")' -e ic</div>
         </div>
       </div>
       </div><!-- /spane general -->
+      <div class="spane" data-spane="teams"><div id="companyTeams"></div></div>
       <div class="spane" data-spane="ai">
       <div class="card">
         <h3>AI for your apps <span class="pill" id="aiState">off</span></h3>
@@ -1362,7 +1365,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.33.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.34.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1410,6 +1413,8 @@ const idlFactory = ({ IDL }) => {
   const HttpGwRequest = IDL.Record({ body: IDL.Vec(IDL.Nat8), headers: IDL.Vec(HeaderField), method: IDL.Text, url: IDL.Text });
   const GroupView = IDL.Record({ editable: IDL.Bool, id: IDL.Nat, members: IDL.Vec(IDL.Text), name: IDL.Text, note: IDL.Text, source: IDL.Text });
   const Grant = IDL.Record({ email: IDL.Text, endedAt: IDL.Int, endedBy: IDL.Text, expiresAt: IDL.Int, grantedAt: IDL.Int, grantedBy: IDL.Text, id: IDL.Nat, reason: IDL.Text, state: IDL.Text, target: IDL.Text, targetName: IDL.Text });
+  const FinanceBinding = IDL.Record({ canisterId: IDL.Principal, cid: IDL.Nat });
+  const FinanceTeam = IDL.Record({ apps: IDL.Vec(FinanceBinding), groups: IDL.Vec(IDL.Nat), mode: IDL.Text, people: IDL.Vec(IDL.Text), revision: IDL.Nat });
   const Event = IDL.Record({ at: IDL.Int, effectiveActive: IDL.Bool, email: IDL.Text, kind: IDL.Variant({ deactivated: IDL.Null, reactivated: IDL.Null }), name: IDL.Text, personId: IDL.Text, seq: IDL.Nat, source: IDL.Text });
   const DeskReportingAccess = IDL.Record({ capabilities: IDL.Vec(Role), detail: IDL.Text, grants: IDL.Vec(ReportingGrant), ok: IDL.Bool, revision: IDL.Nat, scopes: IDL.Vec(ReportingScope) });
   const Context = IDL.Record({ checkedAt: IDL.Int, items: IDL.Vec(Item), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
@@ -1469,6 +1474,7 @@ const idlFactory = ({ IDL }) => {
     getAppPermissions: IDL.Func([IDL.Nat], [IDL.Opt(AppPermissionView)], ["query"]),
     getCompanyLogo: IDL.Func([], [IDL.Opt(IDL.Record({ img: IDL.Vec(IDL.Nat8), mime: IDL.Text }))], ["query"]),
     getDeskReportingAccess: IDL.Func([IDL.Nat], [DeskReportingAccess], []),
+    getFinanceTeam: IDL.Func([], [IDL.Record({ apps: IDL.Vec(IDL.Record({ canisterId: IDL.Principal, cid: IDL.Nat, enabled: IDL.Bool, name: IDL.Text, recipients: IDL.Nat })), canManage: IDL.Bool, config: FinanceTeam, groups: IDL.Vec(IDL.Record({ id: IDL.Nat, name: IDL.Text })), people: IDL.Vec(IDL.Record({ active: IDL.Bool, email: IDL.Text, id: IDL.Text, member: IDL.Bool, name: IDL.Text })) })], ["query"]),
     getJournal: IDL.Func([], [IDL.Vec(JournalEntry)], ["query"]),
     getJwk: IDL.Func([IDL.Nat], [IDL.Text], ["query"]),
     getLive: IDL.Func([IDL.Nat], [IDL.Text], ["query"]),
@@ -1486,6 +1492,7 @@ const idlFactory = ({ IDL }) => {
     hub_aiCredentials: IDL.Func([], [IDL.Opt(IDL.Record({ key: IDL.Text, model: IDL.Text, provider: IDL.Text, url: IDL.Text, visionModel: IDL.Text }))], []),
     hub_aiStatus: IDL.Func([], [IDL.Opt(IDL.Record({ connectorId: IDL.Nat, keySet: IDL.Bool, laneGranted: IDL.Bool, model: IDL.Text, provider: IDL.Text, visionModel: IDL.Text }))], ["query"]),
     hub_aiUsed: IDL.Func([IDL.Nat], [], []),
+    hub_financeTeam: IDL.Func([], [IDL.Record({ enabled: IDL.Bool, mode: IDL.Text, recipients: IDL.Vec(IDL.Text), revision: IDL.Nat })], ["query"]),
     hub_hardwareCheck: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Opt(Case)], []),
     hub_lifecycleEvents: IDL.Func([IDL.Nat], [Batch], ["query"]),
     hub_notify: IDL.Func([IDL.Record({ dedupeKey: IDL.Text, email: IDL.Text, kind: IDL.Text, title: IDL.Text, url: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
@@ -1606,6 +1613,7 @@ const idlFactory = ({ IDL }) => {
     setConnectorOwners: IDL.Func([IDL.Nat, IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setConnectorScope: IDL.Func([IDL.Nat, IDL.Vec(IDL.Nat)], [IDL.Bool], []),
     setDeskReportingAccess: IDL.Func([IDL.Nat, IDL.Nat, IDL.Vec(ReportingGrant)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setFinanceTeam: IDL.Func([FinanceTeam], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setGroupMembers: IDL.Func([IDL.Nat, IDL.Vec(IDL.Text), IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, members: IDL.Nat, ok: IDL.Bool })], []),
     setKitchen: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setLocalUserActive: IDL.Func([IDL.Text, IDL.Bool], [IDL.Bool], []),
@@ -1894,6 +1902,7 @@ const setStatus = (id, cls, txt) => { const el = $(id); el.className = "status "
 const jump = (hash) => { if (location.hash === hash) applyRoute(); else location.hash = hash; };
 const plural = (n, one, many) => `${n} ${Number(n) === 1 ? one : (many || one + "s")}`;
 async function refreshDash() {
+  if (["owner","admin"].includes(window._role)) window.KebabCompanyTeams.banner($("financeHomeBanner"),()=>backend);
   let h;
   try { h = await backend.home(); } catch (e) { $("pulseText").textContent = "Could not load the overview."; return; }
   window._home = h;
@@ -3991,6 +4000,7 @@ function showTab(view, tab, replace) {
   const target = "#/" + (VIEW_SLUG[view] || view) + "/" + tab;
   if (location.hash !== target) { if (replace) history.replaceState(null, "", target); else history.pushState(null, "", target); }
   if (view === "connectors" && ["updates","history","catalogue"].includes(tab)) refreshUpdates();
+  if (view === "settings" && tab === "teams") window.KebabCompanyTeams.mount($("companyTeams"), () => backend);
   if (view === "settings" && tab === "oidc" && typeof refreshOidc === "function") refreshOidc();
 }
 document.querySelectorAll(".view .stabs").forEach((bar) => bar.addEventListener("click", (e) => {
@@ -4000,6 +4010,7 @@ document.querySelectorAll(".view .stabs").forEach((bar) => bar.addEventListener(
 function showSettingsTab(name) { showTab("settings", name, true); }
 
 async function refreshSettings() {
+  window.KebabCompanyTeams.banner($("financeSetupBanner"), () => backend);
   refreshBranding();
   refreshAppLinks();
   refreshSsoAdmin();

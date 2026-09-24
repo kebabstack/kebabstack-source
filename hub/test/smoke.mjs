@@ -12,6 +12,7 @@ window.addEventListener("error", (e) => errors.push("window.error: " + e.message
 // the shared topbar (sdk/js/hub-client.js, served under dist/sdk/) is an ES module; the classic script reaches it via globalThis.kebabHub
 try { window.eval(fs.readFileSync("sdk/hub-client.js", "utf8").replace(/^export (const|function) /gm, "$1 ")); } catch (e) { errors.push("hub-client.js: " + e.message); }
 window.eval(fs.readFileSync("permissions.js", "utf8"));
+window.eval(fs.readFileSync("company-teams.js", "utf8"));
 window.eval(fs.readFileSync("updates.js", "utf8"));
 window.eval(fs.readFileSync("operations.js", "utf8"));
 window.eval(fs.readFileSync("displays.js", "utf8"));

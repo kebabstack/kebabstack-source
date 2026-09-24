@@ -57,3 +57,7 @@ Run `node --test tests/permissions.test.mjs` for the cross-app authorization mat
 ## Desk reporting capabilities
 
 Hub 0.31.0 additionally assigns project-scoped `time_review`, `compensation`, `release` and `export` to people/groups for Desk 0.19.0. They supplement a base role; No access still denies entry. Use Requester for HR/Finance to avoid broad support access. Hub Owners/Admins retain all app capabilities, subject to no-self-approval rules. Grants bind to the exact backend and participate in enforcement snapshots. See [Service reporting](../desk/REPORTING.md).
+
+## Central Finance team
+
+Hub 0.34.0 and Assets 0.16.0 add an Assets Finance role derived from **Settings → Company teams**. Only Owners manage it. Explicit individual No access wins; global Owner/Admin and individual Admin keep Admin. Finance supplements Employee access, including an individual Employee assignment. Other group roles retain their normal precedence. The app binding includes the backend identity, so replacing a connector cannot transfer Finance rights to another service. Other apps receive no Finance grant merely because someone belongs to this team. Existing Desk project reporting remains separately scoped. See [Finance](FINANCE.md).

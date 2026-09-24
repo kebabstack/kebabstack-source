@@ -387,6 +387,19 @@ type Grant =
    target: text;
    targetName: text;
  };
+type FinanceTeam =
+ record {
+   apps: vec FinanceBinding;
+   groups: vec nat;
+   mode: text;
+   people: vec text;
+   revision: nat;
+ };
+type FinanceBinding =
+ record {
+   canisterId: principal;
+   cid: nat;
+ };
 type Event =
  record {
    at: int;
@@ -809,6 +822,33 @@ service : {
                                mime: text;
                              }) query;
   getDeskReportingAccess: (cid: nat) -> (DeskReportingAccess);
+  getFinanceTeam: () ->
+   (record {
+      apps:
+       vec
+        record {
+          canisterId: principal;
+          cid: nat;
+          enabled: bool;
+          name: text;
+          recipients: nat;
+        };
+      canManage: bool;
+      config: FinanceTeam;
+      groups: vec record {
+                    id: nat;
+                    name: text;
+                  };
+      people:
+       vec
+        record {
+          active: bool;
+          email: text;
+          id: text;
+          member: bool;
+          name: text;
+        };
+    }) query;
   getJournal: () -> (vec JournalEntry) query;
   getJwk: (id: nat) -> (text) query;
   getLive: (id: nat) -> (text) query;
@@ -909,6 +949,13 @@ service : {
      }) query;
   /// Apps report their calls so the owner sees who uses the key (best effort, one call per batch is fine).
   hub_aiUsed: (calls: nat) -> ();
+  hub_financeTeam: () ->
+   (record {
+      enabled: bool;
+      mode: text;
+      recipients: vec text;
+      revision: nat;
+    }) query;
   hub_hardwareCheck: (deskId: text, ticket: nat, viewer: text) -> (opt Case);
   hub_lifecycleEvents: (after: nat) -> (Batch) query;
   /// CONTRACT (return lane): a registered connector notifies a person.
@@ -1516,6 +1563,10 @@ service : {
                              detail: text;
                              ok: bool;
                            });
+  setFinanceTeam: (input: FinanceTeam) -> (record {
+                                             detail: text;
+                                             ok: bool;
+                                           });
   setGroupMembers: (id: nat, add: vec text, remove: vec text) ->
    (record {
       detail: text;

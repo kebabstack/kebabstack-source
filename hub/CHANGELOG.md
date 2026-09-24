@@ -1,5 +1,10 @@
 # Changelog — kebab-stack hub
 
+## [0.34.0] — 2026-09-24
+
+- Add owner-managed Company teams → Finance with direct people, directory groups and explicit, backend-bound Assets connections. Show effective recipients; individual No access and inactive identities still deny entry. Manual groups carrying Finance access become owner-managed.
+- Add a shared setup reminder and an intentional company-wide “managed through IT” choice. A configured team losing its recipients remains a distinct warning. Existing Lunch and unrelated app permissions are unchanged.
+
 ## [0.33.0] — 2026-09-23
 
 - Refresh personal-assistant setup with a readable, branded installation guide and source-based commands; remove the unpublished npm-package shortcut.

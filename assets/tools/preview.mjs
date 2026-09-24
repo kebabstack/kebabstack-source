@@ -9,7 +9,7 @@ fs.copyFileSync(path.join(root,'assets/test/agent-bundle.stub.js'),path.join(out
 let source = fs.readFileSync(path.join(root,'assets/test/smoke.mjs'),'utf8');
 source = source.slice(source.indexOf('const now ='),source.indexOf('const dom ='));
 source = source.replace(/import \{ generateKeyPairSync[^\n]*\n/,'').replace(/const abmPair[^\n]*\n/,'').replace(/const abmPemPkcs8[^\n]*\n/,'').replace(/const abmPemSec1[^\n]*\n/,'');
-source = source.replace(/let role = .*?;/,'let role = "admin";').replace(/let aiOn = .*?;/,'let aiOn = true;').replace(/const flow = .*?;/,'const flow = "";');
+source = source.replace(/let role = .*?;/,'let role = new URLSearchParams(location.search).get("as") === "finance" ? "finance" : "admin";').replace(/let aiOn = .*?;/,'let aiOn = true;').replace(/const flow = .*?;/,'const flow = "";');
 source = source.replace(/appUrl: flow.startsWith\("canonical"\) \? "https:\/\/new.assets.test\/" : "https:\/\/assets.test\/"/,'appUrl: ""');
 source = source.replaceAll('Me Myself','Demo Admin');
 source = source.replace(/photos: \[\{ id: 5n,[^\]]+\}\]/,'photos: []');
@@ -31,7 +31,12 @@ function previewView(id) {
 }
 `;
 source=source.replace('globalThis.__fakeBackend =',fixture+'\nglobalThis.__fakeBackend =');
-source=source.replace('  switch (m) {',`  if (m === 'getSale') return [previewView(a[1])];
+source=source.replace('  switch (m) {',`  if(m==='financeSetup')return [{mode:'team',enabled:true,activeMembers:2n}];
+  if(m==='financePayments')return [{open:2n,overdue:1n,totals:[['CHF',87000n]],matched:2n,rows:[{id:8n,number:'EXAMPLE-0013',buyer:'Sam Rivers',device:'MacBook Air 13 inch',dueOn:'2026-09-15',currency:'CHF',outstandingMinor:39000n},{id:7n,number:'EXAMPLE-0014',buyer:'Alex Morgan',device:'MacBook Pro 14 inch',dueOn:'2026-10-04',currency:'CHF',outstandingMinor:48000n}]}];
+  if(m==='financeInventory')return [{rows:Array.from({length:24},(_,i)=>({id:BigInt(i+1),name:i%3?'MacBook Pro 14 inch':'Dell monitor',tag:'EXAMPLE-'+(i+1),serial:'SAMPLE-'+i,kind:i%3?'laptop':'monitor',status:'assigned',assignee:['Alex Morgan','Sam Rivers','Jamie Parker'][i%3],archived:false,purchase:[{priceMinor:240000n,currency:'CHF',date:'2025-03-15',at:now,by:'Finance',note:''}],valuation:[],bookMinor:i===3?[]:[120000n],revision:0n})),matched:24n,missing:1n,totals:[['CHF',2760000n]],defaults:[{kind:'laptop',months:36n}],defaultsRevision:0n}];
+  if(m==='financeAsset')return [{asset:{id:a[1],name:'MacBook Pro 14 inch',tag:'EXAMPLE-'+a[1],serial:'SAMPLE',kind:'laptop',status:'assigned',assignee:'Alex Morgan',archived:false,purchase:[{priceMinor:240000n,currency:'CHF',date:'2025-03-15',at:now,by:'Finance',note:''}],valuation:[],bookMinor:[],revision:0n},history:[]}];
+  if(m==='salePaymentHistory'){const s=previewView(a[1]).sale;return [{entries:[],revision:0n,paidMinor:s.status==='paid'?s.grossMinor:0n,outstandingMinor:s.status==='paid'?0n:s.grossMinor,canRecord:true}];}
+  if (m === 'getSale') return [previewView(a[1])];
   if (m === 'salesBoard') {
     const rows=previewSales.map(r=> {const v=previewView(r.id);return {...v.sale,phase:v.phase,buyerName:r.buyer,deviceName:r.name,deviceTag:'INV-'+String(r.id).padStart(4,'0'),receiptPending:false};});
     const counts=['offer','invoice','paid','complete','cancelled'].map(p=>[p,BigInt(rows.filter(r=>r.phase===p).length)]);

@@ -14,7 +14,7 @@
   },
   "scripts": {
     "check": "python3 tools/check-all.py",
-    "test:security": "node --test --test-concurrency=1 tests/crumbs.test.mjs tests/security.test.mjs tests/permissions.test.mjs tests/lifecycle.test.mjs tests/customer-support.test.mjs tests/oncall.test.mjs tests/oncall-response.test.mjs tests/oncall-reporting.test.mjs tests/oncall-compensation.test.mjs tests/oncall-calendar-status.test.mjs tests/oncall-regional-reminders.test.mjs tests/oncall-alerts.test.mjs tests/hardware-offboarding.test.mjs tests/trust-workspace.test.mjs tests/operations.test.mjs tests/displays.test.mjs",
+    "test:security": "node --test --test-concurrency=1 tests/finance.test.mjs tests/crumbs.test.mjs tests/security.test.mjs tests/permissions.test.mjs tests/lifecycle.test.mjs tests/customer-support.test.mjs tests/oncall.test.mjs tests/oncall-response.test.mjs tests/oncall-reporting.test.mjs tests/oncall-compensation.test.mjs tests/oncall-calendar-status.test.mjs tests/oncall-regional-reminders.test.mjs tests/oncall-alerts.test.mjs tests/hardware-offboarding.test.mjs tests/trust-workspace.test.mjs tests/operations.test.mjs tests/displays.test.mjs",
     "test:tools": "python3 -m unittest discover -s tests -p \"test_*.py\"",
     "test:publication": "python3 -m unittest discover -s tests -p 'test_public_source.py'",
     "audit:public-source": "python3 tools/public-source.py --reviews docs/source-asset-reviews.json",

@@ -249,3 +249,9 @@ Upgrade Hub to 0.27, Assets to 0.13 and Desk to 0.14 in one tested suite release
 ## Operations rollout
 
 Publish with Hub 0.28 and the matching source releases through the tested suite update service. No new roles, directory lanes or Lunch changes are required. Existing records remain in place. See [Operations rollout and verification](../docs/HUB-OPERATIONS.md#release-and-verification).
+
+## Upgrade to 0.16: company Finance
+
+Deploy Hub 0.34.0 first and Assets 0.16.0 second using the tested update service. Finance starts unconfigured; no people receive new grants automatically. Existing admins keep access. After both versions are current, an Owner opens Hub → Settings → Company teams → Finance, selects people/groups and explicitly enables the Assets connection. Check effective roles under Hub → Permissions. Alternatively select “We manage this through IT” to dismiss the shared setup reminder.
+
+New invoices notify the current effective Finance recipients, or Assets admins if no usable team exists. Historical invoices remain in the payment queue without generating a bulk announcement. Slack DMs require the Hub integration and the recipient’s settings. Read [the Finance guide](../docs/FINANCE.md).

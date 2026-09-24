@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-assets"
-version = "0.15.1"
+version = "0.16.0"
 description = "kebab-stack assets — the devices of a company: who has what, what happened, with the photo that proved it"
 
 [toolchain]

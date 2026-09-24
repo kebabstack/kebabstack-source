@@ -1,6 +1,6 @@
 [package]
 name = "kebab-hub"
-version = "0.12.4"
+version = "0.13.0"
 description = "kebab-stack hub client for app canisters: ticket sign-in, sessions, directory cache, connector contract"
 repository = "https://github.com/kebabstack/kebabstack"
 license = "MIT"

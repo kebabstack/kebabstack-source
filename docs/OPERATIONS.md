@@ -231,3 +231,7 @@ Use **Hub → Apps → Updates** to review and apply published suite releases, a
 Unexpected deactivations create private account reviews or update an existing
 offboarding. Review source/effective access, then confirm departure or record why
 it is not a departure. See [Lifecycle](LIFECYCLE.md) for limits and recovery.
+
+## Company Finance
+
+Use Hub → Settings → Company teams for the shared Finance team and its explicitly enabled Assets connections. Owners set the scope; Finance works in Assets → Finance. The [Finance guide](FINANCE.md) covers IT fallback, team health, bank confirmation, valuation and exports.

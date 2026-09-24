@@ -65,6 +65,7 @@ api.operationsDisplaySnapshot=async(secret,cid)=>{const state=await api.operatio
 api.operationsDisplayForget=async secret=>{const hash=await digest(secret),d=readDisplays();delete d.grants[hash];for(const[k,p]of Object.entries(d.pending))if(p.keyHash===hash)delete d.pending[k];writeDisplays(d);};
 
 // Unsupported edits are refused in this sample preview; no backend actor is created.
+api.getFinanceTeam=async()=>({config:{revision:1n,mode:'team',people:['sample-finance'],groups:[7n],apps:[{cid:3n,canisterId:{toText:()=> 'aaaaa-aa'}}]},canManage:true,people:[{id:'sample-finance',name:'Alex Morgan',email:'alex@example.test',active:true,member:true},{id:'sample-employee',name:'Jamie Parker',email:'jamie@example.test',active:true,member:false}],groups:[{id:7n,name:'Accounting'}],apps:[{cid:3n,canisterId:{toText:()=> 'aaaaa-aa'},name:'Assets',enabled:true,recipients:2n}]});
 const fixture=new Proxy(api,{get:(o,k)=>k in o?o[k]:async()=>{throw Error('This action is not available in the local sample.')}});
 const label=document.createElement('div');label.textContent='LOCAL PREVIEW · Sample data only';label.style.cssText='position:fixed;bottom:10px;right:14px;z-index:300;background:#213d31;color:#fff;padding:7px 12px;border-radius:7px;font:11px system-ui';document.body.append(label);
 if(location.hash==='#/tv'){

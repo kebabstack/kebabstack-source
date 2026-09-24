@@ -174,7 +174,7 @@ def main():
         notes = next((section.split("\n", 1)[1].strip() for section in sections if section.startswith(f"[{ver}]")), "")
         requires = ([{"id": "kitchen", "minVersion": "0.7.0"}] if app == "hub" else
                     [{"id": "hub", "minVersion": "0.31.0"}] if app == "desk" else
-                    [{"id": "hub", "minVersion": "0.27.0"}] if app == "assets" else
+                    [{"id": "hub", "minVersion": "0.34.0"}] if app == "assets" else
                     [{"id": "hub", "minVersion": "0.30.0"}] if app == "crumbs" else
                     [{"id": "hub", "minVersion": "0.23.0"}] if app in ["contracts", "forms", "trust", "watch"] else [])
         image_sha = sha(d / "icon.png") if image else ""

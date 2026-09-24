@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 node --check dist/app.js
 node --check dist/deal.js
 T=$(mktemp -d)
-cp dist/handover.js dist/index.html dist/app.js dist/canonical-url.js dist/workflow.js dist/idl.js dist/hub-client.js dist/invoice-pdf.js "$T/"
+cp dist/finance.js dist/handover.js dist/index.html dist/app.js dist/canonical-url.js dist/workflow.js dist/idl.js dist/hub-client.js dist/invoice-pdf.js "$T/"
 mkdir -p "$T/vendor" && cp dist/vendor/pdf-lib.min.js dist/vendor/qrcode.js "$T/vendor/"
 cp test/agent-bundle.stub.js "$T/agent-bundle.js"
 cp test/smoke.mjs "$T/"

@@ -153,7 +153,7 @@
   .stepline { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
   input[type=number], input[type=date], input[type=password] { padding: 10px 12px; border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-input); font: 400 15px var(--ks-ui); background: var(--ks-bg-card); color: var(--ks-fg); width: 100%; }
 </style>
-<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./finance.css"><link rel="stylesheet" href="./signin.css">
 <link rel="stylesheet" href="./components.css">
 </head>
 <body class="ks-workspace">
@@ -310,11 +310,12 @@
       <div class="card flat"><h3>History</h3><div id="dEvents"></div></div>
     </section>
 
-    <!-- ===== sales (admins) ===== -->
-    <section class="view" id="v-sales"><div class="page-heading"><div><p class="eyebrow">DEVICE LIFECYCLE</p><h2>Sales</h2><p class="lead">From the first offer to the final hand-over. See what needs to happen next.</p></div><a href="#/devices">Start a sale ↗</a></div>
+    <section class="view" id="v-finance"></section>
+    <!-- ===== sales (admins and Finance) ===== -->
+    <section class="view" id="v-sales"><div class="page-heading"><div><p class="eyebrow">DEVICE LIFECYCLE</p><h2>Sales</h2><p class="lead">From the first offer to the final hand-over. See what needs to happen next.</p></div><a id="salesStart" href="#/devices">Start a sale ↗</a></div>
 
 
-      <div class="flow" id="saleFilters" role="group" aria-label="Sales process"></div><div class="sales-toolbar"><button class="filter-button on" id="salesOpen">Needs action</button><button class="filter-button" id="salesAll">All sales</button><input type="search" id="salesQ" placeholder="Search device, buyer or invoice" aria-label="Search sales"><details><summary>Finance export ↗</summary><div class="export-popover"><label for="salesYear">Invoice year (optional)</label><input type="text" id="salesYear" placeholder="All years" inputmode="numeric" maxlength="4"><div class="btnrow"><button id="salesCsv" class="sm">Download CSV</button></div></div></details></div>
+      <div id="salesFinanceBanner"></div><div class="flow" id="saleFilters" role="group" aria-label="Sales process"></div><div class="sales-toolbar"><button class="filter-button on" id="salesOpen">Needs action</button><button class="filter-button" id="salesAll">All sales</button><input type="search" id="salesQ" placeholder="Search device, buyer or invoice" aria-label="Search sales"><details><summary>Finance export ↗</summary><div class="export-popover"><label for="salesYear">Invoice year (optional)</label><input type="text" id="salesYear" placeholder="All years" inputmode="numeric" maxlength="4"><div class="btnrow"><button id="salesCsv" class="sm">Download CSV</button></div></div></details></div>
       <div class="card flat"><div class="list-heading"><span id="salesCount">Loading sales…</span><span>Next step</span></div><div id="saleRows"><div class="empty">loading…</div></div><div class="btnrow"><button id="salesPrev" class="sm hidden">Previous</button><button id="salesNext" class="sm hidden">Next 100</button></div></div>
       <div class="kv" id="salesReady" role="status"></div>
     </section>
@@ -330,7 +331,7 @@
 
 
 
-    <div class="detail-columns"><div><div class="card flat" id="sAdminCard"><h3>Next action</h3><div class="btnrow" id="sActions"></div><div class="row hidden" id="sPaidRow"><div style="flex:2"><label for="sPaidNote">Note for the record (bank statement line, date)</label><input type="text" id="sPaidNote" placeholder="optional"></div><div><label>&nbsp;</label><button id="sPaidGo" class="primary sm">Mark paid</button></div></div><div class="row hidden" id="sCancelRow"><div style="flex:2"><label for="sCancelReason">Reason</label><input type="text" id="sCancelReason" placeholder="why — goes into the history"></div><div><label>&nbsp;</label><button id="sCancelGo" class="sm">Cancel the sale</button></div></div><span id="sActStatus" class="status" role="status"></span></div><div id="sFormerBuyer" class="card flat hidden"></div>
+    <div class="detail-columns"><div><div class="card flat" id="sPayments" hidden></div><div class="card flat" id="sAdminCard"><h3>Next action</h3><div class="btnrow" id="sActions"></div><div class="row hidden" id="sCancelRow"><div style="flex:2"><label for="sCancelReason">Reason</label><input type="text" id="sCancelReason" placeholder="why — goes into the history"></div><div><label>&nbsp;</label><button id="sCancelGo" class="sm">Cancel the sale</button></div></div><span id="sActStatus" class="status" role="status"></span></div><div id="sFormerBuyer" class="card flat hidden"></div>
       <div class="card" id="sDealCard"></div><div class="card flat" id="sChecksCard">
         <h3 id="sChecksTitle">Prepare for hand-over</h3><p class="setting-description">Complete these after payment, before the device leaves IT.</p>
         <label class="ck"><input type="checkbox" id="ckWiped"><span>Wiped &amp; setup tested<small>No company or personal data remains. The device reaches a usable setup screen.</small></span></label>

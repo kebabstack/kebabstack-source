@@ -117,7 +117,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.33.0";
+  transient let BUILD_VERSION : Text = "0.34.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -2511,7 +2511,7 @@ persistent actor UserHub {
     let cfg = appPermissionPolicies.get(cid) ?? (return "");
     let conn = connectors.get(cid) ?? (return "");
     let policy = deskReportingPolicies.get(cid) ?? (return "");
-    if (cfg.policy.app != "desk" or policy.canisterId != conn.canisterId or permissionDecision(cfg.policy, email).role == "none") return "";
+    if (cfg.policy.app != "desk" or policy.canisterId != conn.canisterId or permissionDecision(cid, cfg.policy, email).role == "none") return "";
     var result = ";";
     for (grant in policy.grants.values()) {
       let matches = switch (grant.subject) { case (#person id) id == pidForEmail(email); case (#group id) switch (groups.get(id)) { case (?g) groupMember(g, email); case null false } };
@@ -2561,18 +2561,85 @@ persistent actor UserHub {
     ignore Timer.setTimer<system>(#seconds 0, func() : async () { try { await pushDirectoryTo(cid) } catch (_) {} });
     { ok = true; detail = "Reporting rights saved in Hub. Check app enforcement; the directory lease still applies." }
   };
+  // Company teams are central assignments, bound to an explicit connected backend.
+  public type FinanceBinding = { cid : Nat; canisterId : Principal };
+  public type FinanceTeam = { revision : Nat; mode : Text; people : [Text]; groups : [Nat]; apps : [FinanceBinding] };
+  var financeTeam : FinanceTeam = { revision = 0; mode = "unconfigured"; people = []; groups = []; apps = [] };
+  func financeMember(email : Text) : Bool {
+    let pid = pidForEmail(email);
+    if (pid == "" or accessOf(email) != #active) return false;
+    financeTeam.people.any(func id = id == pid) or financeTeam.groups.any(func id = switch (groups.get(id)) { case (?g) groupMember(g, email); case null false });
+  };
+  func financeEnabled(cid : Nat) : Bool {
+    if (financeTeam.mode != "team") return false;
+    switch (connectors.get(cid)) { case (?c) financeTeam.apps.any(func b = b.cid == cid and b.canisterId == c.canisterId); case null false }
+  };
+  public shared query ({ caller }) func getFinanceTeam() : async {
+    config : FinanceTeam; canManage : Bool;
+    people : [{ id : Text; name : Text; email : Text; active : Bool; member : Bool }];
+    groups : [{ id : Nat; name : Text }];
+    apps : [{ cid : Nat; canisterId : Principal; name : Text; enabled : Bool; recipients : Nat }]
+  } {
+    assert isAdminRole(caller);
+    let ps = persons.entries().filter(func (id, p) = p.sealedAt == 0 and pidForEmail(p.email) == id).map(func (id, p) = { id; name = nameOfEmail(p.email); email = p.email; active = accessOf(p.email) == #active; member = financeMember(p.email) }).toArray();
+    let apps = appPermissionPolicies.entries().filter(func (_, p) = p.policy.app == "assets").filterMap(func (cid, p) {
+      let c = connectors.get(cid) ?? (return null);
+      ?{ cid; canisterId = c.canisterId; name = c.name; enabled = financeEnabled(cid); recipients = ps.filter(func person = person.member and accessForConn(person.email, cid) == #active and permissionDecision(cid, p.policy, person.email).role != "none").size() }
+    }).toArray();
+    { config = financeTeam; canManage = isOwnerRole(caller); people = ps; groups = groups.entries().map(func (id, g) = { id; name = g.name }).toArray(); apps }
+  };
+  public shared ({ caller }) func setFinanceTeam(input : FinanceTeam) : async { ok : Bool; detail : Text } {
+    if (not isOwnerRole(caller)) return { ok = false; detail = "Only Hub owners manage company teams" };
+    if (input.revision != financeTeam.revision) return { ok = false; detail = "Finance changed. Reload before saving" };
+    if (input.mode != "team" and input.mode != "it") return { ok = false; detail = "Choose a Finance team or management through IT" };
+    if (input.people.size() > 500 or input.groups.size() > 100 or input.apps.size() > 30) return { ok = false; detail = "Too many assignments" };
+    let seen = Map.empty<Text, Bool>();
+    for (id in input.people.values()) {
+      let p = persons.get(id) ?? (return { ok = false; detail = "Unknown person" });
+      if (p.sealedAt != 0 or pidForEmail(p.email) != id or seen.containsKey(id)) return { ok = false; detail = "Remove duplicate or former person assignments" };
+      seen.add(id, true);
+    };
+    let gs = Map.empty<Nat, Bool>();
+    for (id in input.groups.values()) { if (not groups.containsKey(id) or gs.containsKey(id)) return { ok = false; detail = "Unknown or duplicate group" }; gs.add(id, true) };
+    let cs = Map.empty<Nat, Bool>();
+    for (b in input.apps.values()) {
+      let c = connectors.get(b.cid) ?? (return { ok = false; detail = "Unknown app" });
+      let p = appPermissionPolicies.get(b.cid) ?? (return { ok = false; detail = "Configure central app permissions first" });
+      if (p.policy.app != "assets" or c.canisterId != b.canisterId or cs.containsKey(b.cid)) return { ok = false; detail = "Finance currently supports Assets. Reload changed connections" };
+      cs.add(b.cid, true);
+    };
+    let previous = financeTeam;
+    financeTeam := { input with revision = input.revision + 1 };
+    journal("permissions", "Company Finance team: " # debug_show(previous) # " → " # debug_show(financeTeam), caller);
+    for ((cid, p) in appPermissionPolicies.entries()) if (p.policy.app == "assets") {
+      appPermissionChecks.remove(cid);
+      ignore Timer.setTimer<system>(#seconds 0, func() : async () { try { await pushDirectoryTo(cid) } catch (_) {} });
+    };
+    { ok = true; detail = "Finance saved. Connected apps apply the updated directory; check enforcement under Permissions." }
+  };
+  public shared query ({ caller }) func hub_financeTeam() : async { mode : Text; enabled : Bool; recipients : [Text]; revision : Nat } {
+    let c = connectorByPrincipal(caller) ?? (return { mode = "unavailable"; enabled = false; recipients = []; revision = 0 });
+    let p = appPermissionPolicies.get(c.id) ?? (return { mode = "unavailable"; enabled = false; recipients = []; revision = 0 });
+    assert p.policy.app == "assets";
+    let enabled = financeEnabled(c.id);
+    let recipients = if (not enabled) [] else persons.entries().filter(func (id, person) = person.sealedAt == 0 and pidForEmail(person.email) == id and financeMember(person.email) and accessForConn(person.email, c.id) == #active and permissionDecision(c.id, p.policy, person.email).role != "none").map(func (_, person) = person.email).toArray();
+    { mode = financeTeam.mode; enabled; recipients; revision = financeTeam.revision }
+  };
+
   // ---- authoritative app permissions (person ids, never email identities) ----
   let appPermissionPolicies = Map.empty<Nat, Permissions.StoredPolicy>();
   type PermissionCheck = { status : Permissions.Status; checkedAt : Int };
   let appPermissionChecks = Map.empty<Nat, PermissionCheck>();
   type PermissionDecision = { role : Text; source : Text; inherited : Bool };
-  func permissionDecision(p : Permissions.Policy, email : Text) : PermissionDecision {
+  func permissionDecision(cid : Nat, p : Permissions.Policy, email : Text) : PermissionDecision {
     let e = lower(norm(email));
     if (accessOf(e) != #active) return { role = "none"; source = "Inactive or missing Hub account"; inherited = true };
     let hr = hubRoleOf(e);
     if (hr == "owner" or hr == "admin") return { role = "admin"; source = "Global Hub " # hr; inherited = true };
     let pid = pidForEmail(e);
     if (pid == "") return { role = "none"; source = "Person identity is not ready"; inherited = true };
+    for (g in p.people.vals()) if (g.id == pid and (g.role == "none" or g.role == "admin")) return { role = g.role; source = "Individual assignment"; inherited = false };
+    if (p.app == "assets" and financeEnabled(cid) and financeMember(e) and (p.people.any(func grant = grant.id == pid) or not p.groups.any(func grant = grant.role == "admin" and (switch (groups.get(grant.id)) { case (?g) groupMember(g, e); case null false })))) return { role = "finance"; source = "Company Finance team"; inherited = true };
     for (g in p.people.vals()) if (g.id == pid) return { role = g.role; source = "Individual assignment"; inherited = false };
     var role = "none"; var source = "";
     for (grant in p.groups.vals()) {
@@ -2591,24 +2658,24 @@ persistent actor UserHub {
     var snapshot = cfg.revision.toText() # ":";
     func field(t : Text) : Text { t.size().toText() # ":" # t };
     for ((id, person) in persons.entries()) if (person.sealedAt == 0 and pidForEmail(person.email) == id) {
-      let d = permissionDecision(cfg.policy, person.email);
+      let d = permissionDecision(cid, cfg.policy, person.email);
       snapshot #= field(id) # field(person.email) # field(d.role) # field(d.source) # field(reportingText(cid, person.email));
     };
     cfg.revision.toText() # ":" # sha256Hex(snapshot);
   };
   func permissionBearingGroup(gid : Nat) : Bool {
-    appPermissionPolicies.values().any(func c = c.policy.groups.any(func g = g.id == gid)) or deskReportingPolicies.values().any(func p = p.grants.any(func g = g.subject == #group(gid)));
+    financeTeam.groups.any(func id = id == gid) or appPermissionPolicies.values().any(func c = c.policy.groups.any(func g = g.id == gid)) or deskReportingPolicies.values().any(func p = p.grants.any(func g = g.subject == #group(gid)));
   };
   func centrallyAllowed(cid : Nat, email : Text) : ?Bool {
-    switch (appPermissionPolicies.get(cid)) { case (?c) ?(permissionDecision(c.policy, email).role != "none"); case null null };
+    switch (appPermissionPolicies.get(cid)) { case (?c) ?(permissionDecision(cid, c.policy, email).role != "none"); case null null };
   };
   func permissionPolicyError(p : Permissions.Policy) : ?Text {
     if (not Permissions.supported(p.app)) return ?"Choose a supported app";
-    if (not Permissions.valid(p.app, p.defaultRole) or p.defaultRole == "admin" or p.defaultRole == "agent") return ?"Choose a non-administrative app default";
+    if (not Permissions.valid(p.app, p.defaultRole) or p.defaultRole == "admin" or p.defaultRole == "agent" or p.defaultRole == "finance") return ?"Choose a non-administrative app default";
     if (p.people.size() > 2000 or p.groups.size() > 100) return ?"Too many assignments";
     let seen = Map.empty<Text, Bool>();
     for (g in p.people.vals()) {
-      if (not Permissions.valid(p.app, g.role)) return ?"Unsupported person role";
+      if (not Permissions.valid(p.app, g.role) or g.role == "finance") return ?"Manage Finance in Settings → Company teams";
       if (seen.containsKey(g.id)) return ?"A person may have only one assignment";
       let person = persons.get(g.id) ?? (return ?"Unknown person id");
       if (person.sealedAt != 0) return ?"Remove assignments to former person identities";
@@ -2616,7 +2683,7 @@ persistent actor UserHub {
     };
     let gs = Map.empty<Nat, Bool>();
     for (g in p.groups.vals()) {
-      if (not Permissions.valid(p.app, g.role) or g.role == "none") return ?"Groups grant a supported role; use an individual No access assignment to exclude a person";
+      if (not Permissions.valid(p.app, g.role) or g.role == "none" or g.role == "finance") return ?"Groups grant a supported role; use an individual No access assignment to exclude a person";
       if (not groups.containsKey(g.id) or gs.containsKey(g.id)) return ?"Unknown or duplicate group";
       gs.add(g.id, true);
     };
@@ -2626,7 +2693,7 @@ persistent actor UserHub {
   func permissionPeople(cid : Nat, p : Permissions.Policy) : [PermissionPerson] {
     let out = List.empty<PermissionPerson>();
     for ((id, person) in persons.entries()) if ((person.sealedAt == 0 and pidForEmail(person.email) == id) or p.people.any(func g = g.id == id)) {
-      let d = if (person.sealedAt != 0 or pidForEmail(person.email) != id) ({ role = "none"; source = "Former person identity — remove its assignment"; inherited = true }) else permissionDecision(p, person.email);
+      let d = if (person.sealedAt != 0 or pidForEmail(person.email) != id) ({ role = "none"; source = "Former person identity — remove its assignment"; inherited = true }) else permissionDecision(cid, p, person.email);
       let assigned = p.people.find(func g = g.id == id).map(func g = g.role);
       out.add({ id; email = person.email; name = nameOfEmail(person.email); active = person.sealedAt == 0 and pidForEmail(person.email) == id and accessOf(person.email) == #active; role = d.role; source = d.source; inherited = d.inherited; assigned; previouslyAllowed = accessForConn(person.email, cid) == #active });
     };
@@ -2670,7 +2737,7 @@ persistent actor UserHub {
     if (person.sealedAt != 0 or pidForEmail(person.email) != pid) return [];
     connectors.entries().map(func (cid, c) {
       switch (appPermissionPolicies.get(cid)) {
-        case (?cfg) { let d = permissionDecision(cfg.policy, person.email); let r = Permissions.roles(cfg.policy.app).find(func r = r.id == d.role); { cid; name = c.name; app = cfg.policy.app; configured = true; role = d.role; roleLabel = switch(r) { case (?r) r.name; case null "No access" }; source = d.source; can = (switch(r) {case (?r) r.can;case null []}).concat(reportingSummary(cid, person.email)); cannot = switch(r) {case (?r) r.cannot;case null []} } };
+        case (?cfg) { let d = permissionDecision(cid, cfg.policy, person.email); let r = Permissions.roles(cfg.policy.app).find(func r = r.id == d.role); { cid; name = c.name; app = cfg.policy.app; configured = true; role = d.role; roleLabel = switch(r) { case (?r) r.name; case null "No access" }; source = d.source; can = (switch(r) {case (?r) r.can;case null []}).concat(reportingSummary(cid, person.email)); cannot = switch(r) {case (?r) r.cannot;case null []} } };
         case null ({ cid; name = c.name; app = ""; configured = false; role = "unknown"; roleLabel = "Unconfirmed"; source = "App still uses its own permission rules"; can = []; cannot = [] });
       };
     }).toArray();
@@ -2760,7 +2827,7 @@ persistent actor UserHub {
     };
     if (hasLane(cid, "roles")) { let hr = hubRoleOf(lower(norm(email))); if (hr != "") out := Array.concat(out, [("hubRole", hr)]) };
     switch (appPermissionPolicies.get(cid)) {
-      case (?cfg) { let d = permissionDecision(cfg.policy, email); out := Array.concat(out, [("appPermissionModel", Permissions.model), ("appPermissionApp", cfg.policy.app), ("appPermissionRevision", stamp), ("appRole", d.role), ("appRoleSource", d.source)]); if (cfg.policy.app == "desk") out := out.concat([("deskReportingModel", "1"), ("deskReporting", reportingText(cid, email))]) };
+      case (?cfg) { let d = permissionDecision(cid, cfg.policy, email); out := Array.concat(out, [("appPermissionModel", Permissions.model), ("appPermissionApp", cfg.policy.app), ("appPermissionRevision", stamp), ("appRole", d.role), ("appRoleSource", d.source)]); if (cfg.policy.app == "desk") out := out.concat([("deskReportingModel", "1"), ("deskReporting", reportingText(cid, email))]) };
       case null {};
     };
     out;
@@ -6880,7 +6947,7 @@ persistent actor UserHub {
     let person = personOf(viewer) ?? (return false);
     if (person.sealedAt != 0 or pidForEmail(person.email) != viewer or accessForConn(person.email, c.id) != #active) return false;
     let policy = appPermissionPolicies.get(c.id) ?? (return false);
-    let role = permissionDecision(policy.policy, person.email).role;
+    let role = permissionDecision(c.id, policy.policy, person.email).role;
     role == "admin" or role == "agent";
   };
   public shared query ({ caller }) func hub_lifecycleEvents(after : Nat) : async Support.Batch {
@@ -6895,7 +6962,7 @@ persistent actor UserHub {
     assert isAdmin(caller);
     let email = principalLinks.get(caller) ?? (return "");
     for ((cid, policy) in appPermissionPolicies.entries()) if (policy.policy.app == "desk" and accessForConn(email, cid) == #active) {
-      let role = permissionDecision(policy.policy, email).role;
+      let role = permissionDecision(cid, policy.policy, email).role;
       if (role == "agent" or role == "admin") for ((tid, tile) in appLinks.entries()) if (connectorOfTile(tid) == cid and Text.startsWith(tile.url, #text "https://")) return tile.url;
     };
     "";
@@ -6921,11 +6988,11 @@ persistent actor UserHub {
     let c = connectors.get(cid) ?? (return Support.unavailable());
     let policy = appPermissionPolicies.get(cid) ?? (return Support.denied());
     if (not Permissions.supported(policy.policy.app) or policy.policy.app == "desk" or accessForConn(person.email, cid) != #active) return Support.denied();
-    let viewerRole = permissionDecision(policy.policy, person.email).role;
+    let viewerRole = permissionDecision(cid, policy.policy, person.email).role;
     let app : actor { hub_personContext : shared query (Text, Text, Text) -> async Support.Context } = actor (c.canisterId.toText());
     try {
       let result = await (with timeout = 15) app.hub_personContext(viewer, subject, viewerRole);
-      if (not supportViewer(caller, viewer) or connectors.get(cid) != ?c or accessForConn(person.email, cid) != #active or pidForEmail(person.email) != viewer or appPermissionPolicies.get(cid) != ?policy or permissionDecision(policy.policy, person.email).role != viewerRole) return Support.denied();
+      if (not supportViewer(caller, viewer) or connectors.get(cid) != ?c or accessForConn(person.email, cid) != #active or pidForEmail(person.email) != viewer or appPermissionPolicies.get(cid) != ?policy or permissionDecision(cid, policy.policy, person.email).role != viewerRole) return Support.denied();
       result;
     } catch (_) { Support.unavailable() };
   };
@@ -6960,12 +7027,12 @@ persistent actor UserHub {
     let source = connectorByPrincipal(caller) ?? (return null);
     let policy = appPermissionPolicies.get(source.id) ?? (return null);
     let person = personOf(viewer) ?? (return null);
-    if (not hardwareSource(source.id) or pidForEmail(person.email) != viewer or accessForConn(person.email, source.id) != #active or permissionDecision(policy.policy, person.email).role != "admin") return null;
+    if (not hardwareSource(source.id) or pidForEmail(person.email) != viewer or accessForConn(person.email, source.id) != #active or permissionDecision(source.id, policy.policy, person.email).role != "admin") return null;
     let desk = connectors.values().find(func c = c.canisterId.toText() == deskId) ?? (return null);
     if (deskConnector(desk.canisterId) == null) return null;
     let app : HardwareDesk = actor (deskId);
     let result = try { await (with timeout = 15) app.hub_hardwareCase(ticket) } catch (_) { return null };
-    if (connectorByPrincipal(caller) != ?source or appPermissionPolicies.get(source.id) != ?policy or pidForEmail(person.email) != viewer or accessForConn(person.email, source.id) != #active or permissionDecision(policy.policy, person.email).role != "admin" or connectors.get(desk.id) != ?desk or deskConnector(desk.canisterId) == null) return null;
+    if (connectorByPrincipal(caller) != ?source or appPermissionPolicies.get(source.id) != ?policy or pidForEmail(person.email) != viewer or accessForConn(person.email, source.id) != #active or permissionDecision(source.id, policy.policy, person.email).role != "admin" or connectors.get(desk.id) != ?desk or deskConnector(desk.canisterId) == null) return null;
     hardwareCase(desk.canisterId, result ?? (return null));
   };
 
@@ -6991,7 +7058,7 @@ persistent actor UserHub {
     let pid = pidForEmail(email);
     let person = personOf(pid) ?? (return null);
     let policy = appPermissionPolicies.get(cid) ?? (return null);
-    if (person.sealedAt != 0 or person.email != email or not Operations.supported(policy.policy.app) or accessForConn(email, cid) != #active or permissionDecision(policy.policy, email).role != "admin") return null;
+    if (person.sealedAt != 0 or person.email != email or not Operations.supported(policy.policy.app) or accessForConn(email, cid) != #active or permissionDecision(cid, policy.policy, email).role != "admin") return null;
     ?pid;
   };
   public shared query ({ caller }) func operationsSources() : async [Support.Source] {

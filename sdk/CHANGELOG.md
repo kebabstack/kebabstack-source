@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.13.0] — 2026-09-24
+
+- Add the Assets Finance role vocabulary. Hub company teams are its only assignment source; role freshness and all other app permissions retain the existing protocol.
+
 ## [0.12.4] — 2026-09-22
 
 - Keep shared global navigation visible while workspace content scrolls by pinning the mount host. Preserve normal-flow spacing and add scroll clearance for anchors and keyboard focus. No authorization, directory or data-model changes.

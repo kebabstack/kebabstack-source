@@ -1,3 +1,4 @@
+import { createFinance, financeBanner, paymentPanel } from "./finance.js";
 import { createHandoverPanel, renderFormerBuyer } from "./handover.js";
 import { PHASES, phaseOf, nextStep } from "./workflow.js";
 import { idlFactory } from "./idl.js";
@@ -36,6 +37,7 @@ const toMinor = (text) => { let t = String(text || "").trim().replace(/[^\d.,'�
 const hubSettingsAi = () => (HUB_URL.startsWith("https://") ? `${HUB_URL}/#/settings/ai` : "#");
 const deviceName = (a) => (`${a.vendor} ${a.model}`.trim() || a.tag || a.serial || `device #${a.id}`);
 
+let financeWorkspace;
 let backend, hubActor = null, topbar = null, me = null, curId = 0, curAsset = null, curAssigneeEmail = "";
 
 // ---------- the shared topbar (brand · app · menu · bell · theme · person) — one component for the whole suite ----------
@@ -58,11 +60,13 @@ function route() {
   const h = location.hash.replace(/^#\/?/, "");
   const [view, arg] = h.split("/");
   const admin = me.role === "admin";
-  let v = view || "devices";
-  const known = admin ? ["intake", "devices", "d", "apple", "sales", "sale", "offers", "import", "settings", "docs"] : ["devices", "d", "offers", "sale", "docs"];
+  const financial = admin || me.role === "finance";
+  let v = view || (me.role === "finance" ? "finance" : "devices");
+  const known = admin ? ["finance", "intake", "devices", "d", "apple", "sales", "sale", "offers", "import", "settings", "docs"] : financial ? ["finance", "sales", "devices", "d", "offers", "sale", "docs"] : ["devices", "d", "offers", "sale", "docs"];
   if (!known.includes(v)) v = "devices";
   document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === "v-" + (v === "d" ? "device" : v)));
-  document.querySelectorAll("#nav .tab").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "d" && el.dataset.view === "devices") || (v === "sale" && el.dataset.view === (admin ? "sales" : "offers"))));
+  document.querySelectorAll("#nav .tab").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "d" && el.dataset.view === "devices") || (v === "sale" && el.dataset.view === (financial ? "sales" : "offers"))));
+  if (v === "finance") { financeWorkspace ||= createFinance($("v-finance"), {api:()=>backend,token:tok,hubUrl:HUB_URL}); financeWorkspace.load(arg); }
   if (v === "intake") loadRecent();
   if (v === "devices") loadDevices();
   if (v === "d") loadDevice(Number(arg));
@@ -77,7 +81,7 @@ function route() {
 window.addEventListener("hashchange", route);
 
 function renderNav() {
-  const items = me.role === "admin" ? [["devices", "Devices"], ["intake", "Scan & update"], ["sales", "Sales"], ["apple", "Apple inventory"], ["settings", "Settings"], ["import", "Import / export"], ["docs", "Help"]] : [["devices", "My devices"], ["offers", "Offers & invoices"], ["docs", "How it works"]];
+  const items = me.role === "admin" ? [["devices", "Devices"], ["finance", "Finance"], ["intake", "Scan & update"], ["sales", "Sales"], ["apple", "Apple inventory"], ["settings", "Settings"], ["import", "Import / export"], ["docs", "Help"]] : me.role === "finance" ? [["finance", "Finance"], ["sales", "Sales"], ["devices", "My devices"], ["offers", "My offers"], ["docs", "Help"]] : [["devices", "My devices"], ["offers", "Offers & invoices"], ["docs", "How it works"]];
   $("nav").innerHTML = items.map(([v, l]) => `<button class="tab ${["import", "docs"].includes(v) ? "utility" : ""}" data-view="${v}">${l}</button>`).join("");
   $("nav").onclick = (e) => { const el = e.target.closest(".tab"); if (el) location.hash = "#/" + el.dataset.view; };
 
@@ -434,13 +438,13 @@ function renderSaleWorkflow(v, deal) {
     columns.lastElementChild.prepend($("sDocCard")); columns.lastElementChild.prepend($("sSummaryCard"));
   }
   const primaryAction = phase === 'invoice' || (phase === 'offer' && !!s.buyer.pid);
-  if (primaryAction) columns.firstElementChild.prepend($("sAdminCard")); else columns.lastElementChild.append($("sAdminCard"));
-  $("sAdminCard").querySelector('h3').textContent = primaryAction ? 'Next action' : 'Sale actions';
+  if (primaryAction && phase !== 'invoice') columns.firstElementChild.prepend($("sAdminCard")); else columns.lastElementChild.append($("sAdminCard"));
+  $("sAdminCard").querySelector('h3').textContent = primaryAction && phase !== 'invoice' ? 'Next action' : 'Sale actions';
   $("saleNext").classList.toggle('hidden', !admin);
   const needsPdf = phase === 'paid' && !Number(s.pdfId);
   const action = needsPdf ? 'Archive the invoice PDF' : nextStep({...v,phase,receiptPending:!!deal?.exists && !Number(deal.completedAt)});
   const help = {offer:'Agree the offer with the buyer before invoicing.',invoice:'Use the bank record to confirm payment. Downloading an invoice is not payment.',paid:'Payment is recorded. Finish preparation and record the physical hand-over.',complete:'Payment and physical hand-over are recorded. The invoice remains available.',cancelled:s.creditNoteNo ? 'Keep the credit note with the invoice. Handle any refund with finance.' : 'This offer is closed. Its record is retained.'}[phase];
-  const target = needsPdf ? 'sDocCard' : phase === 'paid' ? (!s.wiped || !s.mdmRemoved ? 'sChecksCard' : 'handoverCard') : phase === 'offer' && !s.buyer.pid ? 'sDealCard' : 'sAdminCard';
+  const target = phase === 'invoice' ? 'sPayments' : needsPdf ? 'sDocCard' : phase === 'paid' ? (!s.wiped || !s.mdmRemoved ? 'sChecksCard' : 'handoverCard') : phase === 'offer' && !s.buyer.pid ? 'sDealCard' : 'sAdminCard';
   $("saleNext").innerHTML = `<div><div class="eyebrow">${phase === 'complete' || phase === 'cancelled' ? 'Sale closed' : 'Next step'}</div><strong>${esc(action)}</strong><p>${esc(help)}</p></div>${['offer','invoice','paid'].includes(phase) ? '<button class="sm" id="jumpNext">Go to task ↓</button>' : ''}`;
   if ($("jumpNext")) $("jumpNext").onclick = () => $(target).scrollIntoView({behavior:'smooth',block:'center'});
   $("handoverCard").classList.toggle('hidden',!admin || phase !== 'paid');
@@ -721,6 +725,8 @@ $("salesPrev").onclick = () => { salesOffset = Math.max(0, salesOffset - 100); l
 let salesTimer;
 $("salesQ").oninput = () => { clearTimeout(salesTimer); salesTimer = setTimeout(() => { salesOffset = 0; loadSales(); }, 200); };
 async function loadSales() {
+  $("salesStart").classList.toggle("hidden", me.role !== "admin");
+  financeBanner($("salesFinanceBanner"),{api:()=>backend,token:tok,hubUrl:HUB_URL});
   const generation = ++salesGeneration;
   $("salesOpen").classList.toggle("on", saleFilter === "open"); $("salesOpen").setAttribute("aria-pressed", saleFilter === "open");
   $("salesAll").classList.toggle("on", saleFilter === ""); $("salesAll").setAttribute("aria-pressed", saleFilter === "");
@@ -736,7 +742,7 @@ async function loadSales() {
     $("salesPrev").classList.toggle("hidden", !salesOffset); $("salesNext").classList.toggle("hidden", !board.hasMore);
     $("saleRows").innerHTML = rows.length ? rows.map(r => `<a class="dev" href="#/sale/${Number(r.id)}"><div class="ic" aria-hidden="true">${r.phase === 'complete' ? '✓' : '↗'}</div><div class="t"><b>${esc(r.deviceName)}</b><span>${esc(r.buyerName)}${r.deviceTag ? ' · ' + esc(r.deviceTag) : ''}${r.invoiceNo ? ' · ' + esc(r.invoiceNo) : ''}</span></div><div class="r"><span class="next">${esc(nextStep({...r, sale:r}))}</span><span class="kv">${esc(fmtMoney(r.grossMinor,r.currency))} · ${esc(ago(r.updatedAt))}</span></div></a>`).join('') : `<div class="empty">${$("salesQ").value.trim() ? 'No sales match this search. Try a device, buyer name or invoice number.' : saleFilter === 'open' ? 'Nothing needs attention. Completed and cancelled sales stay available above.' : 'No sales in this phase yet.'}</div>`;
     $("salesReady").textContent = '';
-    const b = opt(await backend.getBilling(tok()));
+    const b = me.role === "admin" ? opt(await backend.getBilling(tok())) : null;
     if (generation === salesGeneration && b && (!b.legalName || !b.iban)) $("salesReady").innerHTML = '<a href="#/settings/sales">Finish invoice settings before the first sale →</a>';
   } catch (_) { if (generation === salesGeneration) { $("saleRows").innerHTML = '<div class="empty">Sales could not be loaded. <button id="salesRetry" class="sm">Try again</button></div>'; $("salesRetry").onclick = loadSales; $("salesCount").textContent = 'Sales unavailable'; } }
   finally { if (generation === salesGeneration) $("saleRows").removeAttribute("aria-busy"); }
@@ -753,8 +759,10 @@ async function loadSale(id) {
   const generation = ++saleLoadGeneration;
   let v; try { v = opt(await backend.getSale(tok(), BigInt(id))); } catch (e) { v = null; }
   if (generation !== saleLoadGeneration) return;
-  const admin = me.role === "admin";
-  $("sBack").href = admin ? "#/sales" : "#/offers"; $("sBack").textContent = admin ? "‹ Sales" : "‹ Offers & invoices";
+  const admin = me.role === "admin", financial = admin || me.role === "finance";
+  $("sPayments").hidden = true;
+  $("sPayments").replaceChildren();
+  $("sBack").href = financial ? "#/sales" : "#/offers"; $("sBack").textContent = financial ? "‹ Sales" : "‹ Offers & invoices";
   if (!v) { $("sTitle").textContent = "not found"; $("sPills").innerHTML = ""; $("sKv").innerHTML = ""; $("sMoney").textContent = ""; for (const c of ["sChecksCard", "sTermsCard", "sEditCard", "sDocCard", "sAdminCard", "sDealCard", "sSummaryCard", "handoverCard"]) $(c).classList.add("hidden"); return; }
   $("sSummaryCard").classList.remove("hidden"); $("sTermsCard").classList.remove("hidden");
   curSale = v; const s = v.sale; const inv = opt(v.invoice), cn = opt(v.creditNote), pr = opt(v.proposal);
@@ -767,7 +775,7 @@ async function loadSale(id) {
   renderDealAdmin(s, deal, id, v, former);
   renderSaleWorkflow(v, deal);
   $("sTitle").textContent = v.deviceName;
-  $("sPills").innerHTML = `<span class="pill st-${esc(s.status)}">${esc(Number(v.handedOverAt || deal?.handedOverAt) && s.status !== "cancelled" ? "complete" : SALE_WORD[s.status] || s.status)}</span> <a href="#/d/${Number(s.assetId)}" class="pill" style="text-decoration:none">device</a>${s.creditNoteNo ? ` <span class="pill off">credit note ${esc(s.creditNoteNo)}</span>` : ""}${v.stillInAbm ? ` <span class="pill warn" title="Apple Business Manager still lists this device">still in ABM · ${esc(v.stillInAbm)}</span>` : ""}`;
+  $("sPills").innerHTML = `<span class="pill st-${esc(s.status)}">${esc(Number(v.handedOverAt || deal?.handedOverAt) && s.status !== "cancelled" ? "complete" : SALE_WORD[s.status] || s.status)}</span> <a href="#/${me.role === "finance" ? "finance" : "d"}/${Number(s.assetId)}" class="pill" style="text-decoration:none">device</a>${s.creditNoteNo ? ` <span class="pill off">credit note ${esc(s.creditNoteNo)}</span>` : ""}${admin && v.stillInAbm ? ` <span class="pill warn" title="Apple Business Manager still lists this device">still in ABM · ${esc(v.stillInAbm)}</span>` : ""}`;
 
   $("sMoney").textContent = fmtMoney(s.grossMinor, s.currency);
   $("sKv").innerHTML = [["Buyer", esc(s.buyer.name) + `<details><summary>Billing contact</summary>${buyerLines(s.buyer).slice(1).map(esc).join("<br>")}</details>` + (s.buyer.pid ? ' <span class="kv">(colleague)</span>' : ' <span class="kv">(outside buyer)</span>')], ["Device", `${esc(v.deviceName)}${v.deviceSerial ? ` · <span class="mono">${esc(v.deviceSerial)}</span>` : ""}${v.deviceTag ? " · " + esc(v.deviceTag) : ""}`], ["Price", `${esc(fmtMoney(s.grossMinor, s.currency))} incl. VAT ${esc((Number(s.vatRateBp) / 100).toString())}% · net ${esc(fmtMoney(s.netMinor))} · VAT ${esc(fmtMoney(s.vatMinor))}${s.priceNote ? `<br><span class="kv">${esc(s.priceNote)}</span>` : ""}`], ["Invoice", s.invoiceNo ? `${esc(s.invoiceNo)} · issued ${esc(s.issuedOn)} · due ${esc(s.dueOn)} · reference <span class="mono">${esc(inv ? inv.referencePretty : s.reference)}</span>` : "not issued yet"], ["Paid", s.paidAt && Number(s.paidAt) ? `${esc(fmt(s.paidAt))}${s.paidNote ? " · " + esc(s.paidNote) : ""}` : ""], ["Handed over", Number(v.handedOverAt || deal?.handedOverAt) ? esc(fmt(v.handedOverAt || deal.handedOverAt)) : ""], ["Cancelled", s.cancelledAt && Number(s.cancelledAt) ? `${esc(fmt(s.cancelledAt))} · ${esc(s.cancelReason)}` : ""], ["Started", `${esc(fmt(s.createdAt))}${v.createdByName ? " · " + esc(v.createdByName) : ""}`]].filter(([, val]) => val).map(([k, val]) => `<div>${k}</div><div>${val}</div>`).join("");
@@ -793,16 +801,18 @@ async function loadSale(id) {
   $("sDocCard").classList.toggle("hidden", !docs.length);
   $("sDocs").innerHTML = docs.map((d) => `<div class="ev"><span class="dot"></span><div><div class="what"><b>${esc(d.name)}</b>${d.missing ? ' <span class="pill warn">not archived yet</span>' : ` <button class="sm" data-dl="${Number(d.id)}">Download</button>`}</div>${d.hash ? `<details><summary>Document integrity</summary><div class="meta">SHA-256 ${esc(d.hash)}</div></details>` : ""}</div></div>`).join("");
   $("sDocs").querySelectorAll("[data-dl]").forEach((b) => (b.onclick = async () => { const d = opt(await backend.saleDocument(tok(), BigInt(b.dataset.dl))); if (!d) return setStatus("sDocStatus", "err", "not available"); downloadBytes(d.name, new Uint8Array(d.bytes), d.mime); }));
-  $("sDocActions").innerHTML = admin ? docs.filter((d) => d.missing).map((d) => `<button class="primary sm" data-render="${d.credit ? "creditNote" : "invoice"}">Render and archive the ${d.credit ? "credit note" : "invoice"} PDF</button>`).join("") : "";
+  $("sDocActions").innerHTML = financial ? docs.filter((d) => d.missing).map((d) => `<button class="primary sm" data-render="${d.credit ? "creditNote" : "invoice"}">Render and archive the ${d.credit ? "credit note" : "invoice"} PDF</button>`).join("") : "";
   $("sDocActions").querySelectorAll("[data-render]").forEach((b) => (b.onclick = () => renderAndArchive(v, b.dataset.render)));
   if (lastSaleId !== id) setStatus("sDocStatus", "", ""); lastSaleId = id;
+  if (financial && s.invoiceNo) { $("sPayments").hidden=false; await paymentPanel($("sPayments"),{api:()=>backend,token:tok,sale:s,reload:()=>loadSale(id),isCurrent:()=>generation===saleLoadGeneration&&curSale?.sale.id===s.id}); }
+  if (generation !== saleLoadGeneration) return;
   // actions
   $("sAdminCard").classList.toggle("hidden", !admin);
   const acts = [];
   if (s.status === "draft" && s.buyer.pid) acts.push(`<button class="primary sm" data-act="offer">Offer to the buyer</button>`);
   if (s.status === "offered" && s.buyer.pid) acts.push(`<button class="sm" data-act="offer">Offer again (re-notify)</button>`);
   if (s.status === "accepted" && !deal?.exists) acts.push(`<button class="primary sm" data-act="issue">Issue the invoice</button>`);
-  if (s.status === "issued") acts.push(`<button class="primary sm" data-act="paid">Confirm payment…</button>`);
+
   if (s.status !== "cancelled") acts.push(`<button class="sm" data-act="cancel">${["issued", "paid"].includes(s.status) ? "Cancel with credit note…" : "Cancel the sale…"}</button>`);
   $("sActions").innerHTML = acts.join("");
   const cancelButton = $("sActions").querySelector('[data-act="cancel"]'); if (cancelButton) { const more = document.createElement("details"); more.innerHTML = "<summary>More actions</summary>"; $("sActions").append(more); more.append(cancelButton); } $("sCancelRow").classList.add("hidden"); setStatus("sActStatus", "", "");
@@ -812,7 +822,6 @@ async function loadSale(id) {
     setStatus("sActStatus", "", "working…"); b.disabled = true;
     try {
       if (act === "offer") { const r = await backend.offerSale(tok(), s.id); setStatus("sActStatus", r.ok ? (/NOT be notified/.test(r.detail) ? "err" : "ok") : "err", r.detail || "offered"); if (r.ok) loadSale(id); }
-      if (act === "paid") { $("sPaidRow").classList.remove("hidden"); $("sPaidNote").focus(); setStatus("sActStatus", "", ""); }
       if (act === "issue") {
         const r = await backend.issueInvoice(tok(), s.id);
         if (!r.ok) { setStatus("sActStatus", "err", r.detail); return; }
@@ -824,8 +833,6 @@ async function loadSale(id) {
       }
     } finally { b.disabled = false; }
   }));
-  $("sPaidRow").classList.add("hidden");
-  $("sPaidGo").onclick = async () => { const r = await backend.markPaid(tok(), s.id, $("sPaidNote").value.trim()); setStatus("sActStatus", r.ok ? "ok" : "err", r.ok ? "marked paid" : r.detail); if (r.ok) loadSale(id); };
   $("sCancelGo").onclick = async () => {
     const reason = $("sCancelReason").value.trim(); if (!reason) return setStatus("sActStatus", "err", "a reason, please");
     if (!confirm(["issued", "paid"].includes(s.status) ? "Cancel this invoice with a numbered credit note?" : "Cancel this sale?")) return;

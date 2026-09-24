@@ -1,3 +1,4 @@
+import Option "mo:core/Option";
 import Operations "mo:kebab-hub/Operations";
 /// kebab-stack assets — the devices of a company, on the skewer.
 ///
@@ -59,7 +60,7 @@ persistent actor Assets {
   var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
   var photoBytes : Nat = 0; // total photo bytes held
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.15.1";
+  transient let BUILD_VERSION : Text = "0.16.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -272,6 +273,8 @@ persistent actor Assets {
     };
   };
   func admin(tok : Text) : ?Me = switch (me(tok)) { case (?m) { if (m.role == "admin") ?m else null }; case null null };
+
+  func finance(tok : Text) : ?Me = switch (me(tok)) { case (?m) { if (m.role == "admin" or m.role == "finance") ?m else null }; case null null };
 
   // =====================================================================
   // bootstrap (CLI) & settings
@@ -1967,6 +1970,7 @@ persistent actor Assets {
     dealDevices.add(id, { name = deviceName(a); serial = a.serial });
     saleDocs.add(docId, { id = docId; saleId = id; kind = "invoice"; name = number # ".pdf"; bytes = pdf; hash; at; by = "dealroom invoice service" });
     saleDocBytes += pdf.size(); putSale({ issued with pdfId = docId; pdfHash = hash });
+    queueFinanceNotice(issued, "invoice");
     dealAudit(issued, externalLabel(s), "accepted", "Offer and terms v" # s.waiverVersion.toText() # " accepted using the private dealroom link; invoice " # number # " issued and archived");
     queueDealNotice(issued, "accepted", s.buyer.name # " accepted the offer — invoice " # number # " created");
     ignore sendDealNotices();
@@ -2068,7 +2072,7 @@ persistent actor Assets {
     let parts = Text.split(norm(s), #char '-').toArray();
     if (parts.size() != 3 or parts[0].size() != 4 or parts[1].size() != 2 or parts[2].size() != 2) return null;
     switch (Nat.fromText(parts[0]), Nat.fromText(parts[1]), Nat.fromText(parts[2])) {
-      case (?y, ?m, ?d) { if (m < 1 or m > 12 or d < 1 or d > 31) null else ?daysFromCivil(y, m, d) };
+      case (?y, ?m, ?d) { if (y < 1900 or y > 9999 or m < 1 or m > 12 or d < 1 or d > 31 or isoFromDays(daysFromCivil(y, m, d)) != s) null else ?daysFromCivil(y, m, d) };
       case _ null;
     };
   };
@@ -2159,6 +2163,7 @@ persistent actor Assets {
         ignore addEvent(assetId, m.id, "edited", "purchase details set: " # moneyPretty(p) # " " # cur # (if (date != "") " on " # norm(date) else ""), "", 0);
       };
     };
+    financialRevisions.add(assetId, (financialRevisions.get(assetId) ?? 0) + 1);
     { ok = true; detail = "" };
   };
   /// The rule's price for a device today: linear write-down over the configured months, never below the floor (share of the purchase price) or the minimum.
@@ -2317,6 +2322,7 @@ persistent actor Assets {
     let no = nextInvoiceNo();
     let today = todayDays();
     putSale({ s with status = "issued"; invoiceNo = no; issuedAt = now(); issuedOn = isoFromDays(today); dueOn = isoFromDays(today + billing.paymentDays); reference = scorOf(no) });
+    queueFinanceNotice(sales.get(id) ?? s, "invoice");
     // Payment and physical hand-over follow the invoice; the device stays reserved.
     saleEvent(s, m.id, "invoice " # no # " issued — " # moneyPretty(s.grossMinor) # " " # s.currency # ", due " # isoFromDays(today + billing.paymentDays));
     log(m.email, "invoice " # no # " issued for " # deviceName(a) # " → " # s.buyer.name);
@@ -2329,7 +2335,7 @@ persistent actor Assets {
   };
   /// Admins: archive the rendered PDF exactly as handed to the buyer (kind invoice | creditNote). Once stored it is never replaced.
   public shared func attachSaleDocument(tok : Text, id : Nat, kind : Text, bytes : Blob) : async { ok : Bool; detail : Text; docId : Nat } {
-    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only"; docId = 0 } };
+    let m = switch (finance(tok)) { case (?m) m; case null return { ok = false; detail = "Finance or Assets admins only"; docId = 0 } };
     let s = switch (Map.get(sales, Nat.compare, id)) { case (?s) s; case null return { ok = false; detail = "no such sale"; docId = 0 } };
     if (kind != "invoice" and kind != "creditNote") return { ok = false; detail = "kind: invoice or creditNote"; docId = 0 };
     if (kind == "invoice" and s.invoiceNo == "") return { ok = false; detail = "issue the invoice first"; docId = 0 };
@@ -2353,19 +2359,19 @@ persistent actor Assets {
     let m = switch (me(tok)) { case (?m) m; case null return null };
     let d = switch (Map.get(saleDocs, Nat.compare, docId)) { case (?d) d; case null return null };
     let s = switch (Map.get(sales, Nat.compare, d.saleId)) { case (?s) s; case null return null };
-    if (m.role != "admin" and s.buyer.pid != m.id) return null;
+    if (m.role != "admin" and m.role != "finance" and s.buyer.pid != m.id) return null;
     ?{ name = d.name; mime = "application/pdf"; bytes = d.bytes; hash = d.hash };
   };
   /// Admins: the money arrived (finance says so) — a note for the record; the books stay with finance.
   public shared func markPaid(tok : Text, id : Nat, note : Text) : async { ok : Bool; detail : Text } {
-    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
-    let s = switch (Map.get(sales, Nat.compare, id)) { case (?s) s; case null return { ok = false; detail = "no such sale" } };
-    if (s.status != "issued") return { ok = false; detail = "the sale is " # s.status };
-    putSale({ s with status = "paid"; paidAt = now(); paidNote = capText(norm(note), 200) });
-    if (deals.get(id) != null) dealAudit(s, m.displayName, "paid", "IT confirmed payment of invoice " # s.invoiceNo # (if (norm(note) == "") "" else ": " # capText(norm(note), 200)));
-    saleEvent(s, m.id, "invoice " # s.invoiceNo # " paid" # (if (norm(note) != "") " — " # capText(norm(note), 100) else ""));
-    { ok = true; detail = "" };
+    let m = finance(tok) ?? (return { ok = false; detail = "Finance or Assets admins only" });
+    let s = sales.get(id) ?? (return { ok = false; detail = "No such sale" });
+    let rows = paymentRows(s);
+    let paid = paymentTotal(rows);
+    if (paid >= s.grossMinor) return { ok = false; detail = "Already paid" };
+    recordPayment(m, s, rows.size(), { amountMinor = s.grossMinor - paid; paidOn = isoFromDays(todayDays()); reference = note; reason = ""; reverses = null; requestId = "mark-paid-" # rows.size().toText() })
   };
+
   /// Admins: cancel. Before the invoice: the sale just ends. After: a numbered credit note is created (the invoice number stays used — ranges are gapless) and the device goes back to stock unless it was already paid.
   public shared func cancelSale(tok : Text, id : Nat, reason : Text) : async { ok : Bool; detail : Text; creditNoteNo : Text } {
     if (migrating()) return { ok = false; detail = MIGRATING; creditNoteNo = "" };
@@ -2377,7 +2383,7 @@ persistent actor Assets {
     if (s.status == "issued" or s.status == "paid") {
       cn := nextInvoiceNo();
       switch (Map.get(assets, Nat.compare, s.assetId)) {
-        case (?a) { if (s.status == "issued" and a.status == "sold") { Map.add(assets, Nat.compare, a.id, { a with status = "in_stock"; holder = ""; updatedAt = now() }); ignore addEvent(a.id, m.id, "returned", "back in stock — invoice " # s.invoiceNo # " cancelled with credit note " # cn, "", 0) } else ignore addEvent(a.id, m.id, "note", "invoice " # s.invoiceNo # " cancelled with credit note " # cn # " after payment — check where the device is and refund", "", 0) };
+        case (?a) { if (s.status == "issued" and a.status == "sold" and handedOverAt(s.id) == 0) { Map.add(assets, Nat.compare, a.id, { a with status = "in_stock"; holder = ""; updatedAt = now() }); ignore addEvent(a.id, m.id, "returned", "back in stock — invoice " # s.invoiceNo # " cancelled with credit note " # cn, "", 0) } else ignore addEvent(a.id, m.id, "note", "invoice " # s.invoiceNo # " cancelled with credit note " # cn # " after payment — check where the device is and refund", "", 0) };
         case null {};
       };
     };
@@ -2469,7 +2475,7 @@ persistent actor Assets {
   // All phase counts are computed before pagination. This overview intentionally excludes
   // buyer email/address, invoice snapshots, terms and other detail-only personal data.
   public shared query func salesBoard(tok : Text, phase : Text, search : Text, offset : Nat) : async { counts : [(Text, Nat)]; total : Nat; matched : Nat; rows : [SaleSummary]; hasMore : Bool } {
-    if (admin(tok) == null) return { counts = []; total = 0; matched = 0; rows = []; hasMore = false };
+    if (finance(tok) == null) return { counts = []; total = 0; matched = 0; rows = []; hasMore = false };
     let counts = Map.empty<Text, Nat>(); let rows = List.empty<SaleSummary>();
     let q = lower(capText(norm(search), 150));
     for ((_, s) in sales.entries()) {
@@ -2487,7 +2493,7 @@ persistent actor Assets {
   };
   /// Admins: the sales, newest first; status "" = everything, else that status, "open" = draft/offered/accepted/issued.
   public shared query func listSales(tok : Text, status : Text) : async [SaleView] {
-    switch (admin(tok)) { case null return []; case (?_) {} };
+    switch (finance(tok)) { case null return []; case (?_) {} };
     let out = List.empty<SaleView>();
     for ((_, s) in Map.entries(sales)) if (status == "" or s.status == status or (status == "open" and (s.status != "cancelled" and handedOverAt(s.id) == 0))) List.add(out, saleView(s));
     let arr = Array.sort<SaleView>(List.toArray(out), func(a, b) = Int.compare(b.sale.updatedAt, a.sale.updatedAt));
@@ -2496,7 +2502,7 @@ persistent actor Assets {
   /// One sale with everything the pages need — admins, or the buyer for their own.
   public shared query func getSale(tok : Text, id : Nat) : async ?SaleView {
     let m = switch (me(tok)) { case (?m) m; case null return null };
-    switch (Map.get(sales, Nat.compare, id)) { case (?s) { if (m.role == "admin" or s.buyer.pid == m.id) ?saleView(s) else null }; case null null };
+    switch (Map.get(sales, Nat.compare, id)) { case (?s) { if (m.role == "admin" or m.role == "finance" or s.buyer.pid == m.id) ?saleView(s) else null }; case null null };
   };
   /// Admins: the device's purchase details (if any) and its open sale — for the device page.
   public shared query func saleOfDevice(tok : Text, assetId : Nat) : async { purchase : ?Purchase; sale : ?SaleView; proposal : ?{ proposedMinor : Nat; basis : Text }; billingReady : Text } {
@@ -2505,7 +2511,7 @@ persistent actor Assets {
   };
   /// Admins: the invoices and credit notes of a year (or all) for finance — number, dates, buyer, device, net/VAT/gross, status, archived document hash.
   public shared query func salesExportCsv(tok : Text, year : Text) : async Text {
-    switch (admin(tok)) { case null return ""; case (?_) {} };
+    switch (finance(tok)) { case null return ""; case (?_) {} };
     var out = "number,kind,issued,due,status,buyer,buyer e-mail,device,serial,net,vat rate,vat,gross,currency,reference,paid at,credit note,cancel reason,pdf sha256\n";
     let rows = List.empty<(Text, Text)>();
     let yr = norm(year);
@@ -2518,6 +2524,200 @@ persistent actor Assets {
     };
     for ((_, line) in Array.sort<(Text, Text)>(List.toArray(rows), func(a, b) = Text.compare(a.0, b.0)).vals()) out #= line # "\n";
     out;
+  };
+
+
+  // ---- Finance: central role, financial projections and append-only payments ----
+  public type PaymentInput = { amountMinor : Nat; paidOn : Text; reference : Text; reason : Text; reverses : ?Nat; requestId : Text };
+  public type PaymentEntry = { id : Nat; amountMinor : Nat; paidOn : Text; reference : Text; reason : Text; reverses : ?Nat; requestId : Text; by : Text; at : Int };
+  let salePayments = Map.empty<Nat, [PaymentEntry]>();
+  func paymentRows(s : Sale) : [PaymentEntry] {
+    salePayments.get(s.id) ?? (if (s.paidAt == 0) [] else [{ id = 1; amountMinor = s.grossMinor; paidOn = isoFromDays(s.paidAt / 86_400_000_000_000); reference = s.paidNote; reason = "Payment confirmed before the Finance ledger was introduced"; reverses = null; requestId = "legacy-payment"; by = "Legacy record"; at = s.paidAt }])
+  };
+  func paymentTotal(rows : [PaymentEntry]) : Nat {
+    var amount : Int = 0;
+    for (p in rows.values()) { if (p.reverses == null) amount += p.amountMinor else amount -= p.amountMinor };
+    if (amount < 0) 0 else Int.abs(amount)
+  };
+  func ownPurchase(m : Me, s : Sale) : Bool = s.buyer.pid == m.id or (norm(s.buyer.email) != "" and lower(norm(s.buyer.email)) == lower(norm(m.email)));
+  func recordPayment(m : Me, s : Sale, revision : Nat, input : PaymentInput) : { ok : Bool; detail : Text } {
+    if (ownPurchase(m, s)) return { ok = false; detail = "Another Finance member or Assets admin must confirm your own purchase" };
+    if (s.invoiceNo == "" or s.status == "cancelled") return { ok = false; detail = "Payments require an active issued invoice" };
+    let rows = paymentRows(s);
+    if (input.requestId.size() < 8 or input.requestId.size() > 100 or input.reference.size() > 200 or input.reason.size() > 500) return { ok = false; detail = "Check the payment reference, reason and request identifier" };
+    switch (rows.find(func p = p.requestId == input.requestId)) {
+      case (?p) return { ok = p.by == m.id and p.amountMinor == input.amountMinor and p.paidOn == input.paidOn and p.reference == input.reference and p.reason == input.reason and p.reverses == input.reverses; detail = "This payment request was already processed; refresh the ledger" };
+      case null {};
+    };
+    if (rows.size() != revision) return { ok = false; detail = "Payments changed. Refresh before recording another entry" };
+    if (rows.size() >= 1000) return { ok = false; detail = "Payment history limit reached; contact IT" };
+    let date = parseIso(input.paidOn) ?? (return { ok = false; detail = "Use a valid payment date" });
+    if (date > todayDays() or input.amountMinor == 0) return { ok = false; detail = "Use a positive amount and a payment date that is not in the future" };
+    let total = paymentTotal(rows);
+    switch (input.reverses) {
+      case (?id) {
+        let original = rows.find(func p = p.id == id) ?? (return { ok = false; detail = "Original payment not found" });
+        if (original.reverses != null or rows.any(func p = p.reverses == ?id) or original.amountMinor != input.amountMinor or norm(input.reason) == "" or input.paidOn != original.paidOn) return { ok = false; detail = "Reverse an unreversed payment in full, keep its date and give a correction reason" };
+      };
+      case null { if (total + input.amountMinor > s.grossMinor) return { ok = false; detail = "This exceeds the outstanding invoice amount" } };
+    };
+    let entry : PaymentEntry = { input with id = rows.size() + 1; by = m.id; at = now() };
+    let next = rows.concat([entry]); salePayments.add(s.id, next);
+    let paid = paymentTotal(next) == s.grossMinor;
+    putSale({ s with status = if (paid) "paid" else "issued"; paidAt = if (paid) now() else 0; paidNote = "Recorded in Finance ledger" });
+    saleEvent(s, m.id, (if (input.reverses == null) "Payment recorded: " else "Payment corrected: ") # money(input.amountMinor) # " " # s.currency # " · " # input.paidOn);
+    if (paid and total < s.grossMinor) queueFinanceNotice(s, "paid");
+    { ok = true; detail = if (paid) "Invoice fully paid. IT can prepare the hand-over." else "Payment history saved. The outstanding balance remains visible." }
+  };
+  public shared func recordSalePayment(tok : Text, id : Nat, revision : Nat, input : PaymentInput) : async { ok : Bool; detail : Text } {
+    let m = finance(tok) ?? (return { ok = false; detail = "Finance or Assets admins only" });
+    let s = sales.get(id) ?? (return { ok = false; detail = "No such sale" });
+    recordPayment(m, s, revision, input)
+  };
+  public shared query func salePaymentHistory(tok : Text, id : Nat) : async ?{ entries : [PaymentEntry]; revision : Nat; paidMinor : Nat; outstandingMinor : Nat; canRecord : Bool } {
+    let m = finance(tok) ?? (return null);
+    let s = sales.get(id) ?? (return null); let rows = paymentRows(s); let paid = paymentTotal(rows);
+    ?{ entries = rows.map(func p = { p with by = nameOf(p.by) }); revision = rows.size(); paidMinor = paid; outstandingMinor = if (paid >= s.grossMinor) 0 else s.grossMinor - paid; canRecord = s.invoiceNo != "" and s.status != "cancelled" and not ownPurchase(m, s) }
+  };
+  public shared query func financePayments(tok : Text, overdueOnly : Bool, offset : Nat) : async ?{ open : Nat; overdue : Nat; totals : [(Text, Nat)]; matched : Nat; rows : [{ id : Nat; number : Text; buyer : Text; device : Text; dueOn : Text; currency : Text; outstandingMinor : Nat }] } {
+    if (finance(tok) == null) return null;
+    let rows = List.empty<{ id : Nat; number : Text; buyer : Text; device : Text; dueOn : Text; currency : Text; outstandingMinor : Nat }>();
+    let totals = Map.empty<Text, Nat>(); var open = 0; var overdue = 0;
+    for ((_, s) in sales.entries()) if (s.invoiceNo != "" and s.status != "cancelled") {
+      let paid = paymentTotal(paymentRows(s));
+      if (paid < s.grossMinor) {
+        open += 1; let due = (parseIso(s.dueOn) ?? todayDays()) < todayDays(); if (due) overdue += 1;
+        let outstandingMinor = s.grossMinor - paid; totals.add(s.currency, (totals.get(s.currency) ?? 0) + outstandingMinor);
+        if (not overdueOnly or due) rows.add({ id = s.id; number = s.invoiceNo; buyer = s.buyer.name; device = assets.get(s.assetId).map(deviceName) ?? "Device"; dueOn = s.dueOn; currency = s.currency; outstandingMinor });
+      };
+    };
+    let sorted = rows.toArray().sort(func(a, b) = Text.compare(a.dueOn, b.dueOn)); let start = Nat.min(offset, sorted.size()); let size = Nat.min(100, sorted.size() - start);
+    ?{ open; overdue; totals = totals.entries().toArray(); matched = sorted.size(); rows = Array.tabulate(size, func i = sorted[start + i]) }
+  };
+  public shared query func paymentsExportCsv(tok : Text) : async Text {
+    if (finance(tok) == null) return "";
+    var out = "invoice,payment id,kind,date,amount,currency,reference,reason,recorded by,recorded at,reverses\n";
+    for ((_, s) in sales.entries()) for (p in paymentRows(s).values()) {
+      out #= Text.join([csv(s.invoiceNo), p.id.toText(), if (p.reverses == null) "payment" else "correction", csv(p.paidOn), (if (p.reverses == null) "" else "-") # money(p.amountMinor), csv(s.currency), csv(p.reference), csv(p.reason), csv(nameOf(p.by)), p.at.toText(), p.reverses.map(func id = id.toText()) ?? ""].values(), ",") # "\n";
+    }; out
+  };
+  public type ValuationInput = { priceMinor : Nat; currency : Text; purchasedOn : Text; inServiceOn : Text; months : Nat; residualMinor : Nat; reason : Text };
+  public type Valuation = { input : ValuationInput; revision : Nat; by : Text; at : Int };
+  let valuations = Map.empty<Nat, Valuation>();
+  let valuationHistory = Map.empty<Nat, [Valuation]>();
+  let financialRevisions = Map.empty<Nat, Nat>();
+  var valuationDefaults : [{ kind : Text; months : Nat }] = [];
+  var valuationDefaultsRevision : Nat = 0;
+  public type FinanceAsset = { id : Nat; tag : Text; serial : Text; name : Text; kind : Text; status : Text; assignee : Text; archived : Bool; purchase : ?Purchase; valuation : ?Valuation; bookMinor : ?Nat; revision : Nat };
+  func bookValue(v : ValuationInput, asOf : Int) : ?Nat {
+    let start = parseIso(v.inServiceOn) ?? (return null);
+    if (asOf < start) return null;
+    let (sy, sm, _) = civilFromDays(start); let (ey, em, _) = civilFromDays(asOf);
+    // Calendar-month boundaries: depreciation starts in the month AFTER commissioning.
+    let elapsed = Nat.min(v.months, Int.abs((ey - sy) * 12 + em - sm));
+    if (v.months == 0 or v.residualMinor > v.priceMinor) return null;
+    ?(v.priceMinor - (v.priceMinor - v.residualMinor) * elapsed / v.months)
+  };
+  func financeAssetRow(a : Asset, asOf : Int) : FinanceAsset {
+    let v = valuations.get(a.id); let p = purchases.get(a.id);
+    let consistent = switch (v, p) { case (?v, ?p) v.input.priceMinor == p.priceMinor and v.input.currency == p.currency and v.input.purchasedOn == p.date; case _ false };
+    { id = a.id; tag = a.tag; serial = a.serial; name = deviceName(a); kind = a.kind; status = a.status; assignee = nameOf(a.assignee); archived = a.archived; purchase = p.map(func p = { p with note = ""; by = nameOf(p.by) }); valuation = v.map(func v = { v with by = nameOf(v.by) }); bookMinor = if (consistent) (switch (v) { case (?v) bookValue(v.input, asOf); case null null }) else null; revision = financialRevisions.get(a.id) ?? 0 }
+  };
+  public shared query func financeInventory(tok : Text, asOf : Text, search : Text, offset : Nat) : async ?{ rows : [FinanceAsset]; matched : Nat; missing : Nat; totals : [(Text, Nat)]; defaults : [{ kind : Text; months : Nat }]; defaultsRevision : Nat } {
+    if (finance(tok) == null) return null;
+    let date = parseIso(asOf) ?? (return null); let q = lower(capText(norm(search), 150));
+    let rows = List.empty<FinanceAsset>(); let totals = Map.empty<Text, Nat>(); var missing = 0;
+    for ((_, a) in assets.entries()) {
+      let row = financeAssetRow(a, date);
+      if (not a.archived and a.status != "sold" and a.status != "scrapped") switch (row.bookMinor, row.purchase) { case (?n, ?p) totals.add(p.currency, (totals.get(p.currency) ?? 0) + n); case _ missing += 1 };
+      if (q == "" or Text.contains(lower(row.name # " " # row.tag # " " # row.serial # " " # row.assignee # " " # row.kind), #text q)) rows.add(row);
+    };
+    let all = rows.toArray(); let start = Nat.min(offset, all.size()); let size = Nat.min(100, all.size() - start);
+    ?{ rows = Array.tabulate<FinanceAsset>(size, func i = all[start + i]); matched = all.size(); missing; totals = totals.entries().toArray(); defaults = valuationDefaults; defaultsRevision = valuationDefaultsRevision }
+  };
+  public shared query func financeAsset(tok : Text, id : Nat, asOf : Text) : async ?{ asset : FinanceAsset; history : [Valuation] } {
+    if (finance(tok) == null) return null;
+    let a = assets.get(id) ?? (return null); let date = parseIso(asOf) ?? (return null);
+    ?{ asset = financeAssetRow(a, date); history = (valuationHistory.get(id) ?? []).map(func v = { v with by = nameOf(v.by) }) }
+  };
+  public shared func saveAssetValuation(tok : Text, id : Nat, revision : Nat, input : ValuationInput) : async { ok : Bool; detail : Text } {
+    let m = finance(tok) ?? (return { ok = false; detail = "Finance or Assets admins only" });
+    if (not assets.containsKey(id)) return { ok = false; detail = "No such asset" };
+    if ((financialRevisions.get(id) ?? 0) != revision) return { ok = false; detail = "Valuation changed. Reload before saving" };
+    let purchaseDate = parseIso(input.purchasedOn) ?? (return { ok = false; detail = "Use a valid purchase date" });
+    let serviceDate = parseIso(input.inServiceOn) ?? (return { ok = false; detail = "Use a valid in-service date" });
+    if (purchaseDate > todayDays() or serviceDate < purchaseDate or serviceDate > todayDays() or input.months < 1 or input.months > 600 or input.residualMinor > input.priceMinor or input.priceMinor > 1_000_000_000_000 or input.currency.size() != 3 or not input.currency.chars().all(func c = c >= 'A' and c <= 'Z') or norm(input.reason) == "" or input.reason.size() > 500) return { ok = false; detail = "Check dates, currency, useful life (1–600 months), residual value and change reason" };
+    let history = valuationHistory.get(id) ?? [];
+    if (history.size() >= 1000) return { ok = false; detail = "Valuation history limit reached; contact IT" };
+    let v = { input; revision = revision + 1; by = m.id; at = now() };
+    valuations.add(id, v); valuationHistory.add(id, history.concat([v])); financialRevisions.add(id, revision + 1);
+    purchases.add(id, { priceMinor = input.priceMinor; currency = input.currency; date = input.purchasedOn; note = input.reason; by = m.id; at = now() });
+    log(m.email, "Financial valuation updated for asset #" # id.toText());
+    { ok = true; detail = "Valuation saved. Issued invoices are unchanged." }
+  };
+  public shared func setValuationDefaults(tok : Text, revision : Nat, input : [{ kind : Text; months : Nat }]) : async { ok : Bool; detail : Text } {
+    let m = finance(tok) ?? (return { ok = false; detail = "Finance or Assets admins only" });
+    if (revision != valuationDefaultsRevision) return { ok = false; detail = "Defaults changed. Reload before saving" };
+    if (input.size() > 6 or input.any(func r = not has(["laptop", "phone", "tablet", "monitor", "accessory", "other"], r.kind) or r.months < 1 or r.months > 600 or input.filter(func x = x.kind == r.kind).size() != 1)) return { ok = false; detail = "Choose one useful life (1–600 months) per hardware type" };
+    valuationDefaults := input; valuationDefaultsRevision += 1;
+    log(m.email, "Financial useful-life defaults updated: " # debug_show(input));
+    { ok = true; detail = "Defaults saved for new valuations. Existing valuations keep their agreed useful life." }
+  };
+  public shared query func financeInventoryCsv(tok : Text, asOf : Text) : async Text {
+    if (finance(tok) == null) return ""; let date = parseIso(asOf) ?? (return "");
+    var out = "as of,tag,serial,device,type,current status,assigned to,archived,purchase cost,currency,purchased,in service,months,residual,book value\n";
+    for ((_, a) in assets.entries()) {
+      let r = financeAssetRow(a, date); let p = r.purchase; let v = r.valuation;
+      out #= Text.join([csv(asOf), csv(a.tag), csv(a.serial), csv(r.name), csv(a.kind), csv(a.status), csv(r.assignee), if (a.archived) "yes" else "no", p.map(func p = money(p.priceMinor)) ?? "", p.map(func p = csv(p.currency)) ?? "", p.map(func p = csv(p.date)) ?? "", v.map(func v = csv(v.input.inServiceOn)) ?? "", v.map(func v = v.input.months.toText()) ?? "", v.map(func v = money(v.input.residualMinor)) ?? "", r.bookMinor.map(money) ?? ""].values(), ",") # "\n";
+    }; out
+  };
+  type FinanceTeamStatus = { mode : Text; enabled : Bool; recipients : [Text]; revision : Nat };
+  type FinanceHub = actor { hub_financeTeam : shared query () -> async FinanceTeamStatus };
+  public shared func financeSetup(tok : Text) : async ?{ mode : Text; enabled : Bool; activeMembers : Nat } {
+    if (finance(tok) == null or hubId == "") return null;
+    let id = hubId; let hub : FinanceHub = actor (id);
+    let team = try { await (with timeout = 10) hub.hub_financeTeam() } catch (_) { return null };
+    if (finance(tok) == null or hubId != id) return null;
+    ?{ mode = team.mode; enabled = team.enabled; activeMembers = team.recipients.size() }
+  };
+  type FinanceNotice = { saleId : Nat; kind : Text; attempts : Nat; nextAt : Int; detail : Text; delivered : [Text]; complete : Bool };
+  let financeNotices = Map.empty<Text, FinanceNotice>();
+  transient var financeNoticeBusy = false;
+  func queueFinanceNotice(s : Sale, kind : Text) {
+    let key = s.id.toText() # ":" # kind;
+    if (not financeNotices.containsKey(key)) financeNotices.add(key, { saleId = s.id; kind; attempts = 0; nextAt = 0; detail = "Waiting for Hub delivery"; delivered = []; complete = false });
+  };
+  public shared query func saleFinanceNotification(tok : Text, id : Nat) : async [{ kind : Text; detail : Text; complete : Bool }] {
+    if (finance(tok) == null) return [];
+    financeNotices.values().filter(func n = n.saleId == id).map(func n = { kind = n.kind; detail = n.detail; complete = n.complete }).toArray()
+  };
+  func sendFinanceNotices() : async () {
+    if (financeNoticeBusy or hubId == "" or not Hub.directoryFresh(lastDirectoryPull)) return;
+    financeNoticeBusy := true;
+    try {
+      let configuredHub = hubId; let hub : FinanceHub = actor (configuredHub);
+      let team = await (with timeout = 10) hub.hub_financeTeam();
+      var count = 0;
+      for ((key, n) in financeNotices.entries().toArray().values()) if (not n.complete and n.nextAt <= now() and count < 4) {
+        count += 1;
+        let s = sales.get(n.saleId);
+        switch (s) { case (?s) {
+          if (hubId != configuredHub or not Hub.directoryFresh(lastDirectoryPull)) return;
+          let recipients = if (n.kind == "invoice" and team.enabled and team.recipients.size() > 0) team.recipients else people.values().filter(func u = Hub.isActive(people, u.email) and roleOf(u.email) == "admin").map(func u = u.email).toArray();
+          var delivered = n.delivered; var detail = "No active recipient. Configure Finance or an Assets admin in Hub.";
+          var attempted = 0;
+          for (email in recipients.values()) if (not delivered.any(func e = e == email) and attempted < 10) {
+            attempted += 1;
+            if (Hub.isActive(people, email) and (roleOf(email) == "admin" or (n.kind == "invoice" and roleOf(email) == "finance"))) {
+              let result = await notifyPerson(email, (if (n.kind == "invoice") "Invoice ready for payment review: " else "Paid — prepare hardware hand-over: ") # s.invoiceNo, appLink("sale/" # s.id.toText()), "assets.finance", "finance-" # key # "-" # email);
+              if (result == "") delivered := delivered.concat([email]) else detail := result;
+            } else detail := "Waiting for current Hub permissions";
+          };
+          let complete = recipients.size() > 0 and recipients.all(func e = delivered.any(func d = d == e));
+          financeNotices.add(key, { n with delivered; attempts = n.attempts + 1; nextAt = now() + 300_000_000_000; complete; detail = if (complete) "Accepted by Hub. Slack follows each recipient’s notification settings." else detail });
+        }; case null { financeNotices.remove(key) } };
+      };
+    } catch (_) {} finally { financeNoticeBusy := false };
   };
 
   // =====================================================================
@@ -2608,7 +2808,7 @@ persistent actor Assets {
   transient let _idMigrationTimer = Timer.setTimer<system>(#seconds 0, func() : async () { await migrateIds() });
 
   ignore Timer.recurringTimer<system>(#seconds 30, func() : async () { try { ignore await pullDirectory() } catch (_) {}; ignore Hub.pruneSessions(sessions); pruneFormerContacts(); if (migrating()) { try { await migrateIds() } catch (_) {} } });
-  ignore Timer.recurringTimer<system>(#seconds 60, func() : async () { await sendDealNotices() });
+  ignore Timer.recurringTimer<system>(#seconds 60, func() : async () { await sendDealNotices(); await sendFinanceNotices() });
   ignore Timer.recurringTimer<system>(#seconds 21600, func() : async () { await mdmSyncAll(); await abmSyncAll() });
   /// Aggregate-only read for Hub Operations; no session or records leave this app.
   public shared query ({ caller }) func hub_operations(viewer : Text) : async Operations.Snapshot {

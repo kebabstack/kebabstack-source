@@ -19,10 +19,10 @@ module {
     if (not supported(app)) return false;
     if (role == "none" or role == "admin") return true;
     if (app == "watch" or app == "crumbs") return role == "viewer";
-    role == "member" or (app == "desk" and role == "agent") or (app == "trust" and role == "viewer");
+    role == "member" or (app == "assets" and role == "finance") or (app == "desk" and role == "agent") or (app == "trust" and role == "viewer");
   };
   public func rank(role : Text) : Nat {
-    switch (role) { case "admin" 4; case "agent" 3; case "viewer" 2; case "member" 1; case _ 0 };
+    switch (role) { case "admin" 4; case "agent" 3; case "viewer" 2; case "finance" 2; case "member" 1; case _ 0 };
   };
   public func defaultRole(app : Text) : Text { if (app == "watch" or app == "crumbs") "none" else "member" };
   public func roles(app : Text) : [Role] {
@@ -40,6 +40,7 @@ module {
     if (app == "watch") return [none, { id = "viewer"; name = "Viewer"; can = ["Read ALL monitored domains, events and reports"]; cannot = ["Change monitoring, accept DNS changes or manage settings"] }, admin];
     if (app == "desk") return [none, member, { id = "agent"; name = "Agent"; can = ["Read and work on ALL tickets"]; cannot = ["Manage app settings or Hub permissions"] }, admin];
     if (app == "trust") return [none, member, { id = "viewer"; name = "Fleet viewer"; can = ["Read ALL devices and their check results"]; cannot = ["Change checks, enrolment or settings"] }, admin];
+    if (app == "assets") return [none, member, { id = "finance"; name = "Finance"; can = ["Read hardware financial inventory and sales", "Record payments and corrections; download invoices and exports", "Manage purchase values and depreciation"]; cannot = ["Confirm payment for own purchases", "Change device custody, preparation or technical settings", "Read device management secrets", "Assign Finance access — managed in Hub company teams"] }, admin];
     [none, member, admin];
   };
 

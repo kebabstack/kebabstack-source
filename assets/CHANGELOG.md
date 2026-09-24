@@ -1,5 +1,12 @@
 # Changelog — kebab-stack assets
 
+## [0.16.0] — 2026-09-24
+
+- Add centrally assigned Finance access: payment queue, invoice/PDF access and exports, a financial projection of every hardware type, per-device straight-line valuation and useful-life defaults. Technical settings, device secrets and custody changes remain administrator-only.
+- Record partial payments and reasoned reversals in an append-only, concurrency-checked ledger. Retain prior payment confirmations and issued invoices. Nobody, including admins, may confirm their own purchase.
+- Queue issued-invoice notifications to the central Finance team and completed-payment notifications to Assets admins through the Hub bell and configured Slack delivery. Retry safely; missing Finance falls back to IT.
+- Keep book value separate from sale-price suggestions; retain valuation changes and separate currency totals. Existing purchase edits invalidate a mismatched valuation until reviewed.
+
 ## [0.15.1] — 2026-09-22
 
 - Keep shared global navigation visible while workspace content scrolls by pinning the mount host. Preserve normal-flow spacing and add scroll clearance for anchors and keyboard focus. No authorization, directory or data-model changes.

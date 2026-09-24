@@ -74,3 +74,7 @@ Confirmed Desk departures prepare hardware follow-up automatically. Keep custody
 ## Hub Operations
 
 This app contributes aggregate-only, Admin-authorized summaries to Hub → Operations. See [definitions, access and freshness](../docs/HUB-OPERATIONS.md). Individual records remain in the app.
+
+## Finance workspace
+
+Hub owners assign Finance in **Hub → Settings → Company teams**. Finance sees all hardware financial records and sales, records payments and corrections, downloads invoices and exports, and maintains purchase cost and straight-line book values. Device management, secrets, preparation and custody stay with Assets administrators. Read the [company Finance guide](../docs/FINANCE.md) for setup, precedence, notifications, legacy payments and calculation boundaries.
