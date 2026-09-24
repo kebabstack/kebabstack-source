@@ -44,7 +44,7 @@ chosen operators, jurisdictions, controllers and external data flows.
 
 | Module | Role | Status |
 |---|---|---|
-| [Hub](docs/INSTALL.md) | Directory, passkey/SSO sign-in (several providers), groups, access policies, SCIM input from several sources, Okta pull, notifications; OIDC provider for external software | alpha |
+| [Hub](docs/INSTALL.md) | Directory, passkey/SSO sign-in (several providers), groups, access policies, SCIM input from several sources, Okta pull, optional OpenTeam directory input, notifications; OIDC provider for external software | alpha |
 | [Desk](desk/README.md) | Internal and customer support, connected offboarding, project workflows, on-call schedules, incident response, service status and scoped HR/Finance reports | alpha |
 | [Assets](assets/README.md) | Device inventory, MDM/Apple imports, assignment history and hardware sales; employee offers and external magic-link dealrooms with invoices | alpha |
 | [Watch](watch/README.md) | DNS/domain monitoring, posture and expiry evidence; optional notifications | alpha |
@@ -113,3 +113,5 @@ as well as appearance. Existing apps are migrated through the
 [adoption plan](design/ADOPTION.md); the target tokens do not silently replace
 `hub/dist/tokens.css`. Run `npm run design:build` and `npm run design:check` for
 standard changes. Keep source, generated docs, versions and changelogs aligned.
+
+OpenSaaS interoperability: Hub can use OpenTeam as an optional directory source. See the [setup and verified compatibility scope](docs/OPENTEAM.md). Authentication and Kebabstack roles remain Hub-managed; no OpenSaaS-wide certification is claimed.

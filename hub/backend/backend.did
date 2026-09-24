@@ -240,6 +240,31 @@ type OwnedObject =
    title: text;
    updatedAt: int;
  };
+type OpenTeamRow =
+ record {
+   action: text;
+   email: text;
+   memberId: text;
+   name: text;
+ };
+type OpenTeamReview =
+ record {
+   conflicts: vec text;
+   created: nat;
+   deactivated: nat;
+   detail: text;
+   fetched: nat;
+   ok: bool;
+   rows: vec OpenTeamRow;
+   skipped: nat;
+   token: nat;
+   updated: nat;
+ };
+type OpenTeamConfig =
+ record {
+   excludeIds: vec text;
+   includeExternal: bool;
+ };
 type OidcClientView =
  record {
    access: AccessPolicy;
@@ -599,6 +624,17 @@ service : {
       ok: bool;
       secret: text;
     });
+  addOpenTeamSource: (args:
+   record {
+     excludeIds: vec text;
+     includeExternal: bool;
+     name: text;
+     provider: principal;
+   }) -> (record {
+            detail: text;
+            id: nat;
+            ok: bool;
+          });
   /// Owners: a new SCIM source — a name (the IdP), optional domains it may provision. Returns the bearer token ONCE; only its hash is kept.
   addScimSource: (name: text, domains: vec text) ->
    (record {
@@ -652,6 +688,7 @@ service : {
       visionModel: text;
     }) query;
   amIAdmin: () -> (bool) query;
+  applyOpenTeamSource: (id: nat, token: nat) -> (SyncResult);
   /// The person's menu as the assistant sees it: connector-bound app tiles the person may open, with the BACKEND canister to talk to.
   assistantApps: (token: text) ->
    (vec
@@ -813,6 +850,10 @@ service : {
                detail: text;
                ok: bool;
              });
+  discardOpenTeamSource: (id: nat) -> (record {
+                                         detail: text;
+                                         ok: bool;
+                                       });
   /// Owners: generate or rotate the token of source 1 (creates the source when the hub had none).
   genScimToken: () -> (text);
   getAppPermissions: (cid: nat) -> (opt AppPermissionView) query;
@@ -1106,6 +1147,17 @@ service : {
                             expiresAt: int;
                           }) query;
   listOidcClients: () -> (vec OidcClientView) query;
+  listOpenTeamSources: () ->
+   (vec
+     record {
+       config: OpenTeamConfig;
+       id: nat;
+       lastSuccess: opt record {
+                          at: int;
+                          seq: nat;
+                          version: text;
+                        };
+     }) query;
   listPersonRoles: () ->
    (vec record {
           active: bool;
@@ -1289,6 +1341,7 @@ service : {
       ok: bool;
       supported: bool;
     });
+  pauseOpenTeamSource: (id: nat) -> (bool);
   personAppPermissions: (pid: text) ->
    (vec
      record {
@@ -1329,6 +1382,7 @@ service : {
      }) query;
   previewAppPermissions: (cid: nat, p: Policy) ->
    (opt AppPermissionView) query;
+  previewOpenTeamSource: (id: nat) -> (OpenTeamReview);
   previewPush: () -> (vec ConnectorUser) query;
   /// Resolve a principal to a person, for connected tools (scope-relative,
   /// same rule as checkAccess) and admins (global).
@@ -1587,6 +1641,11 @@ service : {
       detail: text;
       ok: bool;
     });
+  setOpenTeamScope: (id: nat, expected: OpenTeamConfig, next:
+   OpenTeamConfig) -> (record {
+                         detail: text;
+                         ok: bool;
+                       });
   /// Give a PERSON a hub role ("" removes it). Owners only. Every passkey
   /// linked to the person inherits it; apps see it as hubRole.
   setPersonRole: (email: text, role: text) ->

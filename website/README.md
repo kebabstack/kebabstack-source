@@ -1,6 +1,6 @@
 # kebabstack product website
 
-Version **0.5.1**. A standalone, bilingual product website intended for
+Version **0.5.2**. A standalone, bilingual product website intended for
 **kebabstack.dev**, hosted on a Cloud Engine.
 
 The site explains the working alpha suite, including Crumbs analytics and Desk

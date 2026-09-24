@@ -18,7 +18,7 @@ canisters:
           - name: service:git:updated_at
             value: $(git log -1 --format=%cI)
           - name: service:version
-            value: "0.5.1"
+            value: "0.5.2"
     settings:
       environment_variables:
         __META_PROJECT: "kebabstack website"

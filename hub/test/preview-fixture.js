@@ -72,6 +72,16 @@ if(location.hash==='#/tv'){
  document.documentElement.dataset.surface='display';
  window.KebabDisplays.createTV(document.getElementById('tv'),fixture);
 }else{
+// Synthetic OpenTeam source: only enabled in the local preview, never production.
+const ot={id:1n,name:'Example OpenTeam',kind:'openteam',baseUrl:'rrkah-fqaaa-aaaaa-aaaaq-cai',enabled:false,lastSync:[],userCount:0n,activeCount:0n};
+const otConfig={includeExternal:false,excludeIds:[]};
+Object.assign(api,{
+ listConnections:async()=>[ot],listOpenTeamSources:async()=>[{id:1n,config:otConfig,lastSuccess:[]}],
+ previewOpenTeamSource:async()=>({ok:true,detail:'Synthetic preview only. No live directory is connected.',token:1n,fetched:25n,created:24n,updated:0n,deactivated:0n,skipped:1n,conflicts:[],rows:people.map(([memberId,name,email])=>({memberId,name,email,action:'Add active person'}))}),
+ applyOpenTeamSource:async()=>{ot.enabled=true;ot.userCount=24n;ot.activeCount=24n;return{ok:true,detail:'Local sample enabled'}},
+ pauseOpenTeamSource:async()=>{ot.enabled=false;return true},
+ setOpenTeamScope:async(_id,_expected,next)=>{Object.assign(otConfig,next);return{ok:true,detail:'Sample scope updated'}}
+});
 window.__smoke.setBackend(fixture);window.__smoke.setAnon(fixture);window._role='owner';window._setup=await api.getSetup();
 await import('../sdk/hub-client.js');
 window.eval('youPerson={email:"alex@example.test",displayName:"Alex Morgan"};portalMode="passkey";');

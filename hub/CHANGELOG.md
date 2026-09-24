@@ -1,5 +1,13 @@
 # Changelog — kebab-stack hub
 
+## [0.35.0] — 2026-09-24
+
+- Add optional OpenTeam directory sources in Directory sync: owner-only setup, reviewed first import, explicit employee/external scope, five-minute read-only polling, pause and visible last-success/error states. No tenant is connected automatically.
+- Use stable provider member IDs; preserve Hub identities through email changes. Conflicting existing identities block the whole import. Complete bounded pages and an unchanged directory sequence are required; stale previews, invalid rosters and sequence rollback never partially apply. Large departure waves require owner review.
+- Mirror explicit activity and erasure signals into the existing directory/lifecycle path. Erasure scrubs the imported profile; person history and downstream records retain their existing policies. OpenTeam roles, SSO, Finance, app grants and group membership are not imported.
+- Keep source fields full-width on narrow screens and prevent the redundant Console caption from overlapping navigation below 380px.
+- Document the tested directory subset and setup. Existing Okta/SCIM, login and Lunch provider contracts remain in place. This is an optional alpha connector; it is not OpenSaaS SSO or full-suite certification.
+
 ## [0.34.0] — 2026-09-24
 
 - Add owner-managed Company teams → Finance with direct people, directory groups and explicit, backend-bound Assets connections. Show effective recipients; individual No access and inactive identities still deny entry. Manual groups carrying Finance access become owner-managed.

@@ -1,6 +1,6 @@
 {
   "name": "kebabstack-website",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "description": "Bilingual, static kebabstack product website for a Cloud Engine",

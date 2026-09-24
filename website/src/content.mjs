@@ -39,7 +39,7 @@ export const content = {
         title: "Ein Einstieg für dein Team.",
         text: "Personen, Gruppen und App-Rechte zentral verwalten. Gemeinsam anmelden, zwischen Apps wechseln und in Operations sehen, wo Arbeit ansteht.",
         features: [
-          "Passkeys, SSO und Verzeichnissynchronisation",
+          "Passkeys & SSO; Verzeichnis aus Okta, SCIM oder OpenTeam",
           "Zentrale Rollen und App-Berechtigungen",
           "Operations-Übersicht und gekoppelte Team-Displays",
         ],
@@ -51,7 +51,7 @@ export const content = {
         category: "Support & Rufbereitschaft",
         icon: "ticket",
         title: "Ein Austritt beginnt nicht immer mit einem Ticket.",
-        text: "Wird eine bekannte Person in Okta, per SCIM oder direkt im Hub deaktiviert, fängt Desk die Folgearbeit auf. IT prüft den Anlass und hat den erlaubten Kontext aus den verbundenen Apps direkt im Fall.",
+        text: "Wird eine bekannte Person in Okta, OpenTeam, per SCIM oder direkt im Hub deaktiviert, fängt Desk die Folgearbeit auf. IT prüft den Anlass und hat den erlaubten Kontext aus den verbundenen Apps direkt im Fall.",
         features: [
           "Automatischer Prüffall statt vergessener Nacharbeit",
           "Hardware-Fortschritt aus Assets statt doppelter Checklisten",
@@ -332,6 +332,12 @@ export const content = {
     faqTitle: "Gute Fragen. Klare Antworten.",
     faq: [
       [
+        "Passt Kebabstack zu OpenSaaS und OpenTeam?",
+        "Hub kann OpenTeam als optionale Verzeichnisquelle nutzen: Personen und Beschäftigungsstatus werden nach einer geprüften Vorschau übernommen und alle fünf Minuten abgeglichen. App-Rechte und Finance bleiben zentral in Hub. Der Connector ist als Alpha gegen die Verzeichnisschnittstelle lokal getestet; prüft eure konkrete OpenTeam-Version im Pilot. Gemeinsames OpenSaaS-Login und weitere Suite-Anbindungen sind damit noch nicht enthalten.",
+        "https://github.com/kebabstack/kebabstack-source/blob/main/docs/OPENTEAM.md",
+        "Einrichtung und Kompatibilitätsumfang",
+      ],
+      [
         "Muss mein Team Blockchain oder Krypto verstehen?",
         "Für die tägliche Arbeit bedient es ganz normale Web-Oberflächen. Die IT benötigt Plattformkenntnisse für Einrichtung und Betrieb. Cloud Engines werden als Infrastruktur betrieben; für Mitarbeitende ist kein eigener Token-Kauf Teil des App-Workflows.",
       ],
@@ -408,7 +414,7 @@ export const content = {
         title: "One starting point for your team.",
         text: "Manage people, groups and app access centrally. Share sign-in, move between apps and use Operations to see what needs attention.",
         features: [
-          "Passkeys, SSO and directory synchronization",
+          "Passkeys & SSO; directory from Okta, SCIM or OpenTeam",
           "Central roles and app permissions",
           "Operations overview and paired team displays",
         ],
@@ -420,7 +426,7 @@ export const content = {
         category: "Support & on-call",
         icon: "ticket",
         title: "A departure does not always start with a ticket.",
-        text: "When a known person is deactivated in Okta, through SCIM or directly in Hub, Desk picks up the follow-up. IT reviews the reason, with authorized context from connected apps alongside the case.",
+        text: "When a known person is deactivated in Okta, OpenTeam, through SCIM or directly in Hub, Desk picks up the follow-up. IT reviews the reason, with authorized context from connected apps alongside the case.",
         features: [
           "Automatic review instead of forgotten follow-up",
           "Hardware progress from Assets instead of duplicate checklists",
@@ -700,6 +706,12 @@ export const content = {
       "Review the source, run the local checks and start a bounded pilot. Manual installation is documented in the public repository.",
     faqTitle: "Good questions. Clear answers.",
     faq: [
+      [
+        "Does Kebabstack work with OpenSaaS and OpenTeam?",
+        "Hub can use OpenTeam as an optional directory source: people and employment status are imported after a reviewed preview, then checked every five minutes. App permissions and Finance stay central in Hub. This alpha connector is locally tested against the directory interface; pilot your specific OpenTeam version before adoption. Shared OpenSaaS sign-in and wider suite integration are not included.",
+        "https://github.com/kebabstack/kebabstack-source/blob/main/docs/OPENTEAM.md",
+        "Setup and compatibility scope",
+      ],
       [
         "Does my team need to understand blockchain or crypto?",
         "For everyday work, they use regular web interfaces. IT operators need platform knowledge for setup and operation. Cloud Engines are operated as infrastructure; employees do not need to buy tokens as part of the app workflow.",

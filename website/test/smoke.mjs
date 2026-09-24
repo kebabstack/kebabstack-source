@@ -31,7 +31,7 @@ for (const lang of ["de", "en"]) {
     assert.equal(d.documentElement.lang, lang);
     assert.equal(d.querySelectorAll("h1").length, 1);
     assert.equal(d.querySelectorAll(".module-panel:not([hidden])").length, 9);
-    assert.equal(d.querySelectorAll(".faq-list details").length, 6);
+    assert.equal(d.querySelectorAll(".faq-list details").length, 7);
     const ids = [...d.querySelectorAll("[id]")].map((e) => e.id);
     assert.equal(new Set(ids).size, ids.length, "unique anchor/control ids");
     assert.equal(

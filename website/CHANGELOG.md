@@ -1,5 +1,11 @@
 # Product website changes
 
+## [0.5.2] — 2026-09-24
+
+- Present the optional OpenTeam directory connector in Hub and the bilingual FAQ, with a direct link to setup and the tested compatibility scope.
+- Explain the reviewed import, five-minute status sync and central Hub permissions. Keep shared OpenSaaS sign-in, wider suite integration and customer-pilot acceptance separate.
+- Preserve canonical design, synthetic demos, Crumbs configuration and crawlable content.
+
 ## [0.5.1] — 2026-09-23
 
 - Link the complete public MIT alpha source on GitHub from the build section and footer. Update bilingual roadmap, guides, FAQs and pilot notes while keeping Marketplace availability distinct.

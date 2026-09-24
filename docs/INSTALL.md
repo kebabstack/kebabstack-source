@@ -241,3 +241,7 @@ See [pairing, revocation and coverage](HUB-OPERATIONS.md#a-screen-for-the-team-r
 ### Scoped on-call reporting alpha
 
 Hub 0.31.0 and Desk 0.19.0 add supplemental project reporting grants. Upgrade both tested artifacts before configuring Permissions → Desk → Reporting access. Base app roles, directory-only Lunch consumers and global Owner/Admin inheritance are preserved. Follow [the reporting operator guide](../desk/REPORTING.md) for retention and separation of duties; payroll cutover requires a reconciled pilot period.
+
+## Optional OpenTeam directory source
+
+Companies using OpenSaaS can configure Hub → Directory sync → OpenTeam. This is a read-only directory integration, independent of login. Follow the [OpenTeam setup and compatibility guide](OPENTEAM.md), preview conflicts before enabling, and keep existing sources until their ownership has been reconciled. No source is enabled by an upgrade.

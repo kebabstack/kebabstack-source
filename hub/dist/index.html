@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="/tokens.css">
 <script src="./permissions.js"></script>
 <script src="./company-teams.js"></script>
+<script src="./openteam.js"></script>
 <link rel="stylesheet" href="./company-teams.css">
 <script src="./updates.js"></script>
 <script src="./operations.js"></script>
@@ -17,6 +18,10 @@
 <link rel="stylesheet" href="./updates.css">
 <script>try{if(localStorage.getItem("ks-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
 <style>
+  #openTeamSources { overflow-wrap: anywhere; }
+  #openTeamSources .row > label { flex: 1 1 240px; min-width: 0; }
+  #openTeamSources .row input, #openTeamSources textarea { width: 100%; }
+  @media (max-width: 380px) { #layout #ks-appName { display: none; } }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--ks-bg); color: var(--ks-fg-body); font: 400 15px/1.55 var(--ks-ui); transition: background .15s ease, color .15s ease; }
   #layout { display: flex; flex-direction: column; min-height: 100vh; }
@@ -836,7 +841,7 @@ city^=Remote"></textarea>
     <div class="view" id="conns">
       <div class="page-heading"><div><h2>Directory sync</h2><p class="lead">Keep people and groups up to date from your identity provider.</p></div></div>
 
-      <div class="stabs" data-tabs="conns"><button class="stab active" data-tab="scim">Connected sources</button><button class="stab" data-tab="okta">Okta pull</button><button class="stab" data-tab="manual">Manual entry</button></div>
+      <div class="stabs" data-tabs="conns"><button class="stab active" data-tab="scim">SCIM</button><button class="stab" data-tab="openteam">OpenTeam</button><button class="stab" data-tab="okta">Okta pull</button><button class="stab" data-tab="manual">Manual entry</button></div>
       <div class="spane active" data-pane="conns-manual">
       <div class="card">
         <h3>Allow manual entry</h3>
@@ -865,6 +870,7 @@ city^=Remote"></textarea>
       </div>
 
       </div>
+      <div class="spane" data-pane="conns-openteam" id="openTeamSources"></div>
       <div class="spane" data-pane="conns-okta"><div id="connList"></div>
       <details class="card disclosure"><summary>Add an Okta pull connection</summary><div class="">
         <h3>Okta pull (advanced, optional)</h3>
@@ -1016,6 +1022,7 @@ city^=Remote"></textarea>
 <div class="spane" data-pane="howit-apps"><div class="card guide-faq">
 <details id="doc-access"><summary>Where are app roles managed?</summary><p>For Assets, Contracts, Desk, Forms, Trust and Watch, <a href="#/permissions">Hub Permissions</a> is the authority. Active global Hub owners and admins inherit Admin everywhere. App-specific assignments affect only that app. Endtools cannot add local administrators.</p></details>
 <details id="doc-roles"><summary>What does each role allow?</summary><p>Employees see their own and explicitly shared or assigned records. App Admin includes all app content and settings, including personal Forms and Contracts areas. Desk Agent handles all tickets without app settings. Trust Fleet viewer reads the fleet. Watch Viewer reads all monitoring, so ordinary employees have no Watch access by default. Hub Helpdesk does not automatically grant an app role.</p></details>
+<details id="doc-openteam"><summary>Can OpenTeam supply our people?</summary><p>Yes. An owner can add it under Directory sync → OpenTeam, preview the import and enable a five-minute refresh. Existing emails are not automatically merged. Hub keeps login, app roles and Finance. <a href="./openteam-guide.html">Setup, safety checks and compatibility limits →</a></p></details>
 <details id="doc-reporting"><summary>How do HR and Finance access on-call reporting?</summary><p>In Permissions, select Desk and open Reporting access. Assign people or groups to existing on-call projects, choosing time review, compensation preparation, statement release or approved payroll export. Keep their base role as Requester to avoid support-agent access. No access still denies entry. Hub Owners/Admins inherit administration, but cannot approve their own service or release their own preparation. Open Service reporting in Desk for confirmation, review and CSV export. The hourly reporting alpha needs a reconciled company pilot before replacing an existing payroll spreadsheet.</p></details>
 <details id="doc-precedence"><summary>Which assignment wins?</summary><p>Inactive accounts have no access. For active people: global Owner/Admin → individual assignment → highest group role → app default. The effective role and its reason are visible before saving. Only Hub owners can delegate app roles; global Hub admins can inspect them.</p></details>
 <details id="doc-push"><summary>When do permission changes take effect?</summary><p>Apps refresh their directory every 30 seconds and refuse protected access when it is 60 seconds old. The bound starts after the Hub knows a change; upstream sync can add delay. “Confirmed by app” verifies the current snapshot and expires. Use Check app enforcement for a fresh observation; already downloaded data cannot be recalled.</p></details>
@@ -1365,7 +1372,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.34.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.35.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1399,6 +1406,9 @@ const idlFactory = ({ IDL }) => {
   const PermissionPerson = IDL.Record({ active: IDL.Bool, assigned: IDL.Opt(IDL.Text), email: IDL.Text, id: IDL.Text, inherited: IDL.Bool, name: IDL.Text, previouslyAllowed: IDL.Bool, role: IDL.Text, source: IDL.Text });
   const PairResult = IDL.Variant({ busy: IDL.Null, invalid: IDL.Null, ok: IDL.Int });
   const OwnedObject = IDL.Record({ id: IDL.Text, kind: IDL.Text, meta: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
+  const OpenTeamRow = IDL.Record({ action: IDL.Text, email: IDL.Text, memberId: IDL.Text, name: IDL.Text });
+  const OpenTeamReview = IDL.Record({ conflicts: IDL.Vec(IDL.Text), created: IDL.Nat, deactivated: IDL.Nat, detail: IDL.Text, fetched: IDL.Nat, ok: IDL.Bool, rows: IDL.Vec(OpenTeamRow), skipped: IDL.Nat, token: IDL.Nat, updated: IDL.Nat });
+  const OpenTeamConfig = IDL.Record({ excludeIds: IDL.Vec(IDL.Text), includeExternal: IDL.Bool });
   const AccessPolicy = IDL.Record({ groups: IDL.Vec(IDL.Text), mode: IDL.Text, people: IDL.Vec(IDL.Text), roles: IDL.Vec(IDL.Text) });
   const OidcClientView = IDL.Record({ access: AccessPolicy, alg: IDL.Text, cid: IDL.Nat, clientId: IDL.Text, consent: IDL.Text, createdAt: IDL.Int, enabled: IDL.Bool, isPublic: IDL.Bool, lanes: IDL.Vec(IDL.Text), name: IDL.Text, redirectUris: IDL.Vec(IDL.Text), tileUrl: IDL.Text });
   const OidcClientArgs = IDL.Record({ access: AccessPolicy, alg: IDL.Text, consent: IDL.Text, isPublic: IDL.Bool, lanes: IDL.Vec(IDL.Text), name: IDL.Text, note: IDL.Text, redirectUris: IDL.Vec(IDL.Text), tileUrl: IDL.Text });
@@ -1436,11 +1446,13 @@ const idlFactory = ({ IDL }) => {
     addGroup: IDL.Func([IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
     addLocalUser: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [IDL.Bool], []),
     addOidcClient: IDL.Func([OidcClientArgs], [IDL.Record({ clientId: IDL.Text, detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool, secret: IDL.Text })], []),
+    addOpenTeamSource: IDL.Func([IDL.Record({ excludeIds: IDL.Vec(IDL.Text), includeExternal: IDL.Bool, name: IDL.Text, provider: IDL.Principal })], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
     addScimSource: IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool, token: IDL.Text })], []),
     addSlackBot: IDL.Func([IDL.Record({ name: IDL.Text, signingSecret: IDL.Text, token: IDL.Text })], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
     addSsoProvider: IDL.Func([IDL.Record({ clientId: IDL.Text, clientSecret: IDL.Text, issuer: IDL.Text, kind: IDL.Text, name: IDL.Text })], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
     aiInfo: IDL.Func([], [IDL.Record({ apps: IDL.Vec(IDL.Record({ calls: IDL.Nat, fetches: IDL.Nat, hasLane: IDL.Bool, id: IDL.Nat, lastCall: IDL.Int, lastFetch: IDL.Int, name: IDL.Text })), keyHint: IDL.Text, model: IDL.Text, on: IDL.Bool, provider: IDL.Text, setAt: IDL.Int, url: IDL.Text, visionModel: IDL.Text })], ["query"]),
     amIAdmin: IDL.Func([], [IDL.Bool], ["query"]),
+    applyOpenTeamSource: IDL.Func([IDL.Nat, IDL.Nat], [SyncResult], []),
     assistantApps: IDL.Func([IDL.Text], [IDL.Vec(IDL.Record({ canisterId: IDL.Text, name: IDL.Text, note: IDL.Text, tileId: IDL.Nat, url: IDL.Text }))], ["query"]),
     assistantDisconnect: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     assistantPeople: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(IDL.Record({ department: IDL.Text, displayName: IDL.Text, email: IDL.Text, groups: IDL.Vec(IDL.Text), id: IDL.Text, title: IDL.Text }))], ["query"]),
@@ -1470,6 +1482,7 @@ const idlFactory = ({ IDL }) => {
     deactivateUsers: IDL.Func([IDL.Vec(IDL.Text), IDL.Text], [IDL.Nat], []),
     decideAccessRequest: IDL.Func([IDL.Nat, IDL.Bool, IDL.Opt(IDL.Nat), IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     decideReviewItem: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    discardOpenTeamSource: IDL.Func([IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     genScimToken: IDL.Func([], [IDL.Text], []),
     getAppPermissions: IDL.Func([IDL.Nat], [IDL.Opt(AppPermissionView)], ["query"]),
     getCompanyLogo: IDL.Func([], [IDL.Opt(IDL.Record({ img: IDL.Vec(IDL.Nat8), mime: IDL.Text }))], ["query"]),
@@ -1520,6 +1533,7 @@ const idlFactory = ({ IDL }) => {
     listGroups: IDL.Func([], [IDL.Vec(GroupView)], ["query"]),
     listInvites: IDL.Func([], [IDL.Vec(IDL.Record({ email: IDL.Text, expiresAt: IDL.Int }))], ["query"]),
     listOidcClients: IDL.Func([], [IDL.Vec(OidcClientView)], ["query"]),
+    listOpenTeamSources: IDL.Func([], [IDL.Vec(IDL.Record({ config: OpenTeamConfig, id: IDL.Nat, lastSuccess: IDL.Opt(IDL.Record({ at: IDL.Int, seq: IDL.Nat, version: IDL.Text })) }))], ["query"]),
     listPersonRoles: IDL.Func([], [IDL.Vec(IDL.Record({ active: IDL.Bool, displayName: IDL.Text, email: IDL.Text, role: IDL.Text }))], ["query"]),
     listPrincipalLinks: IDL.Func([], [IDL.Vec(IDL.Record({ email: IDL.Text, principal: IDL.Text }))], ["query"]),
     listRecentNotifications: IDL.Func([], [IDL.Vec(Notification)], ["query"]),
@@ -1556,12 +1570,14 @@ const idlFactory = ({ IDL }) => {
     operationsSnapshot: IDL.Func([IDL.Nat], [Snapshot], []),
     operationsSources: IDL.Func([], [IDL.Vec(Source)], ["query"]),
     ownedObjects: IDL.Func([IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, objects: IDL.Vec(OwnedObject), ok: IDL.Bool, supported: IDL.Bool })], []),
+    pauseOpenTeamSource: IDL.Func([IDL.Nat], [IDL.Bool], []),
     personAppPermissions: IDL.Func([IDL.Text], [IDL.Vec(IDL.Record({ app: IDL.Text, can: IDL.Vec(IDL.Text), cannot: IDL.Vec(IDL.Text), cid: IDL.Nat, configured: IDL.Bool, name: IDL.Text, role: IDL.Text, roleLabel: IDL.Text, source: IDL.Text }))], ["query"]),
     personCard: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ createdAt: IDL.Int, email: IDL.Text, emails: IDL.Vec(IDL.Text), formerHolders: IDL.Vec(IDL.Text), pid: IDL.Text, sealed: IDL.Bool }))], ["query"]),
     portalApps: IDL.Func([IDL.Text], [IDL.Vec(AppLinkView)], ["query"]),
     portalLunch: IDL.Func([IDL.Text], [IDL.Opt(LunchSummary)], []),
     portalWhoami: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ active: IDL.Bool, displayName: IDL.Text, email: IDL.Text, expiresAt: IDL.Int, id: IDL.Text, provider: IDL.Text }))], ["query"]),
     previewAppPermissions: IDL.Func([IDL.Nat, Policy], [IDL.Opt(AppPermissionView)], ["query"]),
+    previewOpenTeamSource: IDL.Func([IDL.Nat], [OpenTeamReview], []),
     previewPush: IDL.Func([], [IDL.Vec(ConnectorUser)], ["query"]),
     principalPerson: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ access: IDL.Variant({ active: IDL.Null, inactive: IDL.Null, unknown: IDL.Null }), email: IDL.Text }))], ["query"]),
     probeApp: IDL.Func([IDL.Text], [IDL.Record({ already: IDL.Opt(IDL.Nat), detail: IDL.Text, manifest: IDL.Opt(Manifest), ok: IDL.Bool, ping: IDL.Text })], []),
@@ -1621,6 +1637,7 @@ const idlFactory = ({ IDL }) => {
     setMyAvatar: IDL.Func([IDL.Text, IDL.Vec(IDL.Nat8)], [IDL.Bool], []),
     setNotifSlackPref: IDL.Func([IDL.Text, IDL.Bool], [IDL.Bool], []),
     setOidcOrigins: IDL.Func([IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setOpenTeamScope: IDL.Func([IDL.Nat, OpenTeamConfig, OpenTeamConfig], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setPersonRole: IDL.Func([IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setScimSourceEnabled: IDL.Func([IDL.Nat, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSlackDelivery: IDL.Func([IDL.Bool], [IDL.Bool], []),
@@ -2223,6 +2240,7 @@ async function refreshConns() {
   try { const su = await backend.getSetup(); $("srcManual").checked = su.directoryMode !== "scim"; } catch (e) {}
   try { const st = await backend.getSettings(); $("sInterval").value = String(st.autoSyncSecs); } catch (e) {} // the Okta pull interval now lives on this page
   connsCache = conns;
+  if (window.KebabOpenTeam) void KebabOpenTeam.mount($("openTeamSources"), () => backend, text => Actor.canisterIdOf(backend).constructor.fromText(text), window._role === "owner");
   // users view filter options
   const _keep = $("uConn").value;
   const scimOpts = (window._scimSources || []).map((x) => `<option value="${900000000 + (Number(x.id) === 1 ? 0 : Number(x.id))}">${esc(x.name)} (SCIM)</option>`).join("") || '<option value="900000000">synced (SCIM)</option>';
@@ -2250,7 +2268,7 @@ async function refreshConns() {
     $("scimSources").querySelectorAll("[data-scim-save]").forEach((b) => (b.onclick = async () => { const id = b.dataset.scimSave; const q = (k) => $("scimSources").querySelector(`[data-scim-${k}="${id}"]`).value.trim(); const r = await backend.updateScimSource(BigInt(id), q("name"), q("domains").split(",").map((d) => d.trim()).filter(Boolean), q("note")); setStatus("scimStatusTxt", r.ok ? "ok" : "err", r.ok ? "saved" : r.detail); refreshConns(); }));
     $("scimSources").querySelectorAll("[data-scim-remove]").forEach((b) => (b.onclick = async () => { const x = srcs.find((y) => Number(y.id) === Number(b.dataset.scimRemove)); if (!confirm(`Remove the source "${x.name}"? Its ${Number(x.userCount)} people are dropped from the directory (deactivations reach the apps within a minute); its groups stay as ordinary groups. This cannot be undone.`)) return; const r = await backend.removeScimSource(BigInt(b.dataset.scimRemove)); setStatus("scimStatusTxt", r.ok ? "ok" : "err", r.ok ? `removed (${Number(r.people)} people dropped)` : r.detail); refreshConns(); refreshPeopleExtras(); }));
   } catch (e) { console.error(e); }
-  $("connList").innerHTML = conns.map((c) => {
+  $("connList").innerHTML = conns.filter(c => c.kind !== "openteam").map((c) => {
     const s = opt(c.lastSync);
     const hookUrl = `https://${BACKEND_CANISTER_ID}.icp.net${c.hookPath}`;
     return `<div class="card">

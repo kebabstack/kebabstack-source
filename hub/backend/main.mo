@@ -1,3 +1,4 @@
+import OpenTeam "OpenTeam";
 import Displays "Displays";
 import Brand "Brand";
 import HubClient "../../sdk/motoko/src/lib";
@@ -117,7 +118,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.34.0";
+  transient let BUILD_VERSION : Text = "0.35.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -563,8 +564,8 @@ persistent actor UserHub {
   type Conn = {
     id : Nat;
     name : Text;
-    kind : Text; // "okta" | "entra" (entra: prepared, not yet implemented)
-    baseUrl : Text; // e.g. https://acme.okta.com — no trailing slash
+    kind : Text; // "okta" | "openteam" | "entra" (entra: not implemented)
+    baseUrl : Text; // Okta HTTPS origin, or an OpenTeam backend principal
     token : Text; // OAuth client_secret of the API Services app. Write-only, never exposed.
     enabled : Bool;
     hookSecret : Text; // random path secret for the Okta Event Hook endpoint
@@ -773,6 +774,7 @@ persistent actor UserHub {
     switch (connOf(id)) {
       case null { { ok = false; detail = "no such connection" } };
       case (?c) {
+        if (c.kind == "openteam") return { ok = false; detail = "Use the OpenTeam source preview to configure this source." };
         let base = normBase(args.baseUrl);
         if (not Text.startsWith(base, #text "https://")) return { ok = false; detail = "baseUrl must start with https://" };
         let tok = if (norm(args.clientSecret) == "") c.token else norm(args.clientSecret);
@@ -787,6 +789,10 @@ persistent actor UserHub {
 
   public shared ({ caller }) func removeConnection(id : Nat) : async Bool {
     assert isOwnerRole(caller);
+    openTeamRevisions.remove(id);
+    openTeamConfigs.remove(id);
+    openTeamPlans.remove(id);
+    openTeamSuccess.remove(id);
     ignore Map.delete(conns, Nat.compare, id);
     // drop that connection's users (remember the emails BEFORE deleting)
     let doomed = List.empty<Text>();
@@ -809,7 +815,7 @@ persistent actor UserHub {
   /// in the Okta app (the old key stops working immediately).
   public shared ({ caller }) func regenSigningKey(id : Nat) : async Text {
     assert isOwnerRole(caller);
-    if (connOf(id) == null) return "";
+    switch (connOf(id)) { case null return ""; case (?c) { if (c.kind == "openteam") return "" } };
     if (await genKey(id)) {
       journal("conn", "rotated the private_key_jwt signing key for connection #" # Nat.toText(id), caller);
       jwkFor(id);
@@ -826,6 +832,7 @@ persistent actor UserHub {
     switch (connOf(id)) {
       case null "";
       case (?c) {
+        if (c.kind == "openteam") return "";
         let secret = hex(await ic00.raw_rand());
         if (not isOwnerRole(caller) or connOf(id) != ?c) return "";
         Map.add(conns, Nat.compare, id, { c with hookSecret = secret });
@@ -872,7 +879,7 @@ persistent actor UserHub {
         clientId = clientIdOf(id);
         tokenMask = maskToken(c.token);
         jwk = jwkFor(id);
-        hookPath = if (isOwnerRole(caller)) "/hooks/okta/" # Nat.toText(id) # "/" # c.hookSecret else ""; // the secret is owner-tier material
+        hookPath = if (isOwnerRole(caller) and c.kind != "openteam") "/hooks/okta/" # Nat.toText(id) # "/" # c.hookSecret else ""; // the secret is owner-tier material
         lastSync = c.lastSync;
         userCount = total;
         activeCount = act;
@@ -886,7 +893,7 @@ persistent actor UserHub {
 
   type UserRec = {
     connId : Nat;
-    externalId : Text; // Okta user id
+    externalId : Text; // stable upstream user/member ID
     email : Text; // lowercased
     displayName : Text;
     firstName : Text;
@@ -1327,6 +1334,7 @@ persistent actor UserHub {
     switch (connOf(id)) {
       case null { { ok = false; status = 0; detail = "no such connection" } };
       case (?c) {
+        if (c.kind == "openteam") return { ok = false; status = 0; detail = "Use OpenTeam preview to test the directory." };
         let (status, body, _) = await oktaGet(c, c.baseUrl # "/api/v1/users?limit=1");
         if (status >= 200 and status < 300) {
           journal("sync", "test OK for connection #" # Nat.toText(id) # " (" # c.name # ")", caller);
@@ -1341,6 +1349,7 @@ persistent actor UserHub {
   type SyncResult = { ok : Bool; detail : Text; fetched : Nat; created : Nat; updated : Nat; deactivated : Nat };
 
   func syncConnInternal(id : Nat, by : Principal) : async SyncResult {
+    switch (connOf(id)) { case (?c) { if (c.kind == "openteam") return await syncOpenTeam(id, by) }; case null {} };
     switch (connOf(id)) {
       case null return { ok = false; detail = "no such connection"; fetched = 0; created = 0; updated = 0; deactivated = 0 };
       case (?c) {
@@ -1535,19 +1544,237 @@ persistent actor UserHub {
     let doomedT = List.empty<Text>();
     for ((t, tk) in Map.entries(tickets)) if (now > tk.expiresAt) List.add(doomedT, t);
     for (t in List.values(doomedT)) ignore Map.delete(tickets, Text.compare, t);
-    if (autoSyncSecs == 0) return;
+
+    for ((id, plan) in openTeamPlans.entries().toArray().values()) if (now - plan.at > 300_000_000_000) openTeamPlans.remove(id);
     // start all due syncs in parallel, then await them
     let futs = List.empty<async SyncResult>();
     for ((id, c) in Map.entries(conns)) {
-      if (c.enabled) {
+      if (c.enabled and (c.kind == "openteam" or autoSyncSecs > 0)) {
+        let interval = if (c.kind == "openteam") 300 else autoSyncSecs;
         let due = switch (c.lastSync) {
           case null true;
-          case (?s) Int.abs(now - s.at) >= autoSyncSecs * 1_000_000_000;
+          case (?s) Int.abs(now - s.at) >= interval * 1_000_000_000;
         };
         if (due) List.add(futs, syncConnInternal(id, Principal.fromText("2vxsx-fae")));
       };
     };
     for (f in List.values(futs)) ignore await f;
+  };
+
+  // ---------- OpenTeam directory source (roles and login remain in Hub) ----------
+  type OpenTeamConfig = { includeExternal : Bool; excludeIds : [Text] };
+  let openTeamConfigs : Map.Map<Nat, OpenTeamConfig> = Map.empty();
+  let openTeamErased : Map.Map<Text, Bool> = Map.empty();
+  let openTeamRevisions : Map.Map<Nat, Nat> = Map.empty();
+  func openTeamRevision(id : Nat) : Nat = Option.get(openTeamRevisions.get(id), 0);
+  let openTeamSuccess : Map.Map<Nat, { at : Int; version : Text; seq : Nat }> = Map.empty();
+  type OpenTeamRow = { memberId : Text; email : Text; name : Text; action : Text };
+  type OpenTeamReview = { ok : Bool; detail : Text; token : Nat; fetched : Nat; created : Nat; updated : Nat; deactivated : Nat; skipped : Nat; conflicts : [Text]; rows : [OpenTeamRow] };
+  type OpenTeamPlan = { revision : Nat; caller : Principal; at : Int; conn : Conn; config : OpenTeamConfig; directoryHash : Text; snapshot : OpenTeam.Snapshot; review : OpenTeamReview };
+  transient let openTeamPlans : Map.Map<Nat, OpenTeamPlan> = Map.empty();
+  transient var openTeamToken : Nat = 0;
+  func openTeamHash() : Text = hex(Sha256.fromBlob(#sha256, to_candid(users.toArray(), persons.toArray())));
+  func openTeamFailure(detail : Text) : OpenTeamReview = { ok = false; detail; token = 0; fetched = 0; created = 0; updated = 0; deactivated = 0; skipped = 0; conflicts = []; rows = [] };
+  func openTeamError(detail : Text) : SyncResult = { ok = false; detail; fetched = 0; created = 0; updated = 0; deactivated = 0 };
+  func openTeamEligible(m : OpenTeam.Member, cfg : OpenTeamConfig) : Bool {
+    m.erased != ?true and not has(cfg.excludeIds, m.memberId) and (m.kind == ?"employee" or (cfg.includeExternal and (m.kind == ?"contractor" or m.kind == ?"partner")));
+  };
+  func openTeamRecord(id : Nat, m : OpenTeam.Member, cfg : OpenTeamConfig, old : ?UserRec) : ?UserRec {
+    let eligible = openTeamEligible(m, cfg);
+    if (not eligible and old == null) return null;
+    let erased = m.erased == ?true;
+    let email = if (erased) "" else lower(norm(m.email));
+    let active = eligible and m.active == ?true;
+    ?{
+      connId = id; externalId = m.memberId; email;
+      displayName = if (erased) "" else norm(m.firstName # " " # m.lastName);
+      firstName = if (erased) "" else m.firstName; lastName = if (erased) "" else m.lastName;
+      status = if (erased) "ERASED" else if (not eligible) "EXCLUDED" else if (active) "ACTIVE" else "INACTIVE";
+      activeIdp = active;
+      override = switch old { case (?u) u.override; case null null };
+      attributes = if (erased) [] else [("title", m.title), ("departmentId", Option.get(m.departmentId, "")), ("managerId", Option.get(m.managerId, "")), ("sourceKind", Option.get(m.kind, ""))];
+      createdAt = switch old { case (?u) u.createdAt; case null Time.now() }; updatedAt = Time.now();
+    };
+  };
+  func openTeamChanged(a : UserRec, b : UserRec) : Bool = { a with updatedAt = 0 } != { b with updatedAt = 0 };
+  func openTeamReview(id : Nat, snapshot : OpenTeam.Snapshot, cfg : OpenTeamConfig) : OpenTeamReview {
+    let rows = List.empty<OpenTeamRow>();
+    let conflicts = List.empty<Text>();
+    func conflict(detail : Text) { if (conflicts.size() < 50) conflicts.add(detail) };
+    let seen = Map.empty<Text, Bool>();
+    // An email is NOT an identity join. Include past holders as well as live records.
+    switch (openTeamSuccess.get(id)) { case (?last) { if (Option.get(snapshot.info.changeSeq, 0) < last.seq) conflict("OpenTeam reports an older change sequence. Check a possible provider restore before importing.") }; case null {} };
+    let owners = Map.empty<Text, Text>();
+    for ((k, u) in users.entries()) if (u.email != "") owners.add(u.email, k);
+    for ((pid, p) in persons.entries()) for (email in p.emails.values()) {
+      if (not owners.containsKey(email)) owners.add(email, "person:" # pid);
+    };
+    var created = 0; var updated = 0; var deactivated = 0; var skipped = 0;
+    func row(mid : Text, u : UserRec, action : Text) { if (rows.size() < 50) rows.add({ memberId = mid; email = u.email; name = u.displayName; action }) };
+    for (m in snapshot.members.values()) {
+      let key = userKey(id, m.memberId);
+      seen.add(key, true);
+      let old = users.get(key);
+      if (openTeamErased.containsKey(key) and m.erased != ?true) conflict("An erased member ID cannot be reused: " # m.memberId);
+      switch (openTeamRecord(id, m, cfg, old)) {
+        case null { skipped += 1 };
+        case (?u) {
+          if (u.email != "") switch (owners.get(u.email)) {
+            case (?other) {
+              let ownHistory = switch (userKeyToPid.get(key)) { case (?pid) other == "person:" # pid; case null false };
+              if (other != key and not ownHistory) conflict("Member " # m.memberId # ": " # u.email # " already belongs to a Hub identity. Exclude this member or resolve the source ownership first.");
+            };
+            case null {};
+          };
+          switch old {
+            case null { created += 1; row(m.memberId, u, if (u.activeIdp) "Add active person" else "Add inactive person") };
+            case (?prior) {
+              if (prior.status == "ERASED" and m.erased != ?true) conflict("An erased member ID cannot be reused: " # m.memberId);
+              if (openTeamChanged(prior, u)) { updated += 1; row(m.memberId, u, if (u.status == "ERASED") "Erase mirrored profile" else if (prior.activeIdp and not u.activeIdp) "Deactivate source account" else "Update profile") };
+              if (prior.activeIdp and not u.activeIdp) deactivated += 1;
+            };
+          };
+        };
+      };
+    };
+    for ((key, u) in users.entries()) if (u.connId == id and not seen.containsKey(key) and u.activeIdp) { deactivated += 1; updated += 1; row(u.externalId, u, "Deactivate missing source account") };
+    { ok = conflicts.size() == 0; detail = if (conflicts.size() == 0) "Review before applying. Hub roles, Finance and login settings are not imported." else "Resolve identity conflicts before applying. No people changed."; token = 0; fetched = snapshot.members.size(); created; updated; deactivated; skipped; conflicts = conflicts.toArray(); rows = rows.toArray() };
+  };
+  public shared ({ caller }) func addOpenTeamSource(args : { name : Text; provider : Principal; includeExternal : Bool; excludeIds : [Text] }) : async { ok : Bool; id : Nat; detail : Text } {
+    assert isOwnerRole(caller);
+    let provider = args.provider.toText();
+    if (openTeamConfigs.size() >= 20) return { ok = false; id = 0; detail = "At most 20 OpenTeam sources are supported." };
+    if (args.provider == Principal.fromActor(UserHub) or Principal.isAnonymous(args.provider) or provider == "aaaaa-aa" or norm(args.name) == "" or args.name.size() > 60 or args.excludeIds.size() > 500) return { ok = false; id = 0; detail = "Enter a source name and an OpenTeam backend canister ID. At most 500 exclusions." };
+    for (mid in args.excludeIds.values()) if (mid == "" or mid.size() > 200) return { ok = false; id = 0; detail = "Invalid excluded member ID." };
+    for ((_, c) in conns.entries()) if (c.kind == "openteam" and c.baseUrl == provider) return { ok = false; id = 0; detail = "This OpenTeam source is already configured." };
+    let id = nextConnId; nextConnId += 1;
+    conns.add(id, { id; name = norm(args.name); kind = "openteam"; baseUrl = provider; token = ""; hookSecret = ""; enabled = false; lastSync = null });
+    openTeamRevisions.add(id, 1);
+    openTeamConfigs.add(id, { includeExternal = args.includeExternal; excludeIds = args.excludeIds });
+    journal("conn", "OpenTeam draft source #" # Nat.toText(id) # " created; no people imported", caller);
+    { ok = true; id; detail = "Source saved. Preview its people before enabling sync." };
+  };
+  public shared query ({ caller }) func listOpenTeamSources() : async [{ id : Nat; config : OpenTeamConfig; lastSuccess : ?{ at : Int; version : Text; seq : Nat } }] {
+    assert isAdmin(caller);
+    openTeamConfigs.entries().map<(Nat, OpenTeamConfig), { id : Nat; config : OpenTeamConfig; lastSuccess : ?{ at : Int; version : Text; seq : Nat } }>(func((id, config)) { { id; config; lastSuccess = openTeamSuccess.get(id) } }).toArray();
+  };
+  public shared ({ caller }) func discardOpenTeamSource(id : Nat) : async { ok : Bool; detail : Text } {
+    assert isOwnerRole(caller);
+    let c = conns.get(id) ?? (return { ok = false; detail = "Source no longer exists." });
+    if (c.kind != "openteam" or c.enabled or users.values().any(func u = u.connId == id)) return { ok = false; detail = "This source is in use. Pause it and reconcile its people before removal." };
+    conns.remove(id); openTeamConfigs.remove(id); openTeamRevisions.remove(id); openTeamPlans.remove(id); openTeamSuccess.remove(id);
+    journal("conn", "Unused OpenTeam draft #" # id.toText() # " discarded", caller);
+    { ok = true; detail = "Unused source removed." };
+  };
+  public shared ({ caller }) func setOpenTeamScope(id : Nat, expected : OpenTeamConfig, next : OpenTeamConfig) : async { ok : Bool; detail : Text } {
+    assert isOwnerRole(caller);
+    let c = switch (conns.get(id)) { case (?c) c; case null return { ok = false; detail = "Source no longer exists." } };
+    if (openTeamConfigs.get(id) != ?expected) return { ok = false; detail = "Scope changed. Reopen the source before editing." };
+    if (next.excludeIds.size() > 500) return { ok = false; detail = "At most 500 excluded IDs are supported." };
+    for (mid in next.excludeIds.values()) if (mid == "" or mid.size() > 200) return { ok = false; detail = "Invalid excluded member ID." };
+    openTeamRevisions.add(id, openTeamRevision(id) + 1);
+    openTeamConfigs.add(id, next); conns.add(id, { c with enabled = false }); openTeamPlans.remove(id);
+    journal("conn", "OpenTeam #" # Nat.toText(id) # " scope edited; paused pending preview", caller);
+    { ok = true; detail = "Scope saved. Preview before enabling sync." };
+  };
+  public shared ({ caller }) func pauseOpenTeamSource(id : Nat) : async Bool {
+    assert isOwnerRole(caller);
+    switch (conns.get(id)) { case (?c) { if (c.kind != "openteam") return false; openTeamRevisions.add(id, openTeamRevision(id) + 1); conns.add(id, { c with enabled = false }); openTeamPlans.remove(id); journal("conn", "OpenTeam #" # Nat.toText(id) # " paused; existing accounts retained", caller); true }; case null false };
+  };
+  public shared ({ caller }) func previewOpenTeamSource(id : Nat) : async OpenTeamReview {
+    assert isOwnerRole(caller);
+    let c = switch (conns.get(id)) { case (?c) c; case null return openTeamFailure("Source no longer exists.") };
+    let cfg = switch (openTeamConfigs.get(id)) { case (?cfg) cfg; case null return openTeamFailure("Not an OpenTeam source.") };
+    if (isSyncing(id)) return openTeamFailure("A sync is already running. Retry shortly.");
+    openTeamPlans.remove(id);
+    let revision = openTeamRevision(id);
+    let start = Time.now(); syncing.add(id, start);
+    let result = await OpenTeam.fetch(c.baseUrl);
+    if (syncing.get(id) != ?start) return openTeamFailure("Another sync replaced this request. Retry.");
+    syncing.remove(id);
+    if (openTeamRevision(id) != revision or not isOwnerRole(caller) or conns.get(id) != ?c or openTeamConfigs.get(id) != ?cfg) return openTeamFailure("Access or source configuration changed. Reopen the source.");
+    switch result {
+      case (#err(detail)) openTeamFailure(detail);
+      case (#ok(snapshot)) {
+        if (pidSeed == null) return openTeamFailure("Hub is initializing its person registry. Retry shortly.");
+        openTeamToken += 1;
+        let review = { openTeamReview(id, snapshot, cfg) with token = openTeamToken };
+        if (review.ok) openTeamPlans.add(id, { revision; caller; at = Time.now(); conn = c; config = cfg; directoryHash = openTeamHash(); snapshot; review });
+        review;
+      };
+    };
+  };
+  // No awaits during commit: every record, identity reconciliation and source result
+  // change atomically. Notifications happen only after the commit.
+  func openTeamCommit(c : Conn, cfg : OpenTeamConfig, snapshot : OpenTeam.Snapshot, review : OpenTeamReview, by : Principal) : [Text] {
+    let seen = Map.empty<Text, Bool>();
+    let gone = List.empty<Text>();
+    for (m in snapshot.members.values()) {
+      let key = userKey(c.id, m.memberId); seen.add(key, true);
+      if (m.erased == ?true) openTeamErased.add(key, true);
+      let old = users.get(key);
+      switch (openTeamRecord(c.id, m, cfg, old)) {
+        case null {};
+        case (?u) {
+          switch old { case (?prior) { if (prior.activeIdp and not u.activeIdp) gone.add(prior.email) }; case null {} };
+          if (m.erased == ?true) forceActive.remove(key);
+          switch old { case (?prior) { if (openTeamChanged(prior, u)) users.add(key, u) }; case null users.add(key, u) };
+        };
+      };
+    };
+    for ((key, u) in users.entries()) if (u.connId == c.id and not seen.containsKey(key) and u.activeIdp) { users.add(key, { u with activeIdp = false; status = "MISSING"; updatedAt = Time.now() }); gone.add(u.email) };
+    reconcilePersons();
+    let now = Time.now();
+    openTeamRevisions.add(c.id, openTeamRevision(c.id) + 1);
+    conns.add(c.id, { c with enabled = true; lastSync = ?{ at = now; ok = true; fetched = review.fetched; detail = "OpenTeam synced. " # Nat.toText(review.created) # " added, " # Nat.toText(review.updated) # " updated." } });
+    openTeamSuccess.add(c.id, { at = now; version = snapshot.info.version; seq = Option.get(snapshot.info.changeSeq, 0) });
+    openTeamPlans.remove(c.id);
+    if (review.created + review.updated > 0) journal("sync", "OpenTeam #" # Nat.toText(c.id) # ": " # Nat.toText(review.created) # " added, " # Nat.toText(review.updated) # " updated, " # Nat.toText(review.deactivated) # " source deactivations", by);
+    gone.toArray().filter(func(e : Text) : Bool { e != "" and accessOf(e) != #active });
+  };
+  public shared ({ caller }) func applyOpenTeamSource(id : Nat, token : Nat) : async SyncResult {
+    assert isOwnerRole(caller);
+    let p = switch (openTeamPlans.get(id)) { case (?p) p; case null return openTeamError("Preview again before applying.") };
+    if (p.caller != caller or p.review.token != token or Time.now() - p.at > 300_000_000_000 or isSyncing(id)) return openTeamError("Preview expired or sync is running. Preview again.");
+    // Consume once before the await; a failed comparison requires another review.
+    openTeamPlans.remove(id);
+    let source : OpenTeam.Provider = actor(p.conn.baseUrl);
+    let info = try { await (with timeout = 30) source.team_info() } catch (_) { return openTeamError("OpenTeam is unavailable. Preview again when it recovers.") };
+    if (openTeamRevision(id) != p.revision or not isOwnerRole(caller) or conns.get(id) != ?p.conn or openTeamConfigs.get(id) != ?p.config or openTeamHash() != p.directoryHash or info != p.snapshot.info or Time.now() - p.at > 300_000_000_000) return openTeamError("The directory, source or your access changed. Preview again; nothing was applied.");
+    let gone = openTeamCommit(p.conn, p.config, p.snapshot, p.review, caller);
+    if (gone.size() > 0) await notifyDeactivated(gone);
+    { ok = true; detail = "OpenTeam sync enabled. People refresh every five minutes; app roles and login remain in Hub."; fetched = p.review.fetched; created = p.review.created; updated = p.review.updated; deactivated = p.review.deactivated };
+  };
+  func syncOpenTeam(id : Nat, by : Principal) : async SyncResult {
+    let c = switch (conns.get(id)) { case (?c) c; case null return openTeamError("Source not found.") };
+    let cfg = switch (openTeamConfigs.get(id)) { case (?cfg) cfg; case null return openTeamError("Source not configured.") };
+    if (not c.enabled or isSyncing(id)) return openTeamError("Source paused or already syncing.");
+    // Retain the owner's short review window against the background scheduler.
+    switch (openTeamPlans.get(id)) { case (?p) { if (Time.now() - p.at < 300_000_000_000) return openTeamError("A preview is awaiting review."); openTeamPlans.remove(id) }; case null {} };
+    let revision = openTeamRevision(id);
+    let started = Time.now(); syncing.add(id, started);
+    let result = await OpenTeam.fetch(c.baseUrl);
+    if (syncing.get(id) != ?started) return openTeamError("Sync superseded.");
+    syncing.remove(id);
+    if (openTeamRevision(id) != revision or conns.get(id) != ?c or openTeamConfigs.get(id) != ?cfg or (not Principal.isAnonymous(by) and not isAdminRole(by))) return openTeamError("Source or access changed during sync.");
+    var failure = "";
+    switch result {
+      case (#err(detail)) { failure := detail };
+      case (#ok(snapshot)) {
+        let review = openTeamReview(id, snapshot, cfg);
+        var active = 0; for ((_, u) in users.entries()) if (u.connId == id and u.activeIdp) active += 1;
+        if (not review.ok) { failure := "Identity conflict. Open the source preview to resolve it; existing people are unchanged." }
+        else if ((review.deactivated >= 5 and review.deactivated * 5 >= active) or (active > 0 and snapshot.members.size() == 0)) { failure := "Many source accounts would be deactivated. Preview and confirm this change; existing people are unchanged." }
+        else if (pidSeed == null) { failure := "Person registry is initializing. Retry shortly." }
+        else {
+          let gone = openTeamCommit(c, cfg, snapshot, review, by);
+          if (gone.size() > 0) await notifyDeactivated(gone);
+          return { ok = true; detail = "OpenTeam synced."; fetched = review.fetched; created = review.created; updated = review.updated; deactivated = review.deactivated };
+        };
+      };
+    };
+    conns.add(id, { c with lastSync = ?{ at = Time.now(); ok = false; fetched = 0; detail = failure } });
+    openTeamError(failure);
   };
 
   // (the auto-sync timer itself is declared at the END of the actor — it must

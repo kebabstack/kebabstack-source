@@ -47,7 +47,7 @@ for name, (ar, q) in sdk.items():
     if hq != q: problems.append(f"`{name}`: SDK says {'query' if q else 'update'}, hub says {'query' if hq else 'update'}")
 
 # --- served copy in step with the sources
-pairs = [("sdk/motoko/src/Operations.mo", "hub/dist/sdk/Operations.mo"), ("sdk/motoko/src/Hardware.mo", "hub/dist/sdk/Hardware.mo"), ("sdk/motoko/src/Support.mo", "hub/dist/sdk/Support.mo"), ("sdk/motoko/src/Permissions.mo", "hub/dist/sdk/Permissions.mo"), ("sdk/motoko/src/lib.mo", "hub/dist/sdk/kebab-hub.mo"), ("sdk/js/hub-client.js", "hub/dist/sdk/hub-client.js"),
+pairs = [("docs/OPENTEAM.md", "hub/dist/openteam-compatibility.md"), ("sdk/motoko/src/Operations.mo", "hub/dist/sdk/Operations.mo"), ("sdk/motoko/src/Hardware.mo", "hub/dist/sdk/Hardware.mo"), ("sdk/motoko/src/Support.mo", "hub/dist/sdk/Support.mo"), ("sdk/motoko/src/Permissions.mo", "hub/dist/sdk/Permissions.mo"), ("sdk/motoko/src/lib.mo", "hub/dist/sdk/kebab-hub.mo"), ("sdk/js/hub-client.js", "hub/dist/sdk/hub-client.js"),
          ("docs/agent/onboard-app.md", "hub/dist/sdk/onboard-app.md"), ("docs/agent/mcp.md", "hub/dist/sdk/mcp.md"), ("sdk/README.md", "hub/dist/sdk/README.md"),
          ("hub/backend/backend.did", "hub/dist/sdk/hub.did")]
 for src, dst in pairs:

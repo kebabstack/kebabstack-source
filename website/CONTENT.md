@@ -3,7 +3,7 @@
 Reviewed against the shared suite source `4faa5e5` on 2026-09-22 for website
 0.3.2. These are **illustrated workflows from implemented alpha capabilities**,
 not production screenshots, customer stories, benchmarks or measured savings.
-The sanitized public repository and Marketplace distribution remain upcoming.
+The sanitized MIT source is publicly available; Marketplace distribution remains upcoming.
 
 ## Suite overview
 
@@ -105,5 +105,16 @@ docs/APP-PERMISSIONS.md and docs/OPERATIONS.md. Offboarding uses docs/LIFECYCLE.
 docs/HARDWARE-OFFBOARDING.md and their existing integration tests. Analytics uses
 crumbs/METRICS.md, PRIVACY.md, PARITY.md and the 0.6.0 verification record above.
 No search volumes, customer outcomes, replacement equivalence or legal guarantees
-are asserted. Public source and Marketplace remain upcoming. SEARCH.md records
+are asserted. Public source is available; Marketplace distribution remains upcoming. SEARCH.md records
 crawler policy, primary documentation and the separate operator account steps.
+
+## OpenTeam connector (website 0.5.2)
+
+The Hub feature list and bilingual FAQ use `docs/OPENTEAM.md`,
+`hub/backend/OpenTeam.mo` and `tests/openteam.test.mjs`. Hub 0.35.0 implements
+an optional read-only directory source with reviewed initial import, bounded
+five-minute polling, stable member identities and the existing lifecycle path.
+The local synthetic provider tests the reviewed OpenTeam 2.35.0 directory contract;
+it is not an end-to-end customer pilot or OpenSaaS-wide certification. Shared
+OpenSaaS login, upstream roles, groups and write-back are not claimed. Product
+examples remain synthetic; no company is connected by publishing this page.

@@ -33,6 +33,8 @@ try: sha = subprocess.run(["git", "--no-optional-locks", "rev-parse", "--short",
 except Exception: sha = "unknown"
 (OUT / "VERSION").write_text(f"kebab-hub SDK · synced {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%d %H:%M} UTC · repo {sha}\n" + "\n".join(lines) + "\n")
 print("\n".join(lines)); print("→", OUT)
+# OpenTeam operator contract
+shutil.copyfile(ROOT / "docs/OPENTEAM.md", ROOT / "hub/dist/openteam-compatibility.md")
 # changelog + version
 import re
 shutil.copyfile(ROOT / "hub/CHANGELOG.md", ROOT / "hub/dist/CHANGELOG.md")
