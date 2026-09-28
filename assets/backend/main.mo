@@ -60,7 +60,7 @@ persistent actor Assets {
   var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
   var photoBytes : Nat = 0; // total photo bytes held
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.16.0";
+  transient let BUILD_VERSION : Text = "0.16.1";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -1933,13 +1933,13 @@ persistent actor Assets {
     let s = sales.get(id) ?? (return { ok = false; detail = "no such sale" });
     invalidateDeal(s, m.displayName); { ok = true; detail = "link revoked" };
   };
-  public type DealView = { id : Nat; status : Text; buyer : Buyer; sellerName : Text; device : Text; serial : Text; description : Text; grossMinor : Nat; currency : Text; vatRate : Text; terms : Text; termsVersion : Nat; quote : Text; acceptedAt : Int; acceptedHow : Text; invoice : ?InvoiceData; pdfReady : Bool; pdfHash : Text; completedAt : Int; paidAt : Int; handedOverAt : Int; expiresAt : Int; changed : Bool };
+  public type DealView = { id : Nat; status : Text; buyer : Buyer; sellerName : Text; device : Text; serial : Text; description : Text; grossMinor : Nat; currency : Text; vatRate : Text; terms : Text; termsVersion : Nat; quote : Text; acceptedAt : Int; acceptedHow : Text; invoice : ?InvoiceData; pdfReady : Bool; pdfHash : Text; downloadedAt : Int; completedAt : Int; paidAt : Int; handedOverAt : Int; expiresAt : Int; changed : Bool };
   public shared query func getDeal(id : Nat, key : Text) : async ?DealView {
     let d = dealKey(id, key) ?? (return null); let s = sales.get(id) ?? (return null);
     let a = assets.get(s.assetId) ?? (return null);
     let inv = if (s.invoiceNo == "") null else ?invoiceData(s, "invoice");
     let device = dealDevices.get(id) ?? ({ name = deviceName(a); serial = a.serial });
-    ?{ id; status = s.status; buyer = s.buyer; sellerName = (switch (inv) { case (?i) i.seller.name; case null billing.legalName }); device = device.name; serial = device.serial; description = s.description; grossMinor = s.grossMinor; currency = s.currency; vatRate = vatRateText(s.vatRateBp); terms = (switch (inv) { case (?i) i.waiverText; case null externalTerms() }); termsVersion = s.waiverVersion; quote = d.quote; acceptedAt = s.acceptedAt; acceptedHow = s.acceptedHow; invoice = inv; pdfReady = s.pdfId != 0; pdfHash = s.pdfHash; completedAt = d.completedAt; paidAt = s.paidAt; handedOverAt = d.handedOverAt; expiresAt = d.expiresAt; changed = s.invoiceNo == "" and d.quote != quoteHash(s) };
+    ?{ id; status = s.status; buyer = s.buyer; sellerName = (switch (inv) { case (?i) i.seller.name; case null billing.legalName }); device = device.name; serial = device.serial; description = s.description; grossMinor = s.grossMinor; currency = s.currency; vatRate = vatRateText(s.vatRateBp); terms = (switch (inv) { case (?i) i.waiverText; case null externalTerms() }); termsVersion = s.waiverVersion; quote = d.quote; acceptedAt = s.acceptedAt; acceptedHow = s.acceptedHow; invoice = inv; pdfReady = s.pdfId != 0; pdfHash = s.pdfHash; downloadedAt = d.downloadedAt; completedAt = d.completedAt; paidAt = s.paidAt; handedOverAt = d.handedOverAt; expiresAt = d.expiresAt; changed = s.invoiceNo == "" and d.quote != quoteHash(s) };
   };
   public shared func visitDeal(id : Nat, key : Text) : async Bool {
     let d = dealKey(id, key) ?? (return false); let s = sales.get(id) ?? (return false);

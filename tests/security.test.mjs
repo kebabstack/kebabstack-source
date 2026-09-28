@@ -2337,9 +2337,16 @@ test('assets: external dealroom — scoped links, atomic invoice, receipt, IT ha
     const oldBytes=Buffer.from('%PDF-1.4\n'+ 'legacy archive '.repeat(15));
     assert.ok((await app.attachSaleDocument(adminTok,legacy.sid,'invoice',oldBytes)).ok);
     const oldView=(await app.getSale(adminTok,legacy.sid))[0];
+    const priorLink=await app.createDealLink(adminTok,legacy.sid);assert.ok(priorLink.ok,priorLink.detail);
+    const priorKey=priorLink.url.split('.').at(-1);
+    await app.dealDocument(legacy.sid,priorKey);
+    const priorDownload=(await app.dealStatus(adminTok,legacy.sid))[0].downloadedAt;
     if(process.env.KEBAB_ASSETS_BASELINE) { await pic.upgradeCanister({sender:controller,canisterId:appId,wasm:candidateWasm('assets'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}}); app=pic.createActor(candidateIdl,appId); app.setPrincipal(controller); }
     assert.equal((await app.info()).version,readFileSync('assets/mops.toml','utf8').match(/^version\s*=\s*"([^"]+)"/m)[1]);
     assert.deepEqual((await app.getSale(adminTok,legacy.sid))[0].sale,oldView.sale,'historical invoice unchanged by upgrade');
+    const resumed=(await app.getDeal(legacy.sid,priorKey))[0];
+    assert.ok(priorDownload>0n);assert.equal(resumed.downloadedAt,priorDownload,'existing downloads resume after upgrade without downloading again');
+    assert.equal(resumed.completedAt,0n,'resuming never invents buyer receipt');
     const mint=async sid => { const r=await app.createDealLink(adminTok,sid);assert.ok(r.ok,r.detail);assert.match(r.url,/^https:\/\/assets\.example\.test\/deal\.html#[1-9][0-9]*\.[a-f0-9]{64}$/);return r.url.split('.').at(-1); };
     const oldKey=await mint(legacy.sid);
     assert.equal((await app.getDeal(legacy.sid,oldKey))[0].acceptedHow,oldView.sale.acceptedHow,'link does not invent a new acceptance on an issued invoice');
@@ -2394,10 +2401,16 @@ test('assets: external dealroom — scoped links, atomic invoice, receipt, IT ha
     assert.equal((await app.getDeal(a.sid,key))[0].invoice[0].number,invoice.number);
     assert.equal((await app.declineDeal(a.sid,key,offer.quote,'changed my mind')).ok,false,'issued invoices require IT credit note');
     assert.equal((await app.confirmDeal(a.sid,key,invoice.number,accepted.pdfHash)).ok,false,'viewing invoice metadata does not confirm receipt');
+    assert.equal(accepted.downloadedAt,0n,'invoice metadata cannot unlock receipt before a download request');
     const doc=(await app.dealDocument(a.sid,key))[0];assert.ok(doc.bytes.length>1000);
+    const requested=(await app.getDeal(a.sid,key))[0];
+    assert.ok(requested.downloadedAt>0n,'a fresh browser can read the saved download request');
+    assert.equal(requested.completedAt,0n,'requesting PDF bytes never confirms receipt');
     assert.equal(createHash('sha256').update(Buffer.from(doc.bytes)).digest('hex'),doc.hash);
     if(process.env.KEBAB_DEALROOM_ARTIFACTS){const dir=resolve(process.env.KEBAB_DEALROOM_ARTIFACTS);mkdirSync(dir,{recursive:true});writeFileSync(resolve(dir,'invoice.pdf'),Buffer.from(doc.bytes));writeFileSync(resolve(dir,'qr-payload.txt'),invoice.qrPayload);writeFileSync(resolve(dir,'invoice.json'),JSON.stringify({invoice,view:accepted},(_,v)=>typeof v==='bigint'?v.toString():v,2));}
     assert.equal((await app.confirmDeal(a.sid,key,invoice.number,'bad')).ok,false);
+    assert.equal((await app.confirmDeal(a.sid,'0'.repeat(64),invoice.number,doc.hash)).ok,false,'a saved download does not bypass the private link');
+    assert.equal((await app.confirmDeal(a.sid,key,'WRONG-INVOICE',doc.hash)).ok,false);
     assert.ok((await app.confirmDeal(a.sid,key,invoice.number,doc.hash)).ok);
     assert.ok((await app.confirmDeal(a.sid,key,invoice.number,doc.hash)).ok);
     assert.equal((await app.getDeal(a.sid,key))[0].paidAt,0n,'buyer cannot mark payment');

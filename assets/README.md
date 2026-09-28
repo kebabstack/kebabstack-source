@@ -42,6 +42,11 @@ The link is the buyer's access credential, so do not post it in a shared channel
 No buyer account, email-code service or invoice-rendering relay is required.
 See [the operator workflow](INSTALL.md#external-buyers-private-dealroom) for the full process.
 
+After downloading the invoice, the buyer presses **Confirm invoice received**.
+The download request stays with the sale, so reopening the valid private link or
+returning from a phone's PDF viewer keeps confirmation available. The button is
+the explicit receipt assertion; downloading alone never confirms receipt or payment.
+
 
 ### Assets 0.10 — calmer daily work
 

@@ -122,7 +122,10 @@ accepting the offer or consuming a number. Complete terms paginate; they are nev
 3. The buyer checks the offer, fills in their address, explicitly accepts the terms and gets an
    automatically issued invoice. The invoice number, accepted offer and PDF are committed
    together. Repeating the action cannot create another invoice. The seller need not be online.
-4. The buyer downloads the PDF, then explicitly confirms receipt. The history distinguishes
+4. The buyer downloads the PDF, then presses **Confirm invoice received**. No extra checkbox
+   is required. The download request is saved with the sale, so returning from a mobile PDF
+   viewer, reloading the page or opening the valid private link on another device does not
+   require a second download. The history distinguishes
    opening the room, requesting a download, and confirming receipt. Requesting bytes does not
    prove that a file was opened or saved. Acceptance, decline and completion notify the admin
    who created the link, through the Hub and its configured Slack DM delivery. The buyer's

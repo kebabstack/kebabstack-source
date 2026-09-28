@@ -25,4 +25,4 @@ PY
 node --test test/canonical-url.test.mjs test/handover.test.mjs
 rm -rf "$T"
 
-(cd .. && node assets/test/dealroom.mjs accept && node assets/test/dealroom.mjs decline)
+(cd .. && for flow in accept decline reopen reload resume not-ready download-error hash-mismatch lost-response revoked; do node assets/test/dealroom.mjs "$flow"; done)

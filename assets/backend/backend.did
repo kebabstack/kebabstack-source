@@ -403,6 +403,7 @@ type DealView =
    currency: text;
    description: text;
    device: text;
+   downloadedAt: int;
    expiresAt: int;
    grossMinor: nat;
    handedOverAt: int;

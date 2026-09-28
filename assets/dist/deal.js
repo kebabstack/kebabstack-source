@@ -6,8 +6,26 @@ const esc = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;
 const opt = (v) => v?.[0] ?? null;
 const when = (n) => new Date(Number(BigInt(n) / 1000000n)).toLocaleString([], {dateStyle:"medium", timeStyle:"short"});
 const money = (n, currency) => new Intl.NumberFormat(undefined, {style:"currency",currency}).format(Number(n) / 100);
-let backend, saleId, key, view, busy = false, downloadedHash = "";
-function message(text = "", error = false) { $("message").textContent = text; $("message").classList.toggle("error", error); }
+let backend, saleId, key, view, busy = false, downloadedHash = "", awaitingViewerReturn = false;
+function message(text = "", error = false) {
+  const target = $("receiptMessage") || $("message");
+  $("message").textContent = "";
+  target.textContent = text; target.classList.toggle("error", error);
+}
+function receiptReady() {
+  return !!view?.pdfReady && /^[a-f0-9]{64}$/.test(view.pdfHash) &&
+    (Number(view.downloadedAt ?? 0) > 0 || downloadedHash === view.pdfHash);
+}
+function receiptControls() {
+  const button = $("confirmReceipt");
+  if ($("downloadInvoice")) $("downloadInvoice").disabled = busy || !view?.pdfReady;
+  if (!button) return;
+  const ready = receiptReady();
+  button.disabled = busy || !ready;
+  $("downloadHint").textContent = !view?.pdfReady ? "Receipt confirmation will be available when the seller has prepared the invoice PDF."
+    : !ready ? "Download the PDF to enable receipt confirmation."
+    : "Have the PDF? Confirm receipt below. This confirms receipt only, not payment.";
+}
 function unavailable(text = "This private link is invalid, expired or has been replaced. Ask the seller for a new link.") {
   view = null; $("room").innerHTML = `<section class="panel"><p class="eyebrow">Private dealroom</p><h1>This link is unavailable.</h1><p>${esc(text)}</p><button id="retry">Try again</button></section>`;
   $("retry").onclick = refresh; $("room").setAttribute("aria-busy", "false");
@@ -18,7 +36,7 @@ async function action(fn) {
   document.querySelectorAll("fieldset,button").forEach(el => el.disabled = true);
   try { await fn(); }
   catch (_) { message("The connection was interrupted. Refresh the offer to check its saved status before trying again.", true); }
-  finally { busy = false; document.querySelectorAll("fieldset,button").forEach(el => el.disabled = false); if ($("confirmReceipt")) $("confirmReceipt").disabled = downloadedHash !== view?.pdfHash; if ($("downloadInvoice")) $("downloadInvoice").disabled = !view?.pdfReady; }
+  finally { busy = false; document.querySelectorAll("fieldset,button").forEach(el => el.disabled = false); receiptControls(); }
 }
 async function refresh() {
   try { const next = opt(await backend.getDeal(saleId, key)); if (!next) return unavailable(); view = next; render(); }
@@ -48,7 +66,7 @@ function render() {
       ${complete ? `<div class="notice"><strong>Invoice receipt confirmed ${esc(when(d.completedAt))}</strong>The seller has been informed. ${Number(d.handedOverAt) ? "The device hand-over has been recorded." : Number(d.paidAt) ? "Payment has been confirmed. Arrange the hand-over with the seller." : "Please pay the invoice by its due date. The seller will confirm payment and arrange the hand-over."}</div>` : '<p>Download your invoice, then confirm that you have received it. Payment is a separate step.</p>'}
       <div class="invoice"><p class="eyebrow">${esc(invoice.seller.name)}</p><div class="number">${esc(invoice.number)}</div><p>${esc(price)} · Due ${esc(invoice.dueOn)}</p><div class="actions"><button id="downloadInvoice" class="primary">Download invoice PDF</button></div></div>
       ${!d.pdfReady ? '<div class="notice warning">The seller is still preparing this invoice PDF. Refresh in a moment.</div>' : ""}
-      ${!complete ? '<p class="small" id="downloadHint">Download the PDF to enable receipt confirmation.</p><label class="check"><input id="receiptCheck" type="checkbox"><span>I have received the invoice. This confirms receipt only, not payment.</span></label><div class="actions"><button id="confirmReceipt" disabled>Confirm invoice received</button></div>' : ""}
+      ${!complete ? '<p class="small" id="downloadHint"></p><div class="actions"><button id="confirmReceipt" aria-describedby="downloadHint" disabled>Confirm invoice received</button></div><p id="receiptMessage" class="receipt-message" role="status" aria-live="polite"></p>' : ""}
       <details><summary>Accepted offer & hand-over terms</summary><div class="terms" tabindex="0">${esc(d.terms)}</div><p class="small">${esc(invoice.acceptedLine)}</p></details>`;
   }
   $("room").innerHTML = `<div class="intro"><p class="eyebrow">${esc(d.sellerName)} · Private dealroom</p><h1>${cancelled ? "Offer closed." : complete ? "Thank you, " + esc(d.buyer.name.split(" ")[0]) + "." : "A new chapter for this device."}</h1></div><div class="columns"><section class="panel"><ol class="steps" aria-label="Your progress"><li class="active"><b>${invoice ? "✓" : "01"}</b>Review & accept</li><li class="${invoice ? "active" : ""}"><b>${complete ? "✓" : "02"}</b>Get invoice</li><li class="${complete ? "active" : ""}"><b>${complete ? "✓" : "03"}</b>Confirm receipt</li></ol>${body}<div class="actions"><button id="refreshRoom">Refresh status</button></div></section>${summary}</div>`;
@@ -70,18 +88,33 @@ function render() {
       const doc = opt(await backend.dealDocument(saleId, key)); if (!doc) { await refresh(); return message("The PDF is unavailable. Please check the offer status or contact the seller.", true); }
       const bytes = new Uint8Array(doc.bytes), hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(n=>n.toString(16).padStart(2,"0")).join("");
       if (hash !== doc.hash || hash !== d.pdfHash) throw Error("invoice hash mismatch");
+      // Remember the verified document before a mobile PDF viewer takes over.
+      downloadedHash = hash; awaitingViewerReturn = true;
       const url = URL.createObjectURL(new Blob([bytes], {type: "application/pdf"})); const a = document.createElement("a"); a.href = url; a.download = doc.name; a.rel = "noopener"; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
-      downloadedHash = hash; if ($("downloadHint")) $("downloadHint").textContent = "Your download has started. Once you have the PDF, confirm receipt below."; message("Invoice downloaded. You can download this same archived copy again while the link is valid.");
+      message("Your download has started. Once you have the PDF, confirm receipt below.");
     });
   }
   if ($("confirmReceipt")) {
-    $("confirmReceipt").disabled = downloadedHash !== d.pdfHash;
     $("confirmReceipt").onclick = () => {
-      if (!$("receiptCheck").checked) return message("Please tick that you have received the invoice.", true);
-      action(async () => { const r = await backend.confirmDeal(saleId, key, invoice.number, downloadedHash); if (r.ok) await refresh(); message(r.detail, !r.ok); });
+      if (!receiptReady()) return;
+      action(async () => {
+        receiptControls(); message("Confirming invoice receipt…");
+        const r = await backend.confirmDeal(saleId, key, invoice.number, d.pdfHash);
+        await refresh(); message(r.detail, !r.ok);
+      });
     };
   }
+  receiptControls();
 }
+// Mobile in-app browsers may restore the page after showing the PDF, including
+// a back/forward-cache snapshot taken before the download response arrived.
+function resumeRoom(restored = false) {
+  if ((restored || awaitingViewerReturn) && backend && view && !busy && opt(view.invoice) && !Number(view.completedAt)) {
+    awaitingViewerReturn = false; action(refresh);
+  }
+}
+window.addEventListener("pageshow", e => { if (e.persisted) resumeRoom(true); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resumeRoom(); });
 async function boot() {
   if (window.self !== window.top) return unavailable("Open your private link directly in a browser tab.");
   // The secret is a URL fragment: never sent with the HTTP request or referrer.

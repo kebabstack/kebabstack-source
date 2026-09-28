@@ -1,5 +1,11 @@
 # Changelog — kebab-stack assets
 
+## [0.16.1] — 2026-09-28
+
+- Restore invoice receipt confirmation from the saved dealroom download request after a reload, a device switch or returning from a mobile PDF viewer. Existing issued invoices and prior downloads are preserved.
+- Enable **Confirm invoice received** after the PDF download starts, without a second checkbox. The buyer must still press this button explicitly; downloading alone never confirms receipt or payment. Keep confirmation progress and errors beside the action.
+- Keep missing PDFs, invalid links and mismatched invoice hashes blocked. Cover reopened links, mobile page restoration, interrupted downloads and confirmation retries with regressions.
+
 ## [0.16.0] — 2026-09-24
 
 - Add centrally assigned Finance access: payment queue, invoice/PDF access and exports, a financial projection of every hardware type, per-device straight-line valuation and useful-life defaults. Technical settings, device secrets and custody changes remain administrator-only.
