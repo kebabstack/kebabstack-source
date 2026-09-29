@@ -3,6 +3,7 @@ import Workboard "mo:kebab-hub/Workboard";
 import WorkTypes "workboard/Types";
 import WorkLogic "workboard/Logic";
 import WorkApi "workboard/Api";
+import Assignment "Assignment";
 /// kebab-stack desk — service management on the skewer.
 ///
 /// Requests from a catalog (typed fields, checklist, queue, approval, SLA),
@@ -56,6 +57,8 @@ import Sha256 "mo:sha2/Sha256";
 import Json "mo:json";
 
 persistent actor Desk {
+  var autoAssignment : Assignment.Config = Assignment.empty;
+  let workSubtasks : Map.Map<Nat, [WorkTypes.Subtask]> = Map.empty();
   // Additive side-state; the existing stable contract and compiler are retained.
   let workboardState : WorkTypes.State = {
     projects = Map.empty(); tasks = Map.empty(); links = Map.empty(); audit = Map.empty();
@@ -129,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.25.0"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.26.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -1354,6 +1357,34 @@ persistent actor Desk {
     log(m.email, "settings updated");
     { ok = true; detail = "" };
   };
+  func assignmentType(id : Nat) : Bool = types.containsKey(id) and not customerTypeId(id);
+  func assignmentWarnings() : [Text] {
+    let out = List.empty<Text>();
+    if (autoAssignment.defaultAssignee != "" and not workPersonActive(autoAssignment.defaultAssignee)) out.add("The default owner is unavailable. Requests without a valid exception stay unassigned.");
+    for (r in autoAssignment.overrides.values()) if (assignmentType(r.typeId) and r.assignee != "" and not workPersonActive(r.assignee)) {
+      let title = switch (typeOf(r.typeId)) { case (?t) t.name; case null "Request type" };
+      out.add(title # ": the selected owner is unavailable. New requests use the available Desk default, otherwise they stay unassigned.");
+    };
+    out.toArray()
+  };
+  public query func autoAssignmentHealth(tok : Text) : async [Text] {
+    ignore staff(tok) ?? (return []); assignmentWarnings()
+  };
+  public query func getAutoAssignment(tok : Text) : async ?{
+    config : Assignment.Config; people : [WorkTypes.Person]; requestTypes : [{ id : Nat; name : Text; enabled : Bool }]; warnings : [Text]
+  } {
+    ignore admin(tok) ?? (return null);
+    ?{ config = autoAssignment; people = staffEmails().map(func email = { id = pidOf(email); name = personName(pidOf(email)) });
+       requestTypes = types.values().toArray().filter(func t = not customerTypeId(t.id)).sort(func(a, b) = Nat.compare(a.sortOrder, b.sortOrder)).map(func t = { id = t.id; name = t.name; enabled = t.enabled }); warnings = assignmentWarnings() }
+  };
+  public func saveAutoAssignment(tok : Text, input : Assignment.Config) : async { ok : Bool; detail : Text } {
+    let m = admin(tok) ?? (return { ok = false; detail = "Admins only" });
+    if (input.revision != autoAssignment.revision) return { ok = false; detail = "Assignment rules changed. Reload before saving." };
+    switch (Assignment.validate(input, workPersonActive, assignmentType)) { case (?e) return { ok = false; detail = e }; case null {} };
+    autoAssignment := { input with revision = input.revision + 1 };
+    log(m.email, "Automatic assignment updated for new internal requests; existing assignments unchanged");
+    { ok = true; detail = "Assignment rules saved. They apply to new internal requests." }
+  };
   public shared func setAdminEmails(tok : Text, emails : [Text]) : async { ok : Bool; detail : Text } {
     { ok = false; detail = "App permissions are managed only in the Hub" };
   };
@@ -1694,6 +1725,7 @@ persistent actor Desk {
     if (customerTypeId(id)) return { ok = false; detail = "Manage this form in Customer projects" };
     for ((_, t) in Map.entries(tickets)) if (t.typeId == id) return { ok = false; detail = "tickets reference this type — disable it instead" };
     ignore Map.delete(types, Nat.compare, id);
+    if (autoAssignment.overrides.any(func r = r.typeId == id)) autoAssignment := { autoAssignment with revision = autoAssignment.revision + 1; overrides = autoAssignment.overrides.filter(func r = r.typeId != id) };
     if (offboardingTemplateId == ?id) offboardingTemplateId := null;
     log(m.email, "removed request type #" # Nat.toText(id));
     { ok = true; detail = "" };
@@ -1758,22 +1790,26 @@ persistent actor Desk {
       approver := switch (managerOf(emailOfPid(requester))) { case (?m) pidOf(m); case null "role:admin" };
     } else if (Text.startsWith(rt.approval, #text "group:")) approver := rt.approval;
     if (approver != "") { status := "waiting"; waitingOn := "approval" };
+    let assignment = if (Text.startsWith(requester, #text "customer:") or customerTypeId(rt.id)) ({ assignee = ""; reason = "" }) else Assignment.decide(autoAssignment, rt.id, func pid = Hub.directoryFresh(lastDirectoryPull) and workPersonActive(pid));
+    if (status == "new" and assignment.assignee != "") status := "open";
     let t : Ticket = {
       id; key = nextKey(id); typeId = rt.id; subject = capText(norm(subject), 160); body = capText(body, 20_000); status; waitingOn;
-      priority = if (validPriority(priority)) priority else rt.defaultPriority; requester; assignee = ""; queue = q; channel;
+      priority = if (validPriority(priority)) priority else rt.defaultPriority; requester; assignee = assignment.assignee; queue = q; channel;
       fields = personFieldsToIds(rt, knownFields(rt, fields)); links = []; createdAt = t0; updatedAt = t0; dueAt;
       respondBy = if (rt.respondH > 0) ?(t0 + rt.respondH * H) else null; firstResponseAt = null; resolvedAt = null; closedAt = null;
     };
     Map.add(tickets, Nat.compare, id, t);
     ignore addEvent(id, byEmail, byKind, "created", "via " # channel # " · " # rt.name, [("type", rt.name), ("queue", q)]);
+    if (assignment.reason != "") ignore addEvent(id, "system", "system", "assign", "Automatic assignment: " # assignment.reason # (if (assignment.assignee == "") "" else " · " # personName(assignment.assignee)), [("assignee", assignment.assignee)]);
     if (rt.checklist.size() > 0) Map.add(ticketTasks, Nat.compare, id, Array.map<Text, Task>(rt.checklist, func(x) = ({ title = x; state = "open"; by = ""; at = 0 })));
     if (approver != "") {
       Map.add(approvals, Nat.compare, id, { approver; state = "pending"; decidedBy = ""; at = t0; note = "" });
       ignore addEvent(id, "system", "system", "approval", "approval requested from " # approverLabel(approver), [("approver", approver)]);
       let who = if (approver == "role:admin") staffEmails().filter(func email = roleOf(email) == "admin") else if (Text.startsWith(approver, #text "group:")) membersOf(groupName(approver)) else [approver];
+      if (not quiet and assignment.assignee != "") notify<system>([assignment.assignee], "Assigned to you · approval pending · " # t.key, id, "desk", t.key # ":assigned");
       if (not quiet) notify<system>(who, "Approval needed · " # t.key # " " # t.subject, id, "approval", t.key # ":approval");
     } else {
-      if (not quiet) notifyQueue<system>(t, "New request · " # t.key # " " # t.subject, t.key # ":new");
+      if (not quiet) notifyOwners<system>(t, "New request · " # t.key # " " # t.subject, t.key # ":new");
     };
     if (not quiet and aiTriage) scheduleTriage<system>(id); // triage() itself gives up quietly when no key (hub or local) answers
     id;
@@ -2314,7 +2350,7 @@ persistent actor Desk {
       t := { t with status = "new"; waitingOn = ""; closedAt = null; resolvedAt = null; respondBy; dueAt };
       put(t);
       ignore addEvent(id, "system", "system", "status", "new (approved)", [("status", "new")]);
-      notifyQueue<system>(t, "Approved, ready to work · " # t.key # " " # t.subject, t.key # ":approved");
+      notifyOwners<system>(t, "Approved, ready to work · " # t.key # " " # t.subject, t.key # ":approved");
       notify<system>([t.requester], "Approved · " # t.key # " " # t.subject, id, "desk", t.key # ":approved:req");
     } else {
       t := { t with status = "closed"; waitingOn = ""; closedAt = ?now() };
@@ -3171,7 +3207,23 @@ persistent actor Desk {
         case null { switch (typeOf(t.typeId)) { case (?rt) { if (isOffboardingType(rt)) review += 1 }; case null {} } };
       };
     };
-    Operations.ready([("active", active), ("unassigned", unassigned), ("breached", breached), ("departureReview", review), ("offboarding", departing), ("lifecycleUnverified", if (lifecycleCheckedAt == 0 or now() - lifecycleCheckedAt > 120_000_000_000 or lifecycleError != "" or lifecycleGap) 1 else 0)]);
+    // Only own tasks in live shared projects; linked tickets/sales already have source totals.
+    var projects = 0; var tasks = 0; var waiting = 0; var overdue = 0;
+    var unowned = 0; var steps = 0; var stepsDone = 0;
+    let today = isoInDays(0);
+    for (p in workboardState.projects.values()) if (not p.archived) switch (p.scope) { case (#group _) projects += 1; case _ {} };
+    for (t in workboardState.tasks.values()) if (not t.archived and t.column != #done) {
+      let pid = t.projectId ?? (continue);
+      let p = workboardState.projects.get(pid) ?? (continue);
+      if (p.archived) continue;
+      switch (p.scope) { case (#personal) continue; case _ {} };
+      tasks += 1;
+      if (t.column == #waiting) waiting += 1;
+      if (t.dueOn != "" and t.dueOn < today) overdue += 1;
+      if (t.assignee == "" or not workEligible(p, t.assignee)) unowned += 1;
+      for (step in (workSubtasks.get(t.id) ?? []).values()) { steps += 1; if (step.done) stepsDone += 1 };
+    };
+    Operations.ready([("workProjects", projects), ("workOpen", tasks), ("workWaiting", waiting), ("workOverdue", overdue), ("workUnowned", unowned), ("workSteps", steps), ("workStepsDone", stepsDone), ("active", active), ("unassigned", unassigned), ("breached", breached), ("departureReview", review), ("offboarding", departing), ("lifecycleUnverified", if (lifecycleCheckedAt == 0 or now() - lifecycleCheckedAt > 120_000_000_000 or lifecycleError != "" or lifecycleGap) 1 else 0)]);
   };
 
   func responseFresh() : Bool = Hub.directoryFresh(lastDirectoryPull);
@@ -3200,5 +3252,5 @@ persistent actor Desk {
   include ReportingApi(reportingState,compensationState,oncallState,oncallCalendarState,responseState,reportingActor,reportingCapability,oncallEligible,reportingPersonActive,personName);
   include StatusApi(serviceStatusState,oncallState,responseState,oncallActor,func tok = me(tok)!=null,oncallAccess,func id = OncallCalendar.active(oncallCalendarState,id));
   ignore Timer.recurringTimer<system>(#seconds 10, func() : async () { sweepAlerts(); sweepReporting(); sweepOncallCalendar(); sweepServiceStatus(); for(id in oncallRegionalState.recipes.keys().toArray().values())if(not oncallState.plans.containsKey(id))oncallRegionalState.recipes.remove(id); await sweepResponse(); await sweepOncallReminders() });
-  include WorkApi(workboardState, workActor, workAccess, workGroups, workEligible, workPersonActive, workRoster, personName, workTicket, workTickets, workSources, workSales);
+  include WorkApi(workboardState, workSubtasks, workActor, workAccess, workGroups, workEligible, workPersonActive, workRoster, personName, workTicket, workTickets, workSources, workSales);
 };

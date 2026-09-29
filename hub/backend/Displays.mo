@@ -21,8 +21,10 @@ module {
   public func sources(grant : Grant) : [Source] { grant.scopes.map(func s = { cid = s.cid; app = s.app }) };
   // Fixed metric keys only. No future source field becomes public by accident.
   // Personnel departures and employee sales are intentionally absent from a shared screen.
+  public func sourceApp(app : Text) : Text = if (app == "desk-workboard") "desk" else app;
   public func keys(app : Text) : [Text] {
     switch app {
+      case "desk-workboard" ["active", "unassigned", "breached", "workProjects", "workOpen", "workWaiting", "workOverdue", "workUnowned", "workSteps", "workStepsDone"];
       case "desk" ["active", "unassigned", "breached"];
       case "trust" ["total", "passing", "attention", "unverified", "assessed", "score"];
       case "assets" ["total", "stock", "assigned", "preparing"];

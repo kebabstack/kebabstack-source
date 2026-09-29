@@ -314,6 +314,7 @@ type Notice__935769535 =
     updates : [Update__688900656];
     withdrawnAt : Int
   };
+type Override__569529108 = {assignee : Text; typeId : Nat};
 type Period__630644373 =
   {
     adjustmentOf : Nat;
@@ -657,6 +658,7 @@ type Step__491210899 =
     instructions : Text;
     name : Text
   };
+type Subtask__679896091 = {done : Bool; id : Nat; title : Text};
 type SwapState__583333538 = {#accepted; #cancelled; #declined; #pending};
 type Swap__604435800 =
   {
@@ -780,6 +782,12 @@ actor {
     {
       var root : Node__430031793<Nat, Approval__559070989>;
       var size : Nat__58649523
+    };
+  stable var autoAssignment :
+    {
+      defaultAssignee : Text;
+      overrides : [Override__569529108];
+      revision : Nat
     };
   stable var autoCloseDays : Nat;
   stable compensationState :
@@ -1033,6 +1041,11 @@ actor {
   stable types :
     {
       var root : Node__430031793<Nat, RequestType__639901818>;
+      var size : Nat__58649523
+    };
+  stable workSubtasks :
+    {
+      var root : Node__430031793<Nat, [Subtask__679896091]>;
       var size : Nat__58649523
     };
   stable workboardState :

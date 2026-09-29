@@ -25,7 +25,8 @@ module {
   public type Error = { #denied; #missing; #stale; #unavailable; #invalid : Text; #limit : Text };
   public type Result = { #ok : { id : Nat; revision : Nat }; #err : Error };
   public type ProjectView = Project and { canManage : Bool; openTasks : Nat; doneTasks : Nat };
-  public type TaskView = Task and { assigneeName : Text; projectName : Text; assigneeAvailable : Bool };
+  public type Subtask = { id : Nat; title : Text; done : Bool };
+  public type TaskView = Task and { assigneeName : Text; projectName : Text; assigneeAvailable : Bool; subtaskCount : Nat; subtasksDone : Nat };
   public type State = {
     projects : Map.Map<Nat, Project>; tasks : Map.Map<Nat, Task>;
     links : Map.Map<Nat, [Link]>; audit : Map.Map<Text, [Audit]>;

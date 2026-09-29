@@ -1372,7 +1372,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.36.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.37.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1569,6 +1569,7 @@ const idlFactory = ({ IDL }) => {
     oidcRotateKey: IDL.Func([], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     operationsDisplayAdmin: IDL.Func([], [IDL.Record({ canManage: IDL.Bool, displays: IDL.Vec(View) })], ["query"]),
     operationsDisplayApprove: IDL.Func([IDL.Text, IDL.Text, IDL.Vec(IDL.Nat), IDL.Nat], [Approval], []),
+    operationsDisplayApproveWithWorkboard: IDL.Func([IDL.Text, IDL.Text, IDL.Vec(IDL.Nat), IDL.Nat, IDL.Bool], [Approval], []),
     operationsDisplayForget: IDL.Func([IDL.Text], [], []),
     operationsDisplayPair: IDL.Func([IDL.Text, IDL.Text], [PairResult], []),
     operationsDisplayRevoke: IDL.Func([IDL.Nat], [IDL.Bool], []),

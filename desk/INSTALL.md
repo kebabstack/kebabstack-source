@@ -227,3 +227,20 @@ production authorization. This candidate has not been deployed.
 ## Workboard upgrade
 
 Desk 0.25.0 adds stable project/task state. Use Hub 0.36.0 and Assets 0.17.0 for hardware sale cards, updating those before Desk through the [release executor](../kitchen/INSTALL.md). Existing Desk roles and company Finance assignments remain authoritative. [Workboard guide](../docs/WORKBOARD.md).
+
+## Assignment and subtasks upgrade (0.26.0)
+
+Only Desk changes. Hub 0.36.0 / Assets 0.17.0 remain sufficient for Workboard's
+existing source cards. Assignment initializes disabled (no default or exceptions),
+and existing tasks have empty subtask lists. Existing tickets are never reassigned
+by the upgrade. No new Hub role or directory grant is required; Lunch is unaffected.
+
+Check compatibility with the **committed 0.25 stable signature** before promoting
+the new baseline. Build and test a populated 0.25 upgrade and a second 0.26 upgrade.
+`KEBAB_WORKBOARD_BASELINE=/path/to/baseline` (hub/desk/assets subdirectories) enables
+the populated fixture in `tests/desk-assignment-subtasks.test.mjs`. Include the
+matching `assignment.js`, Workboard module, CSS and generated bindings in the
+normal tested format-2 release. Kitchen derives the recipe version from mops.toml.
+Configure the owner only after the separately authorized production rollout.
+
+For the Workboard Operations card deploy Desk 0.26 then Hub 0.37 through the release executor. Existing screen approvals do not gain Workboard access; pair them again with the explicit Workboard choice if desired.

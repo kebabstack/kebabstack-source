@@ -73,3 +73,14 @@
 
 /* Compact screens keep full navigation labels in one scrollable strip. */
 @media(max-width:760px){.ks-workspace .desk-nav #nav{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;padding:4px 0;scrollbar-width:thin}.ks-workspace .desk-nav #nav .navstep{flex:0 0 auto;width:auto;min-width:max-content;flex-direction:row;white-space:nowrap;padding:10px 12px;gap:8px;min-height:44px}.ks-workspace .desk-nav #nav .nav-label{display:block;min-height:0;font:500 14px/20px var(--ks-ui);letter-spacing:0;text-align:left;white-space:nowrap}.ks-workspace .desk-nav #nav .navstep .n{position:static;margin-left:0}.ks-workspace .desk-nav #nav .nav-icon{line-height:20px}}
+
+/* Automatic assignment: bounded settings, using shared runtime foundations. */
+.assignment-settings{max-width:var(--ks-prose)}
+.assignment-settings h3{margin-top:var(--ks-space-5)}
+.assignment-default{max-width:360px;margin:var(--ks-space-5) 0}
+.assignment-settings select{width:100%;min-height:var(--ks-field-height);font-size:var(--ks-field-font)}
+.assignment-exceptions{margin:var(--ks-space-5) 0}
+.assignment-exceptions summary{min-height:var(--ks-button-height);align-content:center;cursor:pointer}
+.assignment-rules{display:grid;gap:var(--ks-space-4);max-width:440px}
+.assignment-settings [data-assignment-warnings]:not(:empty){padding:var(--ks-space-3) var(--ks-space-4);border-left:3px solid var(--ks-warning);background:var(--ks-bg-sunk)}
+.assignment-settings [data-assignment-status]{font-size:var(--ks-fz-body-sm)}

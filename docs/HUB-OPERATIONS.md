@@ -7,7 +7,7 @@ Implementation/test status is separate from production deployment.
 ## The operator's workflow
 
 Open **Hub → Operations**. Five connected apps contribute current summaries.
-A short **Where to focus** panel highlights one follow-up per app. Open that app
+A short **Where to focus** panel highlights one follow-up per area. Desk contributes separate Internal support and Workboard cards. Open that app
 to investigate and act; tickets remain in Desk, custody in Assets and terms in
 Contracts. Operations never changes a device, completes a departure or renews a
 contract. It does not create another task list.
@@ -31,6 +31,7 @@ lease (at most 60 seconds); upstream IdP provisioning latency is additional.
 | Source | Included | Interpretation |
 |---|---|---|
 | Desk | Internal unresolved/unclosed tickets, unassigned tickets, breached response/due targets, directory reviews and confirmed offboardings | Customer-project tickets never contribute. A disabled account is a review, not proof of departure. Recent lifecycle processing must be verified separately. |
+| Workboard (Desk 0.26 / Hub 0.37) | Open own tasks in unarchived shared projects: overdue, waiting, unassigned/unavailable owners; subtask progress on those tasks | Personal tasks/projects, archived work, completed tasks and linked tickets/sales are excluded. Target dates become overdue the following UTC day; no date is not overdue. Project count includes unarchived shared projects even with no open tasks. Counts overlap. Open Workboard projects for details. |
 | Trust | Real enrolled devices, fully assessed devices, verified average score, current failures and unverified devices | Samples excluded. Score averages the per-device percentage of passing applicable checks only where all applicable checks have current, successful observations; current failing checks lower the score. Missing/stale/error/no-check evidence remains unverified. This is enrolled-fleet coverage, not proof that all company hardware is enrolled. |
 | Assets | Unarchived inventory, assigned hardware, in-stock unassigned hardware, open offboarding handovers, received items in preparation and unfinished sales | Every hardware kind counts. In-stock excludes tracked open handovers. IT must record preparation; a return alone is not reuse readiness. Paid sales remain open until physical handover. |
 | Contracts | Visible active/cancelling contracts across all admin-accessible spaces; upcoming and overdue decisions, missing decision dates and missing/inactive owners | Uses the recorded internal decision date (including existing term-derived dates). Excludes trash, billing documents, offers and license-key records. Unknown dates do not become zero-day deadlines. Indefinite/non-renewing agreements do not require a renewal date. No currency addition or claimed vendor usage/savings. |
@@ -60,7 +61,7 @@ approved aggregate scopes and never signs into an Owner account.
 2. On your own computer, an active, linked **Hub Owner** opens **Operations →
    Screens**. Enter the ten-character code shown on the physical screen, name
    the room, select its sources and choose **1, 7 or 30 days** (default: 7).
-   Sources start unselected. A pairing code expires after ten minutes.
+   Sources start unselected. **Include Workboard with Desk** is a separate unchecked choice. It requires Desk to be selected. Existing screen approvals keep their original data scope; re-pair a screen to include Workboard. A pairing code expires after ten minutes.
 3. Select **Approve this screen**. The TV connects automatically. Full screen
    expands the display; configure the device's sleep/kiosk settings separately.
 4. To stop sharing, use **Revoke** beside the screen in Hub. **Disconnect** on
@@ -69,7 +70,7 @@ approved aggregate scopes and never signs into an Owner account.
    there is no permanent or automatically renewed display grant.
 
 The TV never exposes app links or business-action controls. Desk shares internal
-queue/service-target counts, not customer projects or directory departures. Assets
+queue/service-target counts, not customer projects or directory departures. When explicitly included, a separate Workboard card adds shared-project task totals and subtask progress; personal projects and tasks remain excluded. Assets
 shares inventory, stock and preparation, not offboarding handovers or employee
 sales. Trust, Contracts and Watch share the documented numeric coverage and
 follow-up metrics. No names, emails, ticket/contract text, device serials, vendor

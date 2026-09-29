@@ -22,3 +22,9 @@ test('an access confirmation older than 30 seconds clears even otherwise fresh m
  const f=fixture({operationsDisplayState:async()=>ready(start),operationsDisplaySnapshot:async()=>snapshot(start)},{now:()=>current});
  try{await tick();await tick();assert.equal(f.root.querySelectorAll('.tv-number').length,1);current+=31000;await new Promise(r=>setTimeout(r,1100));assert.equal(f.root.querySelectorAll('.tv-number').length,0);assert.match(f.root.textContent,/Connection paused|expired/);}finally{f.close();}
 });
+
+test('an explicitly approved Workboard renders separately; old Desk scope rejects extra metrics',async()=>{
+ const work={workProjects:2n,workOpen:7n,workWaiting:2n,workOverdue:1n,workUnowned:1n,workSteps:5n,workStepsDone:3n};
+ const totals={schema:1n,state:{ready:null},checkedAt:nano(Date.now()),metrics:Object.entries({active:18n,unassigned:1n,breached:0n,...work})};
+ for(const app of ['desk-workboard','desk']){const f=fixture({operationsDisplayState:async()=>({ready:{...ready().ready,sources:[{cid:1n,app}]}}),operationsDisplaySnapshot:async()=>totals});try{await tick();await tick();if(app==='desk-workboard'){assert.match(f.root.textContent,/7open project tasks/);assert.match(f.root.textContent,/18open requests/);assert.match(f.root.textContent,/3 of 5 subtasks/);assert.equal(f.root.querySelectorAll('a').length,0);}else{assert.match(f.root.textContent,/Source unverified/);assert.doesNotMatch(f.root.textContent,/open project tasks/);}}finally{f.close();}}
+});

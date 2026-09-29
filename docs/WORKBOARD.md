@@ -112,3 +112,42 @@ release has no dependencies, Gantt charts, project-specific notification rules,
 automatic AI project plans or external-customer ticket aggregation. Those are not
 marketed as implemented. Adoption should be judged on fewer copied status fields
 and clearer ownership in the company's own pilot, not a promised saving.
+
+## Subtasks
+
+Open a task, add short steps under **Subtasks**, then **Save task**. The board
+shows completed/total steps. Task fields and subtasks are one revision: if another
+colleague saves first, reopen the task before retrying. A lost response on task
+creation can be retried with the same request ID and identical content without
+creating another task. Changes stay in the local form after an error; they are
+not saved until the save succeeds and are not retained across reloads.
+
+Every step shares the task's owner and audience. Up to 50 steps are supported,
+with no nested children, separate due dates or separate notification channel.
+Complete all steps before setting Done; adding an open step to completed work
+requires explicitly reopening the parent. Archive and restore preserve the steps.
+Removing a step takes effect on Save and is recorded as a checklist change in
+activity; this is not a per-step deletion recovery system.
+
+Linked Desk tickets continue to use their ticket checklist; hardware sales use
+the Assets preparation/payment/hand-over workflow. Source cards do not receive a
+second checklist or an alternative completion path in Workboard.
+
+For the IT operator this keeps small project steps in one place. For a decision
+maker the scope is deliberately modest: it reduces duplicated planning entry,
+but does not claim measured savings or replace a dedicated project planning tool.
+
+## Operations overview
+
+With Hub 0.37 and Desk 0.26, **Hub → Operations** includes a separate Workboard
+card for shared projects: open tasks, overdue target dates, waiting work, missing
+or unavailable owners and subtask progress. It uses current aggregate counts;
+open Workboard projects to act. Personal work, archived projects/tasks, completed
+tasks and linked source records are excluded. Tickets and hardware sales retain
+their Desk/Assets counts rather than being counted twice. Target dates use UTC in
+this company overview; an empty date is not overdue.
+
+Owners may explicitly include these shared totals when pairing a TV under
+**Operations → Screens**. Existing paired screens retain their previous scope.
+No task titles, people or project names are sent to a TV. This is a capacity and
+follow-up overview, not a historical productivity score or a claim of time saved.

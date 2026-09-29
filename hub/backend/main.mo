@@ -119,7 +119,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.36.0";
+  transient let BUILD_VERSION : Text = "0.37.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -7380,7 +7380,7 @@ persistent actor UserHub {
     let scope = grant.scopes.find(func s = s.cid == cid) ?? (return null);
     let conn = connectors.get(cid) ?? (return null);
     let policy = appPermissionPolicies.get(cid) ?? (return null);
-    if (conn.canisterId != scope.canisterId or policy.policy.app != scope.app) return null;
+    if (conn.canisterId != scope.canisterId or policy.policy.app != Displays.sourceApp(scope.app)) return null;
     ?scope;
   };
   func displayPrune() {
@@ -7416,6 +7416,12 @@ persistent actor UserHub {
     #ok(expiresAt);
   };
   public shared ({ caller }) func operationsDisplayApprove(code : Text, name : Text, cids : [Nat], days : Nat) : async Displays.Approval {
+    approveDisplay(caller, code, name, cids, days, false)
+  };
+  public shared ({ caller }) func operationsDisplayApproveWithWorkboard(code : Text, name : Text, cids : [Nat], days : Nat, workboard : Bool) : async Displays.Approval {
+    approveDisplay(caller, code, name, cids, days, workboard)
+  };
+  func approveDisplay(caller : Principal, code : Text, name : Text, cids : [Nat], days : Nat, workboard : Bool) : Displays.Approval {
     let personId = displayOwner(caller) ?? (return #denied);
     if (not Displays.hex(code, 10) or name.size() == 0 or name.size() > 60 or name.chars().any(func c = c < ' ') or cids.size() == 0 or cids.size() > 5 or (days != 1 and days != 7 and days != 30)) return #invalid;
     displayPrune();
@@ -7427,9 +7433,10 @@ persistent actor UserHub {
       if (operationsViewer(caller, cid) != ?personId) return #denied;
       let c = connectors.get(cid) ?? (return #invalid);
       let policy = appPermissionPolicies.get(cid) ?? (return #invalid);
-      if (scopes.values().any(func s = s.cid == cid or s.app == policy.policy.app)) return #invalid;
-      scopes.add({ cid; app = policy.policy.app; canisterId = c.canisterId });
+      if (scopes.values().any(func s = s.cid == cid or Displays.sourceApp(s.app) == policy.policy.app)) return #invalid;
+      scopes.add({ cid; app = if (workboard and policy.policy.app == "desk") "desk-workboard" else policy.policy.app; canisterId = c.canisterId });
     };
+    if (workboard and not scopes.values().any(func s = s.app == "desk-workboard")) return #invalid;
     ignore operationsPairs.delete(codeHash);
     operationsDisplayNext += 1;
     let id = operationsDisplayNext;

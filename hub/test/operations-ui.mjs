@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
 const code=readFileSync(new URL('../dist/operations.js',import.meta.url),'utf8');
 const tick=()=>new Promise(r=>setTimeout(r,0));
-const desk={active:18,unassigned:3,breached:2,departureReview:1,offboarding:2,lifecycleUnverified:0};
+const desk={active:18,unassigned:3,breached:2,departureReview:1,offboarding:2,lifecycleUnverified:0,workProjects:2,workOpen:7,workWaiting:2,workOverdue:1,workUnowned:1,workSteps:5,workStepsDone:3};
 function fixture(api){
  const dom=new JSDOM('<main></main>',{runScripts:'outside-only',pretendToBeVisual:true,url:'https://hub.test/#/operations'});
  const w=dom.window;w.eval(code);const root=w.document.querySelector('main');const ui=w.KebabOperations.create(root,()=>api);
@@ -14,7 +14,7 @@ const source=(app='desk',cid=1n)=>({cid,app,name:'Team '+app,url:'https://'+app+
 const result=(metrics=desk,at=Date.now())=>({schema:1n,state:{ready:null},checkedAt:BigInt(at)*1000000n,metrics:Object.entries(metrics).map(([k,v])=>[k,BigInt(v)])});
 test('real totals, actionable links, escaped labels and no personal-data inputs',async()=>{
  const f=fixture({operationsSources:async()=>[{...source(),name:'Desk <img src=x onerror=bad()> '},source('trust',2n)],operationsSnapshot:async id=>id===1n?result():result({total:4,passing:0,attention:0,unverified:4,assessed:0,score:0})});
- try{await f.ui.start();assert.equal(f.root.querySelector('img'),null);assert.match(f.root.textContent,/18open requests/);assert.match(f.root.textContent,/—average verified score/);assert.match(f.root.textContent,/0 of 4 real devices fully assessed/);assert.match(f.root.textContent,/2 of 2 connected sources checked/);assert.equal(f.root.querySelector('a.ops-action').href,'https://desk.test/#/queue');assert.equal(f.root.querySelectorAll('[data-source]').length,2);}finally{f.close();}
+ try{await f.ui.start();assert.equal(f.root.querySelector('img'),null);assert.match(f.root.textContent,/18open requests/);assert.match(f.root.textContent,/—average verified score/);assert.match(f.root.textContent,/0 of 4 real devices fully assessed/);assert.match(f.root.textContent,/2 of 2 connected sources checked/);assert.equal(f.root.querySelector('a.ops-action').href,'https://desk.test/#/queue');assert.equal(f.root.querySelectorAll('[data-source]').length,3);}finally{f.close();}
 });
 test('failure, denial, expired and malformed snapshots never appear as healthy zero',async()=>{
  for(const fail of [async()=>{throw Error('offline')},async()=>({schema:1n,state:{denied:null}}),async()=>result(desk,Date.now()-100000),async()=>result({active:999}),async()=>({...result(),schema:2n})]){
@@ -38,4 +38,9 @@ test('unsafe destinations are never links; hiding a tab clears snapshots',async(
 test('a partial outage stays unverified even when the responding source has no flags',async()=>{
  const f=fixture({operationsSources:async()=>[source(),source('desk',2n)],operationsSnapshot:async id=>{if(id===2n)throw Error('offline');return result(Object.fromEntries(Object.keys(desk).map(k=>[k,0])));}});
  try{await f.ui.start();assert.equal(f.root.dataset.complete,'false');assert.match(f.root.textContent,/Other sources are still unverified/);assert.match(f.root.textContent,/Source unavailable/);}finally{f.close();}
+});
+
+test('Workboard is distinct from tickets and links to its project list',async()=>{
+ const f=fixture({operationsSources:async()=>[source()],operationsSnapshot:async()=>result()});
+ try{await f.ui.start();const card=f.root.querySelector('[data-area="workboard"]');assert.match(card.textContent,/7open project tasks/);assert.match(card.textContent,/3 of 5 subtasks/);assert.equal(card.querySelector('a').href,'https://desk.test/#/workboard/projects');assert.equal(f.root.querySelectorAll('.ops-action').length,2);assert.doesNotMatch(card.textContent,/18open requests/);}finally{f.close();}
 });

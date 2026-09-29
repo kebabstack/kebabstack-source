@@ -223,6 +223,8 @@ type TaskView =
    projectId: opt nat;
    projectName: text;
    revision: nat;
+   subtaskCount: nat;
+   subtasksDone: nat;
    title: text;
    updatedAt: int;
    waitingFor: text;
@@ -274,6 +276,12 @@ type Summary =
    revision: nat;
    startAt: int;
    timezone: text;
+ };
+type Subtask =
+ record {
+   done: bool;
+   id: nat;
+   title: text;
  };
 type Step =
  record {
@@ -821,6 +829,11 @@ type Overview =
    deliveryReady: bool;
    incidents: vec Incident;
    policy: opt Policy__1;
+ };
+type Override =
+ record {
+   assignee: text;
+   typeId: nat;
  };
 type Notice =
  record {
@@ -1380,17 +1393,7 @@ type Context =
           };
    total: nat;
  };
-type ConfigInput =
- record {
-   audience: Audience;
-   description: text;
-   enabled: bool;
-   retentionDays: nat;
-   services: vec text;
-   slug: text;
-   title: text;
- };
-type Config =
+type Config__1 =
  record {
    at: int;
    audience: Audience;
@@ -1404,6 +1407,22 @@ type Config =
    services: vec text;
    slug: text;
    title: text;
+ };
+type ConfigInput =
+ record {
+   audience: Audience;
+   description: text;
+   enabled: bool;
+   retentionDays: nat;
+   services: vec text;
+   slug: text;
+   title: text;
+ };
+type Config =
+ record {
+   defaultAssignee: text;
+   overrides: vec Override;
+   revision: nat;
  };
 type Column =
  variant {
@@ -1587,6 +1606,7 @@ service : {
     });
   attestDepartedService: (tok: text, id: nat, recordId: nat, revision:
    nat, reason: text) -> (Result);
+  autoAssignmentHealth: (tok: text) -> (vec text) query;
   cancelOffboarding: (tok: text, id: nat, revision: int, note: text) ->
    (record {
       detail: text;
@@ -1720,6 +1740,18 @@ service : {
           mime: text;
           name: text;
         }) query;
+  getAutoAssignment: (tok: text) ->
+   (opt
+     record {
+       config: Config;
+       people: vec Person;
+       requestTypes: vec record {
+                           enabled: bool;
+                           id: nat;
+                           name: text;
+                         };
+       warnings: vec text;
+     }) query;
   getSettings: (tok: text) -> (opt Settings) query;
   getTicket: (tok: text, id: nat) -> (opt TicketFull) query;
   handoffOncallIncident: (tok: text, id: nat, revision: nat, to: text,
@@ -1832,7 +1864,7 @@ service : {
   oncallResponse: (tok: text, projectId: nat) -> (opt Overview) query;
   oncallStatus: (tok: text, id: nat) ->
    (opt record {
-          config: opt Config;
+          config: opt Config__1;
           notices: vec Notice;
           page: opt Page;
         }) query;
@@ -1934,6 +1966,11 @@ service : {
   rotateCustomerWidget: (tok: text, id: nat) -> (bool);
   rotateOncallAlertKey: (tok: text, id: nat, revision: nat, days: nat) ->
    (SecretResult);
+  saveAutoAssignment: (tok: text, input: Config) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   saveCustomerPrivacy: (tok: text, id: nat, revision: nat, input:
    CustomerPrivacyInput, confirmShorter: bool) ->
    (record {
@@ -1960,6 +1997,8 @@ service : {
    ProjectInput) -> (Result__1);
   saveWorkTask: (tok: text, id: nat, revision: nat, key: text, input:
    TaskInput) -> (Result__1);
+  saveWorkTaskWithSubtasks: (tok: text, id: nat, revision: nat, key:
+   text, input: TaskInput, items: vec Subtask) -> (Result__1);
   saveWorkboardPreferences: (tok: text, input: Preferences) -> (bool);
   /// Demo data for evaluation instances: ~12 requests across all states,
   /// requesters from the directory when present (otherwise demo people).
@@ -2162,6 +2201,7 @@ service : {
        history: vec Audit;
        people: vec Person;
        readOnly: bool;
+       subtasks: vec Subtask;
        task: TaskView;
      }) query;
   workboardTasks: (tok: text, f: Filter, archived: bool) ->

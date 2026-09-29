@@ -1,3 +1,4 @@
+import { createAssignment } from "./assignment.js";
 import { createWorkboard } from "./workboard.js";
 import {createWorkspaceStatus} from "./service-status.js";
 import { createReporting } from "./reporting.js";
@@ -38,6 +39,8 @@ const bigint = (x) => BigInt(Number(x) || 0);
 
 let backend, hubActor = null, topbar = null, me = null, catalogCache = [], agentsCache = [], settingsCache = null, lastList = "#/me";
 
+const assignment = createAssignment({root:$("sp-assignment"),api:()=>backend,session,getMe:()=>me});
+
 // ---------- the shared topbar (brand · app · menu · bell · theme · person) — one component for the whole suite ----------
 function mountBar() {
   if (!me) return;
@@ -69,6 +72,7 @@ async function route() {
   document.querySelectorAll("#nav .navstep").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "t" && el.dataset.view === lastListView())));
   if (v !== 't') ticketView.leave();
   if (v !== 'workboard') workboard.clear();
+  if (v !== 'settings' || arg !== 'assignment') assignment.clear();
   if (v === 'workboard') lastList = '#/workboard' + (/^\d+$/.test(arg || '') ? '/' + arg : '');
   if (v !== 'customers') customerProjects.clear();
   if (v !== 'oncall') oncall.clear();
@@ -122,7 +126,7 @@ async function refreshMe() {
   const w = opt(await backend.whoami(session.load()));
   if (!w) return false;
   const changed = me && (me.id !== w.id || me.role !== w.role || me.reporting !== w.reporting || JSON.stringify(me.groups) !== JSON.stringify(w.groups));
-  if (changed) { workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); agentsAt = 0; catalogCache = []; agentsCache = []; }
+  if (changed) { assignment.clear(); workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); agentsAt = 0; catalogCache = []; agentsCache = []; }
   if (!me) lastList = w.role === "requester" ? "#/me" : "#/queue";
   me = w;
   renderNav();
@@ -166,7 +170,7 @@ async function boot() {
   }
 }
 function signOut() {
-  workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); knownQueues.clear(); routeGeneration++; agentsAt = 0; agentsCache = []; catalogCache = [];
+  assignment.clear(); workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); knownQueues.clear(); routeGeneration++; agentsAt = 0; agentsCache = []; catalogCache = [];
   const t = session.load();
   session.clear();
   if (t) backend.signOut(t).catch(() => {});
@@ -304,6 +308,15 @@ async function loadQueue() {
     $('fQueue').innerHTML = '<option value="">All teams</option>' + [...knownQueues].sort().map(q => `<option value="${esc(q)}"${q===selected?' selected':''}>${esc(q)}</option>`).join('');
     $('qRows').innerHTML = rows.map(r => `<tr data-id="${r.id}"><td class="queue-subject"><div class="request-row-kicker"><span class="request-key">${esc(r.key)}</span><span class="priority-dot p-${esc(r.priority)}">${esc(r.priority)} priority</span></div><a class="request-title" href="#/t/${r.id}">${esc(plainMessage(r.subject))}</a><div class="rowsub">${esc(typeLabel(r.typeName))}${r.approval==='pending'?' · Approval needed':''}${Number(r.totalTasks)?` · ${r.openTasks} of ${r.totalTasks} tasks remaining`:''}</div></td><td data-label="Requested by">${esc(r.requesterName)}</td><td data-label="Status">${statusPill(r,true)}</td><td data-label="Assigned to">${esc(r.assigneeName || 'Not assigned')}<span class="rowsub">${esc(r.queue)}</span></td><td data-label="Target date">${due(opt(r.dueAt))}${r.breached && !opt(r.dueAt)?'<div class="due-overdue">Response overdue</div>':''}<span class="rowsub">Updated ${ago(r.updatedAt)}</span></td></tr>`).join('') || '<tr><td colspan="5" class="empty"><strong>No requests match this view.</strong><p>Try another filter or search term.</p></td></tr>';
     setStatus('qStatus','','');
+    if (backend.autoAssignmentHealth) {
+      const box=$('assignmentHealth'); box.replaceChildren(); box.classList.add('hidden');
+      void backend.autoAssignmentHealth(session.load()).then(warnings=>{
+        if(stamp!==queueGeneration || me?.id!==person || me.role==='requester')return;
+        box.classList.toggle('hidden',!warnings.length);
+        if(warnings.length) { box.textContent='Automatic assignment needs attention. Some configured owners are no longer available. ';
+          if(me.role==='admin'){const link=document.createElement('a');link.href='#/settings/assignment';link.textContent='Review assignment rules';box.append(link);}else box.append('Ask a Desk administrator to review assignment rules.'); }
+      }).catch(()=>{ if(stamp!==queueGeneration || me?.id!==person || me.role==='requester')return;box.textContent='Automatic assignment status could not be checked. Refresh the queue to try again.';box.classList.remove('hidden'); });
+    }
     if (backend.lifecycleHealth) {
       void backend.lifecycleHealth(session.load()).then(value => {
         if(stamp !== queueGeneration || me?.id !== person || me.role === 'requester') return;
@@ -367,6 +380,7 @@ const ticketView = createTicketView({profilePictures,$, getBackend:()=>backend, 
 function showSettings(tab) {
   document.querySelectorAll(".stab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".spane").forEach((p) => p.classList.toggle("active", p.id === "sp-" + tab));
+  if (tab === "assignment") return assignment.show();
   if (tab === "general") loadGeneral();
   if (tab === "catalog") loadCatalogAdmin();
   if (tab === "ai") loadAi();

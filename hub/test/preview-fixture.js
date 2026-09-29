@@ -41,7 +41,7 @@ window.__previewUpdateService={recipes:async()=>releaseSamples,checkForUpdates:a
 
 // Operations sample sources; only this local fixture supplies these numbers.
 const operationsSamples={
- desk:{active:18,unassigned:3,breached:2,departureReview:1,offboarding:2,lifecycleUnverified:0},
+ desk:{active:18,unassigned:3,breached:2,departureReview:1,offboarding:2,lifecycleUnverified:0,workProjects:3,workOpen:12,workWaiting:2,workOverdue:1,workUnowned:1,workSteps:9,workStepsDone:6},
  trust:{total:120,passing:104,attention:5,unverified:11,assessed:109,score:96},
  assets:{total:186,stock:14,assigned:154,handover:5,preparing:2,sales:3},
  contracts:{total:42,due:3,overdue:1,unknown:2,unowned:1},
@@ -55,13 +55,14 @@ const displayKey='ks-preview-displays';
 const readDisplays=()=>JSON.parse(localStorage.getItem(displayKey)||'{"pending":{},"grants":{},"next":0}');
 const writeDisplays=v=>localStorage.setItem(displayKey,JSON.stringify(v));
 const digest=async s=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),b=>b.toString(16).padStart(2,'0')).join('');
-const displaySource=cid=>({cid:BigInt(cid),app:Object.keys(operationsSamples)[Number(cid)-1]});
-api.operationsDisplayAdmin=async()=>({canManage:true,displays:Object.values(readDisplays().grants).map(g=>({...g,id:BigInt(g.id),createdAt:BigInt(g.createdAt),expiresAt:BigInt(g.expiresAt),active:BigInt(g.expiresAt)>now(),sources:g.cids.map(displaySource)}))});
+const displaySource=(cid,workboard=false)=>({cid:BigInt(cid),app:workboard&&Number(cid)===1?'desk-workboard':Object.keys(operationsSamples)[Number(cid)-1]});
+api.operationsDisplayAdmin=async()=>({canManage:true,displays:Object.values(readDisplays().grants).map(g=>({...g,id:BigInt(g.id),createdAt:BigInt(g.createdAt),expiresAt:BigInt(g.expiresAt),active:BigInt(g.expiresAt)>now(),sources:g.cids.map(cid=>displaySource(cid,g.workboard))}))});
 api.operationsDisplayPair=async(code,keyHash)=>{const data=readDisplays(),expiresAt=now()+600000000000n;data.pending[code]={keyHash,expiresAt:String(expiresAt)};writeDisplays(data);return {ok:expiresAt};};
 api.operationsDisplayApprove=async(code,name,cids,days)=>{const d=readDisplays(),p=d.pending[code];if(!p||BigInt(p.expiresAt)<=now())return {missing:null};const id=++d.next;d.grants[p.keyHash]={id,name,cids:cids.map(String),createdAt:String(now()),expiresAt:String(now()+days*86400000000000n)};delete d.pending[code];writeDisplays(d);return {ok:BigInt(id)};};
+api.operationsDisplayApproveWithWorkboard=async(code,name,cids,days,workboard)=>{const result=await api.operationsDisplayApprove(code,name,cids,days);if('ok' in result){const data=readDisplays();Object.values(data.grants).find(g=>BigInt(g.id)===result.ok).workboard=workboard;writeDisplays(data);}return result;};
 api.operationsDisplayRevoke=async id=>{const d=readDisplays();for(const[k,g]of Object.entries(d.grants))if(BigInt(g.id)===id)delete d.grants[k];writeDisplays(d);return true;};
-api.operationsDisplayState=async secret=>{const hash=await digest(secret),d=readDisplays(),g=d.grants[hash];if(g&&BigInt(g.expiresAt)>now())return {ready:{id:BigInt(g.id),name:g.name,expiresAt:BigInt(g.expiresAt),checkedAt:now(),sources:g.cids.map(displaySource)}};const p=Object.values(d.pending).find(p=>p.keyHash===hash&&BigInt(p.expiresAt)>now());return p?{pending:BigInt(p.expiresAt)}:{ended:null};};
-api.operationsDisplaySnapshot=async(secret,cid)=>{const state=await api.operationsDisplayState(secret);if(!state.ready?.sources.some(s=>s.cid===cid))return {schema:1n,state:{denied:null},checkedAt:now(),metrics:[]};const data=await api.operationsSnapshot(cid);return {...data,metrics:data.metrics.filter(([k])=>!['departureReview','offboarding','lifecycleUnverified','handover','sales'].includes(k))};};
+api.operationsDisplayState=async secret=>{const hash=await digest(secret),d=readDisplays(),g=d.grants[hash];if(g&&BigInt(g.expiresAt)>now())return {ready:{id:BigInt(g.id),name:g.name,expiresAt:BigInt(g.expiresAt),checkedAt:now(),sources:g.cids.map(cid=>displaySource(cid,g.workboard))}};const p=Object.values(d.pending).find(p=>p.keyHash===hash&&BigInt(p.expiresAt)>now());return p?{pending:BigInt(p.expiresAt)}:{ended:null};};
+api.operationsDisplaySnapshot=async(secret,cid)=>{const state=await api.operationsDisplayState(secret);if(!state.ready?.sources.some(s=>s.cid===cid))return {schema:1n,state:{denied:null},checkedAt:now(),metrics:[]};const data=await api.operationsSnapshot(cid);return {...data,metrics:data.metrics.filter(([k])=>!['departureReview','offboarding','lifecycleUnverified','handover','sales'].includes(k)&&(!k.startsWith('work')||state.ready.sources.find(s=>s.cid===cid)?.app==='desk-workboard'))};};
 api.operationsDisplayForget=async secret=>{const hash=await digest(secret),d=readDisplays();delete d.grants[hash];for(const[k,p]of Object.entries(d.pending))if(p.keyHash===hash)delete d.pending[k];writeDisplays(d);};
 
 // Unsupported edits are refused in this sample preview; no backend actor is created.

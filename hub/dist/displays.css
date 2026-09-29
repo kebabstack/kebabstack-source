@@ -32,3 +32,5 @@ html[data-surface="display"] body{background:#12251e}
 @media(min-width:1200px) and (max-width:1599px){#tv{height:auto;min-height:100vh}}
 #layout #screens form label{margin:0}#screens fieldset{min-width:0}
 @media(min-width:1300px){#screens fieldset{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px}#screens fieldset legend{grid-column:1/-1}#screens .screen-scope{align-items:flex-start}#screens .screen-scope input{margin-top:3px}}
+
+@media(min-width:1600px) and (min-height:700px){#tv .tv-grid[data-count="7"]{grid-template-columns:repeat(6,minmax(0,1fr))}#tv .tv-grid[data-count="7"] .tv-focus{grid-template-columns:1.2fr repeat(6,1fr)}}

@@ -137,3 +137,23 @@ vendor-specific integration is claimed. See [ONCALL.md](ONCALL.md#connect-monito
 ## IT Workboard (0.25.0, alpha)
 
 Desk → Workboard combines own project tasks, internal requests and optional Assets sales. Projects use personal or existing Hub-group audiences; source access remains separately enforced. See [the operator and decision guide](../docs/WORKBOARD.md).
+
+## Automatic assignment and subtasks (0.26.0)
+
+In **Settings → Assignment**, an administrator chooses the default owner for new
+internal tickets. Optional exceptions choose a different person per request type
+or explicitly keep that type unassigned. Only active Desk agents/admins from Hub
+are eligible. Portal, agent, Slack and newly created directory reviews use this
+same rule; existing tickets and customer-project workflows are unchanged. An
+unavailable override uses the valid default, otherwise the ticket stays unassigned.
+The queue warns staff about unavailable configured owners; the ticket activity
+explains the decision. Review the rules after a team change. No round-robin,
+workload balancing or automatic reassignment of existing tickets is implied.
+
+Workboard tasks support up to 50 simple title/checkbox subtasks. Progress appears
+on the card. Save records the task and checklist together; unfinished subtasks
+block Done. Reopen the parent before adding unfinished work to a completed task.
+Subtasks share the parent's audience, owner and archive lifecycle. They do not
+create separate tickets, notification streams or nested task trees.
+
+Hub 0.37 Operations shows shared Workboard project totals and subtask progress; paired TV screens require explicit Workboard inclusion. See [the Operations scope](../docs/HUB-OPERATIONS.md).

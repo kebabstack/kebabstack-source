@@ -1,7 +1,7 @@
 /* Operations screens: a separate aggregate capability, never a Hub login. */
 (() => {
   const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const names={desk:'Desk',trust:'Trust',assets:'Assets',contracts:'Contracts',watch:'Watch'};
+  const names={'desk-workboard':'Desk + Workboard',workboard:'Workboard',desk:'Desk',trust:'Trust',assets:'Assets',contracts:'Contracts',watch:'Watch'};
   const descriptions={desk:'Internal ticket counts and service targets',trust:'Fleet scores and reporting coverage',assets:'Inventory, stock and preparation',contracts:'Decision dates and ownership coverage',watch:'Domain alerts and monitoring coverage'};
   const ns=n=>Number(n/1000000n), date=n=>new Date(ns(n)).toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
   const number=n=>n>=100000?new Intl.NumberFormat(undefined,{notation:'compact',maximumFractionDigits:1}).format(n):n.toLocaleString();
@@ -20,7 +20,7 @@
         const sources=(await getAPI().operationsSources()).filter(s=>names[s.app]);if(!active||run!==epoch)return;
         root.innerHTML=`<a href="#/operations" class="screen-back">← Operations</a><header class="ops-heading"><div><div class="ops-eyebrow">SHARED SCREENS</div><h2>The big picture. Safely shared.</h2><p class="lead">Choose what a screen can show, and for how long.</p></div><a class="screen-button" href="${esc(tvURL())}" target="_blank" rel="noopener noreferrer">Open TV view ↗</a></header>
         <div class="screen-setup"><div><h3>Pair a screen</h3><ol><li>Open <strong>${esc(tvURL())}</strong> on the TV.</li><li>Enter the code shown on that screen.</li><li>Choose the areas safe to share in this room.</li></ol><p class="screen-note">A screen gets a separate read-only key, never your Hub session. Names, ticket text, device serials, departures and employee sales stay off the TV. Small counts can still be sensitive.</p></div>
-        <form data-pair><label>Screen code<input name="code" autocomplete="off" spellcheck="false" placeholder="ABCDE · 12345" required maxlength="13"></label><label>Screen name<input name="screenName" placeholder="IT team room" required maxlength="60"></label><fieldset><legend>Show these areas</legend>${sources.map(s=>`<label class="screen-scope"><input type="checkbox" name="scope" value="${s.cid}"><span><strong>${names[s.app]}</strong><small>${descriptions[s.app]}</small></span></label>`).join('')||'<p>No supported sources. Connect your apps first.</p>'}</fieldset><label>Allow access for<select name="days"><option value="1">1 day</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label><button type="submit" ${sources.length?'':'disabled'}>Approve this screen</button><p data-message role="status"></p></form></div>
+        <form data-pair><label>Screen code<input name="code" autocomplete="off" spellcheck="false" placeholder="ABCDE · 12345" required maxlength="13"></label><label>Screen name<input name="screenName" placeholder="IT team room" required maxlength="60"></label><fieldset><legend>Show these areas</legend>${sources.map(s=>`<label class="screen-scope"><input type="checkbox" name="scope" value="${s.cid}"><span><strong>${names[s.app]}</strong><small>${descriptions[s.app]}</small></span></label>`).join('')||'<p>No supported sources. Connect your apps first.</p>'}${sources.some(s=>s.app==='desk')?'<label class="screen-scope"><input type="checkbox" name="workboard"><span><strong>Include Workboard with Desk</strong><small>Shared project totals only. Personal tasks stay private.</small></span></label>':''}</fieldset><label>Allow access for<select name="days"><option value="1">1 day</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label><button type="submit" ${sources.length?'':'disabled'}>Approve this screen</button><p data-message role="status"></p></form></div>
         <section class="screen-list"><div class="ops-section-heading"><h3>Approved screens</h3><button data-reload type="button">Refresh</button></div><p class="screen-note">Revocation blocks new reads immediately. An online screen checks access every 15 seconds and clears its display within 30 seconds without confirmation. Expired screens must be paired again.</p>${admin.displays.length?admin.displays.map(d=>`<article><div><strong>${esc(d.name)}</strong><p>${d.sources.map(s=>names[s.app]||'Unavailable source').join(' · ')}</p><small>${d.active?'Expires':'Inactive · expiry'} ${date(d.expiresAt)}</small></div><button type="button" data-revoke="${d.id}">${d.active?'Revoke':'Remove'}</button></article>`).join(''):'<div class="screen-empty">No screens approved yet.</div>'}</section>`;
         $('[data-reload]').onclick=load;
         $('[data-pair]').onsubmit=async e=>{
@@ -28,9 +28,11 @@
           const code=form.elements.code.value.replace(/[\s·-]/g,'').toLowerCase(),label=form.elements.screenName.value.trim();
           const cids=Array.from(form.querySelectorAll('[name=scope]:checked'),x=>BigInt(x.value));
           if(!/^[0-9a-f]{10}$/.test(code)||!label||!cids.length){message.textContent='Enter the code from the TV, a name and at least one area.';return;}
+          const workboard=Boolean(form.elements.workboard?.checked);
+          if(workboard&&!sources.some(s=>s.app==='desk'&&cids.includes(s.cid))){message.textContent='Select Desk to include its Workboard.';return;}
           button.disabled=true;message.textContent='Approving this screen…';
           try{
-            const result=await getAPI().operationsDisplayApprove(code,label,cids,BigInt(form.elements.days.value));if(!active||epoch!==run)return;
+            const result=workboard?await getAPI().operationsDisplayApproveWithWorkboard(code,label,cids,BigInt(form.elements.days.value),true):await getAPI().operationsDisplayApprove(code,label,cids,BigInt(form.elements.days.value));if(!active||epoch!==run)return;
             if('ok' in result){await load();$('[data-message]').textContent='Screen approved. It will connect automatically.';}
             else message.textContent=({denied:'Your Owner access or source permissions changed. Refresh this page.',missing:'This code expired or was already used. Generate a new code on the TV.',limit:'Remove an unused screen before pairing another.',invalid:'Check the code, name and selected areas.'})[Object.keys(result)[0]]||'Approval was not completed. Refresh to check the screen list.';
           }catch{if(active&&epoch===run)message.textContent='Could not confirm approval. Refresh the screen list before trying again.';}
@@ -46,6 +48,7 @@
     return {load,stop(){active=false;epoch++;root.replaceChildren();}};
   }
   const expected={desk:['active','unassigned','breached'],trust:['total','passing','attention','unverified','assessed','score'],assets:['total','stock','assigned','preparing'],contracts:['total','due','overdue','unknown','unowned'],watch:['enabled','alerts','warnings','stale','expiring','unknown','expiryDays']};
+  expected['desk-workboard']=[...expected.desk,'workProjects','workOpen','workWaiting','workOverdue','workUnowned','workSteps','workStepsDone'];
   function parsed(app,result,now){
     if(result?.schema!==1n||!result.state||!('ready' in result.state))return null;
     const at=ns(result.checkedAt);if(!Number.isFinite(at)||at>now+5000||now-at>90000)return null;
@@ -56,6 +59,7 @@
   function summary(app,m){
     switch(app){
       case 'desk':return {value:m.active,unit:'open requests',detail:'Internal support',rows:[[m.breached,'past their service target'],[m.unassigned,'without an agent']],flag:m.breached+m.unassigned,focus:'requests need an owner or response'};
+      case 'workboard':return {value:m.workOpen,unit:'open project tasks',detail:`${m.workProjects} shared projects · own tasks only`,rows:[[m.workOverdue,'past their target date'],[m.workWaiting,'waiting on something'],[m.workUnowned,'without an available owner']],flag:m.workOverdue+m.workWaiting+m.workUnowned,focus:'review project dates, blockers and ownership',note:`${m.workStepsDone} of ${m.workSteps} subtasks complete · dates use UTC`};
       case 'trust':return {value:m.assessed?m.score:'—',unit:'verified device score',detail:`${m.assessed} of ${m.total} devices fully assessed`,rows:[[m.attention,'with failing checks'],[m.unverified,'not fully verified']],flag:m.attention+m.unverified,focus:'check failures and missing evidence',bar:m.total?m.assessed/m.total:0};
       case 'assets':return {value:m.stock,unit:'devices ready in stock',detail:`${m.total} registered · ${m.assigned} assigned`,rows:[[m.preparing,'received, still being prepared']],flag:m.preparing,focus:'hardware needs preparation'};
       case 'contracts':return {value:m.due,unit:'decisions in the next 30 days',detail:`${m.total} active or cancelling contracts`,rows:[[m.overdue,'decision dates passed'],[m.unowned,'without an active owner'],[m.unknown,'decision dates unknown']],flag:m.overdue+m.unowned+m.unknown,focus:'review decisions and ownership'};
@@ -103,13 +107,14 @@
       if(!state||closed||document.hidden)return;
       $('[data-title]').textContent=state.name;$('[data-expiry]').textContent='Access ends '+date(state.expiresAt);
       const checked=entries.filter(e=>e.data).length;
-      const items=entries.map(e=>{
+      const views=entries.flatMap(e=>e.app==='desk-workboard'?[{...e,app:'desk'},{...e,app:'workboard'}]:[e]);
+      const items=views.map(e=>{
         const head=`<span class="tv-kicker">${names[e.app]}</span>`;
         if(!e.data)return `<article class="tv-card tv-unverified">${head}<strong class="tv-number">—</strong><h2>${e.waiting?'Checking source':'Source unverified'}</h2><p>${e.waiting?'Reading current totals…':'No current totals. Check this app in Hub.'}</p></article>`;
         const p=summary(e.app,e.data.m),n=typeof p.value==='number'?number(p.value):p.value;
         return `<article class="tv-card">${head}<strong class="tv-number">${n}</strong><h2>${p.unit}</h2><p>${p.detail}</p>${p.bar===undefined?'':`<div class="tv-bar" aria-label="Assessment coverage ${Math.round(p.bar*100)}%"><span style="width:${Math.max(0,Math.min(100,p.bar*100))}%"></span></div>`}<div class="tv-rows">${p.rows.map(([n,t])=>`<div><strong class="${n?'tv-flag':''}">${number(n)}</strong><span>${t}</span></div>`).join('')}</div>${p.note?`<small>${p.note}</small>`:''}<time class="tv-checked">Checked ${new Date(e.data.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time></article>`;
       });
-      const focus=entries.filter(e=>e.data&&summary(e.app,e.data.m).flag>0);
+      const focus=views.filter(e=>e.data&&summary(e.app,e.data.m).flag>0);
       items.push(`<article class="tv-card tv-focus"><span class="tv-kicker">THE NEXT CONVERSATION</span><h2>Where to focus</h2>${focus.length?focus.map(e=>`<div class="tv-signal"><strong>${names[e.app]}</strong><span>${summary(e.app,e.data.m).focus}</span></div>`).join(''):`<p>${checked===entries.length?'No follow-up flags in the approved sources.':'Check source coverage before drawing conclusions.'}</p>`}<small>Current snapshots · overlapping counts are not added up</small></article>`);
       const html=`<div class="tv-grid" data-count="${items.length}">${items.join('')}</div>`;
       if(html!==lastHTML){lastHTML=html;$('[data-stage]').innerHTML=html;}

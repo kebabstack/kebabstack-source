@@ -37,3 +37,6 @@
 #operations .ops-card:last-child .ops-counts{grid-template-columns:1fr}
 @media(max-width:1200px){#operations.active{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){#operations.active{grid-template-columns:1fr}}
+
+#operations .ops-next{grid-column:1/-1}
+#operations .ops-work{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 24px}

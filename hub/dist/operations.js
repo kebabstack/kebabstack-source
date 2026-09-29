@@ -2,12 +2,13 @@
 (() => {
   'use strict';
   const APPS = {
-    desk: {name:'Desk', category:'INTERNAL SUPPORT', path:'#/queue', icon:'M3 8V4h18v4a4 4 0 0 0 0 8v4H3v-4a4 4 0 0 0 0-8m11-4v3m0 4v2m0 4v3', keys:['active','unassigned','breached','departureReview','offboarding','lifecycleUnverified']},
+    desk: {name:'Desk', category:'INTERNAL SUPPORT', path:'#/queue', icon:'M3 8V4h18v4a4 4 0 0 0 0 8v4H3v-4a4 4 0 0 0 0-8m11-4v3m0 4v2m0 4v3', keys:['active','unassigned','breached','departureReview','offboarding','lifecycleUnverified','workProjects','workOpen','workWaiting','workOverdue','workUnowned','workSteps','workStepsDone']},
     trust: {name:'Trust', category:'DEVICE HEALTH', path:'#/devices', icon:'m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Zm-4 9 3 3 5-6', keys:['total','passing','attention','unverified','assessed','score']},
     assets: {name:'Assets', category:'HARDWARE', path:'#/devices', icon:'M4 4h16v12H4zM2 20h20M8 16l-1 4m9-4 1 4', keys:['total','stock','assigned','handover','preparing','sales']},
     contracts: {name:'Contracts', category:'RENEWALS & OWNERSHIP', path:'', icon:'M14 2H4v20h16V8l-6-6Zm0 0v6h6M8 13h8m-8 4h5', keys:['total','due','overdue','unknown','unowned']},
     watch: {name:'Watch', category:'DOMAIN MONITORING', path:'#/overview', icon:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z', keys:['enabled','alerts','warnings','stale','expiring','unknown','expiryDays']}
   };
+  APPS.workboard={...APPS.desk,name:'Workboard',category:'SHARED IT PROJECTS',path:'#/workboard/projects'};
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = n => n.toLocaleString('en');
   function link(source, path) {
@@ -33,6 +34,10 @@
         [m.departureReview,'Review account changes','Confirm departure or pause offboarding.'],
         [m.unassigned,'Assign an agent','Give incoming work a clear owner.'],
         [m.lifecycleUnverified,'Check directory follow-up','Desk has not verified recent directory changes.'] ]};
+      case 'workboard': return {value:m.workOpen, unit:'open project tasks', context:`${number(m.workProjects)} shared projects · own tasks only`, rows:[[m.workOverdue,'past their target date'],[m.workWaiting,'waiting on something'],[m.workUnowned,'without an available owner']], note:`${number(m.workStepsDone)} of ${number(m.workSteps)} subtasks complete on open tasks · dates use UTC`, work:[
+        [m.workOverdue,'Review project target dates','Open Workboard projects to review outstanding tasks.'],
+        [m.workUnowned,'Give project tasks an owner','Review unassigned tasks and unavailable owners.'],
+        [m.workWaiting,'Unblock waiting project work','Check the recorded waiting reasons.'] ]};
       case 'trust': return {value:m.assessed ? m.score : '—', unit:'average verified score', context:`${number(m.assessed)} of ${number(m.total)} real devices fully assessed`, rows:[[m.attention,'with failing checks'],[m.unverified,'not fully verified']], note:'Samples excluded · evidence must be current within 24h', bar:m.total ? m.assessed/m.total : null, barLabel:'Full assessment coverage', work:[
         [m.attention,'Investigate failing checks','Open Trust for evidence and the next step.'],
         [m.unverified,'Restore device reporting','Check stale, missing or failed assessments.'] ]};
@@ -61,19 +66,20 @@
       <div class="ops-coverage"><span class="ops-dot" aria-hidden="true"></span><span data-coverage role="status">Checking your connected apps…</span><span class="ops-cadence">Refreshes every minute</span></div>
       <div data-error role="status"></div><div class="ops-grid" data-grid></div>
       <section class="ops-next"><div class="ops-section-heading"><h3>Where to focus</h3><span>Continue in the app that owns the work</span></div><div data-work class="ops-work"></div></section>
-      <details class="ops-explain"><summary>What these numbers cover</summary><p>Only connected apps where you have Admin access in Hub appear here. Each app calculates its own current totals; records and personal details stay in that app. Changes to your access are checked again on every refresh.</p><p>These are current snapshots, not historical trends. An unavailable app is never counted as healthy. Trust scores cover fully assessed real devices; coverage is shown separately. In-stock hardware excludes open handovers. Contract dates come from recorded terms, not a vendor billing system.</p></details>`;
+      <details class="ops-explain"><summary>What these numbers cover</summary><p>Only connected apps where you have Admin access in Hub appear here. Each app calculates its own current totals; records and personal details stay in that app. Changes to your access are checked again on every refresh.</p><p>These are current snapshots, not historical trends. An unavailable app is never counted as healthy. Trust scores cover fully assessed real devices; coverage is shown separately. In-stock hardware excludes open handovers. Contract dates come from recorded terms, not a vendor billing system. Workboard includes open own tasks in unarchived shared projects; personal work, completed tasks and linked tickets/sales are excluded. Subtask progress covers those open tasks. Target dates become overdue on the following UTC day.</p></details>`;
     const $=s=>root.querySelector(s);
     $('[data-refresh]').onclick=()=>refresh();
     function clearTimer(){clearTimeout(timer);clearInterval(ageTimer);}
     function paint() {
       if(!active) return;
       const ready=entries.filter(e=>e.data.state==='ready');
+      const views=entries.flatMap(e=>e.source.app==='desk'?[e,{...e,source:{...e.source,app:'workboard',name:'Workboard'}}]:[e]);
       $('[data-coverage]').textContent=entries.length ? `${ready.length} of ${entries.length} connected sources checked${busy?' · refreshing…':''}` : busy ? 'Checking your connected apps…' : 'No Operations sources available';
       $('[data-refresh]').disabled=busy;
       root.dataset.complete=String(entries.length>0 && ready.length===entries.length);
-      $('[data-grid]').innerHTML=entries.map(e=>card(e)).join('');
+      $('[data-grid]').innerHTML=views.map(e=>card(e)).join('');
       const actions=[];
-      for(const e of ready) {
+      for(const e of views.filter(e=>e.data.state==='ready')) {
         const first=presentation(e.source.app,e.data.values).work.find(([count])=>count>0);
         if(first) { const [count,title,detail,path]=first; actions.push({e,count,title,detail,path}); }
       }
@@ -89,10 +95,10 @@
       if(data.state!=='ready') {
         const messages={loading:['Checking source…','Confirming access and reading its current totals.'],denied:['Access needs checking','Your role changed or the app directory is not current. Check Hub Permissions.'],unavailable:['Source unavailable','The app may need an update, or could not respond. Check Apps → Updates and retry.'],stale:['Snapshot expired','Refresh to check this source again. Old values are hidden.']};
         const [title,detail]=messages[data.state]||messages.unavailable;
-        return `<article class="ops-card ops-unavailable" data-source="${source.cid}">${head}<div class="ops-metric"><strong>—</strong><span>${title}</span></div><p class="ops-context">${detail}</p><div class="ops-card-footer">${data.state==='loading'?'Waiting for this app':'No current totals'}</div></article>`;
+        return `<article class="ops-card ops-unavailable" data-source="${source.cid}" data-area="${source.app}">${head}<div class="ops-metric"><strong>—</strong><span>${title}</span></div><p class="ops-context">${detail}</p><div class="ops-card-footer">${data.state==='loading'?'Waiting for this app':'No current totals'}</div></article>`;
       }
       const p=presentation(source.app,data.values);
-      return `<article class="ops-card" data-source="${source.cid}">${head}<div class="ops-metric"><strong>${typeof p.value==='number'?number(p.value):p.value}</strong><span>${p.unit}</span></div><p class="ops-context">${p.context}</p>${p.bar==null?'':`<div class="ops-bar" role="img" aria-label="${p.barLabel}: ${Math.round(p.bar*100)}%"><span style="width:${Math.max(0,Math.min(100,p.bar*100))}%"></span></div>`}<div class="ops-counts">${p.rows.map(([n,text])=>`<div><strong class="${n>0?'ops-flag':''}">${number(n)}</strong><span>${text}</span></div>`).join('')}</div><p class="ops-note">${p.note}</p><div class="ops-card-footer"><span>Current snapshot</span><time datetime="${new Date(data.at).toISOString()}">${new Date(data.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time></div></article>`;
+      return `<article class="ops-card" data-source="${source.cid}" data-area="${source.app}">${head}<div class="ops-metric"><strong>${typeof p.value==='number'?number(p.value):p.value}</strong><span>${p.unit}</span></div><p class="ops-context">${p.context}</p>${p.bar==null?'':`<div class="ops-bar" role="img" aria-label="${p.barLabel}: ${Math.round(p.bar*100)}%"><span style="width:${Math.max(0,Math.min(100,p.bar*100))}%"></span></div>`}<div class="ops-counts">${p.rows.map(([n,text])=>`<div><strong class="${n>0?'ops-flag':''}">${number(n)}</strong><span>${text}</span></div>`).join('')}</div><p class="ops-note">${p.note}</p><div class="ops-card-footer"><span>Current snapshot</span><time datetime="${new Date(data.at).toISOString()}">${new Date(data.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time></div></article>`;
     }
     async function refresh() {
       if(!active || busy || document.hidden) return;

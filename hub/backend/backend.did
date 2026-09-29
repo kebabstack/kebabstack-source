@@ -1370,6 +1370,8 @@ service : {
     }) query;
   operationsDisplayApprove: (code: text, name: text, cids: vec nat, days:
    nat) -> (Approval);
+  operationsDisplayApproveWithWorkboard: (code: text, name: text, cids:
+   vec nat, days: nat, workboard: bool) -> (Approval);
   operationsDisplayForget: (secret: text) -> ();
   operationsDisplayPair: (code: text, keyHash: text) -> (PairResult);
   operationsDisplayRevoke: (id: nat) -> (bool);

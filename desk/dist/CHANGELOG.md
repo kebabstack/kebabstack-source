@@ -1,5 +1,13 @@
 # Changelog — kebab-stack desk
 
+## [0.26.0] — 2026-09-29
+
+- Add Settings → Assignment: a default owner for new internal requests and optional request type exceptions, including deliberately unassigned types. Only current Hub-authorized Desk staff can be selected; configuration is administrator-only.
+- Apply the same rule to portal, agent, Slack and directory follow-up intake. Keep existing/manual assignments and customer-project routing intact. An unavailable override falls back to the active default, otherwise the request stays unassigned; show configuration warnings and ticket activity.
+- Add up to 50 simple subtasks to each Workboard task, with progress on the board. Save task and subtasks together, reject stale edits and prevent completion with unfinished subtasks. Archive/restore preserves subtasks. Linked tickets and sales retain their original workflows.
+
+- Provide aggregate shared-project task and subtask totals to Hub Operations (Hub 0.37). Exclude private work, archived projects/tasks, completed tasks and linked source records; target dates use UTC.
+
 ## [0.25.0] — 2026-09-29
 
 - Add Workboard for personal and Hub-group IT projects, own tasks, linked internal tickets and optional hardware sales. Four clear stages, accountable owners, target dates and a required waiting reason keep the next step visible.

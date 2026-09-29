@@ -13,6 +13,7 @@ import Time "mo:core/Time";
 // New durable state lives only in the host, passed by reference here.
 mixin (
   state : T.State,
+  subtasks : Map.Map<Nat, [T.Subtask]>,
   authenticate : Text -> ?T.Actor,
   access : (T.Actor, T.Project) -> Bool,
   groups : T.Actor -> [Text],
@@ -51,7 +52,7 @@ mixin (
     switch (t.projectId) { case null [{ id = t.createdBy; name = name(t.createdBy) }]; case (?id) { let p = wbProjectFor(a, id) ?? (return []); roster(p) } }
   };
   func wbTaskView(a : T.Actor, t : T.Task) : T.TaskView = {
-    t with assigneeName = if (t.assignee == "") "" else name(t.assignee);
+    t with subtaskCount = (subtasks.get(t.id) ?? []).size(); subtasksDone = (subtasks.get(t.id) ?? []).filter(func s = s.done).size(); assigneeName = if (t.assignee == "") "" else name(t.assignee);
     assigneeAvailable = t.assignee == "" or wbPersonEligible(a, t, t.createdBy);
     projectName = switch (t.projectId) { case null "Personal tasks"; case (?id) switch (state.projects.get(id)) { case (?p) p.name; case null "Unavailable project" } };
   };
@@ -130,31 +131,59 @@ mixin (
       (f.completed or t.column != #done) and L.matches(t.title, f.search)).sort(L.taskOrder);
     ?{ rows = L.slice(rows, f.offset).map(func t = wbTaskView(a, t)); total = rows.size(); checkedAt = Time.now() }
   };
-  public query func workboardTask(tok : Text, id : Nat) : async ?{ task : T.TaskView; people : [T.Person]; history : [T.Audit]; readOnly : Bool } {
+  public query func workboardTask(tok : Text, id : Nat) : async ?{ task : T.TaskView; subtasks : [T.Subtask]; people : [T.Person]; history : [T.Audit]; readOnly : Bool } {
     let a = authenticate(tok) ?? (return null);
     let t = state.tasks.get(id) ?? (return null);
     if (not wbTaskAccess(a, t)) return null;
-    ?{ task = wbTaskView(a, t); people = wbTaskPeople(a, t); history = wbHistory("t:" # id.toText()); readOnly = not wbActive(t.projectId) }
+    ?{ task = wbTaskView(a, t); subtasks = subtasks.get(id) ?? []; people = wbTaskPeople(a, t); history = wbHistory("t:" # id.toText()); readOnly = not wbActive(t.projectId) }
   };
   public func saveWorkTask(tok : Text, id : Nat, revision : Nat, key : Text, input : T.TaskInput) : async T.Result {
+    wbSaveTask(tok, id, revision, key, input, null)
+  };
+  public func saveWorkTaskWithSubtasks(tok : Text, id : Nat, revision : Nat, key : Text, input : T.TaskInput, items : [T.Subtask]) : async T.Result {
+    wbSaveTask(tok, id, revision, key, input, ?items)
+  };
+  func wbSubtaskError(items : [T.Subtask], old : [T.Subtask], input : T.TaskInput) : ?Text {
+    if (items.size() > 50) return ?"Use at most 50 subtasks per task";
+    var seen : [Nat] = [];
+    for (item in items.values()) {
+      if (L.trim(item.title) == "" or item.title.size() > 180) return ?"Give every subtask a title of 1–180 characters";
+      if (item.id != 0) {
+        if (seen.contains(item.id) or not old.any(func row = row.id == item.id)) return ?"Subtasks changed. Reopen this task before saving.";
+        seen := seen.concat([item.id]);
+      };
+    };
+    if (input.column == #done and items.any(func item = not item.done)) return ?"Complete the remaining subtasks before marking this task done";
+    null
+  };
+  func wbSaveSubtasks(id : Nat, revision : Nat, items : [T.Subtask]) {
+    // At most 50 children: each parent revision reserves 100 IDs, never reusing a removed ID.
+    var i = 0;
+    subtasks.add(id, items.map(func row { i += 1; { row with id = if (row.id == 0) revision * 100 + i else row.id; title = L.trim(row.title) } }))
+  };
+  func wbSaveTask(tok : Text, id : Nat, revision : Nat, key : Text, input : T.TaskInput, children : ?[T.Subtask]) : T.Result {
     let a = authenticate(tok) ?? (return #err(#denied));
     switch (L.taskError(input)) { case (?e) return #err(#invalid(e)); case null {} };
     if (not wbScopeFor(a, input.projectId)) return #err(#denied);
     if (not wbActive(input.projectId)) return #err(#invalid("Restore the project before changing its tasks"));
+    let encoded = switch (children) { case null to_candid(input); case (?items) to_candid(input, items) };
     if (id == 0) {
       if (not L.validKey(key)) return #err(#invalid("Invalid request identifier"));
       let k = a.id # ":task:" # key;
       switch (state.requests.get(k)) { case (?r) {
-        if (r.input != to_candid(input)) return #err(#stale);
+        if (r.input != encoded) return #err(#stale);
         let t = state.tasks.get(r.id) ?? (return #err(#missing));
         if (not wbTaskAccess(a, t)) return #err(#denied);
         return #ok({ id = t.id; revision = t.revision })
       }; case null {} };
+      let items = children ?? [];
+      switch (wbSubtaskError(items, [], input)) { case (?e) return #err(#invalid(e)); case null {} };
       if (not wbPersonEligible(a, input, a.id)) return #err(#invalid("Choose an active Desk colleague in this project's audience"));
       if (state.tasks.size() >= L.maxTasks) return #err(#limit("Maximum 5,000 tasks"));
       let id = state.nextTask; state.nextTask += 1;
       state.tasks.add(id, { input with id; revision = 1; createdBy = a.id; createdAt = Time.now(); updatedAt = Time.now(); archived = false });
-      state.requests.add(k, { id; input = to_candid(input) }); L.record(state, "t:" # id.toText(), a.id, "Task created");
+      wbSaveSubtasks(id, 1, items);
+      state.requests.add(k, { id; input = encoded }); L.record(state, "t:" # id.toText(), a.id, "Task created");
       #ok({ id; revision = 1 })
     } else {
       let t = state.tasks.get(id) ?? (return #err(#missing));
@@ -163,8 +192,14 @@ mixin (
       if (input.projectId != t.projectId) return #err(#invalid("A task keeps its original project and audience"));
       if (t.archived) return #err(#invalid("Restore the task before editing"));
       if (not wbPersonEligible(a, input, t.createdBy)) return #err(#invalid("Choose an active Desk colleague in this project's audience"));
+      let oldItems = subtasks.get(id) ?? [];
+      let items = children ?? oldItems;
+      switch (wbSubtaskError(items, oldItems, input)) { case (?e) return #err(#invalid(e)); case null {} };
       let updated : T.Task = { input with id; revision = revision + 1; createdBy = t.createdBy; createdAt = t.createdAt; updatedAt = Time.now(); archived = false };
-      state.tasks.add(id, updated); L.record(state, "t:" # id.toText(), a.id, if (input.column != t.column) "Task state updated" else "Task details updated");
+      state.tasks.add(id, updated);
+      wbSaveSubtasks(id, updated.revision, items);
+      if (items != oldItems) L.record(state, "t:" # id.toText(), a.id, "Subtasks updated · " # items.filter(func row = row.done).size().toText() # " of " # items.size().toText() # " complete");
+      L.record(state, "t:" # id.toText(), a.id, if (input.column != t.column) "Task state updated" else "Task details updated");
       #ok({ id; revision = updated.revision })
     }
   };

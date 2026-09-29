@@ -1,5 +1,11 @@
 # Changelog — kebab-stack hub
 
+## [0.37.0] — 2026-09-29
+
+- Show Desk Workboard as its own Operations card: open tasks, waiting work, overdue target dates, unavailable owners and subtask progress in shared projects. Personal/archived/completed work and linked ticket/sale duplicates are excluded; dates use UTC.
+- Allow owners to explicitly include shared Workboard totals when pairing a TV with Desk. Existing TV approvals retain their exact previous scope. Names, task text and personal projects never enter the display projection.
+- Preserve source authorization, expiring snapshots, central roles, Finance and the Lunch directory contract.
+
 ## [0.36.0] — 2026-09-29
 
 - Authorize the Desk Workboard Assets bridge through current Desk staff access and current Assets admin/Finance access. Recheck permissions and connector identity after cross-app reads; unavailable sources never become empty success.

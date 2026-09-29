@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-desk"
-version = "0.25.0"
+version = "0.26.0"
 description = "kebab-stack desk — service management on the skewer (catalog, approvals, SLA, hub-wired)"
 
 [toolchain]

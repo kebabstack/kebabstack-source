@@ -85,6 +85,7 @@
 
     <!-- ===== queue (staff) ===== -->
     <section class="view" id="v-queue">
+      <div id="assignmentHealth" class="card hidden" role="status"></div>
       <div id="directoryFollowupHealth" class="card hidden" role="status"></div>
       <div class="page-heading"><div><span class="eyebrow">INTERNAL SUPPORT</span><h2>Let’s move work forward.</h2><p class="lead">The right context. A clear next step. One request at a time.</p></div><a class="button primary" href="#/agent-new">Create a request <span aria-hidden="true">+</span></a></div>
       <div class="statgrid" id="statGrid"></div>
@@ -166,8 +167,8 @@
     <!-- ===== settings (admin) ===== -->
     <section class="view" id="v-settings">
       <h2>Settings</h2>
-      <p class="lead">Roles, catalog, AI and the hub wiring.</p>
-      <div class="stabs" id="stabs"><button class="stab active" data-tab="general">General</button><button class="stab" data-tab="catalog">Catalog</button><button class="stab" data-tab="ai">AI</button><button class="stab" data-tab="slack">Slack</button><button class="stab" data-tab="log">Log</button></div>
+      <p class="lead">Request types, assignment and connected services.</p>
+      <div class="stabs" id="stabs"><button class="stab active" data-tab="general">General</button><button class="stab" data-tab="catalog">Catalog</button><button class="stab" data-tab="assignment">Assignment</button><button class="stab" data-tab="ai">AI</button><button class="stab" data-tab="slack">Slack</button><button class="stab" data-tab="log">Log</button></div>
 
       <div class="spane active" id="sp-general">
         <div class="card">
@@ -191,6 +192,7 @@
         </div>
       </div>
 
+      <div class="spane" id="sp-assignment"></div>
       <div class="spane" id="sp-catalog">
         <div class="card flat">
           <h3>Request types</h3>

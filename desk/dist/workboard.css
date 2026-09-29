@@ -50,3 +50,18 @@
 .workboard .wb-toolbar .wb-scope{width:160px}
 .workboard .wb-card-foot{margin-top:var(--ks-space-3)}
 @media(max-width:640px){.workboard .wb-toolbar .wb-scope{width:100%}}
+
+.workboard .wb-subtasks h3{font-size:var(--ks-fz-body);margin:0}
+.workboard .wb-subtasks h3 span{font-weight:var(--ks-weight-body);color:var(--ks-fg-secondary);margin-left:var(--ks-space-2)}
+.workboard .wb-subtasks ul{display:grid;gap:var(--ks-space-2);list-style:none;padding:0;margin:var(--ks-space-3) 0}
+.workboard .wb-subtasks li{display:flex;align-items:center;gap:var(--ks-space-2);min-width:0}
+.workboard .wb-subtasks input[type=text]{flex:1;min-width:0;width:0}
+.workboard .wb-subtask-check{min-width:44px;min-height:44px;display:grid;place-items:center;cursor:pointer;margin:0}
+.workboard .wb-subtasks button{flex:none}
+@media(max-width:480px){.workboard .wb-subtasks li{display:grid;grid-template-columns:44px minmax(0,1fr);margin-bottom:var(--ks-space-3)}.workboard .wb-subtasks input[type=text]{width:100%}.workboard .wb-subtasks li button{grid-column:2;justify-self:end}}
+
+.workboard .wb-task-context{font-size:var(--ks-fz-body-sm);color:var(--ks-fg-secondary);margin:0}
+.workboard .wb-task-details summary{min-height:var(--ks-button-height);align-content:center;cursor:pointer;font-size:var(--ks-fz-body-sm)}
+.workboard .wb-task-details .wb-field{margin:var(--ks-space-4) 0}
+.workboard .wb-field label{margin-top:0}
+.workboard .wb-subtasks [data-subtask-blocker]:empty{display:none}
