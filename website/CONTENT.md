@@ -31,7 +31,7 @@ all scenes remain readable in order. Phone remains a labelled planned concept.
 
 | Example / claim | Implementation evidence | Boundary preserved in the example |
 | --- | --- | --- |
-| Hub Operations | `docs/HUB-OPERATIONS.md`, `hub/backend/main.mo` operations snapshots, `tests/operations.test.mjs`, `tests/displays.test.mjs` | Current permitted summaries; 12 internal tickets, 48 inventory devices and 3 contract decisions are separate counts, not a health score. Trust's 2 failing devices are part of 40 enrolled devices, not proof of fleet-wide coverage. Actions belong in source tools. |
+| Hub central access and Operations | `docs/HUB-OPERATIONS.md`, `hub/backend/main.mo` operations snapshots, `tests/operations.test.mjs`, `tests/displays.test.mjs` | Current permitted summaries; 12 internal tickets, 48 inventory devices and 3 contract decisions are separate counts, not a health score. Trust's 2 failing devices are part of 40 enrolled devices, not proof of fleet-wide coverage. Actions belong in source tools. |
 | Desk deactivation → review → offboarding | `docs/LIFECYCLE.md`, `desk/backend/main.mo` lifecycle event handling/decision methods, `tests/lifecycle.test.mjs`, `desk/test/person-context.test.mjs` | Hub must learn of a known person's change first. Existing open case reused. Account review is not an automatic departure verdict. IT confirms; cross-app context obeys source permissions. No guaranteed end-to-end timing. |
 | Hardware follow-up from Desk | `docs/HARDWARE-OFFBOARDING.md`, `desk/backend/main.mo` hardware close guard, `assets/backend/main.mo`, `tests/hardware-offboarding.test.mjs` | After confirmation and configured approvals, assigned hardware is discovered. 1 of 3 items complete: dock prepared, display still being prepared, notebook sale not handed over. Unavailable sources do not count as done. |
 | Assets former-employee sale | `docs/HARDWARE-OFFBOARDING.md`, `assets/README.md`, Assets sale/dealroom and handover code/tests | Outside buyer uses a private transaction link. Company account stays inactive. Paid is not handed over; preparation and physical work remain IT responsibilities. No automatic link email or device wipe claimed. |
@@ -148,3 +148,32 @@ on the eight bilingual pages. A link opens the visitor’s configured email app;
 it does not claim to send a message or display a delivery confirmation.
 Forwarding and its private destination are configured outside the website.
 No form, third-party widget, address capture or new analytics event is added.
+
+## Hub Operations spotlight (website 0.5.5)
+
+Reviewed against integrated source `ca5d943` on 29 September 2026:
+`docs/HUB-OPERATIONS.md`, `hub/dist/operations.js`, `hub/dist/displays.js`,
+and the source/test references in the table above. The separate public section
+uses `src/operations.mjs` and synthetic numbers, with no calls to Hub or its apps.
+The Hub explorer instead explains central access, supported by
+`docs/APP-PERMISSIONS.md`; this avoids presenting the dashboard twice.
+
+- Five implemented sources only: Desk internal tickets, Trust evidence, Assets
+  inventory, Contracts decisions and Watch recorded domain findings. No Crumbs,
+  Forms, external customer-project statistics or historical curves are added.
+- 12 tickets / 3 unassigned; 48 inventory devices / 8 in stock / 2 preparing;
+  3 decisions among 24 active contracts; one alerted domain among 12. These are
+  illustrative, independently scoped metrics, never added into a total score.
+- Trust's mean 96/100 covers 38 fully assessed devices among 40 enrolled, with
+  2 failing checks. One coherent example is 36 devices at 100 and 2 at 24.
+  The remaining 2 are unverified, not counted as passing. Inventory/enrolment
+  coverage differs deliberately. The figure is not a production fleet result.
+- One sale is still open until physical handover, as in `operations.js`. The
+  work illustration links to the existing app examples, not admin tools.
+- The TV scene contains no business-action links, sale/departure follow-up or
+  personal record. Owner pairing, chosen sources, 1/7/30-day expiry and central
+  revocation are implemented in `displays.js` and the Hub display API. Small
+  aggregate counts can still be sensitive. No instantaneous screen erasure is
+  claimed; the linked operator guide states the actual timing and limits.
+- Minute refresh and unavailable-source handling describe the real app. The
+  public illustration is static and never simulates changing live data.

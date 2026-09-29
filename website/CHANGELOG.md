@@ -1,5 +1,11 @@
 # Product website changes
 
+## [0.5.5] — 2026-09-29
+
+- Give Hub Operations a dedicated bilingual section with an illustrative work/TV switch and a visible entry from the suite overview.
+- Show current Desk, Trust, Assets, Contracts and Watch metrics, source-app follow-up and separately scoped TV access. Samples remain labelled; the website never connects to company dashboards.
+- Explain refresh, unavailable evidence and display approval without inventing historical trends or a company health score.
+
 ## [0.5.4] — 2026-09-29
 
 - Add a direct email contact in desktop/mobile navigation and show the public hello@kebabstack.dev address in the footer, in both languages.

@@ -190,7 +190,7 @@ export const content = {
         "bug",
       ],
     ],
-    engineKicker: "02 / DIE TECHNOLOGIE, VERSTÄNDLICH",
+    engineKicker: "03 / DIE TECHNOLOGIE, VERSTÄNDLICH",
     engineTitle: "Weniger Infrastruktur.\nMehr Zeit für deine IT.",
     engineIntro:
       "Kebabstacks Kernanwendungen speichern ihre Daten direkt mit der Anwendung. Du betreibst dafür keine separate Datenbank. Bei kompatiblen Updates bleiben Tickets, Gerätezuordnungen und Verträge erhalten.",
@@ -233,7 +233,7 @@ export const content = {
     opencloudLink: "OpenCloud kennenlernen",
     engineNote:
       "Persistenz ersetzt kein Backup und macht Fehler nicht ungeschehen. Snapshots gelten je Canister; Wiederherstellung und Datenmigrationen bleiben zu planen. Externe Integrationen können eigene Dienste benötigen. Betreiber, Datenstandort und ICP-Abhängigkeit gehören weiterhin zur Entscheidung.",
-    buildKicker: "03 / DEIN STACK KANN MEHR WERDEN",
+    buildKicker: "04 / DEIN STACK KANN MEHR WERDEN",
     buildTitle: "Eure Abläufe sind eigen.\nEure Software darf es auch sein.",
     buildIntro:
       "Ein zusätzliches Feld. Ein anderer Freigabeprozess. Eine ganz neue App. Mit offenem Quellcode und einem gemeinsamen SDK baut ihr auf dem auf, was schon da ist.",
@@ -269,7 +269,7 @@ export const content = {
     licenseLink: "Lizenz lesen",
     buildNote:
       "Motoko hilft, strukturell inkompatible Zustandsänderungen zu erkennen. Fachliche Tests, Berechtigungsprüfungen, Upgrade-Tests und Wiederherstellung bleiben Teil eurer Arbeit.",
-    economicsKicker: "04 / DIE ENTSCHEIDUNG",
+    economicsKicker: "05 / DIE ENTSCHEIDUNG",
     economicsTitle: "Keine Gebühr pro Kopf.\nEine ehrliche Gesamtrechnung.",
     economicsIntro:
       "kebabstack erhebt keine Lizenzgebühr pro Person. Was es euch insgesamt kostet, entscheidet sich an Infrastruktur, Integrationen und dem Aufwand eures Teams.",
@@ -300,7 +300,7 @@ export const content = {
     ],
     costNote:
       "Betriebszeit × interner Stundensatz; Migration über einen festgelegten Zeitraum verteilen. Nur tatsächlich kündbare Abos als Einsparung rechnen. Noch kein validierter Kosten- oder Kapazitätsbenchmark.",
-    startKicker: "05 / DER NÄCHSTE SCHRITT",
+    startKicker: "06 / DER NÄCHSTE SCHRITT",
     startTitle: "Klein anfangen.\nMit echten Fragen.",
     startIntro:
       "Plant einen abgegrenzten Pilot mit Testdaten. Nicht die Anzahl installierter Apps entscheidet, sondern ob eure Abläufe damit besser funktionieren.",
@@ -578,7 +578,7 @@ export const content = {
         "bug",
       ],
     ],
-    engineKicker: "02 / THE TECHNOLOGY, IN PLAIN LANGUAGE",
+    engineKicker: "03 / THE TECHNOLOGY, IN PLAIN LANGUAGE",
     engineTitle: "Less infrastructure.\nMore time for your IT.",
     engineIntro:
       "Kebabstack’s core applications store their data with the application itself. There is no separate database for you to operate. Compatible upgrades retain tickets, device assignments and contracts.",
@@ -621,7 +621,7 @@ export const content = {
     opencloudLink: "Meet OpenCloud",
     engineNote:
       "Persistence does not replace backups or undo mistakes. Snapshots are per canister; recovery and data migrations still need planning. External integrations may require their own services. Operators, data location and the dependency on ICP remain part of the decision.",
-    buildKicker: "03 / YOUR STACK CAN KEEP GROWING",
+    buildKicker: "04 / YOUR STACK CAN KEEP GROWING",
     buildTitle: "Your workflows are your own.\nYour software can be, too.",
     buildIntro:
       "An extra field. A different approval flow. An entirely new app. Open source and a shared SDK let your team build on what is already there.",
@@ -657,7 +657,7 @@ export const content = {
     licenseLink: "Read the licence",
     buildNote:
       "Motoko helps detect structurally incompatible state changes. Business logic tests, authorization checks, upgrade tests and recovery remain your responsibility.",
-    economicsKicker: "04 / THE DECISION",
+    economicsKicker: "05 / THE DECISION",
     economicsTitle: "No fee per seat.\nAn honest total cost.",
     economicsIntro:
       "kebabstack charges no per-person licence fee. Your total cost depends on infrastructure, integrations and the time your team puts in.",
@@ -688,7 +688,7 @@ export const content = {
     ],
     costNote:
       "Operating hours × internal hourly cost; spread migration over an agreed period. Count only subscriptions you can actually cancel. No validated cost or capacity benchmark yet.",
-    startKicker: "05 / YOUR NEXT STEP",
+    startKicker: "06 / YOUR NEXT STEP",
     startTitle: "Start small.\nAsk real questions.",
     startIntro:
       "Plan a bounded pilot with test data. Success is not the number of apps installed, but whether your workflows actually work better.",

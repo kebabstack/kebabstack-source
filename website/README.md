@@ -1,6 +1,6 @@
 # kebabstack product website
 
-Version **0.5.4**. A standalone, bilingual product website intended for
+Version **0.5.5**. A standalone, bilingual product website intended for
 **kebabstack.dev**, hosted on a Cloud Engine.
 
 The site explains the working alpha suite, including Crumbs analytics and Desk
@@ -28,6 +28,7 @@ There are no runtime packages, remote fonts or forms. The production website
 uses the configured Crumbs tracker; unconfigured builds remain analytics-free.
 The optional appearance choice is the only local-storage preference.
 
+`src/operations.mjs` renders the dedicated Hub Operations work/TV illustration.
 `src/scenarios.mjs` contains the bilingual product scenarios and shared example
 analytics fixture. `src/content.mjs` contains the page translations; `src/build.mjs` renders the pages.
 `public/` holds the shared CSS, progressive enhancement, domain declaration and
@@ -84,3 +85,12 @@ and cookieless analytics. `src/guides.mjs` is their content source; the build em
 all routes, reciprocal metadata, sitemap and structured HTML data. `src/social.mjs`
 renders the sharing image from canonical brand/token registries using the pinned
 root build dependency. See [search visibility and operator steps](SEARCH.md).
+
+## Shared operations dashboard
+
+The dedicated `#operations` section explains current Desk, Trust, Assets, Contracts
+and Watch summaries. A local work/TV switch illustrates source-app follow-up and
+separately approved aggregate screens. It reuses the existing accessible scene
+controls; both scenes remain readable without JavaScript. This is labelled sample
+data, never a public connection to a customer's dashboard. No retained trends,
+company-wide health score, Crumbs feed or Forms metrics are implied.

@@ -36,7 +36,7 @@ export function renderScenario(id, lang, icon, esc) {
   const metric = (n, label) =>
     `<div><strong>${esc(n)}</strong><span>${esc(label)}</span></div>`;
   const labels = {
-    hub: t("Ein Ort für den Überblick.", "One place to see what needs you."),
+    hub: t("Zugriff, den du erklären kannst.", "Access you can explain."),
     desk: t(
       "Eine Sperre. Ein klarer nächster Schritt.",
       "One deactivation. A clear next step.",
@@ -72,11 +72,10 @@ export function renderScenario(id, lang, icon, esc) {
   };
   let body = "";
   if (id === "hub")
-    body = `
-    <div class="demo-metrics">${metric("12", t("Offene interne Tickets", "Open internal tickets"))}${metric("48", t("Inventarisierte Geräte", "Inventory devices"))}${metric("3", t("Anstehende Vertragsentscheidungen", "Upcoming contract decisions"))}</div>
-    <p class="demo-label">Operations · ${t("Nächste Schritte", "Where to focus")}</p>
-    <ul class="evidence-list">${row("Desk", t("3 interne Tickets ohne Zuständigkeit", "3 internal tickets without an assignee"), t("Zuweisen", "Assign"), "warning")}${row("Trust", t("2 von 40 erfassten Geräten mit aktuellen Fehlern", "2 of 40 enrolled devices have current failures"), t("Prüfen", "Review"), "warning")}${row("Contracts", t("Nächste Entscheidungsfrist: 12. Oktober 2026", "Next decision deadline: 12 October 2026"), t("Öffnen", "Review"))}</ul>
-    ${callout(t("Übersicht hier. Bearbeitung in der App.", "Overview here. Work in the source app."), t("Nur freigegebene Quellen tragen Daten bei. Rollen werden zentral im Hub vergeben.", "Only authorized sources contribute. App roles are managed centrally in Hub."))}`;
+    body = `<p class="demo-label">${t("Rollen einmal im Hub festlegen", "Define roles once in Hub")}</p>
+    <ul class="evidence-list">${row(t("Hub Owner", "Hub Owner"), t("Administrativer Zugriff auf die offiziellen Apps", "Administrative access to the official apps"), "Admin")}${row(t("Support-Team", "Support team"), t("Im Hub für Desk als Agent berechtigt", "Assigned the Desk Agent role in Hub"), "Desk Agent")}${row(t("Mitarbeitende", "Employees"), t("Eigene Geräte, Anfragen und ausdrücklich geteilte Inhalte", "Own devices, requests and explicitly shared content"), t("Mitarbeiter", "Employee"))}</ul>
+    ${callout(t("Eine Rechtequelle für den Stack.", "One source of permissions for the stack."), t("App-Zugriff, Rollen und Ausnahmen sind im Hub nachvollziehbar. Fachliche Projekt- und Inhaltsfreigaben gelten zusätzlich.", "App access, roles and exceptions are visible in Hub. Project and content scopes still apply."))}
+    <a class="text-link" href="#operations">${t("Das gemeinsame Dashboard ansehen", "Explore the shared dashboard")} ${icon("arrow")}</a>`;
   if (id === "desk") {
     const steps = [
       {

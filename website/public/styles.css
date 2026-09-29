@@ -1453,6 +1453,275 @@ select {
 .not-found .button {
   margin: 32px 24px 0 0;
 }
+.stack-operations-link {
+  margin-top: 16px;
+  border-top: 1px solid var(--ks-rule);
+  padding-top: 16px;
+  width: 100%;
+  justify-content: space-between;
+}
+.operations-section {
+  border-top: 1px solid var(--ks-rule);
+}
+.operations-demo {
+  border: 1px solid var(--ks-rule);
+  border-radius: var(--ks-radius-card);
+  background: var(--ks-bg-card);
+}
+.operations-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--ks-rule);
+}
+.operations-toolbar .demo-control {
+  margin: 0 0 0 auto;
+}
+.operations-canvas {
+  padding: 24px;
+}
+.operations-view-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.operations-view-heading h3 {
+  font-size: 24px;
+}
+.operations-view-heading > span,
+.operations-view-note,
+.operations-demo figcaption,
+.operations-boundary {
+  font-size: 14px;
+  color: var(--ks-fg-secondary);
+}
+.operations-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+.operations-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border: 1px solid var(--ks-rule);
+  border-radius: var(--ks-radius-inline);
+  background: var(--ks-bg-card);
+}
+.operations-card h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+.operations-card h4 .icon {
+  width: 20px;
+  height: 20px;
+  color: var(--ks-logo);
+}
+.operations-card .operations-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--ks-fg);
+  margin-top: 24px;
+}
+.operations-value span {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ks-fg-secondary);
+}
+.operations-card .operations-label {
+  color: var(--ks-fg);
+  font-weight: 500;
+  line-height: 1.4;
+  margin-block: 8px;
+}
+.operations-context,
+.operations-note,
+.operations-card > a {
+  font-size: 14px;
+}
+.operations-note {
+  margin-block: auto 0;
+  padding-top: 16px;
+}
+.operations-card > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 12px;
+  color: var(--ks-accent);
+  font-weight: 500;
+}
+.operations-card > a .icon {
+  width: 16px;
+  height: 16px;
+}
+.operations-card > a:hover,
+.operations-boundary a:hover {
+  text-decoration: underline;
+}
+.operations-followup {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+  padding: 16px 24px;
+  border-left: 3px solid var(--ks-accent);
+  background: var(--ks-accent-dim);
+}
+.operations-followup > div {
+  flex: 1;
+}
+.operations-followup h4 {
+  margin-block: 8px;
+}
+.operations-followup p {
+  max-width: 68ch;
+  font-size: 14px;
+}
+.operations-followup > a {
+  flex: 0 0 180px;
+}
+.operations-view-note {
+  padding: 0 24px 24px;
+  max-width: 100ch;
+}
+.operations-demo figcaption {
+  padding: 16px 24px;
+  border-top: 1px solid var(--ks-rule);
+}
+.operations-tv-canvas {
+  background: var(--ks-bg-sunk);
+  padding-block: 32px;
+  margin-bottom: 24px;
+}
+.operations-tv-canvas h3 {
+  margin-top: 8px;
+}
+.operations-tv-canvas .operations-value {
+  font-size: 48px;
+}
+.operations-tv-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 24px;
+  font-size: 14px;
+}
+.operations-tv-footer .icon {
+  width: 20px;
+  height: 20px;
+}
+.operations-principles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  margin-top: 32px;
+}
+.operations-principles h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.operations-principles p {
+  font-size: 14px;
+}
+.operations-boundary {
+  margin-top: 24px;
+  max-width: 110ch;
+}
+.operations-boundary a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 1120px) {
+  .operations-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .operations-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .operations-principles {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .operations-followup {
+    align-items: start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .operations-followup > a {
+    flex-basis: auto;
+  }
+}
+@media (max-width: 540px) {
+  .operations-toolbar,
+  .operations-canvas,
+  .operations-demo figcaption {
+    padding: 16px;
+  }
+  .operations-toolbar .demo-control {
+    width: 100%;
+    margin: 0;
+  }
+  .operations-toolbar .step-buttons button {
+    flex: 1;
+    font-size: 14px;
+  }
+  .operations-cards {
+    grid-template-columns: 1fr;
+  }
+  .operations-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 16px;
+    align-items: start;
+  }
+  .operations-card h4 {
+    grid-column: 1 / -1;
+  }
+  .operations-card .operations-value {
+    margin: 0;
+    grid-row: 2 / 4;
+    font-size: 32px;
+    flex-wrap: wrap;
+    max-width: 82px;
+    gap: 0 4px;
+  }
+  .operations-card .operations-label {
+    margin: 0;
+  }
+  .operations-context {
+    grid-column: 2;
+  }
+  .operations-card > a,
+  .operations-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0;
+  }
+  .operations-view-note {
+    padding: 0 16px 16px;
+  }
+  .operations-followup {
+    padding: 16px;
+  }
+}
 @media (max-width: 1120px) {
   .desktop-nav {
     display: none;
