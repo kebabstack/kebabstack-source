@@ -139,3 +139,12 @@ customer migration. Each application has its own state; the three record labels
 illustrate different core apps, not one combined database or one atomic upgrade.
 All copy is rendered as static HTML in both languages, including the disclosure.
 No new tracking, external media, integration or application behavior is added.
+
+## Email contact (website 0.5.4)
+
+The operator selected `hello@kebabstack.dev` as the public contact address. Three
+ordinary mail links cover desktop navigation, mobile navigation and the footer
+on the eight bilingual pages. A link opens the visitor’s configured email app;
+it does not claim to send a message or display a delivery confirmation.
+Forwarding and its private destination are configured outside the website.
+No form, third-party widget, address capture or new analytics event is added.

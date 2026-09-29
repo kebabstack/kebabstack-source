@@ -1,6 +1,6 @@
 # kebabstack product website
 
-Version **0.5.3**. A standalone, bilingual product website intended for
+Version **0.5.4**. A standalone, bilingual product website intended for
 **kebabstack.dev**, hosted on a Cloud Engine.
 
 The site explains the working alpha suite, including Crumbs analytics and Desk
@@ -51,6 +51,14 @@ operator. No legal entity or contact address has been invented. Add the real
 operator's required notices before a public launch. Public code links should be
 added only after the sanitized repository is actually available. Deploying this
 site does not publish the application source or submit it to a marketplace.
+
+## Contact
+
+The public contact address is **hello@kebabstack.dev**. Desktop/mobile navigation
+and every page footer open the visitor’s email application with an ordinary
+`mailto:` link. The destination mailbox and forwarding are managed separately in
+Cloudflare Email Routing and are never included in the website or public source.
+No form, Worker or outbound mailbox is configured by this website build.
 
 ## Crumbs pilot
 

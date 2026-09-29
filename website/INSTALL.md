@@ -2,7 +2,7 @@
 
 This module publishes only the static marketing website. It is separate from
 Kitchen and the application suite. It neither upgrades the suite nor publishes
-its source. Target domain: **kebabstack.dev**. Version: **0.5.3**.
+its source. Target domain: **kebabstack.dev**. Version: **0.5.4**.
 
 ## Build and inspect
 
@@ -160,3 +160,12 @@ Analytics remains an alpha pilot. Cookie-free collection is not a legal
 certification or an automatic consent exemption; see `crumbs/PRIVACY.md` and the
 operator's actual site policy. Product demos do not read private analytics.
 
+
+## Contact forwarding
+
+The website links to `hello@kebabstack.dev`. Provision and verify its destination
+privately in Cloudflare Email Routing before publishing this link. Retain existing
+web records and inspect conflicting mail records before enabling routing.
+Sending from the public address is separate from receiving/forwarding email.
+Check an incoming message from a different sender; DNS records alone do not prove
+mailbox delivery. The recipient address must not be committed to public source.

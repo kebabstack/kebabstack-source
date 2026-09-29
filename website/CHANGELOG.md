@@ -1,5 +1,10 @@
 # Product website changes
 
+## [0.5.4] — 2026-09-29
+
+- Add a direct email contact in desktop/mobile navigation and show the public hello@kebabstack.dev address in the footer, in both languages.
+- Use ordinary mail links; no contact form, new tracking or application backend. The forwarding destination remains private infrastructure configuration.
+
 ## [0.5.3] — 2026-09-29
 
 - Lead the technology section with the operational benefit of Motoko persistence: core apps keep their state without a separately managed application database.
