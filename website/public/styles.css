@@ -987,58 +987,73 @@ select {
   gap: 64px;
   align-items: start;
 }
-.architecture {
-  display: grid;
-  gap: 16px;
-}
-.architecture-row {
-  display: flex;
-  gap: 16px;
-  align-items: start;
-}
-.architecture-number,
-.explain-number {
-  color: var(--ks-fg-muted);
-  font: 12px var(--ks-mono);
-  padding-top: 24px;
-}
-.architecture-layer {
-  background: var(--ks-bg-card);
+.persistence-diagram {
+  margin: 0;
+  padding: var(--ks-space-5);
   border: 1px solid var(--ks-rule);
-  border-radius: 16px;
-  padding: 24px;
-  width: 100%;
+  border-radius: var(--ks-radius-card);
+  background: var(--ks-bg-card);
 }
-.architecture-layer > div:first-child {
+.persistence-code {
+  display: grid;
+  gap: var(--ks-space-4);
+  margin-top: var(--ks-space-5);
+}
+.persistence-code > span {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--ks-space-3);
+  color: var(--ks-fg);
+  font-weight: 600;
+}
+.persistence-code .icon,
+.persistence-data .icon {
   color: var(--ks-logo);
-  margin-bottom: 16px;
+  flex-shrink: 0;
 }
-.architecture-layer h3 {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-.architecture-layer p {
+.persistence-code > p {
+  display: flex;
+  align-items: center;
+  gap: var(--ks-space-2);
+  padding-left: 36px;
   font-size: 14px;
 }
-.diagram-caption {
+.persistence-code > p .icon { transform: rotate(90deg); }
+.persistence-data {
+  border-top: 1px solid var(--ks-rule);
+  margin-top: var(--ks-space-5);
+  padding-top: var(--ks-space-5);
+}
+.persistence-data h3 { font-size: 20px; }
+.persistence-data ul {
+  display: grid;
+  gap: var(--ks-space-3);
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.persistence-data li { display: flex; align-items: center; gap: var(--ks-space-3); }
+.persistence-diagram figcaption {
+  margin-top: var(--ks-space-5);
   font-size: 12px;
-  color: var(--ks-fg-muted);
-  padding-left: 32px;
+  color: var(--ks-fg-secondary);
 }
-.nodes {
-  display: flex;
-  gap: 8px;
-  margin-top: 24px;
+.persistence-details {
+  margin-top: var(--ks-space-6);
+  border-block: 1px solid var(--ks-rule);
 }
-.nodes i {
-  height: 8px;
-  width: 8px;
-  border-radius: 50%;
-  background: var(--ks-logo);
+.persistence-details summary {
+  cursor: pointer;
+  padding-block: var(--ks-space-4);
+  color: var(--ks-fg);
+  font-weight: 600;
 }
+.persistence-details > div { max-width: 75ch; padding-bottom: var(--ks-space-5); }
+.persistence-details p + p { margin-top: var(--ks-space-4); }
+.persistence-details ul { margin: 12px 0 0; padding-left: var(--ks-space-5); }
+.persistence-details li + li { margin-top: var(--ks-space-3); }
+.persistence-details a { color: var(--ks-accent); text-underline-offset: 4px; }
+.explain-number { color: var(--ks-fg-muted); font: 12px var(--ks-mono); }
 .engine-explainer {
   display: grid;
   gap: 32px;
@@ -1526,6 +1541,7 @@ select {
   .alpha-label {
     margin-top: 24px;
   }
+  .persistence-diagram { padding: 16px; }
   .engine-grid,
   .build-grid,
   .start-grid,
@@ -1719,12 +1735,6 @@ select {
   .benefit-grid {
     grid-template-columns: 1fr;
     gap: 32px;
-  }
-  .architecture-layer {
-    padding: 16px;
-  }
-  .architecture-row {
-    gap: 8px;
   }
   .source-header,
   .file-tree,

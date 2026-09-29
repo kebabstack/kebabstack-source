@@ -118,3 +118,24 @@ The local synthetic provider tests the reviewed OpenTeam 2.35.0 directory contra
 it is not an end-to-end customer pilot or OpenSaaS-wide certification. Shared
 OpenSaaS login, upstream roles, groups and write-back are not claimed. Product
 examples remain synthetic; no company is connected by publishing this page.
+
+## Orthogonal persistence (website 0.5.3, reviewed 2026-09-29)
+
+The technology section now leads with the operator outcome: no separately
+operated application SQL database for the core Motoko backends. It identifies
+persistence as a Motoko/ICP platform capability used by Kebabstack, not an
+exclusive invention or a promise that other products lose data.
+
+| Public statement | Evidence | Boundary |
+| --- | --- | --- |
+| Core application data is stored in the canister | `persistent actor` in `hub/backend/main.mo`, `desk/backend/main.mo`, `assets/backend/main.mo`, `contracts/backend/main.mo`; root README | External services and the optional Crumbs Node collector can have their own storage. This does not describe every dependency as database-free. |
+| Compatible upgrades retain persistent application state | [Motoko persistence](https://docs.internetcomputer.org/languages/motoko/fundamentals/actors/data-persistence/) and [orthogonal persistence](https://docs.internetcomputer.org/languages/motoko/fundamentals/actors/orthogonal-persistence/); module `.most` contracts and `tools/check-all.py` | Persistent state, not transient caches or every arbitrary variable. Schema compatibility and explicit migrations still matter. No zero-downtime or unconditional data-loss guarantee. |
+| Kebabstack snapshots before updating, then verifies | `kitchen/backend/main.mo` update job: backend/frontend snapshot, `wasm_memory_persistence = ?#keep`, installation verification; `kitchen/INSTALL.md`; `tests/releases.test.mjs`; populated upgrade cases in `tests/security.test.mjs` | Per-canister snapshots. No atomic suite backup, automatic safe rollback of later writes or independent off-site recovery claimed. |
+| Less persistence plumbing for extensions | [Motoko orthogonal persistence](https://docs.internetcomputer.org/languages/motoko/fundamentals/actors/orthogonal-persistence/) and `sdk/example/backend/main.mo` | Business logic, access control, capacity, migrations and upgrade tests remain application responsibilities. No measured productivity or cost claim. |
+| Cloud Engine / OpenCloud context | [OpenCloud](https://opencloud.org/) and [canisters](https://docs.internetcomputer.org/concepts/canisters/) | Platform dependency and infrastructure operator/location decisions remain. No confidentiality or location guarantee. |
+
+The graphic is a labelled explanation, not telemetry or a simulated successful
+customer migration. Each application has its own state; the three record labels
+illustrate different core apps, not one combined database or one atomic upgrade.
+All copy is rendered as static HTML in both languages, including the disclosure.
+No new tracking, external media, integration or application behavior is added.

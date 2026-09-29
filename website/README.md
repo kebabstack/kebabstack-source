@@ -1,6 +1,6 @@
 # kebabstack product website
 
-Version **0.5.2**. A standalone, bilingual product website intended for
+Version **0.5.3**. A standalone, bilingual product website intended for
 **kebabstack.dev**, hosted on a Cloud Engine.
 
 The site explains the working alpha suite, including Crumbs analytics and Desk
@@ -59,6 +59,15 @@ choices and pilot downloads in the existing Crumbs website. Examples on the page
 stay synthetic. No report key, user identity or form content is embedded.
 See INSTALL.md for the ignored per-deployment configuration, exact CSP and live
 verification. Local previews and canister-alias visits do not load the tracker.
+
+## Persistent application state
+
+The technology section explains Motoko’s orthogonal persistence through its
+operator benefit: core application data needs no separate SQL service, and
+compatible upgrades retain persistent state. A static diagram distinguishes
+code from stored data. Sources and platform terminology are available in an
+expandable explanation; backup, migration and external-service limits stay visible.
+The same decision context appears in the bilingual sovereign-IT guide.
 
 ## Search and sharing
 

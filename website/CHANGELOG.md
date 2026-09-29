@@ -1,5 +1,11 @@
 # Product website changes
 
+## [0.5.3] — 2026-09-29
+
+- Lead the technology section with the operational benefit of Motoko persistence: core apps keep their state without a separately managed application database.
+- Explain compatible code upgrades with a simple diagram, plain German/English copy and direct links to platform documentation and the actual Kebabstack update workflow.
+- Keep platform ownership, migration, backup and external-service limits explicit; expand the sovereign-IT guides and preserve the shared design and analytics behavior.
+
 ## [0.5.2] — 2026-09-24
 
 - Present the optional OpenTeam directory connector in Hub and the bilingual FAQ, with a direct link to setup and the tested compatibility scope.
