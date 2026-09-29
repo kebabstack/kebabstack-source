@@ -1,5 +1,10 @@
 # Changelog — kebab-stack assets
 
+## [0.17.0] — 2026-09-29
+
+- Add a Hub-only, paginated Workboard projection for current Assets administrators and Finance staff. Return a hardware title, invoice reference, next action and source link; omit buyer/contact, value, invoice contents and technical inventory data.
+- Map invoices awaiting payment to Waiting and paid sales to In progress until physical hand-over. Source workflows and permissions are unchanged.
+
 ## [0.16.1] — 2026-09-28
 
 - Restore invoice receipt confirmation from the saved dealroom download request after a reload, a device switch or returning from a mobile PDF viewer. Existing issued invoices and prior downloads are preserved.

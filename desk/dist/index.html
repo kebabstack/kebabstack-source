@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="./service-status.css">
 <link rel="stylesheet" href="./reporting.css">
 <link rel="stylesheet" href="./components.css">
+<link rel="stylesheet" href="./workboard.css">
 </head>
 <body class="ks-workspace">
 
@@ -80,6 +81,7 @@
     <section class="view" id="v-service-status"></section>
     <section class="view" id="v-reporting"></section>
     <section class="view" id="v-oncall"></section>
+    <section class="view" id="v-workboard"></section>
 
     <!-- ===== queue (staff) ===== -->
     <section class="view" id="v-queue">
@@ -280,6 +282,7 @@
     <!-- ===== docs ===== -->
     <section class="view docs" id="v-docs">
       <h2>How desk works</h2>
+      <details><summary>How does Workboard help with IT projects?</summary><p>Open Workboard to plan personal or Hub-group projects, assign tasks and see internal tickets and optional hardware sales in four columns. Open a linked record to act in its original workflow. Linking does not grant source access.</p><p>Waiting tasks need a reason. Archive and restore under Projects. Personal work is also accessible to Desk administrators. Hardware sales require Assets admin or Finance access from Hub.</p><a href="./workboard-guide.md">Read the Workboard guide and limits</a></details>
       <details><summary>How do on-call projects work?</summary><p>Choose an internal Hub team or a customer project. Coverage shows who is on duty and what needs attention. Review and publish each planning period; use Time off and accepted cover requests for changes. Incidents keep one owner until an accepted handoff. Settings contains response timing, alert sources and optional planning reminders.</p><p>Local and regional plans use explicit dates and timezones. Nothing extends itself automatically. Hub notification acceptance does not prove device delivery; mobile paging is not configured by this module.</p></details>
       <details><summary>How do we communicate service status?</summary><p>Open On-call → project → Status page. An administrator chooses the services and whether the page is for signed-in Desk users or the public internet. Responders publish separate audience-specific updates; internal incident notes and identities are never copied. Changing audience starts a fresh page and keeps earlier notices private.</p><p>Employees use Service status in the menu; public readers need no Hub login. Customer widgets link to an enabled public page. Operational confirmations expire, and scheduled maintenance requires an explicit completion update. No measured uptime or subscriber notifications are implied. Keep an independent communication fallback for a Desk or engine outage.</p></details>
       <details><summary>How does Time &amp; compensation work?</summary><p><strong>Time &amp; compensation.</strong> Participants confirm duty; reviewers check recorded work; HR prepares a statement and a different authorized person releases it for Finance. Hub → Permissions → Desk → Reporting access controls each project. Company rules support hourly or daily readiness, explicit holidays, money and time credits. Each statement keeps its calculation and deletion date. CSV is payroll input, not proof of payment.</p><p>Permissions come from Hub → Permissions → Desk → Reporting access. These grants do not give access to incidents or customer conversations. Statutory calculations and payment remain in your payroll system.</p></details>

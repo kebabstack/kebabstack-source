@@ -3,6 +3,7 @@ import Displays "Displays";
 import Brand "Brand";
 import HubClient "../../sdk/motoko/src/lib";
 import Operations "../../sdk/motoko/src/Operations";
+import Workboard "../../sdk/motoko/src/Workboard";
 /// kebab-stack hub — people, sign-in, apps and backups on a cloud engine
 ///
 /// One canonical store of a company's people, fed from three sources (typed
@@ -118,7 +119,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.35.0";
+  transient let BUILD_VERSION : Text = "0.36.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -7222,6 +7223,43 @@ persistent actor UserHub {
       if (not supportViewer(caller, viewer) or connectors.get(cid) != ?c or accessForConn(person.email, cid) != #active or pidForEmail(person.email) != viewer or appPermissionPolicies.get(cid) != ?policy or permissionDecision(cid, policy.policy, person.email).role != viewerRole) return Support.denied();
       result;
     } catch (_) { Support.unavailable() };
+  };
+
+  // Only a registered Desk may request a projection on behalf of its current
+  // staff member. Source access is checked independently, before and after await.
+  public shared query ({ caller }) func hub_workboardSources(viewer : Text) : async [Support.Source] {
+    assert supportViewer(caller, viewer);
+    let person = personOf(viewer) ?? (return []);
+    let out = List.empty<Support.Source>();
+    for ((cid, policy) in appPermissionPolicies.entries()) if (policy.policy.app == "assets" and accessForConn(person.email, cid) == #active) {
+      let role = permissionDecision(cid, policy.policy, person.email).role;
+      if (role == "admin" or role == "finance") switch (connectors.get(cid)) {
+        case (?c) {
+          var url = "";
+          for ((tid, tile) in appLinks.entries()) if (connectorOfTile(tid) == cid and Text.startsWith(tile.url, #text "https://")) url := tile.url;
+          if (out.size() < 20) out.add({ cid; app = "assets"; name = c.name; url });
+        };
+        case null {};
+      };
+    };
+    out.toArray()
+  };
+  public shared ({ caller }) func hub_workboardSales(viewer : Text, cid : Nat, filter : Workboard.SalesFilter) : async Workboard.Page {
+    if (not supportViewer(caller, viewer)) return Workboard.denied();
+    switch (filter.selection) { case (#ids ids) { if (ids.size() > 100) return Workboard.denied() }; case (#all) {} };
+    let person = personOf(viewer) ?? (return Workboard.denied());
+    let c = connectors.get(cid) ?? (return Workboard.denied());
+    let policy = appPermissionPolicies.get(cid) ?? (return Workboard.denied());
+    if (policy.policy.app != "assets" or accessForConn(person.email, cid) != #active) return Workboard.denied();
+    let role = permissionDecision(cid, policy.policy, person.email).role;
+    if (role != "admin" and role != "finance") return Workboard.denied();
+    let source : actor { hub_workboardSales : shared query (Text, Text, Workboard.SalesFilter) -> async Workboard.Page } = actor (c.canisterId.toText());
+    try {
+      let result = await (with timeout = 15) source.hub_workboardSales(viewer, role, filter);
+      if (not supportViewer(caller, viewer) or connectors.get(cid) != ?c or appPermissionPolicies.get(cid) != ?policy or accessForConn(person.email, cid) != #active or pidForEmail(person.email) != viewer or permissionDecision(cid, policy.policy, person.email).role != role) return Workboard.denied();
+      if (result.rows.size() > 100) return Workboard.unavailable();
+      result
+    } catch (_) { Workboard.unavailable() }
   };
 
   type HardwareDesk = actor { hub_hardwareCase : shared query Nat -> async ?Hardware.Case };

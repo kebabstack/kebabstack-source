@@ -1,3 +1,4 @@
+import { createWorkboard } from "./workboard.js";
 import {createWorkspaceStatus} from "./service-status.js";
 import { createReporting } from "./reporting.js";
 import { createOncall } from "./oncall.js";
@@ -52,7 +53,7 @@ function mountBar() {
 
 // ---------- routing ----------
 // #/me · #/new · #/new/<typeId> · #/queue · #/agent-new · #/t/<id> · #/settings/<tab> · #/docs
-const STAFF_VIEWS = ["queue", "agent-new", "offboarding", "customers", "oncall"];
+const STAFF_VIEWS = ["queue", "agent-new", "offboarding", "customers", "oncall", "workboard"];
 let routeGeneration = 0;
 async function route() {
   const stamp = ++routeGeneration;
@@ -62,18 +63,20 @@ async function route() {
   let v = (view === "offboarding" ? "agent-new" : view) || (me.role === "requester" ? "me" : "queue");
   if (STAFF_VIEWS.includes(v) && me.role === "requester") v = "me";
   if (v === "settings" && me.role !== "admin") v = me.role === "requester" ? "me" : "queue";
-  const known = ["me", "new", "queue", "agent-new", "t", "settings", "docs", "customers", "oncall", "reporting", "service-status"];
+  const known = ["me", "new", "queue", "agent-new", "t", "settings", "docs", "customers", "oncall", "reporting", "service-status", "workboard"];
   if (!known.includes(v)) v = me.role === "requester" ? "me" : "queue";
   document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === "v-" + (v === "t" ? "ticket" : v)));
   document.querySelectorAll("#nav .navstep").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "t" && el.dataset.view === lastListView())));
   if (v !== 't') ticketView.leave();
+  if (v !== 'workboard') workboard.clear();
+  if (v === 'workboard') lastList = '#/workboard' + (/^\d+$/.test(arg || '') ? '/' + arg : '');
   if (v !== 'customers') customerProjects.clear();
   if (v !== 'oncall') oncall.clear();
   if (v !== 'reporting') reporting.clear();
   if(v !== 'service-status') serviceStatus.clear();
   if (v === 'customers') lastList = '#/customers' + (arg && arg !== 'new' ? '/' + arg : '');
   if (['me','queue'].includes(v)) lastList = '#/' + v;
-  $('tBack').textContent = lastList.startsWith('#/customers') ? '← Customer project' : lastList === '#/queue' ? '← Back to workspace' : '← My requests';
+  $('tBack').textContent = lastList.startsWith('#/workboard') ? '← Workboard' : lastList.startsWith('#/customers') ? '← Customer project' : lastList === '#/queue' ? '← Back to workspace' : '← My requests';
   $('pageError').classList.add('hidden');
   try {
   if (v === "me") await loadMe();
@@ -81,6 +84,7 @@ async function route() {
   if (v === "queue") await loadQueue();
   if(v === "service-status") await serviceStatus.show();
   if (v === "reporting") await reporting.show(arg || "");
+  if (v === "workboard") await workboard.show(arg || "", mode || "");
   if (v === "oncall") await oncall.show(arg || "", mode || "");
   if (v === "customers") await customerProjects.show(arg || "", mode || "");
   if (v === "agent-new") await showAgentNew(view === "offboarding" ? arg : null);
@@ -97,7 +101,7 @@ $("tBack").onclick = (e) => { e.preventDefault(); location.hash = lastList; };
 
 function renderNav() {
   const items = [];
-  if (me.role !== "requester") items.push(["queue", "Internal support", "qCount"], ["customers", "Customer projects", ""], ["oncall", "On-call", ""]);
+  if (me.role !== "requester") items.push(["queue", "Internal support", "qCount"], ["workboard", "Workboard", ""], ["customers", "Customer projects", ""], ["oncall", "On-call", ""]);
   items.push(["service-status", "Service status", ""]);
   if (me.reporting || me.role !== "requester") items.push(["reporting", "Time &amp; compensation", ""]);
   items.push(["me", "My requests", ""], ["new", "New request", ""]);
@@ -105,7 +109,7 @@ function renderNav() {
   $('layout').dataset.role = me.role;
   $('navCaption').textContent = me.role === 'requester' ? 'YOUR SUPPORT' : 'SUPPORT DESK';
   const previousCount = $('qCount')?.textContent || '';
-  const symbols = {"service-status":"◉",reporting:"≡",oncall:'◷',customers:'◫',queue:'▤',me:'◫',new:'＋',settings:'⚙'};
+  const symbols = {workboard:"▥","service-status":"◉",reporting:"≡",oncall:'◷',customers:'◫',queue:'▤',me:'◫',new:'＋',settings:'⚙'};
   $("nav").innerHTML = items.map(([v, l, n]) => `<button type="button" class="navstep" data-view="${v}"><span class="nav-icon" aria-hidden="true">${symbols[v]}</span><span class="nav-label">${l}</span>${n ? `<span class="n" id="${n}">${previousCount}</span>` : ""}</button>`).join("");
   $("nav").onclick = (e) => { const el = e.target.closest(".navstep"); if (el) location.hash = "#/" + el.dataset.view; };
 
@@ -118,7 +122,7 @@ async function refreshMe() {
   const w = opt(await backend.whoami(session.load()));
   if (!w) return false;
   const changed = me && (me.id !== w.id || me.role !== w.role || me.reporting !== w.reporting || JSON.stringify(me.groups) !== JSON.stringify(w.groups));
-  if (changed) { customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); agentsAt = 0; catalogCache = []; agentsCache = []; }
+  if (changed) { workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); agentsAt = 0; catalogCache = []; agentsCache = []; }
   if (!me) lastList = w.role === "requester" ? "#/me" : "#/queue";
   me = w;
   renderNav();
@@ -162,7 +166,7 @@ async function boot() {
   }
 }
 function signOut() {
-  customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); knownQueues.clear(); routeGeneration++; agentsAt = 0; agentsCache = []; catalogCache = [];
+  workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); knownQueues.clear(); routeGeneration++; agentsAt = 0; agentsCache = []; catalogCache = [];
   const t = session.load();
   session.clear();
   if (t) backend.signOut(t).catch(() => {});
@@ -353,10 +357,11 @@ $("anSubmit").onclick = async () => {
 // ---------- ticket ----------
 const profilePictures = createProfilePictures({getBackend:()=>backend,getMe:()=>me,session,onOwn:url=>topbar?.setPerson({avatarUrl:url})});
 const serviceStatus=createWorkspaceStatus({root:$("v-service-status"),api:()=>backend,session,getMe:()=>me});
+const workboard = createWorkboard({root: $("v-workboard"), api:()=>backend, session, getMe:()=>me});
 const reporting = createReporting({root: $("v-reporting"), api:()=>backend, session, getMe:()=>me});
 const oncall = createOncall({root: $("v-oncall"), api:()=>backend, session, getMe:()=>me, backendId:BACKEND_CANISTER_ID});
 const customerProjects = createCustomerProjects({root: $("v-customers"), api:()=>backend, session, getMe:()=>me, backendId:BACKEND_CANISTER_ID});
-const ticketView = createTicketView({profilePictures,$, getBackend:()=>backend, getMe:()=>me, session, loadAgents, renderFields, collectFields, setStatus});
+const ticketView = createTicketView({profilePictures,$, getBackend:()=>backend, getMe:()=>me, getReturnRoute:()=>lastList, session, loadAgents, renderFields, collectFields, setStatus});
 
 // ---------- settings ----------
 function showSettings(tab) {

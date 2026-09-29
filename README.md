@@ -115,3 +115,5 @@ as well as appearance. Existing apps are migrated through the
 standard changes. Keep source, generated docs, versions and changelogs aligned.
 
 OpenSaaS interoperability: Hub can use OpenTeam as an optional directory source. See the [setup and verified compatibility scope](docs/OPENTEAM.md). Authentication and Kebabstack roles remain Hub-managed; no OpenSaaS-wide certification is claimed.
+
+Desk also includes an alpha [IT Workboard](docs/WORKBOARD.md) for project tasks, linked internal tickets and optional hardware sales, with existing Hub and source permissions.

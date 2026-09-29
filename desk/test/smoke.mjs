@@ -28,6 +28,10 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "stats": return { total: 3n, new: 1n, open: 1n, waiting: 1n, resolved: 0n, closed: 0n, unassigned: 1n, breached: 1n, mine: 1n, approvals: 1n };
     case "catalog": case "adminCatalog": return [type1];
     case "agents": return [{ id: ME, email: "me@example.com", displayName: "Me Myself" }];
+    case "workboardHome": return role==='requester'?[]:[{projects:[],groups:['desk-agents'],preferences:{projectId:[],mine:true,tickets:true,sales:false,completed:false}}];
+    case "saveWorkboardPreferences": return true;
+    case "workboardTasks": return [{rows:[],total:0n,checkedAt:now}];
+    case "workboardTickets": return {state:{ready:null},rows:[],total:0n,checkedAt:now};
     case "workspaceServiceStatus": return [];
     case "oncallCalendar": return [{settings:{revision:0n,archivedAt:0n,retentionDays:730n},absences:[]}];
     case "oncallProjects": return [{id:1n,name:'Operations',description:'Coverage',scope:{internal:'desk-agents'},services:['API']}];
@@ -84,6 +88,16 @@ check(!window.document.getElementById("themeBtn") && !window.document.getElement
 check(!window.location.hash.includes("uht="), "ticket stripped from URL");
 const go = async (h) => { window.location.hash = h; window.dispatchEvent(new window.Event("hashchange")); for (let i = 0; i < 4; i++) await tick(); };
 await go("#/queue"); if (role !== "requester") check(document.querySelectorAll("#qRows tr").length === 2, "queue rows: " + document.querySelectorAll("#qRows tr").length);
+const beforeWorkboard=calls.filter(x=>x==='workboardHome').length;
+await go('#/workboard');
+if(role==='requester'){check(document.querySelector('#v-me').classList.contains('active'),'requester direct Workboard URL redirects');check(calls.filter(x=>x==='workboardHome').length===beforeWorkboard,'requester never fetches Workboard');check(!document.querySelector('[data-view=workboard]'),'requester has no Workboard navigation');}
+else{
+  check(document.querySelectorAll('#v-workboard .wb-column').length===4,'Workboard renders through full Desk route');check(!!document.querySelector('[data-view=workboard]'),'staff gets Workboard navigation');
+  await go('#/t/1');
+  check(document.getElementById('tBack').getAttribute('href')==='#/workboard','ticket preserves Workboard return link after loading');
+  document.getElementById('tBack').click();for(let i=0;i<4;i++)await tick();
+  check(window.location.hash==='#/workboard'&&document.querySelector('#v-workboard.active'),'ticket returns to Workboard instead of the support queue');
+}
 const beforeOncall=calls.filter(x=>x==='oncallProjects'||x==='oncallWorkspace').length;
 await go('#/service-status');check(/No status pages/.test(document.getElementById('v-service-status').textContent),'every active role can open published workspace status');
 await go('#/oncall');

@@ -1,5 +1,10 @@
 # Changelog — kebab-stack hub
 
+## [0.36.0] — 2026-09-29
+
+- Authorize the Desk Workboard Assets bridge through current Desk staff access and current Assets admin/Finance access. Recheck permissions and connector identity after cross-app reads; unavailable sources never become empty success.
+- Preserve directory, SSO, company Finance and external Lunch contracts. Workboard links do not grant source access.
+
 ## [0.35.0] — 2026-09-24
 
 - Add optional OpenTeam directory sources in Directory sync: owner-only setup, reviewed first import, explicit employee/external scope, five-minute read-only polling, pause and visible last-success/error states. No tenant is connected automatically.

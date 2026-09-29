@@ -1,5 +1,12 @@
 # Changelog — kebab-stack desk
 
+## [0.25.0] — 2026-09-29
+
+- Add Workboard for personal and Hub-group IT projects, own tasks, linked internal tickets and optional hardware sales. Four clear stages, accountable owners, target dates and a required waiting reason keep the next step visible.
+- Reuse source status without copying customer/buyer details or bypassing payment, hand-over or ticket workflows. Keep existing Hub roles; requester accounts cannot use Workboard.
+- Save view preferences, archive and restore work, retain bounded activity, reject stale edits and make creation retries idempotent. Project audiences stay fixed; permission changes remove access on the existing Hub lease.
+- Responsive board and task forms use the shared design runtime. Initial release excludes external customer tickets, drag-and-drop source transitions, project notifications and automatic project creation.
+
 ## [0.24.1] — 2026-09-22
 
 - Keep shared global navigation visible while workspace content scrolls by pinning the mount host. Preserve normal-flow spacing and add scroll clearance for anchors and keyboard focus. No authorization, directory or data-model changes. Align the side menu below the shared header and allow it to scroll independently on short screens.

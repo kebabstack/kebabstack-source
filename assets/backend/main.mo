@@ -1,5 +1,6 @@
 import Option "mo:core/Option";
 import Operations "mo:kebab-hub/Operations";
+import Workboard "mo:kebab-hub/Workboard";
 /// kebab-stack assets — the devices of a company, on the skewer.
 ///
 /// A register of devices (tag, serial, vendor, model, kind), who has each one,
@@ -60,7 +61,7 @@ persistent actor Assets {
   var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
   var photoBytes : Nat = 0; // total photo bytes held
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.16.1";
+  transient let BUILD_VERSION : Text = "0.17.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -2466,6 +2467,40 @@ persistent actor Assets {
     else if (s.status == "paid") "paid"
     else "offer";
   };
+  /// Minimal staff board projection. Buyer contacts, values, invoices, receipts,
+  /// secrets and technical evidence stay in Assets. This never writes a sale.
+  public shared query ({ caller }) func hub_workboardSales(viewer : Text, viewerRole : Text, filter : Workboard.SalesFilter) : async Workboard.Page {
+    assert Hub.isHub(caller, hubId);
+    let email = emailOfPid(viewer);
+    if (viewer == "" or pidOf(email) != viewer or not Hub.directoryFresh(lastDirectoryPull) or not Hub.isActive(people, email) or roleOf(email) != viewerRole or (viewerRole != "admin" and viewerRole != "finance")) return Workboard.denied();
+    switch (filter.selection) { case (#ids ids) { if (ids.size() > 100) return Workboard.denied() }; case (#all) {} };
+    let rows = List.empty<Workboard.Card>();
+    for (s in sales.values()) {
+      let selected = switch (filter.selection) { case (#all) true; case (#ids ids) ids.contains(s.id) };
+      let phase = salePhase(s);
+      if (selected and (not filter.mine or s.createdBy == viewer) and (filter.completed or (phase != "complete" and phase != "cancelled"))) {
+        let a = assets.get(s.assetId);
+        let title = switch (a) { case (?a) deviceName(a); case null "Hardware sale" };
+        let (column, status, next, responsible) : (Workboard.Column, Text, Text, Text) =
+          if (phase == "cancelled") (#done, "Cancelled", if (s.creditNoteNo != "") "Review any refund in Assets" else "Offer closed", "Finance")
+          else if (phase == "complete") (#done, "Complete", "Payment and handover recorded", "")
+          else if (phase == "invoice") (#waiting, "Awaiting payment", "Finance: reconcile payment in Assets", "Finance")
+          else if (phase == "paid") {
+            if (s.pdfId == 0) (#active, "Paid · invoice archive pending", "IT: archive the invoice PDF", "IT")
+            else if (not s.wiped or not s.mdmRemoved) (#active, "Paid · preparation pending", "IT: complete device preparation", "IT")
+            else (#active, "Paid · handover pending", "IT: verify release and record physical handover", "IT")
+          }
+          else if (s.status == "accepted") (#active, "Offer accepted", "IT: issue the invoice in Assets", "IT")
+          else if (s.status == "offered") (#waiting, "Awaiting buyer", "Buyer: review and accept the offer", "Buyer")
+          else (#planned, "Draft offer", "IT: prepare the offer", "IT");
+        rows.add({ id = s.id; title = Support.brief(title, 180); reference = if (s.invoiceNo == "") "Sale #" # s.id.toText() else s.invoiceNo;
+          column; status; next; owner = responsible; updatedAt = s.updatedAt; dueOn = if (phase == "invoice") s.dueOn else ""; path = "#/sale/" # s.id.toText() });
+      };
+    };
+    let sorted = rows.toArray().sort(func (a, b) = if (a.updatedAt == b.updatedAt) Nat.compare(b.id, a.id) else Int.compare(b.updatedAt, a.updatedAt));
+    { state = #ready; rows = sorted.values().drop(filter.offset).take(100).toArray(); total = rows.size(); checkedAt = Time.now() }
+  };
+
   public type SaleSummary = {
     id : Nat; assetId : Nat; phase : Text; status : Text; buyerName : Text;
     deviceName : Text; deviceTag : Text; invoiceNo : Text; creditNoteNo : Text;

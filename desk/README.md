@@ -133,3 +133,7 @@ Kitchen bundle. HTTP intake is on the **backend** at `/oncall/v1/sources/{id}/ev
 not the frontend/custom Desk domain. Existing sources are never seeded in a real
 upgrade. The generic contract requires a server-side adapter; no direct Watch or
 vendor-specific integration is claimed. See [ONCALL.md](ONCALL.md#connect-monitoring).
+
+## IT Workboard (0.25.0, alpha)
+
+Desk → Workboard combines own project tasks, internal requests and optional Assets sales. Projects use personal or existing Hub-group audiences; source access remains separately enforced. See [the operator and decision guide](../docs/WORKBOARD.md).

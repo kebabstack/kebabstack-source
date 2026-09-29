@@ -83,3 +83,7 @@ This app contributes aggregate-only, Admin-authorized summaries to Hub → Opera
 ## Finance workspace
 
 Hub owners assign Finance in **Hub → Settings → Company teams**. Finance sees all hardware financial records and sales, records payments and corrections, downloads invoices and exports, and maintains purchase cost and straight-line book values. Device management, secrets, preparation and custody stay with Assets administrators. Read the [company Finance guide](../docs/FINANCE.md) for setup, precedence, notifications, legacy payments and calculation boundaries.
+
+## Desk Workboard
+
+Assets 0.17.0 exposes a minimal Hub-only sale status projection for Desk 0.25.0 / Hub 0.36.0. Only existing Assets admins and Finance can read it. Payment and hand-over actions stay in Assets. See [Workboard](../docs/WORKBOARD.md).

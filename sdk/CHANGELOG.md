@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.14.0] — 2026-09-29
+
+- Add the minimal Workboard source projection protocol: bounded pages, explicit ready/denied/unavailable states and source-owned workflow status. Existing directory, permissions, SSO and Lunch interfaces are unchanged.
+
 ## [0.13.0] — 2026-09-24
 
 - Add the Assets Finance role vocabulary. Hub company teams are its only assignment source; role freshness and all other app permissions retain the existing protocol.

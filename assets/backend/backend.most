@@ -64,6 +64,17 @@ type Buyer__854564082 =
     street : Text;
     town : Text
   };
+type Case__414749382 =
+  {
+    desk : Text;
+    dueAt : ?Int;
+    key : Text;
+    person : Text;
+    revision : Int;
+    state : Text;
+    ticket : Nat;
+    url : Text
+  };
 type ConnectorUser__173861307 =
   {
     active : Bool;
@@ -110,6 +121,31 @@ type Event__55031293 =
     kind : Text;
     photoId : Nat;
     to : Text
+  };
+type FinanceNotice__184273685 =
+  {
+    attempts : Nat;
+    complete : Bool;
+    delivered : [Text];
+    detail : Text;
+    kind : Text;
+    nextAt : Int;
+    saleId : Nat
+  };
+type Handover__559138407 =
+  {
+    assetId : Nat;
+    caseKey : Text;
+    choice : Text;
+    dueOn : Text;
+    note : Text;
+    owner : Text;
+    person : Text;
+    recipient : Text;
+    revision : Nat;
+    saleId : Nat;
+    stage : Text;
+    updatedAt : Int
   };
 type Internal__161573640<K, V> =
   {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
@@ -190,6 +226,18 @@ type Node__430031793<K, V> =
   {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
 type NotifyState__771511965 =
   {at : Int; detail : Text; ok : Bool; title : Text; to : Text};
+type PaymentEntry__410165988 =
+  {
+    amountMinor : Nat;
+    at : Int;
+    by : Text;
+    id : Nat;
+    paidOn : Text;
+    reason : Text;
+    reference : Text;
+    requestId : Text;
+    reverses : ?Nat
+  };
 type Photo__148154263 =
   {
     assetId : Nat;
@@ -260,6 +308,18 @@ type Sale__491607931 =
   };
 type Session__739831475 =
   {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type ValuationInput__627699105 =
+  {
+    currency : Text;
+    inServiceOn : Text;
+    months : Nat;
+    priceMinor : Nat;
+    purchasedOn : Text;
+    reason : Text;
+    residualMinor : Nat
+  };
+type Valuation__555161821 =
+  {at : Int; by : Text; input : ValuationInput__627699105; revision : Nat};
 actor {
   stable abmAssertions :
     {
@@ -340,13 +400,41 @@ actor {
       var root : Node__430031793<Nat, Event__55031293>;
       var size : Nat__58649523
     };
+  stable financeNotices :
+    {
+      var root : Node__430031793<Text, FinanceNotice__184273685>;
+      var size : Nat__58649523
+    };
+  stable financialRevisions :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
   stable former :
     {
       var root : Node__430031793<Text, ConnectorUser__173861307>;
       var size : Nat__58649523
     };
+  stable formerBuyer :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable formerContactExpires :
+    {var root : Node__430031793<Nat, Int>; var size : Nat__58649523};
+  stable formerDealContacts :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
   stable groupsCache :
     {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable handoverHistory :
+    {
+      var root : Node__430031793<Text, Handover__559138407>;
+      var size : Nat__58649523
+    };
+  stable handovers :
+    {
+      var root : Node__430031793<Nat, Handover__559138407>;
+      var size : Nat__58649523
+    };
+  stable hardwareCases :
+    {
+      var root : Node__430031793<Text, Case__414749382>;
+      var size : Nat__58649523
+    };
   stable var hubId : Text;
   stable var idMigration : Text;
   stable ids :
@@ -402,6 +490,11 @@ actor {
       var root : Node__430031793<Nat, SaleDoc__1047958008>;
       var size : Nat__58649523
     };
+  stable salePayments :
+    {
+      var root : Node__430031793<Nat, [PaymentEntry__410165988]>;
+      var size : Nat__58649523
+    };
   stable sales :
     {
       var root : Node__430031793<Nat, Sale__491607931>;
@@ -414,5 +507,17 @@ actor {
     };
   stable var tagPrefix : Text;
   stable var trustId : Text;
-  stable var trustLastPull : Int
+  stable var trustLastPull : Int;
+  stable var valuationDefaults : [{kind : Text; months : Nat}];
+  stable var valuationDefaultsRevision : Nat;
+  stable valuationHistory :
+    {
+      var root : Node__430031793<Nat, [Valuation__555161821]>;
+      var size : Nat__58649523
+    };
+  stable valuations :
+    {
+      var root : Node__430031793<Nat, Valuation__555161821>;
+      var size : Nat__58649523
+    }
 };

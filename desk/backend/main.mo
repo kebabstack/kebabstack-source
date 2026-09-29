@@ -1,4 +1,8 @@
 import Operations "mo:kebab-hub/Operations";
+import Workboard "mo:kebab-hub/Workboard";
+import WorkTypes "workboard/Types";
+import WorkLogic "workboard/Logic";
+import WorkApi "workboard/Api";
 /// kebab-stack desk — service management on the skewer.
 ///
 /// Requests from a catalog (typed fields, checklist, queue, approval, SLA),
@@ -52,11 +56,80 @@ import Sha256 "mo:sha2/Sha256";
 import Json "mo:json";
 
 persistent actor Desk {
+  // Additive side-state; the existing stable contract and compiler are retained.
+  let workboardState : WorkTypes.State = {
+    projects = Map.empty(); tasks = Map.empty(); links = Map.empty(); audit = Map.empty();
+    requests = Map.empty(); preferences = Map.empty(); var nextProject = 1; var nextTask = 1;
+  };
+  func workActor(tok : Text) : ?WorkTypes.Actor {
+    let m = staff(tok) ?? (return null); ?{ id = m.id; role = m.role }
+  };
+  func workAccess(a : WorkTypes.Actor, p : WorkTypes.Project) : Bool {
+    if (a.role == "admin") return true;
+    switch (p.scope) { case (#personal) p.createdBy == a.id; case (#group g) inGroup(emailOfPid(a.id), g) }
+  };
+  func workGroups(a : WorkTypes.Actor) : [Text] {
+    if (a.role != "admin") return groupsOfEmail(emailOfPid(a.id));
+    let names = Map.empty<Text, Bool>();
+    for ((email, u) in people.entries()) if (u.active) for (g in groupsOfEmail(email).values()) names.add(g, true);
+    names.keys().toArray()
+  };
+  func workPersonActive(id : Text) : Bool { let email = emailOfPid(id); Hub.isActive(people, email) and isStaff(roleOf(email)) };
+  func workEligible(p : WorkTypes.Project, id : Text) : Bool {
+    let email = emailOfPid(id);
+    if (not Hub.isActive(people, email) or not isStaff(roleOf(email))) return false;
+    // A personal project's assigned person is its owner, even for an admin reader.
+    switch (p.scope) { case (#personal) id == p.createdBy; case (#group _) workAccess({ id; role = roleOf(email) }, p) }
+  };
+  func workRoster(p : WorkTypes.Project) : [WorkTypes.Person] = staffEmails().filter(func email = workEligible(p, pidOf(email))).map(func email = { id = pidOf(email); name = personName(pidOf(email)) });
+  func workTicket(a : WorkTypes.Actor, id : Nat) : ?Workboard.Card {
+    let m : Me = { id = a.id; role = a.role; email = emailOfPid(a.id); displayName = personName(a.id) };
+    let t = tickets.get(id) ?? (return null);
+    // Customer project tickets retain their separate workspace in this first release.
+    if (projectOf(id) != 0 or not canSee(m, t)) return null;
+    let (column, next) : (Workboard.Column, Text) = if (t.status == "closed" or t.status == "resolved") (#done, "Resolved in Desk")
+      else if (t.status == "waiting") (#waiting, switch (t.waitingOn) { case "requester" "Waiting for the requester"; case "approval" "Waiting for approval"; case "third-party" "Waiting for a third party"; case _ "Review the waiting reason in the ticket" })
+      else if (t.status == "new") (#planned, if (t.assignee == "") "Assign and review the request" else "Review the request")
+      else (#active, if (openTasks(id) > 0) "Continue the ticket checklist" else "Continue handling the request");
+    ?{ id; title = capText(t.subject, 180); reference = t.key; column; status = t.status; next;
+      owner = if (t.assignee == "") "Unassigned" else personName(t.assignee); updatedAt = t.updatedAt; dueOn = ""; path = "#/t/" # id.toText() }
+  };
+  func workTickets(a : WorkTypes.Actor, f : WorkTypes.Filter, selection : ?[Nat]) : Workboard.Page {
+    let rows = List.empty<Workboard.Card>();
+    for (t in tickets.values()) {
+      let selected = switch (selection) { case null true; case (?ids) ids.contains(t.id) };
+      if (selected and (not f.mine or t.assignee == a.id) and WorkLogic.matches(t.subject # " " # t.key, f.search)) switch (workTicket(a, t.id)) {
+        case (?card) { if (f.completed or card.column != #done) rows.add(card) }; case null {};
+      };
+    };
+    let sorted = rows.toArray().sort(func (a, b) = if (a.updatedAt == b.updatedAt) Nat.compare(b.id, a.id) else Int.compare(b.updatedAt, a.updatedAt));
+    { state = #ready; rows = WorkLogic.slice(sorted, f.offset); total = rows.size(); checkedAt = now() }
+  };
+  type WorkHub = actor {
+    hub_workboardSources : shared query Text -> async [Support.Source];
+    hub_workboardSales : shared (Text, Nat, Workboard.SalesFilter) -> async Workboard.Page;
+  };
+  func workSources(tok : Text) : async [Support.Source] {
+    let before = workActor(tok) ?? (return []); let expectedHub = hubId;
+    if (expectedHub == "") return [];
+    let hub : WorkHub = actor (expectedHub);
+    let result = await (with timeout = 20) hub.hub_workboardSources(before.id);
+    if (hubId != expectedHub or workActor(tok) != ?before) return [];
+    result
+  };
+  func workSales(tok : Text, cid : Nat, f : Workboard.SalesFilter) : async Workboard.Page {
+    let before = workActor(tok) ?? (return Workboard.denied()); let expectedHub = hubId;
+    if (expectedHub == "") return Workboard.unavailable();
+    let hub : WorkHub = actor (expectedHub);
+    let result = try { await (with timeout = 20) hub.hub_workboardSales(before.id, cid, f) } catch (_) { Workboard.unavailable() };
+    if (hubId != expectedHub or workActor(tok) != ?before) return Workboard.denied();
+    result
+  };
   // =====================================================================
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.24.1"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.25.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -3127,4 +3200,5 @@ persistent actor Desk {
   include ReportingApi(reportingState,compensationState,oncallState,oncallCalendarState,responseState,reportingActor,reportingCapability,oncallEligible,reportingPersonActive,personName);
   include StatusApi(serviceStatusState,oncallState,responseState,oncallActor,func tok = me(tok)!=null,oncallAccess,func id = OncallCalendar.active(oncallCalendarState,id));
   ignore Timer.recurringTimer<system>(#seconds 10, func() : async () { sweepAlerts(); sweepReporting(); sweepOncallCalendar(); sweepServiceStatus(); for(id in oncallRegionalState.recipes.keys().toArray().values())if(not oncallState.plans.containsKey(id))oncallRegionalState.recipes.remove(id); await sweepResponse(); await sweepOncallReminders() });
+  include WorkApi(workboardState, workActor, workAccess, workGroups, workEligible, workPersonActive, workRoster, personName, workTicket, workTickets, workSources, workSales);
 };

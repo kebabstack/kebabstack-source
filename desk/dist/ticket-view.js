@@ -11,7 +11,7 @@ export const statusLabel = t => t.status === 'waiting' ? ({requester: 'Waiting f
 export const typeLabel = value => ({'Question / how do I…': 'Question or advice', 'Question / how do I...': 'Question or advice'}[value] || value);
 export const statusPill = (t, staff = false) => `<span class="pill s-${esc(t.status)}">${esc(staff && t.status === 'waiting' && t.waitingOn === 'requester' ? 'Waiting for requester' : statusLabel(t))}</span>`;
 
-export function createTicketView({ profilePictures, $, getBackend, getMe, session, loadAgents, renderFields, collectFields, setStatus }) {
+export function createTicketView({ profilePictures, $, getBackend, getMe, getReturnRoute, session, loadAgents, renderFields, collectFields, setStatus }) {
   let current = null, activeId = null, generation = 0, pending = 0, loading = false, kind = 'comment', aiSuggestion = null;
   let checklistOpen = false, customerSignature = "", privacySignature = "";
   let agents = []; const drafts = new Map(), dirty = new Set();
@@ -200,7 +200,11 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, sessio
         $('tBack').href = '#/customers/'+opt(value.customer).projectId;
         $('tBack').textContent = '← '+opt(value.customer).projectName;
         $('tBack').onclick = e => {e.preventDefault();location.hash='#/customers/'+opt(value.customer).projectId;};
-      } else { $('tBack').onclick = e=>{e.preventDefault();location.hash=getMe()?.role==='requester'?'#/me':'#/queue';}; }
+      } else {
+        const back = getReturnRoute?.() || (getMe()?.role === 'requester' ? '#/me' : '#/queue');
+        $('tBack').href = back;
+        $('tBack').onclick = e => { e.preventDefault(); location.hash = back; };
+      }
       paint(value, fresh); sync('Up to date');
       if(!opt(value.customer))void personContext.load(value, !background);
     } catch (e) {

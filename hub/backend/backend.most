@@ -16,6 +16,7 @@ type AccessRequest__902137167 =
     state : Text;
     wantedHours : Nat
   };
+type Account__457019596 = {active : Bool; key : Text; source : Text};
 type AppLink__853635696 = {id : Nat; name : Text; note : Text; url : Text};
 type AssistantCode__739914438 =
   {displayName : Text; email : Text; expiresAt : Int};
@@ -60,8 +61,30 @@ type ConnectorRequest__343326626 =
 type Connector__316469665 =
   {addedAt : Int; canisterId : Principal; id : Nat; name : Text; note : Text};
 type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Event__445430861 =
+  {
+    at : Int;
+    effectiveActive : Bool;
+    email : Text;
+    kind : {#deactivated; #reactivated};
+    name : Text;
+    personId : Text;
+    seq : Nat;
+    source : Text
+  };
+type FinanceBinding__345430488 = {canisterId : Principal; cid : Nat};
 type Gen__361870898 =
   {bits : Nat; cur : Nat; done : Bool; found : [Nat]; tried : Nat};
+type Grant__382912696 =
+  {
+    by : Principal;
+    createdAt : Int;
+    expiresAt : Int;
+    id : Nat;
+    name : Text;
+    personId : Text;
+    scopes : [Scope__685529882]
+  };
 type Grant__637092062 =
   {
     email : Text;
@@ -119,6 +142,8 @@ type Notification__744695751 =
     title : Text;
     url : Text
   };
+type Observation__33797346 =
+  {accounts : [Account__457019596]; active : Bool; email : Text; name : Text};
 type OidcClient__506679717 =
   {
     alg : Text;
@@ -147,6 +172,8 @@ type OidcCode__122870733 =
   };
 type OidcToken__329142809 =
   {cid : Nat; email : Text; expiresAt : Int; scope : Text; sub : Text};
+type OpenTeamConfig__195003865 =
+  {excludeIds : [Text]; includeExternal : Bool};
 type PermissionCheck__68449854 =
   {checkedAt : Int; status : Status__947094800};
 type PersonGrant__328057996 = {id : Text; role : Text};
@@ -164,6 +191,18 @@ type Policy__630656513 =
     defaultRole : Text;
     groups : [GroupGrant__29097267];
     people : [PersonGrant__328057996]
+  };
+type ReportingGrant__531340435 =
+  {
+    capabilities : [Text];
+    projectId : Nat;
+    subject : {#group : Nat; #person : Text}
+  };
+type ReportingPolicy__713611667 =
+  {
+    canisterId : Principal;
+    grants : [ReportingGrant__531340435];
+    revision : Nat
   };
 type ReviewItem__516517488 =
   {
@@ -203,6 +242,7 @@ type ScimSource__155503634 =
     note : Text;
     tokenHash : Text
   };
+type Scope__685529882 = {app : Text; canisterId : Principal; cid : Nat};
 type Session__1030403100 =
   {
     createdAt : Int;
@@ -378,9 +418,22 @@ actor {
       var root : Node__430031793<Nat, Conn__58803623>;
       var size : Nat__58649523
     };
+  stable deskReportingPolicies :
+    {
+      var root : Node__430031793<Nat, ReportingPolicy__713611667>;
+      var size : Nat__58649523
+    };
   stable var directoryMode : Text;
   stable emailToPid :
     {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var financeTeam :
+    {
+      apps : [FinanceBinding__345430488];
+      groups : [Nat];
+      mode : Text;
+      people : [Text];
+      revision : Nat
+    };
   stable forceActive :
     {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
   stable grants :
@@ -405,6 +458,17 @@ actor {
     };
   stable var kitchenId : Text;
   stable var lastHookAt : ?Int;
+  stable lifecycleEvents :
+    {
+      var root : Node__430031793<Nat, Event__445430861>;
+      var size : Nat__58649523
+    };
+  stable lifecycleObserved :
+    {
+      var root : Node__430031793<Text, Observation__33797346>;
+      var size : Nat__58649523
+    };
+  stable var lifecycleSequence : Nat;
   stable var lunchCanister : Text;
   stable var nextAccessRequestId : Nat;
   stable var nextAppLinkId : Nat;
@@ -462,6 +526,26 @@ actor {
   stable oidcTokens :
     {
       var root : Node__430031793<Text, OidcToken__329142809>;
+      var size : Nat__58649523
+    };
+  stable openTeamConfigs :
+    {
+      var root : Node__430031793<Nat, OpenTeamConfig__195003865>;
+      var size : Nat__58649523
+    };
+  stable openTeamErased :
+    {var root : Node__430031793<Text, Bool>; var size : Nat__58649523};
+  stable openTeamRevisions :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable openTeamSuccess :
+    {
+      var root : Node__430031793<Nat, {at : Int; seq : Nat; version : Text}>;
+      var size : Nat__58649523
+    };
+  stable var operationsDisplayNext : Nat;
+  stable operationsDisplays :
+    {
+      var root : Node__430031793<Text, Grant__382912696>;
       var size : Nat__58649523
     };
   stable var orgName : Text;

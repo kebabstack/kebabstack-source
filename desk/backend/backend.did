@@ -208,6 +208,35 @@ type Ticket =
    updatedAt: int;
    waitingOn: text;
  };
+type TaskView =
+ record {
+   archived: bool;
+   assignee: text;
+   assigneeAvailable: bool;
+   assigneeName: text;
+   column: Column;
+   createdAt: int;
+   createdBy: text;
+   dueOn: text;
+   id: nat;
+   note: text;
+   projectId: opt nat;
+   projectName: text;
+   revision: nat;
+   title: text;
+   updatedAt: int;
+   waitingFor: text;
+ };
+type TaskInput =
+ record {
+   assignee: text;
+   column: Column;
+   dueOn: text;
+   note: text;
+   projectId: opt nat;
+   title: text;
+   waitingFor: text;
+ };
 type Task =
  record {
    at: int;
@@ -390,10 +419,15 @@ type SecretResult =
          secret: text;
        };
  };
-type Scope =
+type Scope__1 =
  variant {
    customer: nat;
    internal: text;
+ };
+type Scope =
+ variant {
+   group: text;
+   personal;
  };
 type Saved =
  record {
@@ -428,6 +462,14 @@ type Rule =
    withdrawnAt: int;
    work: Rates;
    workUnit: Unit;
+ };
+type Result__1 =
+ variant {
+   err: Error__1;
+   ok: record {
+         id: nat;
+         revision: nat;
+       };
  };
 type Result =
  variant {
@@ -550,8 +592,24 @@ type Project__1 =
    id: nat;
    name: text;
    requestKey: text;
-   scope: Scope;
+   scope: Scope__1;
    services: vec text;
+ };
+type ProjectView =
+ record {
+   archived: bool;
+   canManage: bool;
+   createdAt: int;
+   createdBy: text;
+   description: text;
+   doneTasks: nat;
+   dueOn: text;
+   id: nat;
+   name: text;
+   openTasks: nat;
+   revision: nat;
+   scope: Scope;
+   updatedAt: int;
  };
 type ProjectSettings =
  record {
@@ -560,12 +618,19 @@ type ProjectSettings =
    retentionDays: nat;
    revision: nat;
  };
-type ProjectInput =
+type ProjectInput__1 =
  record {
    description: text;
    name: text;
-   scope: Scope;
+   scope: Scope__1;
    services: vec text;
+ };
+type ProjectInput =
+ record {
+   description: text;
+   dueOn: text;
+   name: text;
+   scope: Scope;
  };
 type Project =
  record {
@@ -582,6 +647,14 @@ type Progress =
    sources: nat;
    state: text;
    total: nat;
+ };
+type Preferences =
+ record {
+   completed: bool;
+   mine: bool;
+   projectId: opt nat;
+   sales: bool;
+   tickets: bool;
  };
 type Policy__3 =
  record {
@@ -721,6 +794,17 @@ type PeriodInput =
    timezone: text;
    title: text;
  };
+type Page__1 =
+ record {
+   checkedAt: int;
+   rows: vec Card;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+   total: nat;
+ };
 type Page =
  record {
    audience: Audience;
@@ -784,6 +868,14 @@ type LogRow =
    at: int;
    what: text;
    who: text;
+ };
+type Link =
+ variant {
+   sale: record {
+           cid: nat;
+           id: nat;
+         };
+   ticket: nat;
  };
 type Line__1 =
  record {
@@ -1067,13 +1159,21 @@ type Handoff =
    to: text;
    toName: text;
  };
-type Filter =
+type Filter__1 =
  record {
    assignee: text;
    q: text;
    queue: text;
    status: text;
    view: text;
+ };
+type Filter =
+ record {
+   completed: bool;
+   mine: bool;
+   offset: nat;
+   projectId: opt nat;
+   search: text;
  };
 type FileMeta =
  record {
@@ -1142,6 +1242,15 @@ type Event =
    kind: text;
    name: text;
    "text": text;
+ };
+type Error__1 =
+ variant {
+   denied;
+   invalid: text;
+   limit: text;
+   missing;
+   stale;
+   unavailable;
  };
 type Error =
  variant {
@@ -1296,6 +1405,13 @@ type Config =
    slug: text;
    title: text;
  };
+type Column =
+ variant {
+   active;
+   done;
+   planned;
+   waiting;
+ };
 type Case =
  record {
    desk: text;
@@ -1306,6 +1422,19 @@ type Case =
    state: text;
    ticket: nat;
    url: text;
+ };
+type Card =
+ record {
+   column: Column;
+   dueOn: text;
+   id: nat;
+   next: text;
+   owner: text;
+   path: text;
+   reference: text;
+   status: text;
+   title: text;
+   updatedAt: int;
  };
 type Capabilities =
  record {
@@ -1321,13 +1450,19 @@ type Cancellation =
    from: int;
    reason: text;
  };
-type Audit =
+type Audit__1 =
  record {
    action: text;
    at: int;
    by: text;
    reason: text;
    recordId: nat;
+ };
+type Audit =
+ record {
+   action: text;
+   at: int;
+   by: text;
  };
 type Audience =
  variant {
@@ -1441,6 +1576,10 @@ service : {
                           });
   archiveOncallProject: (tok: text, id: nat, revision: nat, archived:
    bool) -> (Result);
+  archiveWorkProject: (tok: text, id: nat, revision: nat, archived: bool) ->
+   (Result__1);
+  archiveWorkTask: (tok: text, id: nat, revision: nat, archived: bool) ->
+   (Result__1);
   assign: (tok: text, id: nat, email: text) ->
    (record {
       detail: text;
@@ -1485,7 +1624,7 @@ service : {
                             });
   createOncallAlertSource: (tok: text, key: text, input: Input__4) ->
    (SecretResult);
-  createOncallProject: (tok: text, key: text, input: ProjectInput) ->
+  createOncallProject: (tok: text, key: text, input: ProjectInput__1) ->
    (Result);
   /// Requester files a request from the catalog.
   createRequest: (tok: text, typeId: nat, subject: text, body: text, fields:
@@ -1518,7 +1657,7 @@ service : {
           id: text;
         }) query;
   customerProjectKeys: (tok: text, id: nat) -> (vec CustomerKeyView) query;
-  customerProjectTickets: (tok: text, projectId: nat, f: Filter) ->
+  customerProjectTickets: (tok: text, projectId: nat, f: Filter__1) ->
    (vec TicketRow) query;
   customerTicketLink: (tok: text, id: nat, revoke: bool) ->
    (record {
@@ -1619,9 +1758,11 @@ service : {
           detail: text;
           gap: bool;
         }) query;
+  linkWorkItem: (tok: text, projectId: nat, revision: nat, ref: Link, attach:
+   bool) -> (Result__1);
   listCustomerProjects: (tok: text) -> (vec CustomerProject) query;
   listCustomerTypes: (tok: text, projectId: nat) -> (vec Type) query;
-  listTickets: (tok: text, f: Filter) -> (vec TicketRow) query;
+  listTickets: (tok: text, f: Filter__1) -> (vec TicketRow) query;
   loginWithTicket: (ticket: text) ->
    (opt
      record {
@@ -1677,7 +1818,7 @@ service : {
        id: nat;
        name: text;
        requestKey: text;
-       scope: Scope;
+       scope: Scope__1;
        services: vec text;
      }) query;
   oncallRegionalRecipe: (tok: text, id: nat) -> (opt Saved) query;
@@ -1758,7 +1899,7 @@ service : {
                                id: text;
                                name: text;
                              };
-       audit: vec Audit;
+       audit: vec Audit__1;
        blockers: vec text;
        calculation: opt View;
        capabilities: Capabilities;
@@ -1815,6 +1956,11 @@ service : {
    PlanInput) -> (Result);
   saveOncallRegionalPlan: (tok: text, id: nat, revision: nat, key: text,
    input: PlanInput, recipe: Recipe) -> (Result);
+  saveWorkProject: (tok: text, id: nat, revision: nat, key: text, input:
+   ProjectInput) -> (Result__1);
+  saveWorkTask: (tok: text, id: nat, revision: nat, key: text, input:
+   TaskInput) -> (Result__1);
+  saveWorkboardPreferences: (tok: text, input: Preferences) -> (bool);
   /// Demo data for evaluation instances: ~12 requests across all states,
   /// requesters from the directory when present (otherwise demo people).
   seedDemo: (tok: text) -> (record {
@@ -1994,5 +2140,36 @@ service : {
   withdrawReportingCompensation: (tok: text, projectId: nat, revision:
    nat, ruleRevision: nat) -> (Result);
   withdrawServiceNotice: (tok: text, id: nat, revision: nat) -> (Result);
+  workboardHome: (tok: text) ->
+   (opt
+     record {
+       groups: vec text;
+       preferences: Preferences;
+       projects: vec ProjectView;
+     }) query;
+  workboardProject: (tok: text, id: nat) ->
+   (opt record {
+          history: vec Audit;
+          people: vec Person;
+          project: ProjectView;
+        }) query;
+  workboardSales: (tok: text, cid: nat, projectId: opt nat, completed:
+   bool, mine: bool, offset: nat) -> (Page__1);
+  workboardSources: (tok: text) -> (vec Source);
+  workboardTask: (tok: text, id: nat) ->
+   (opt
+     record {
+       history: vec Audit;
+       people: vec Person;
+       readOnly: bool;
+       task: TaskView;
+     }) query;
+  workboardTasks: (tok: text, f: Filter, archived: bool) ->
+   (opt record {
+          checkedAt: int;
+          rows: vec TaskView;
+          total: nat;
+        }) query;
+  workboardTickets: (tok: text, f: Filter) -> (Page__1) query;
   workspaceServiceStatus: (tok: text) -> (vec Page) query;
 }

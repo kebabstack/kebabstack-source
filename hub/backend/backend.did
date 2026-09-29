@@ -131,6 +131,11 @@ type Snapshot =
             unavailable;
           };
  };
+type Selection =
+ variant {
+   all;
+   ids: vec nat;
+ };
 type ScimSourceView =
  record {
    createdAt: int;
@@ -145,6 +150,13 @@ type ScimSourceView =
    name: text;
    note: text;
    userCount: nat;
+ };
+type SalesFilter =
+ record {
+   completed: bool;
+   mine: bool;
+   offset: nat;
+   selection: Selection;
  };
 type Role =
  record {
@@ -231,6 +243,17 @@ type PairResult =
    busy;
    invalid;
    ok: int;
+ };
+type Page =
+ record {
+   checkedAt: int;
+   rows: vec Card;
+   state: variant {
+            denied;
+            ready;
+            unavailable;
+          };
+   total: nat;
  };
 type OwnedObject =
  record {
@@ -490,6 +513,13 @@ type ConnView =
    tokenMask: text;
    userCount: nat;
  };
+type Column =
+ variant {
+   active;
+   done;
+   planned;
+   waiting;
+ };
 type Case =
  record {
    desk: text;
@@ -500,6 +530,19 @@ type Case =
    state: text;
    ticket: nat;
    url: text;
+ };
+type Card =
+ record {
+   column: Column;
+   dueOn: text;
+   id: nat;
+   next: text;
+   owner: text;
+   path: text;
+   reference: text;
+   status: text;
+   title: text;
+   updatedAt: int;
  };
 type Batch =
  record {
@@ -1028,6 +1071,8 @@ service : {
   hub_supportContext: (viewer: text, subject: text, cid: nat) -> (Context);
   hub_supportSources: (viewer: text) -> (vec Source) query;
   hub_syncHardware: (input: Case) -> (Progress);
+  hub_workboardSales: (viewer: text, cid: nat, filter: SalesFilter) -> (Page);
+  hub_workboardSources: (viewer: text) -> (vec Source) query;
   icpChart: () -> (record {
                      body: text;
                      src: text;

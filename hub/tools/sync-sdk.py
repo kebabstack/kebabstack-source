@@ -22,7 +22,7 @@ import hashlib, pathlib, shutil, subprocess, datetime
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = ROOT / "hub/dist/sdk"
 OUT.mkdir(exist_ok=True)
-pairs = [("sdk/motoko/src/Operations.mo", "Operations.mo"), ("sdk/motoko/src/Hardware.mo", "Hardware.mo"), ("sdk/motoko/src/Support.mo", "Support.mo"), ("sdk/motoko/src/Permissions.mo", "Permissions.mo"), ("sdk/motoko/src/lib.mo", "kebab-hub.mo"), ("sdk/js/hub-client.js", "hub-client.js"),
+pairs = [("sdk/motoko/src/Workboard.mo", "Workboard.mo"), ("sdk/motoko/src/Operations.mo", "Operations.mo"), ("sdk/motoko/src/Hardware.mo", "Hardware.mo"), ("sdk/motoko/src/Support.mo", "Support.mo"), ("sdk/motoko/src/Permissions.mo", "Permissions.mo"), ("sdk/motoko/src/lib.mo", "kebab-hub.mo"), ("sdk/js/hub-client.js", "hub-client.js"),
          ("docs/agent/onboard-app.md", "onboard-app.md"), ("docs/agent/mcp.md", "mcp.md"), ("sdk/README.md", "README.md"), ("hub/backend/backend.did", "hub.did")]
 lines = []
 for src, dst in pairs:

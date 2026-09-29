@@ -1372,7 +1372,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.35.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.36.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1393,7 +1393,9 @@ const idlFactory = ({ IDL }) => {
   const SsoProvider = IDL.Record({ clientId: IDL.Text, clientSecret: IDL.Text, enabled: IDL.Bool, id: IDL.Nat, issuer: IDL.Text, kind: IDL.Text, name: IDL.Text });
   const Source = IDL.Record({ app: IDL.Text, cid: IDL.Nat, name: IDL.Text, url: IDL.Text });
   const Snapshot = IDL.Record({ checkedAt: IDL.Int, metrics: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)), schema: IDL.Nat, state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }) });
+  const Selection = IDL.Variant({ all: IDL.Null, ids: IDL.Vec(IDL.Nat) });
   const ScimSourceView = IDL.Record({ createdAt: IDL.Int, domains: IDL.Vec(IDL.Text), enabled: IDL.Bool, groupCount: IDL.Nat, hasToken: IDL.Bool, id: IDL.Nat, lastOp: IDL.Text, lastSeen: IDL.Int, legacyToken: IDL.Bool, name: IDL.Text, note: IDL.Text, userCount: IDL.Nat });
+  const SalesFilter = IDL.Record({ completed: IDL.Bool, mine: IDL.Bool, offset: IDL.Nat, selection: Selection });
   const Role = IDL.Record({ can: IDL.Vec(IDL.Text), cannot: IDL.Vec(IDL.Text), id: IDL.Text, name: IDL.Text });
   const ReviewItem = IDL.Record({ appName: IDL.Text, applied: IDL.Text, cid: IDL.Nat, decidedAt: IDL.Int, decidedBy: IDL.Text, decision: IDL.Text, detail: IDL.Text, id: IDL.Nat, note: IDL.Text, reviewId: IDL.Nat, reviewers: IDL.Vec(IDL.Text), subject: IDL.Text });
   const Review = IDL.Record({ apps: IDL.Vec(IDL.Nat), closedAt: IDL.Int, dueAt: IDL.Int, id: IDL.Nat, name: IDL.Text, startedAt: IDL.Int, startedBy: IDL.Text, state: IDL.Text });
@@ -1405,6 +1407,9 @@ const idlFactory = ({ IDL }) => {
   const Policy = IDL.Record({ app: IDL.Text, defaultRole: IDL.Text, groups: IDL.Vec(GroupGrant), people: IDL.Vec(PersonGrant) });
   const PermissionPerson = IDL.Record({ active: IDL.Bool, assigned: IDL.Opt(IDL.Text), email: IDL.Text, id: IDL.Text, inherited: IDL.Bool, name: IDL.Text, previouslyAllowed: IDL.Bool, role: IDL.Text, source: IDL.Text });
   const PairResult = IDL.Variant({ busy: IDL.Null, invalid: IDL.Null, ok: IDL.Int });
+  const Column = IDL.Variant({ active: IDL.Null, done: IDL.Null, planned: IDL.Null, waiting: IDL.Null });
+  const Card = IDL.Record({ column: Column, dueOn: IDL.Text, id: IDL.Nat, next: IDL.Text, owner: IDL.Text, path: IDL.Text, reference: IDL.Text, status: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
+  const Page = IDL.Record({ checkedAt: IDL.Int, rows: IDL.Vec(Card), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   const OwnedObject = IDL.Record({ id: IDL.Text, kind: IDL.Text, meta: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
   const OpenTeamRow = IDL.Record({ action: IDL.Text, email: IDL.Text, memberId: IDL.Text, name: IDL.Text });
   const OpenTeamReview = IDL.Record({ conflicts: IDL.Vec(IDL.Text), created: IDL.Nat, deactivated: IDL.Nat, detail: IDL.Text, fetched: IDL.Nat, ok: IDL.Bool, rows: IDL.Vec(OpenTeamRow), skipped: IDL.Nat, token: IDL.Nat, updated: IDL.Nat });
@@ -1513,6 +1518,8 @@ const idlFactory = ({ IDL }) => {
     hub_supportContext: IDL.Func([IDL.Text, IDL.Text, IDL.Nat], [Context], []),
     hub_supportSources: IDL.Func([IDL.Text], [IDL.Vec(Source)], ["query"]),
     hub_syncHardware: IDL.Func([Case], [Progress], []),
+    hub_workboardSales: IDL.Func([IDL.Text, IDL.Nat, SalesFilter], [Page], []),
+    hub_workboardSources: IDL.Func([IDL.Text], [IDL.Vec(Source)], ["query"]),
     icpChart: IDL.Func([], [IDL.Record({ body: IDL.Text, src: IDL.Text })], []),
     importPeople: IDL.Func([IDL.Vec(IDL.Record({ displayName: IDL.Text, email: IDL.Text, fields: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), firstName: IDL.Text, lastName: IDL.Text }))], [IDL.Record({ created: IDL.Nat, skipped: IDL.Nat })], []),
     kitchenAuth: IDL.Func([IDL.Text], [IDL.Bool], ["query"]),

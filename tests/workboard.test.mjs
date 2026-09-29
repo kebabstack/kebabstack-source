@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import {test,before,after} from 'node:test';
+import {PocketIcServer} from '@dfinity/pic';
+import {setup,identity,key,unwrap,projectInput,taskInput} from './helpers/workboard.mjs';
+let server;before(async()=>{server=await PocketIcServer.start();});after(async()=>{await server?.stop();});
+const filter=(projectId=[])=>({projectId,mine:false,completed:true,search:'',offset:0n});
+const stablePolicies=rows=>JSON.parse(JSON.stringify(rows,(k,v)=>['checkedAt','directoryAt'].includes(k)?undefined:typeof v==='bigint'?String(v):v));
+const error=(r,kind)=>assert.ok(kind in (r.err||{}),JSON.stringify(r,(_,v)=>typeof v==='bigint'?String(v):v));
+for(const baseline of [false,true])test(`workboard ${baseline?'populated upgrade':'fresh install'}: scopes, source truth and Lunch`,{skip:baseline&&!process.env.KEBAB_WORKBOARD_BASELINE},async()=>{const x=await setup(server.getUrl(),baseline);try{
+ const saleBefore=await x.apps.assets.app.getSale(x.assetToken,x.saleId),ticketBefore=await x.apps.desk.app.getTicket(x.tokens.owner,x.ticketId);x.hub.setPrincipal(identity.owner);const finance=await x.hub.getFinanceTeam(),policies=await Promise.all(Object.values(x.apps).map(f=>x.hub.getAppPermissions(f.conn.id)));
+ if(baseline)await x.upgrade();
+ let d=x.apps.desk.app,a=x.apps.assets.app;
+ assert.deepEqual(await a.getSale(x.assetToken,x.saleId),saleBefore);assert.deepEqual(await d.getTicket(x.tokens.owner,x.ticketId),ticketBefore);x.hub.setPrincipal(identity.owner);assert.deepEqual((await x.hub.getFinanceTeam()).config,finance.config);assert.deepEqual(stablePolicies(await Promise.all(Object.values(x.apps).map(f=>x.hub.getAppPermissions(f.conn.id)))),stablePolicies(policies));x.hub.setPrincipal(identity.lunch);assert.deepEqual(await x.hub.team_members(),x.lunch);
+ assert.deepEqual(await d.workboardHome(x.tokens.employee),[]);assert.deepEqual(await d.workboardHome('forged'),[]);
+ const p=unwrap(await d.saveWorkProject(x.tokens.alpha,0n,0n,key(1),projectInput));assert.deepEqual(unwrap(await d.saveWorkProject(x.tokens.alpha,0n,0n,key(1),projectInput)),p);error(await d.saveWorkProject(x.tokens.alpha,0n,0n,key(1),{...projectInput,name:'Different'}),'stale');
+ assert.deepEqual(await d.workboardProject(x.tokens.beta,p.id),[]);error(await d.saveWorkProject(x.tokens.beta,0n,0n,key(2),projectInput),'denied');error(await d.saveWorkProject(x.tokens.alpha,p.id,p.revision,key(3),{...projectInput,scope:{personal:null}}),'invalid');
+ const input=taskInput(p.id,x.ids.alpha),t=unwrap(await d.saveWorkTask(x.tokens.alpha,0n,0n,key(4),input));assert.deepEqual(unwrap(await d.saveWorkTask(x.tokens.alpha,0n,0n,key(4),input)),t);assert.deepEqual(await d.workboardTask(x.tokens.beta,t.id),[]);
+ error(await d.saveWorkTask(x.tokens.alpha,t.id,t.revision,key(5),{...input,column:{waiting:null}}),'invalid');error(await d.saveWorkTask(x.tokens.alpha,t.id,t.revision,key(5),{...input,dueOn:'2026-02-30'}),'invalid');error(await d.saveWorkTask(x.tokens.alpha,t.id,t.revision,key(5),{...input,assignee:x.ids.beta}),'invalid');
+ const waiting={...input,column:{waiting:null},waitingFor:'Vendor delivery'};const update=unwrap(await d.saveWorkTask(x.tokens.alpha,t.id,t.revision,key(5),waiting));error(await d.saveWorkTask(x.tokens.alpha,t.id,t.revision,key(6),input),'stale');
+ assert.equal((await d.workboardTasks(x.tokens.alpha,filter([p.id]),false))[0].rows.length,1);assert.equal((await d.workboardTasks(x.tokens.beta,filter(),false))[0].rows.length,0);
+ const before=await d.workboardTask(x.tokens.alpha,t.id);await x.upgrade();d=x.apps.desk.app;a=x.apps.assets.app;assert.deepEqual(await d.workboardTask(x.tokens.alpha,t.id),before);
+ assert.equal((await d.workboardSources(x.tokens.alpha)).length,1,'central Finance permits the Assets projection');assert.equal((await d.workboardSources(x.tokens.beta)).length,0);
+ let sales=await d.workboardSales(x.tokens.alpha,x.apps.assets.conn.id,[],true,false,0n);assert.ok('ready' in sales.state);assert.equal(sales.rows.length,1);assert.ok('waiting' in sales.rows[0].column);assert.doesNotMatch(JSON.stringify(sales,(_,v)=>typeof v==='bigint'?String(v):v),/PRIVATE|@outside|10000|TEST-SERIAL/);
+ const link=unwrap(await d.linkWorkItem(x.tokens.alpha,p.id,p.revision,{sale:{cid:x.apps.assets.conn.id,id:x.saleId}},true));assert.equal((await d.workboardSales(x.tokens.alpha,x.apps.assets.conn.id,[p.id],true,false,0n)).rows.length,1);assert.equal((await d.workboardTickets(x.tokens.alpha,filter([p.id]))).rows.length,0);
+ const link2=unwrap(await d.linkWorkItem(x.tokens.alpha,p.id,link.revision,{ticket:x.ticketId},true));assert.equal((await d.workboardTickets(x.tokens.alpha,filter([p.id]))).rows[0].id,x.ticketId);
+ assert.ok((await a.markPaid(x.assetToken,x.saleId,'Test bank reconciliation')).ok);sales=await d.workboardSales(x.tokens.alpha,x.apps.assets.conn.id,[],true,false,0n);assert.ok('active' in sales.rows[0].column,'paid is not handed over');
+ assert.ok((await a.attachSaleDocument(x.assetToken,x.saleId,'invoice',Buffer.from('%PDF-1.4\n'+'example '.repeat(40)))).ok);assert.ok((await a.setSaleChecks(x.assetToken,x.saleId,true,true)).ok);assert.ok((await a.completeSaleHandover(x.assetToken,x.saleId,false,'Test hand-over')).ok);assert.ok('done' in (await d.workboardSales(x.tokens.alpha,x.apps.assets.conn.id,[],true,false,0n)).rows[0].column);assert.equal((await d.workboardSales(x.tokens.alpha,x.apps.assets.conn.id,[],false,false,0n)).rows.length,0);
+ const archived=unwrap(await d.archiveWorkProject(x.tokens.alpha,p.id,link2.revision,true));error(await d.saveWorkTask(x.tokens.alpha,t.id,update.revision,key(7),input),'invalid');assert.equal((await d.workboardTasks(x.tokens.alpha,filter(),false))[0].rows.length,0);unwrap(await d.archiveWorkProject(x.tokens.alpha,p.id,archived.revision,false));assert.equal((await d.workboardTasks(x.tokens.alpha,filter(),false))[0].rows.length,1);
+ unwrap(await d.archiveWorkTask(x.tokens.alpha,t.id,update.revision,true));assert.equal((await d.workboardTasks(x.tokens.alpha,filter(),true))[0].rows.length,1);
+ // Hub revocation is authoritative even while the Assets cache still knows Finance.
+ x.hub.setPrincipal(identity.owner);const team=await x.hub.getFinanceTeam();assert.ok((await x.hub.setFinanceTeam({...team.config,mode:'it'})).ok);assert.ok('denied' in (await d.workboardSales(x.tokens.alpha,x.apps.assets.conn.id,[],true,false,0n)).state);
+ x.hub.setPrincipal(identity.owner);await x.hub.setGroupMembers(x.group,[],['alpha@workboard.test']);await x.refresh();assert.deepEqual(await d.workboardProject(x.tokens.alpha,p.id),[]);assert.deepEqual(await d.workboardTask(x.tokens.alpha,t.id),[]);assert.ok((await d.workboardProject(x.tokens.owner,p.id)).length);
+ x.hub.setPrincipal(identity.lunch);assert.deepEqual(await x.hub.team_members(),x.lunch);
+ // Forged inter-app caller cannot query a privileged viewer, and stale leases fail closed.
+ x.hub.setPrincipal(identity.alpha);await assert.rejects(()=>x.hub.hub_workboardSources(x.ids.owner));a.setPrincipal(identity.alpha);await assert.rejects(()=>a.hub_workboardSales(x.ids.owner,'admin',{selection:{all:null},mine:false,completed:true,offset:0n}));
+ await x.pic.stopCanister({sender:identity.controller,canisterId:x.h.canisterId});await x.pic.advanceTime(61000);await x.pic.tick(3);assert.deepEqual(await d.workboardHome(x.tokens.owner),[]);
+ }finally{await x.pic.tearDown();}});

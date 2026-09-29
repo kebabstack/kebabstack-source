@@ -223,3 +223,7 @@ imports configured for the legacy schema until the new schema is reconciled. Dat
 rules apply only to new whole-day statements; no existing draft is recalculated.
 Publish/deploy only through the tested format-2 release workflow after explicit
 production authorization. This candidate has not been deployed.
+
+## Workboard upgrade
+
+Desk 0.25.0 adds stable project/task state. Use Hub 0.36.0 and Assets 0.17.0 for hardware sale cards, updating those before Desk through the [release executor](../kitchen/INSTALL.md). Existing Desk roles and company Finance assignments remain authoritative. [Workboard guide](../docs/WORKBOARD.md).

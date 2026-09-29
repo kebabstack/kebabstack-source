@@ -1,0 +1,52 @@
+/* Geometry only. Product colours, controls and type come from the shared runtime. */
+.workboard{min-width:0}
+.workboard .wb-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--ks-space-4);flex-wrap:wrap;margin-bottom:var(--ks-space-2)}
+.workboard .wb-heading h2{font-size:var(--ks-fz-h2);line-height:var(--ks-lh-display);margin:0}
+.workboard .wb-actions,.workboard .wb-toolbar,.workboard .wb-filters{display:flex;align-items:end;flex-wrap:wrap;gap:var(--ks-space-3)}
+.workboard .wb-intro{color:var(--ks-fg-secondary);margin:var(--ks-space-2) 0 var(--ks-space-5);max-width:var(--ks-prose)}
+.workboard .wb-toolbar{margin:var(--ks-space-5) 0 var(--ks-space-4)}
+.workboard .wb-toolbar .wb-field{width:240px;max-width:100%;margin:0}
+.workboard .wb-field label{display:block;font-size:var(--ks-fz-body-sm);margin-bottom:var(--ks-space-2);font-weight:var(--ks-weight-ui-strong)}
+.workboard .wb-field input,.workboard .wb-field select,.workboard .wb-field textarea{width:100%;font-size:var(--ks-field-font);min-height:var(--ks-field-height);box-sizing:border-box}
+.workboard .wb-filters{align-items:center;margin:var(--ks-space-4) 0;gap:var(--ks-space-4)}
+.workboard .wb-filters label{display:flex;align-items:center;gap:var(--ks-space-2);min-height:var(--ks-button-height);font-size:var(--ks-fz-body-sm);margin:0;cursor:pointer}
+.workboard input[type=checkbox]{width:18px;height:18px;min-height:0;accent-color:var(--ks-accent);margin:0}
+.workboard .wb-meta,.workboard .wb-card p,.workboard .wb-card-foot{font-size:var(--ks-fz-body-sm);color:var(--ks-fg-secondary);line-height:var(--ks-lh-meta)}
+.workboard .wb-columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ks-space-4);align-items:start;margin-top:var(--ks-space-5)}
+.workboard .wb-column{min-width:0;background:var(--ks-bg-sunk);border-radius:var(--ks-radius-card);padding:var(--ks-space-3)}
+.workboard .wb-column h3{display:flex;align-items:center;justify-content:space-between;gap:var(--ks-space-2);font-size:var(--ks-fz-body-sm);font-weight:var(--ks-weight-ui-strong);margin:var(--ks-space-1) var(--ks-space-1) var(--ks-space-4)}
+.workboard .wb-column h3 span{font-weight:var(--ks-weight-body);color:var(--ks-fg-secondary)}
+.workboard .wb-column ul,.workboard .wb-projects{list-style:none;margin:0;padding:0;display:grid;gap:var(--ks-space-3)}
+.workboard .wb-card{position:relative;min-width:0;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-inline);padding:var(--ks-space-4);background:var(--ks-bg-card);overflow-wrap:anywhere}
+.workboard .wb-card-kind{font-size:var(--ks-fz-eyebrow);color:var(--ks-fg-secondary);line-height:var(--ks-lh-meta);margin-bottom:var(--ks-space-2)}
+.workboard .wb-card-title{font-weight:var(--ks-weight-ui-strong);font-size:var(--ks-fz-body);line-height:var(--ks-lh-meta);color:var(--ks-fg);text-decoration:none;display:block}
+.workboard .wb-card-title:hover{text-decoration:underline}
+.workboard .wb-card p{margin:var(--ks-space-3) 0}
+.workboard .wb-card-foot{display:grid;gap:var(--ks-space-1)}
+.workboard .wb-overdue{color:var(--ks-danger)}
+.workboard .wb-column-empty{color:var(--ks-fg-muted);font-size:var(--ks-fz-body-sm);margin:0;padding:var(--ks-space-3) var(--ks-space-1) var(--ks-space-5)}
+.workboard .wb-unlink{margin-top:var(--ks-space-3)}
+.workboard .wb-message:empty{display:none}
+.workboard .wb-message,.workboard .wb-notices{padding:var(--ks-space-3) var(--ks-space-4);margin:var(--ks-space-4) 0;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-inline);font-size:var(--ks-fz-body-sm)}
+.workboard .wb-error{color:var(--ks-danger);border-color:var(--ks-danger)}
+.workboard .wb-notices p{margin:var(--ks-space-1) 0}
+.workboard .wb-more{display:flex;gap:var(--ks-space-3);flex-wrap:wrap;margin-top:var(--ks-space-4)}
+.workboard .wb-help{max-width:var(--ks-prose);margin-top:var(--ks-space-5);font-size:var(--ks-fz-body-sm);color:var(--ks-fg-secondary)}
+.workboard .wb-help summary{min-height:var(--ks-button-height);align-content:center;cursor:pointer;color:var(--ks-fg)}
+.workboard .wb-help li{margin-bottom:var(--ks-space-3)}
+.workboard .wb-help small{display:block}
+.workboard .wb-projects li{display:flex;align-items:center;justify-content:space-between;gap:var(--ks-space-4);padding:var(--ks-space-4);background:var(--ks-bg-card);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-inline)}
+.workboard .wb-projects p{margin:var(--ks-space-1) 0 0;color:var(--ks-fg-secondary);font-size:var(--ks-fz-body-sm)}
+.workboard .wb-projects li>div{min-width:0;overflow-wrap:anywhere}
+.workboard .wb-editor{max-width:var(--ks-prose);margin-top:var(--ks-space-5)}
+.workboard .wb-editor fieldset{border:0;padding:0;margin:0;display:grid;gap:var(--ks-field-group-gap);min-width:0}
+.workboard .wb-editor button{justify-self:start}
+.workboard .wb-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--ks-space-4)}
+.workboard .wb-empty{padding:var(--ks-space-5);background:var(--ks-bg-card);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)}
+.workboard [hidden]{display:none!important}
+@media(max-width:1200px){.workboard .wb-columns{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.workboard .wb-columns,.workboard .wb-pair{grid-template-columns:1fr}.workboard .wb-toolbar .wb-field{width:100%}.workboard .wb-projects li{align-items:start;flex-wrap:wrap}.workboard .wb-heading{align-items:start}}
+
+.workboard .wb-toolbar .wb-scope{width:160px}
+.workboard .wb-card-foot{margin-top:var(--ks-space-3)}
+@media(max-width:640px){.workboard .wb-toolbar .wb-scope{width:100%}}

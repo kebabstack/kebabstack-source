@@ -5,6 +5,8 @@ export const idlFactory = ({ IDL }) => {
   const Snapshot = IDL.Record({ checkedAt: IDL.Int, metrics: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)), schema: IDL.Nat, state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }) });
   const AiState = IDL.Record({ connectorId: IDL.Nat, keySet: IDL.Bool, laneGranted: IDL.Bool, model: IDL.Text, source: IDL.Text });
   const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, ai: AiState, aiModel: IDL.Text, aiSource: IDL.Text, appUrl: IDL.Text, hubId: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat, photoBytes: IDL.Nat, tagPrefix: IDL.Text, trustId: IDL.Text, trustLastPull: IDL.Int });
+  const Selection = IDL.Variant({ all: IDL.Null, ids: IDL.Vec(IDL.Nat) });
+  const SalesFilter = IDL.Record({ completed: IDL.Bool, mine: IDL.Bool, offset: IDL.Nat, selection: Selection });
   const Buyer = IDL.Record({ country: IDL.Text, email: IDL.Text, houseNo: IDL.Text, name: IDL.Text, pid: IDL.Text, postalCode: IDL.Text, street: IDL.Text, town: IDL.Text });
   const InvoiceData = IDL.Record({ acceptedLine: IDL.Text, buyer: Buyer, creditOf: IDL.Text, currency: IDL.Text, description: IDL.Text, dueOn: IDL.Text, footer: IDL.Text, gross: IDL.Text, grossMinor: IDL.Nat, ibanPretty: IDL.Text, issuedOn: IDL.Text, kind: IDL.Text, lang: IDL.Text, net: IDL.Text, netMinor: IDL.Nat, number: IDL.Text, qrPayload: IDL.Text, reference: IDL.Text, referencePretty: IDL.Text, seller: IDL.Record({ country: IDL.Text, houseNo: IDL.Text, name: IDL.Text, postalCode: IDL.Text, street: IDL.Text, town: IDL.Text, uid: IDL.Text, vatRegistered: IDL.Bool }), vat: IDL.Text, vatMinor: IDL.Nat, vatRate: IDL.Text, vatRateBp: IDL.Nat, waiverText: IDL.Text, waiverVersion: IDL.Nat });
   const Sale = IDL.Record({ acceptedAt: IDL.Int, acceptedBy: IDL.Text, acceptedHow: IDL.Text, assetId: IDL.Nat, buyer: Buyer, cancelReason: IDL.Text, cancelledAt: IDL.Int, checksBy: IDL.Text, createdAt: IDL.Int, createdBy: IDL.Text, creditNoteNo: IDL.Text, creditPdfId: IDL.Nat, currency: IDL.Text, description: IDL.Text, dueOn: IDL.Text, grossMinor: IDL.Nat, id: IDL.Nat, invoiceNo: IDL.Text, issuedAt: IDL.Int, issuedOn: IDL.Text, mdmRemoved: IDL.Bool, netMinor: IDL.Nat, paidAt: IDL.Int, paidNote: IDL.Text, pdfHash: IDL.Text, pdfId: IDL.Nat, priceNote: IDL.Text, proposedMinor: IDL.Opt(IDL.Nat), reference: IDL.Text, status: IDL.Text, updatedAt: IDL.Int, vatMinor: IDL.Nat, vatRateBp: IDL.Nat, waiverVersion: IDL.Nat, wiped: IDL.Bool });
@@ -19,6 +21,9 @@ export const idlFactory = ({ IDL }) => {
   const PermissionStatus = IDL.Record({ app: IDL.Text, directoryAt: IDL.Int, legacy: IDL.Vec(LegacyGrant), legacyGroups: IDL.Vec(IDL.Record({ name: IDL.Text, role: IDL.Text })), model: IDL.Nat, revision: IDL.Text });
   const PaymentInput = IDL.Record({ amountMinor: IDL.Nat, paidOn: IDL.Text, reason: IDL.Text, reference: IDL.Text, requestId: IDL.Text, reverses: IDL.Opt(IDL.Nat) });
   const PaymentEntry = IDL.Record({ amountMinor: IDL.Nat, at: IDL.Int, by: IDL.Text, id: IDL.Nat, paidOn: IDL.Text, reason: IDL.Text, reference: IDL.Text, requestId: IDL.Text, reverses: IDL.Opt(IDL.Nat) });
+  const Column = IDL.Variant({ active: IDL.Null, done: IDL.Null, planned: IDL.Null, waiting: IDL.Null });
+  const Card = IDL.Record({ column: Column, dueOn: IDL.Text, id: IDL.Nat, next: IDL.Text, owner: IDL.Text, path: IDL.Text, reference: IDL.Text, status: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
+  const Page = IDL.Record({ checkedAt: IDL.Int, rows: IDL.Vec(Card), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   const OwnedObject = IDL.Record({ id: IDL.Text, kind: IDL.Text, meta: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
   const NotifyState = IDL.Record({ at: IDL.Int, detail: IDL.Text, ok: IDL.Bool, title: IDL.Text, to: IDL.Text });
   const MdmView = IDL.Record({ clientId: IDL.Text, created: IDL.Nat, createdAt: IDL.Int, devices: IDL.Nat, enabled: IDL.Bool, id: IDL.Nat, kind: IDL.Text, lastResult: IDL.Text, lastSync: IDL.Int, matched: IDL.Nat, name: IDL.Text, secretSet: IDL.Bool, url: IDL.Text });
@@ -97,6 +102,7 @@ export const idlFactory = ({ IDL }) => {
     hub_syncHardware: IDL.Func([Case], [Progress], []),
     hub_upsert: IDL.Func([IDL.Vec(DirectoryRow)], [IDL.Nat], []),
     hub_usesGroup: IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], ["query"]),
+    hub_workboardSales: IDL.Func([IDL.Text, IDL.Text, SalesFilter], [Page], ["query"]),
     importCsv: IDL.Func([IDL.Text, IDL.Text], [IDL.Record({ created: IDL.Nat, detail: IDL.Text, ok: IDL.Bool, skipped: IDL.Nat, updated: IDL.Nat })], []),
     info: IDL.Func([], [IDL.Record({ appUrl: IDL.Text, hubId: IDL.Text, hubSet: IDL.Bool, orgName: IDL.Text, version: IDL.Text })], ["query"]),
     intakeCommit: IDL.Func([IDL.Text, IDL.Record({ action: IDL.Text, assetId: IDL.Opt(IDL.Nat), create: IDL.Opt(AssetInput), mime: IDL.Text, note: IDL.Text, photo: IDL.Opt(IDL.Vec(IDL.Nat8)), to: IDL.Text })], [IDL.Record({ assetId: IDL.Nat, detail: IDL.Text, eventId: IDL.Nat, ok: IDL.Bool })], []),

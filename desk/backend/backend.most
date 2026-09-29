@@ -1,6 +1,54 @@
 // Version: 1.0.0
+type Absence__1035572411 =
+  {
+    at : Int;
+    by : Text;
+    cancelledAt : Int;
+    endAt : Int;
+    id : Nat;
+    name : Text;
+    personId : Text;
+    projectId : Nat;
+    startAt : Int
+  };
 type Approval__559070989 =
   {approver : Text; at : Int; decidedBy : Text; note : Text; state : Text};
+type Audience__241913484 = {#public_; #workspace};
+type Audit__500806515 =
+  {action : Text; at : Int; by : Text; reason : Text; recordId : Nat};
+type Audit__833209525 = {action : Text; at : Int; by : Text};
+type Bucket__632639664 = {at : Int; count : Nat};
+type Cancellation__152820794 =
+  {at : Int; by : Text; from : Int; reason : Text};
+type Case__414749382 =
+  {
+    desk : Text;
+    dueAt : ?Int;
+    key : Text;
+    person : Text;
+    revision : Int;
+    state : Text;
+    ticket : Nat;
+    url : Text
+  };
+type Check__1026619385 = {at : Int; by : Text; until : Int};
+type ClosedRange__141979310 = {endAt : Int; projectId : Nat; startAt : Int};
+type Column__43375615 = {#active; #done; #planned; #waiting};
+type Config__737424465 =
+  {
+    at : Int;
+    audience : Audience__241913484;
+    by : Text;
+    description : Text;
+    enabled : Bool;
+    generation : Nat;
+    projectId : Nat;
+    retentionDays : Nat;
+    revision : Nat;
+    services : [Text];
+    slug : Text;
+    title : Text
+  };
 type ConnectorUser__173861307 =
   {
     active : Bool;
@@ -12,7 +60,62 @@ type ConnectorUser__173861307 =
     lastName : Text;
     source : Text
   };
+type Contact__574708535 =
+  {
+    email : Text;
+    expiresAt : Int;
+    fingerprint : Text;
+    name : Text;
+    projectId : Nat;
+    schema : [Field__256479992];
+    tokenHash : Text
+  };
+type Cover__692955551 =
+  {
+    decidedAt : Int;
+    decidedBy : Text;
+    endAt : Int;
+    fromPersonId : Text;
+    id : Nat;
+    planId : Nat;
+    reason : Text;
+    requestedAt : Int;
+    requestedBy : Text;
+    shift : Nat;
+    startAt : Int;
+    state : SwapState__583333538;
+    toName : Text;
+    toPersonId : Text
+  };
 type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type DayKind__28519925 = {#holiday; #weekday; #weekend};
+type Day__1003096954 =
+  {date : Text; endAt : Int; kind : DayKind__28519925; startAt : Int};
+type Delivery__845387396 =
+  {
+    acceptedAt : Int;
+    attempts : Nat;
+    detail : Text;
+    id : Nat;
+    incidentId : Nat;
+    leaseUntil : Int;
+    name : Text;
+    nextAttempt : Int;
+    purpose : {#handoff; #response};
+    recipient : Text;
+    stage : Nat;
+    status : {#accepted; #cancelled; #failed; #pending}
+  };
+type Erasure__198205922 =
+  {
+    createdAt : Int;
+    deletedAt : Int;
+    projectId : Nat;
+    reason : Text;
+    ticketId : Nat
+  };
+type Event__1024384230 =
+  {at : Int; by : Text; kind : Text; name : Text; text : Text};
 type Event__55031293 =
   {
     actorKind : Text;
@@ -33,6 +136,15 @@ type FieldDef__537266714 =
     sensitive : Bool;
     title : Text
   };
+type Field__256479992 =
+  {
+    key : Text;
+    kind : Text;
+    options : [Text];
+    required : Bool;
+    sensitive : Bool;
+    title : Text
+  };
 type File__569085171 =
   {
     at : Int;
@@ -44,14 +156,378 @@ type File__569085171 =
     size : Nat;
     ticketId : Nat
   };
+type Handoff__705417245 =
+  {
+    at : Int;
+    decidedAt : Int;
+    from : Text;
+    status : {#accepted; #cancelled; #declined; #pending};
+    summary : Text;
+    to : Text;
+    toName : Text
+  };
+type History__972988405 = {revision : Nat; rules : [Rule__215297973]};
+type Hold__533759824 = {reason : Text; until : Int};
+type Impact__40061772 = {#degraded; #maintenance; #outage};
+type Incident__450685210 =
+  {
+    ackMinutes : Nat;
+    acknowledgedAt : Int;
+    detail : Text;
+    fallback : Text;
+    id : Nat;
+    nextEscalation : Int;
+    openedAt : Int;
+    openedBy : Text;
+    owner : Text;
+    ownerName : Text;
+    projectId : Nat;
+    requestKey : Text;
+    resolution : Text;
+    resolvedAt : Int;
+    retentionDays : Nat;
+    revision : Nat;
+    routeIssue : Text;
+    service : Text;
+    severity : {#critical; #major; #minor};
+    stage : Nat;
+    stageCount : Nat;
+    status : {#acknowledged; #open; #resolved};
+    title : Text;
+    updatedAt : Int
+  };
 type Internal__161573640<K, V> =
   {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Job__420518707 =
+  {
+    attempts : Nat;
+    createdAt : Int;
+    detail : Text;
+    expiresAt : Int;
+    key : Text;
+    leaseUntil : Int;
+    nextAttempt : Int;
+    path : Text;
+    projectId : Nat;
+    recipient : Text;
+    source : Source__1013999851;
+    status : {#accepted; #cancelled; #failed; #pending};
+    title : Text
+  };
+type Key__773594152 =
+  {
+    createdAt : Int;
+    expiresAt : Int;
+    hash : Text;
+    id : Nat;
+    name : Text;
+    projectId : Nat;
+    revoked : Bool;
+    scopes : [Text]
+  };
+type Kind__581073274 = {#adjustment; #readiness; #work};
 type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type LifecycleCase__125921780 =
+  {
+    decidedBy : Text;
+    detectedAt : Int;
+    effectiveActive : Bool;
+    email : Text;
+    lastEvent : Nat;
+    name : Text;
+    note : Text;
+    personId : Text;
+    source : Text;
+    state : {#notDeparture; #offboarding; #reactivated; #review}
+  };
+type Line__1006148592 =
+  {
+    amount : Int;
+    code : Text;
+    costCenter : Text;
+    currency : Text;
+    decimals : Nat;
+    endAt : Int;
+    kind : Kind__581073274;
+    name : Text;
+    payrollId : Text;
+    personId : Text;
+    rate : Nat;
+    recordId : Nat;
+    seconds : Nat;
+    startAt : Int
+  };
+type Line__873232375 =
+  {
+    amount : Int;
+    basis : {#adjustment; #day; #hour};
+    code : Text;
+    costCenter : Text;
+    currency : Text;
+    date : Text;
+    dayKind : DayKind__28519925;
+    decimals : Nat;
+    divisorSeconds : Nat;
+    endAt : Int;
+    kind : Kind__581073274;
+    name : Text;
+    payableSeconds : Nat;
+    payrollId : Text;
+    personId : Text;
+    rate : Nat;
+    recordId : Nat;
+    recordIds : [Nat];
+    ruleRevision : Nat;
+    seconds : Nat;
+    startAt : Int;
+    unit : Unit__708355153
+  };
+type Link__282387798 = {#sale : {cid : Nat; id : Nat}; #ticket : Nat};
 type LogRow__410755882 = {at : Int; what : Text; who : Text};
+type Map__13625999<K, V> =
+  {var root : Node__430031793<K, V>; var size : Nat__58649523};
+type Map__386906547<K, V> = Map__670138087<K, V>;
+type Map__670138087<K, V> = Map__13625999<K, V>;
+type Mapping__257773927 = {payrollId : Text; personId : Text};
 type Nat__58649523 = Nat__920180692;
 type Nat__920180692 = Nat;
 type Node__430031793<K, V> =
   {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Notice__935769535 =
+  {
+    at : Int;
+    by : Text;
+    endsAt : Int;
+    generation : Nat;
+    id : Nat;
+    impact : Impact__40061772;
+    incidentId : Nat;
+    message : Text;
+    phase : Phase__329397285;
+    projectId : Nat;
+    requestKey : Text;
+    revision : Nat;
+    services : [Text];
+    startsAt : Int;
+    title : Text;
+    updatedAt : Int;
+    updates : [Update__688900656];
+    withdrawnAt : Int
+  };
+type Period__630644373 =
+  {
+    adjustmentOf : Nat;
+    approvedAt : Int;
+    approvedBy : Text;
+    batchId : Text;
+    coverageIssues : Nat;
+    coverageNote : Text;
+    createdAt : Int;
+    createdBy : Text;
+    endAt : Int;
+    id : Nat;
+    lines : [Line__1006148592];
+    policy : Policy__448112390;
+    projectId : Nat;
+    requestKey : Text;
+    revision : Nat;
+    sourceChanged : Bool;
+    startAt : Int;
+    timezone : Text;
+    title : Text
+  };
+type Person__120447987 = {id : Text; name : Text};
+type Phase__329397285 =
+  {
+    #identified;
+    #investigating;
+    #maintenance;
+    #monitoring;
+    #resolved;
+    #scheduled
+  };
+type PlanInput__681146291 =
+  {
+    endAt : Int;
+    layers : [Text];
+    projectId : Nat;
+    shifts : [Shift__1023643395];
+    startAt : Int;
+    template : Text;
+    timezone : Text;
+    windows : [Window__392353250]
+  };
+type Plan__595385244 =
+  {
+    createdAt : Int;
+    createdBy : Text;
+    id : Nat;
+    input : PlanInput__681146291;
+    publication : ?Publication__94378408;
+    requestKey : Text;
+    revision : Nat
+  };
+type PolicyInput__865472899 =
+  {
+    costCenter : Text;
+    currency : Text;
+    decimals : Nat;
+    readinessCode : Text;
+    readinessRates : [Nat];
+    retentionDays : Nat;
+    workCode : Text;
+    workRate : Nat
+  };
+type Policy__206082595 =
+  {
+    ackMinutes : Nat;
+    at : Int;
+    by : Text;
+    enabled : Bool;
+    fallback : Text;
+    projectId : Nat;
+    retentionDays : Nat;
+    revision : Nat
+  };
+type Policy__443462565 =
+  {
+    at : Int;
+    by : Text;
+    coordinators : [Text];
+    enabled : Bool;
+    revision : Nat
+  };
+type Policy__448112390 =
+  {
+    at : Int;
+    by : Text;
+    costCenter : Text;
+    currency : Text;
+    decimals : Nat;
+    readinessCode : Text;
+    readinessRates : [Nat];
+    retentionDays : Nat;
+    revision : Nat;
+    workCode : Text;
+    workRate : Nat
+  };
+type Policy__638844145 =
+  {
+    completedDays : Nat;
+    graceUntil : Int;
+    inactiveDays : Nat;
+    noticeUrl : Text;
+    revision : Nat
+  };
+type Preferences__483381273 =
+  {
+    completed : Bool;
+    mine : Bool;
+    projectId : ?Nat;
+    sales : Bool;
+    tickets : Bool
+  };
+type Progress__763119585 =
+  {
+    bindings : [Text];
+    checkedAt : Int;
+    open : Nat;
+    sources : Nat;
+    state : Text;
+    total : Nat
+  };
+type ProjectSettings__766760505 =
+  {
+    archivedAt : Int;
+    retentionChangedAt : Int;
+    retentionDays : Nat;
+    revision : Nat
+  };
+type Project__223177085 =
+  {
+    description : Text;
+    enabled : Bool;
+    fields : [Field__256479992];
+    group : Text;
+    id : Nat;
+    name : Text;
+    origins : [Text];
+    revision : Nat;
+    typeId : Nat;
+    widgetEnabled : Bool;
+    widgetId : Text
+  };
+type Project__618697039 =
+  {
+    archived : Bool;
+    createdAt : Int;
+    createdBy : Text;
+    description : Text;
+    dueOn : Text;
+    id : Nat;
+    name : Text;
+    revision : Nat;
+    scope : Scope__811524788;
+    updatedAt : Int
+  };
+type Project__923504747 =
+  {
+    createdAt : Int;
+    createdBy : Text;
+    description : Text;
+    id : Nat;
+    name : Text;
+    requestKey : Text;
+    scope : Scope__932687452;
+    services : [Text]
+  };
+type Publication__94378408 =
+  {acceptedGaps : Bool; at : Int; by : Text; names : [Person__120447987]};
+type Rates__472597594 = {holiday : Nat; weekday : Nat; weekend : Nat};
+type Recipe__487147729 =
+  {
+    regions : [Region__565250974];
+    requirement : {#continuous; #regional};
+    rotationDays : Nat;
+    startDate : Text;
+    timezone : Text;
+    weeks : Nat
+  };
+type RecordState__936219443 =
+  {#approved; #confirmed; #disputed; #excluded; #pending};
+type Record__869158105 =
+  {
+    breakMinutes : Nat;
+    confirmedAt : Int;
+    confirmedBy : Text;
+    delta : Int;
+    endAt : Int;
+    id : Nat;
+    kind : Kind__581073274;
+    layer : Nat;
+    name : Text;
+    note : Text;
+    periodId : Nat;
+    personId : Text;
+    reason : Text;
+    reviewedAt : Int;
+    reviewedBy : Text;
+    sourceKey : Text;
+    startAt : Int;
+    state : RecordState__936219443
+  };
+type Region__565250974 =
+  {
+    backup : [Text];
+    backupMode : {#always; #none; #nonworking};
+    days : [Nat];
+    endMinute : Nat;
+    holidays : [Text];
+    name : Text;
+    primary : [Text];
+    startMinute : Nat;
+    timezone : Text
+  };
 type RequestType__639901818 =
   {
     approval : Text;
@@ -70,8 +546,52 @@ type RequestType__639901818 =
     sortOrder : Nat;
     visibility : Text
   };
+type Request__700824527 = {id : Nat; input : Blob};
+type Rule__215297973 =
+  {
+    at : Int;
+    by : Text;
+    effectiveAt : Int;
+    holidays : [Text];
+    minimumMinutes : Nat;
+    policy : PolicyInput__865472899;
+    readiness : [Rates__472597594];
+    readinessBasis : {#day; #hour};
+    readinessUnit : Unit__708355153;
+    revision : Nat;
+    roundingMinutes : Nat;
+    timezone : Text;
+    withdrawnAt : Int;
+    work : Rates__472597594;
+    workUnit : Unit__708355153
+  };
+type Run__161322958 =
+  {
+    checked : [Bool];
+    definition : Type__720201295;
+    outcome : Text;
+    revision : Nat;
+    step : Nat
+  };
+type Saved__468242219 = {edited : Bool; recipe : Recipe__487147729};
+type Scope__811524788 = {#group : Text; #personal};
+type Scope__932687452 = {#customer : Nat; #internal : Text};
 type Session__739831475 =
   {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type Shift__1023643395 =
+  {endAt : Int; layer : Nat; personId : Text; startAt : Int};
+type Signal__1047410816 =
+  {
+    condition : Text;
+    expiresAt : Int;
+    incidentId : Nat;
+    occurredAt : Int;
+    payloadHash : Text;
+    receivedAt : Int;
+    sequence : Nat;
+    sourceId : Nat;
+    transitions : Nat
+  };
 type SlackAnchor__348620600 = {channel : Text; intakeId : Nat; ts : Text};
 type SlackCred__262947466 =
   {
@@ -96,7 +616,80 @@ type SlackIntake__924387788 =
   };
 type SlackOut__37520524 =
   {add : Bool; emoji : Text; kind : Text; text : Text; ticketId : Nat};
+type Snapshot__816004714 =
+  {
+    days : [Day__1003096954];
+    lines : [Line__873232375];
+    rule : Rule__215297973
+  };
+type Source__1013999851 =
+  {
+    #cover : {coverId : Nat; interval : Bool; planId : Nat; urgent : Bool};
+    #planning : {day : Int}
+  };
+type Source__1071702893 =
+  {
+    accepted : Nat;
+    createdAt : Int;
+    createdBy : Text;
+    enabled : Bool;
+    expiresAt : Int;
+    hash : Text;
+    id : Nat;
+    lastError : Text;
+    name : Text;
+    previousHash : Text;
+    previousUntil : Int;
+    projectId : Nat;
+    receivedAt : Int;
+    rejected : Nat;
+    requestKey : Text;
+    revision : Nat;
+    revokedAt : Int;
+    service : Text;
+    testedAt : Int
+  };
+type Step__491210899 =
+  {
+    approval : Bool;
+    checklist : [Text];
+    group : Text;
+    instructions : Text;
+    name : Text
+  };
+type SwapState__583333538 = {#accepted; #cancelled; #declined; #pending};
+type Swap__604435800 =
+  {
+    decidedAt : Int;
+    decidedBy : Text;
+    fromPersonId : Text;
+    id : Nat;
+    planId : Nat;
+    reason : Text;
+    requestedAt : Int;
+    requestedBy : Text;
+    shift : Nat;
+    state : SwapState__583333538;
+    toName : Text;
+    toPersonId : Text
+  };
 type Task__1009919940 = {at : Int; by : Text; state : Text; title : Text};
+type Task__385154700 =
+  {
+    archived : Bool;
+    assignee : Text;
+    column : Column__43375615;
+    createdAt : Int;
+    createdBy : Text;
+    dueOn : Text;
+    id : Nat;
+    note : Text;
+    projectId : ?Nat;
+    revision : Nat;
+    title : Text;
+    updatedAt : Int;
+    waitingFor : Text
+  };
 type Ticket__476694790 =
   {
     assignee : Text;
@@ -121,9 +714,43 @@ type Ticket__476694790 =
     updatedAt : Int;
     waitingOn : Text
   };
+type Type__720201295 =
+  {
+    description : Text;
+    enabled : Bool;
+    fields : [Field__256479992];
+    id : Nat;
+    name : Text;
+    priority : Text;
+    projectId : Nat;
+    resolveH : Nat;
+    respondH : Nat;
+    revision : Nat;
+    steps : [Step__491210899]
+  };
+type Unit__708355153 = {#minutes; #money};
+type Update__688900656 = {at : Int; message : Text; phase : Phase__329397285};
+type Window__392353250 = {endAt : Int; layer : Nat; startAt : Int};
+type Work__747256676 =
+  {
+    at : Int;
+    breakMinutes : Nat;
+    endAt : Int;
+    id : Nat;
+    incidentId : Nat;
+    name : Text;
+    note : Text;
+    personId : Text;
+    projectId : Nat;
+    requestKey : Text;
+    startAt : Int;
+    voidReason : Text;
+    voidedAt : Int
+  };
 actor {
   stable D : Int;
   stable H : Int;
+  stable MAX_CUSTOMER_BYTES : Nat;
   stable MAX_FILE : Nat;
   stable MAX_FILES_PER_TICKET : Nat;
   stable MAX_FILE_BYTES_TOTAL : Nat;
@@ -141,6 +768,13 @@ actor {
   stable var aiProvider : Text;
   stable var aiTriage : Bool;
   stable var aiUrl : Text;
+  stable alertState :
+    {
+      var nextSource : Nat;
+      rates : Map__386906547<Nat, Bucket__632639664>;
+      signals : Map__386906547<Text, Signal__1047410816>;
+      sources : Map__386906547<Nat, Source__1071702893>
+    };
   stable var appUrl : Text;
   stable approvals :
     {
@@ -148,6 +782,80 @@ actor {
       var size : Nat__58649523
     };
   stable var autoCloseDays : Nat;
+  stable compensationState :
+    {
+      histories : Map__386906547<Nat, History__972988405>;
+      legacy : Map__386906547<Nat, Policy__448112390>;
+      snapshots : Map__386906547<Nat, Snapshot__816004714>;
+      units : Map__386906547<Nat, Unit__708355153>
+    };
+  stable var customerAccountingReady : Bool;
+  stable customerContacts :
+    {
+      var root : Node__430031793<Nat, Contact__574708535>;
+      var size : Nat__58649523
+    };
+  stable customerCosts :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable customerErasedRetries :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable customerErasures :
+    {
+      var root : Node__430031793<Nat, Erasure__198205922>;
+      var size : Nat__58649523
+    };
+  stable customerHolds :
+    {
+      var root : Node__430031793<Nat, Hold__533759824>;
+      var size : Nat__58649523
+    };
+  stable var customerJournalCursor : Nat;
+  stable var customerJournalRevision : Nat;
+  stable customerKeys :
+    {
+      var root : Node__430031793<Nat, Key__773594152>;
+      var size : Nat__58649523
+    };
+  stable customerLinkRevisions :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable customerPolicies :
+    {
+      var root : Node__430031793<Nat, Policy__638844145>;
+      var size : Nat__58649523
+    };
+  stable var customerPrivacyCursor : Nat;
+  stable customerPrivacyIntroducedAt : Int;
+  stable var customerPrivacyLastSweep : Int;
+  stable customerProjects :
+    {
+      var root : Node__430031793<Nat, Project__223177085>;
+      var size : Nat__58649523
+    };
+  stable customerQuotas :
+    {
+      var root :
+        Node__430031793<Nat,
+                         {daily : Nat; day : Int; hour : Int; hourly : Nat}>;
+      var size : Nat__58649523
+    };
+  stable customerReplyAt :
+    {var root : Node__430031793<Nat, Int>; var size : Nat__58649523};
+  stable customerReplyRetries :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable customerRetries :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable var customerRetryCursor : Text;
+  stable var customerStoredBytes : Nat;
+  stable customerTypes :
+    {
+      var root : Node__430031793<Nat, Type__720201295>;
+      var size : Nat__58649523
+    };
+  stable customerWorkflows :
+    {
+      var root : Node__430031793<Nat, Run__161322958>;
+      var size : Nat__58649523
+    };
   stable var demoSeeded : Bool;
   stable events :
     {
@@ -167,15 +875,39 @@ actor {
     };
   stable groupsCache :
     {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
+  stable hardwareProgress :
+    {
+      var root :
+        Node__430031793<Nat,
+                         {
+                           context : Case__414749382;
+                           progress : Progress__763119585
+                         }>;
+      var size : Nat__58649523
+    };
+  stable var hardwareSweepAfter : Nat;
   stable var hubId : Text;
   stable var idMigration : Text;
   stable ids :
     {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable internalTickets :
+    {var root : Node__430031793<Nat, Bool>; var size : Nat__58649523};
   stable var keyPrefix : Text;
   stable lastCreateAt :
     {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
   stable var lastDirectoryCount : Nat;
   stable var lastDirectoryPull : Int;
+  stable lifecycleCases :
+    {
+      var root : Node__430031793<Nat, LifecycleCase__125921780>;
+      var size : Nat__58649523
+    };
+  stable var lifecycleCheckedAt : Int;
+  stable var lifecycleCursor : Nat;
+  stable var lifecycleError : Text;
+  stable var lifecycleGap : Bool;
+  stable var nextCustomerKey : Nat;
+  stable var nextCustomerProject : Nat;
   stable var nextEventId : Nat;
   stable var nextFileId : Nat;
   stable var nextLogId : Nat;
@@ -184,12 +916,70 @@ actor {
   stable var nextTypeId : Nat;
   stable nudged :
     {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
+  stable var offboardingTemplateId : ?Nat;
+  stable oncallCalendarState :
+    {
+      absences : Map__386906547<Nat, Absence__1035572411>;
+      cancellations : Map__386906547<Nat, Cancellation__152820794>;
+      covers : Map__386906547<Nat, [Cover__692955551]>;
+      var nextAbsence : Nat;
+      var nextCover : Nat;
+      settings : Map__386906547<Nat, ProjectSettings__766760505>
+    };
+  stable oncallRegionalState :
+    {recipes : Map__386906547<Nat, Saved__468242219>};
+  stable oncallReminderState :
+    {
+      var cursor : Nat;
+      jobs : Map__386906547<Text, Job__420518707>;
+      policies : Map__386906547<Nat, Policy__443462565>;
+      scanned : Map__386906547<Nat, Int>
+    };
+  stable oncallState :
+    {
+      var nextPlan : Nat;
+      var nextProject : Nat;
+      var nextSwap : Nat;
+      plans : Map__386906547<Nat, Plan__595385244>;
+      projects : Map__386906547<Nat, Project__923504747>;
+      swaps : Map__386906547<Nat, [Swap__604435800]>
+    };
   stable var orgName : Text;
   stable var owner : ?Principal;
   stable people :
     {
       var root : Node__430031793<Text, ConnectorUser__173861307>;
       var size : Nat__58649523
+    };
+  stable reportingState :
+    {
+      audit : Map__386906547<Nat, [Audit__500806515]>;
+      closed : Map__386906547<Nat, ClosedRange__141979310>;
+      mappings : Map__386906547<Text, Mapping__257773927>;
+      var nextPeriod : Nat;
+      var nextRecord : Nat;
+      periods : Map__386906547<Nat, Period__630644373>;
+      policies : Map__386906547<Nat, Policy__448112390>;
+      records : Map__386906547<Nat, Record__869158105>
+    };
+  stable responseState :
+    {
+      deliveries : Map__386906547<Nat, Delivery__845387396>;
+      events : Map__386906547<Nat, [Event__1024384230]>;
+      handoffs : Map__386906547<Nat, Handoff__705417245>;
+      incidents : Map__386906547<Nat, Incident__450685210>;
+      var nextDelivery : Nat;
+      var nextIncident : Nat;
+      var nextWork : Nat;
+      policies : Map__386906547<Nat, Policy__206082595>;
+      work : Map__386906547<Nat, Work__747256676>
+    };
+  stable serviceStatusState :
+    {
+      checks : Map__386906547<Text, Check__1026619385>;
+      configs : Map__386906547<Nat, Config__737424465>;
+      var nextNotice : Nat;
+      notices : Map__386906547<Nat, Notice__935769535>
     };
   stable sessions :
     {
@@ -244,5 +1034,16 @@ actor {
     {
       var root : Node__430031793<Nat, RequestType__639901818>;
       var size : Nat__58649523
+    };
+  stable workboardState :
+    {
+      audit : Map__386906547<Text, [Audit__833209525]>;
+      links : Map__386906547<Nat, [Link__282387798]>;
+      var nextProject : Nat;
+      var nextTask : Nat;
+      preferences : Map__386906547<Text, Preferences__483381273>;
+      projects : Map__386906547<Nat, Project__618697039>;
+      requests : Map__386906547<Text, Request__700824527>;
+      tasks : Map__386906547<Nat, Task__385154700>
     }
 };
