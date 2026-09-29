@@ -157,3 +157,19 @@ Subtasks share the parent's audience, owner and archive lifecycle. They do not
 create separate tickets, notification streams or nested task trees.
 
 Hub 0.37 Operations shows shared Workboard project totals and subtask progress; paired TV screens require explicit Workboard inclusion. See [the Operations scope](../docs/HUB-OPERATIONS.md).
+
+## Bulk actions in Internal support
+
+Agents and admins can tick individual requests or use the header checkbox for all
+displayed rows. **Select all matching requests** includes further pages of the
+current filter; changing filters clears the selection. Pick **Assign to me**,
+another available agent, unassigned, a status or a target date, then apply to the
+explicit count. Dates use 00:00 UTC, as in the individual editor.
+
+The result shows updated, already matching and review-needed requests. Each
+successful change has the usual ticket activity and notifications. A concurrent
+edit, pending approval, unfinished checklist or offboarding requirement can keep
+a request unchanged. Review the linked request before retrying an uncertain
+result. Requests are processed in batches, so a lost connection or leaving the
+page can stop remaining batches after earlier ones completed. Customer projects
+keep their own workflows and are excluded. No new Hub permission is needed.

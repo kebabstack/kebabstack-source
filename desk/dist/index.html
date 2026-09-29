@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="./reporting.css">
 <link rel="stylesheet" href="./components.css">
 <link rel="stylesheet" href="./workboard.css">
+<link rel="stylesheet" href="./queue-bulk.css">
 </head>
 <body class="ks-workspace">
 
@@ -99,7 +100,8 @@
 
         <span id="qStatus" class="status" role="status"></span>
       </div>
-      <div class="card flat" style="padding:6px 14px 14px"><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Request</th><th>Requested by</th><th>Status</th><th>Assigned to</th><th>Target date</th></tr></thead><tbody id="qRows"></tbody></table></div></div>
+      <div id="queueBulk"></div>
+      <div class="card flat" style="padding:6px 14px 14px"><div class="table-scroll" tabindex="0" role="region" aria-label="Internal support requests"><table><thead><tr><th class="queue-select"><label class="queue-check"><input id="qSelectAll" type="checkbox" aria-label="Select all displayed requests"><span class="queue-select-caption">Select displayed requests</span></label></th><th>Request</th><th>Requested by</th><th>Status</th><th>Assigned to</th><th>Target date</th></tr></thead><tbody id="qRows"></tbody></table></div><div class="queue-pagination"><span id="qPageCount" class="kv"></span><button type="button" id="qMore" class="sm" hidden>Show more requests</button></div></div>
     </section>
 
     <!-- ===== agent: file on behalf ===== -->
@@ -346,6 +348,7 @@
         <h3>7 · AI</h3>
         <p>Optional and assistive. On a new request (if auto-triage is on), a triage note (summary, suggested priority/type, clarifying questions) is added for agents. The model sees the request with <b>sensitive fields redacted</b> and never sees internal notes. Agents can request a summary of the timeline (stored as a note) or a reply draft (never stored, never sent). Configure any OpenAI-compatible or Anthropic endpoint under Settings → AI; the key stays in the canister.</p>
         <h3>8 · SLA</h3>
+        <p>In <b>Internal support</b>, select requests with the checkboxes, then assign them, change status or set a target date together. The header selects displayed rows; <b>Select all matching requests</b> includes further pages. Review the count before applying. Blocked or changed requests stay unchanged and appear with a reason. Changing filters clears your selection.</p>
         <p>Each type sets <i>respond within</i> and <i>resolve within</i> hours; a date field (start date, last day) can override the due date. An hourly sweep nudges the assignee (or the queue) once per breach and marks it on the ticket. Resolved tickets auto-close after a configurable number of days.</p>
         <h3>9 · Slack intake</h3>
         <p>Optional. A support channel in Slack becomes a queue: every top-level message from a person becomes a request of the type chosen for that channel (the first line is the subject, the whole message the description, the sender the requester when Slack knows their e-mail). The bot answers in the thread with the key and a link; replies in the thread land on the request as comments, and replies from desk land in the thread. A <b>✅</b> on the first message resolves the request (blocked while checklist items are open, with a note in the thread); removing it reopens. Request types with sensitive fields point people to the portal form instead of asking for details in the channel. The Slack app is configured once in the hub (token and signing secret) and assigned to desk there; desk fetches the credentials every 15 minutes and verifies every incoming event against the signing secret. Several channels, even from different workspaces, can feed one desk.</p>

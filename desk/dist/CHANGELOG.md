@@ -1,5 +1,12 @@
 # Changelog — kebab-stack desk
 
+## [0.27.0] — 2026-09-29
+
+- Select internal support requests individually, all displayed rows or all matching filter results. Change their owner (including yourself or unassigned), status or target date in one reviewed action; load further rows without the old silent 500-row UI limit.
+- Apply bounded batches with an explicit result for every request. Preserve approvals, checklist and offboarding guards, reject concurrent edits and retain the individual activity/notification behavior. Customer requests remain outside internal bulk actions.
+- Keep medium-width queue tabs within the workspace and scroll the table independently; keep mobile selection available in the card layout.
+- Clear selection when changing filters or leaving the queue. Show skipped or uncertain results with request links; never silently retry or claim an interrupted batch completed.
+
 ## [0.26.0] — 2026-09-29
 
 - Add Settings → Assignment: a default owner for new internal requests and optional request type exceptions, including deliberately unassigned types. Only current Hub-authorized Desk staff can be selected; configuration is administrator-only.

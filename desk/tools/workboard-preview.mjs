@@ -16,8 +16,19 @@ let rev=unwrap(await d.linkWorkItem(x.tokens.alpha,p.id,p.revision,{ticket:x.tic
 const first=(await d.workboardTask(x.tokens.alpha,1n))[0];unwrap(await d.saveWorkTaskWithSubtasks(x.tokens.alpha,1n,first.task.revision,key(900),first.task,[{id:0n,title:'Measure signal in meeting room A',done:true},{id:0n,title:'Check calls in meeting room B',done:false},{id:0n,title:'Confirm guest network isolation',done:false}]));
 const [assignment]=await d.getAutoAssignment(x.tokens.owner);await d.saveAutoAssignment(x.tokens.owner,{...assignment.config,defaultAssignee:x.ids.alpha,overrides:[]});
 await d.saveWorkboardPreferences(x.tokens[previewRole],{projectId:[p.id],mine:false,tickets:true,sales:true,completed:true});
+if(process.env.KEBAB_PREVIEW_BULK==='1'){
+ const base=(await d.catalog(x.tokens.owner)).find(t=>!t.fields.length);
+ const type=await d.upsertType(x.tokens.owner,0n,{...base,name:'IT support',checklist:[]});
+ const examples=[['Replace the meeting room docking station','open'],['Connect the finance team printer','new'],['Check the software renewal export','waiting'],['Recover the guest Wi-Fi login','open'],['Prepare the new joiner laptop','waiting'],['Update the inventory labels','resolved'],['Replace a broken headset','new'],['Check VPN access after the update','open']];
+ for(const [i,[subject,status]]of examples.entries()){
+  const created=await d.agentCreate(x.tokens.owner,{typeId:type.id,subject,body:'Synthetic preview request.',fields:[],requester:'employee@workboard.test',priority:i===0?'high':'normal',channel:'agent'});
+  if(i%3===0)await d.assign(x.tokens.owner,created.id,'');
+  await d.setStatus(x.tokens.owner,created.id,status,status==='waiting'?'third-party':'');
+  if(i%2===0)await d.setDue(x.tokens.owner,created.id,[BigInt(Date.parse('2026-10-02T00:00:00Z'))*1000000n]);
+ }
+}
 const serialize=v=>JSON.stringify(v,(_,x)=>typeof x==='bigint'?{$bigint:String(x)}:x),parse=s=>JSON.parse(s,(_,v)=>v&&typeof v==='object'&&Object.keys(v).length===1&&typeof v.$bigint==='string'?BigInt(v.$bigint):v);
-const allowed=new Set(['getAutoAssignment','saveAutoAssignment','autoAssignmentHealth','saveWorkTaskWithSubtasks','getTicket','personOverview','personContextSources','personContext','offboardingHardware','profilePictures','listTickets','myTickets','myApprovals','stats','lifecycleHealth','setStatus','assign','whoami','agents','directory','catalog','workboardHome','saveWorkboardPreferences','workboardProject','saveWorkProject','archiveWorkProject','workboardTasks','workboardTask','saveWorkTask','archiveWorkTask','workboardTickets','workboardSources','workboardSales','linkWorkItem']);
+const allowed=new Set(['internalQueuePage','bulkInternalTickets','setDue','getAutoAssignment','saveAutoAssignment','autoAssignmentHealth','saveWorkTaskWithSubtasks','getTicket','personOverview','personContextSources','personContext','offboardingHardware','profilePictures','listTickets','myTickets','myApprovals','stats','lifecycleHealth','setStatus','assign','whoami','agents','directory','catalog','workboardHome','saveWorkboardPreferences','workboardProject','saveWorkProject','archiveWorkProject','workboardTasks','workboardTask','saveWorkTask','archiveWorkTask','workboardTickets','workboardSources','workboardSales','linkWorkItem']);
 const proxy=`export const HttpAgent={create:async()=>({})};export const Actor={createActor:()=>new Proxy({}, {get:(_,method)=>async(...args)=>{const response=await fetch('/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method,args},(_,v)=>typeof v==='bigint'?{$bigint:String(v)}:v)});if(!response.ok)throw Error('Local preview request failed');return JSON.parse(await response.text(),(_,v)=>v&&typeof v==='object'&&Object.keys(v).length===1&&typeof v.$bigint==='string'?BigInt(v.$bigint):v);}})};`;
 const root=resolve('desk/dist'),mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.md':'text/plain'};
 const http=createServer(async(req,res)=>{try{

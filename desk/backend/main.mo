@@ -132,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.26.0"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.27.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -1901,9 +1901,18 @@ persistent actor Desk {
   public shared query func listTickets(tok : Text, f : Filter) : async [TicketRow] { scopedTickets(tok, 0, f) };
   public shared query func customerProjectTickets(tok : Text, projectId : Nat, f : Filter) : async [TicketRow] { scopedTickets(tok, projectId, f) };
   func scopedTickets(tok : Text, projectId : Nat, f : Filter) : [TicketRow] {
-    let m = switch (staff(tok)) { case (?m) m; case null return [] };
+    ticketPage(tok, projectId, f, null, 500).rows
+  };
+  public type QueuePage = { rows : [TicketRow]; total : Nat; next : ?Nat };
+  public shared query func internalQueuePage(tok : Text, f : Filter, before : ?Nat) : async ?QueuePage {
+    if (staff(tok) == null) return null;
+    ?ticketPage(tok, 0, f, before, 100)
+  };
+  func ticketPage(tok : Text, projectId : Nat, f : Filter, before : ?Nat, limit : Nat) : QueuePage {
+    let m = switch (staff(tok)) { case (?m) m; case null return { rows = []; total = 0; next = null } };
     let needle = lower(norm(f.q));
     let out = List.empty<TicketRow>();
+    var total = 0; var more = false; var last : ?Nat = null;
     for ((_, t) in Map.reverseEntries(tickets)) if (projectOf(t.id) == projectId and canSee(m, t)) {
       let r = row(t);
       let active = t.status != "resolved" and t.status != "closed";
@@ -1920,9 +1929,14 @@ persistent actor Desk {
       let queueOk = f.queue == "" or f.queue == t.queue;
       let assigneeOk = f.assignee == "" or f.assignee == t.assignee or (Text.contains(f.assignee, #char '@') and pidOf(f.assignee) == t.assignee);
       let qOk = needle == "" or Text.contains(lower(t.subject), #text needle) or Text.contains(lower(t.key), #text needle) or Text.contains(r.requesterEmail, #text needle) or Text.contains(lower(r.requesterName), #text needle);
-      if (viewOk and statusOk and queueOk and assigneeOk and qOk and List.size(out) < 500) List.add(out, r);
+      if (viewOk and statusOk and queueOk and assigneeOk and qOk) {
+        total += 1;
+        if (switch (before) { case (?id) t.id < id; case null true }) {
+          if (out.size() < limit) { out.add(r); last := ?t.id } else more := true;
+        };
+      };
     };
-    List.toArray(out);
+    { rows = out.toArray(); total; next = if (more) last else null };
   };
 
   public shared query func myTickets(tok : Text) : async [TicketRow] {
@@ -2147,10 +2161,15 @@ persistent actor Desk {
   };
 
   public shared func setStatus(tok : Text, id : Nat, status : Text, waitingOn : Text) : async { ok : Bool; detail : Text } {
+    await changeStatus(tok, id, status, waitingOn, null, false)
+  };
+  func changeStatus(tok : Text, id : Nat, status : Text, waitingOn : Text, expected : ?Int, internalOnly : Bool) : async { ok : Bool; detail : Text } {
     if (migrating()) return { ok = false; detail = MIGRATING };
     let m = switch (staff(tok)) { case (?m) m; case null return { ok = false; detail = "agents only" } };
     let t = switch (Map.get(tickets, Nat.compare, id)) { case (?t) t; case null return { ok = false; detail = "no such ticket" } };
     if (not canSee(m, t)) return { ok = false; detail = "No access to this ticket" };
+    if (internalOnly and projectOf(id) != 0) return { ok = false; detail = "Only internal support requests can be changed here" };
+    if (switch (expected) { case (?v) t.updatedAt != v; case null false }) return { ok = false; detail = "The request changed. Review it before trying again." };
     switch (lifecycleCases.get(id)) { case (?c) { if ((status == "resolved" or status == "closed") and (c.state == #review or c.state == #reactivated)) return { ok = false; detail = "Review the account change before resolving this request" } }; case null {} };
     if ((status == "resolved" or status == "closed") and hardwareCaseOf(t) != null) ignore await syncHardware(id);
     let current = tickets.get(id) ?? (return { ok = false; detail = "Ticket unavailable" });
@@ -2186,8 +2205,12 @@ persistent actor Desk {
   public shared func assign(tok : Text, id : Nat, email : Text) : async { ok : Bool; detail : Text } {
     if (migrating()) return { ok = false; detail = MIGRATING };
     let m = switch (staff(tok)) { case (?m) m; case null return { ok = false; detail = "agents only" } };
-    var t = switch (Map.get(tickets, Nat.compare, id)) { case (?t) t; case null return { ok = false; detail = "no such ticket" } };
+    let t = switch (Map.get(tickets, Nat.compare, id)) { case (?t) t; case null return { ok = false; detail = "no such ticket" } };
     if (not canSee(m, t)) return { ok = false; detail = "No access to this ticket" };
+    changeAssignee<system>(m, t, email)
+  };
+  func changeAssignee<system>(m : Me, initial : Ticket, email : Text) : { ok : Bool; detail : Text } {
+    var t = initial; let id = t.id;
     let e = lower(norm(email)); // the picker hands over an address (or an id); stored is the person id
     let pid = if (e == "") "" else if (Text.contains(e, #char '@')) pidOf(e) else e;
     let em = if (pid == "") "" else emailOfPid(pid);
@@ -2266,9 +2289,62 @@ persistent actor Desk {
     let m = switch (staff(tok)) { case (?m) m; case null return { ok = false; detail = "agents only" } };
     let t = switch (Map.get(tickets, Nat.compare, id)) { case (?t) t; case null return { ok = false; detail = "no such ticket" } };
     if (not canSee(m, t)) return { ok = false; detail = "No access to this ticket" };
+    changeDue(m, t, dueAt)
+  };
+  func changeDue(m : Me, t : Ticket, dueAt : ?Int) : { ok : Bool; detail : Text } {
+    let id = t.id;
     put({ t with dueAt });
     ignore addEvent(id, m.id, "agent", "field", switch (dueAt) { case (?d) "due date set (" # Int.toText(d / D) # " d since epoch)"; case null "due date cleared" }, []);
     { ok = true; detail = "" };
+  };
+
+  // Explicit selections carry the last observed revision. A retry cannot replay
+  // successful writes or overwrite an intervening edit; each result is independent.
+  public type BulkTarget = { id : Nat; updatedAt : Int };
+  public type BulkAction = { #assign : Text; #status : { status : Text; waitingOn : Text }; #due : ?Int };
+  public type BulkOutcome = { id : Nat; result : { #updated; #unchanged; #skipped : Text } };
+  public shared func bulkInternalTickets(tok : Text, targets : [BulkTarget], action : BulkAction) : async { #ok : [BulkOutcome]; #denied; #invalid : Text } {
+    if (migrating()) return #invalid(MIGRATING);
+    let initiator = staff(tok) ?? (return #denied);
+    if (targets.size() == 0 or targets.size() > 50) return #invalid("Select between 1 and 50 requests per batch");
+    let seen = Map.empty<Nat, Bool>();
+    for (target in targets.values()) {
+      if (seen.containsKey(target.id)) return #invalid("A request may only occur once in a batch");
+      seen.add(target.id, true);
+    };
+    switch (action) {
+      case (#status a) { if (not validStatus(a.status) or not validWaiting(a.waitingOn) or a.waitingOn == "approval" or (a.status == "waiting" and a.waitingOn == "") or (a.status != "waiting" and a.waitingOn != "")) return #invalid("Choose a status and, when waiting, who is needed") };
+      case (#due (?date)) { if (date < 0 or date > 253_402_300_799_000_000_000) return #invalid("Choose a valid target date") };
+      case (#due null) {};
+      case (#assign who) { if (who.size() > 320) return #invalid("Choose an available Desk agent") };
+    };
+    let results = List.empty<BulkOutcome>();
+    for (target in targets.values()) {
+      let result = await bulkInternalOne(tok, initiator.id, target, action);
+      results.add({ id = target.id; result });
+    };
+    #ok(results.toArray())
+  };
+  func bulkInternalOne(tok : Text, actorId : Text, target : BulkTarget, action : BulkAction) : async { #updated; #unchanged; #skipped : Text } {
+    if (migrating()) return #skipped(MIGRATING);
+    let m = staff(tok) ?? (return #skipped("Session expired or Desk access changed"));
+    if (m.id != actorId) return #skipped("Session changed");
+    let t = tickets.get(target.id) ?? (return #skipped("Request unavailable"));
+    if (projectOf(t.id) != 0 or not canSee(m, t)) return #skipped("Request unavailable in internal support");
+    if (t.updatedAt != target.updatedAt) return #skipped("The request changed. Review it before trying again.");
+    let r = switch (action) {
+      case (#assign who) {
+        let e = lower(norm(who)); let pid = if (Text.contains(e, #char '@')) pidOf(e) else e;
+        if (pid == t.assignee) return #unchanged;
+        changeAssignee<system>(m, t, who)
+      };
+      case (#due date) { if (date == t.dueAt) return #unchanged; changeDue(m, t, date) };
+      case (#status a) {
+        if (t.status == a.status and t.waitingOn == a.waitingOn) return #unchanged;
+        await changeStatus(tok, t.id, a.status, a.waitingOn, ?target.updatedAt, true)
+      };
+    };
+    if (r.ok) #updated else #skipped(r.detail)
   };
 
   public shared func addLink(tok : Text, id : Nat, kind : Text, ref : Text) : async { ok : Bool; detail : Text } {

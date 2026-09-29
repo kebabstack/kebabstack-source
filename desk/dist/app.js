@@ -1,3 +1,4 @@
+import { createQueueBulk } from "./queue-bulk.js";
 import { createAssignment } from "./assignment.js";
 import { createWorkboard } from "./workboard.js";
 import {createWorkspaceStatus} from "./service-status.js";
@@ -40,6 +41,9 @@ const bigint = (x) => BigInt(Number(x) || 0);
 let backend, hubActor = null, topbar = null, me = null, catalogCache = [], agentsCache = [], settingsCache = null, lastList = "#/me";
 
 const assignment = createAssignment({root:$("sp-assignment"),api:()=>backend,session,getMe:()=>me});
+const queueBulk = createQueueBulk({root:$('queueBulk'),table:$('qRows'),selectAll:$('qSelectAll'),api:()=>backend,session,getMe:()=>me,loadAgents,refresh:()=>loadQueue(true),freeze:locked=>{
+  document.querySelectorAll('#v-queue .filters input,#v-queue .filters select,#viewSeg button,#statGrid button,#qMore').forEach(el=>el.disabled=locked);
+}});
 
 // ---------- the shared topbar (brand · app · menu · bell · theme · person) — one component for the whole suite ----------
 function mountBar() {
@@ -71,6 +75,7 @@ async function route() {
   document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === "v-" + (v === "t" ? "ticket" : v)));
   document.querySelectorAll("#nav .navstep").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "t" && el.dataset.view === lastListView())));
   if (v !== 't') ticketView.leave();
+  if (v !== 'queue') { queueGeneration++; queueBulk.clear(); }
   if (v !== 'workboard') workboard.clear();
   if (v !== 'settings' || arg !== 'assignment') assignment.clear();
   if (v === 'workboard') lastList = '#/workboard' + (/^\d+$/.test(arg || '') ? '/' + arg : '');
@@ -126,7 +131,7 @@ async function refreshMe() {
   const w = opt(await backend.whoami(session.load()));
   if (!w) return false;
   const changed = me && (me.id !== w.id || me.role !== w.role || me.reporting !== w.reporting || JSON.stringify(me.groups) !== JSON.stringify(w.groups));
-  if (changed) { assignment.clear(); workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); agentsAt = 0; catalogCache = []; agentsCache = []; }
+  if (changed) { queueBulk.clear(); assignment.clear(); workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); agentsAt = 0; catalogCache = []; agentsCache = []; }
   if (!me) lastList = w.role === "requester" ? "#/me" : "#/queue";
   me = w;
   renderNav();
@@ -170,7 +175,7 @@ async function boot() {
   }
 }
 function signOut() {
-  assignment.clear(); workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); knownQueues.clear(); routeGeneration++; agentsAt = 0; agentsCache = []; catalogCache = [];
+  queueGeneration++; queueBulk.clear(); assignment.clear(); workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); knownQueues.clear(); routeGeneration++; agentsAt = 0; agentsCache = []; catalogCache = [];
   const t = session.load();
   session.clear();
   if (t) backend.signOut(t).catch(() => {});
@@ -288,25 +293,36 @@ $("nfSubmit").onclick = async () => {
 // ---------- queue ----------
 let qView = "open";
 $("viewSeg").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; qView = b.dataset.v; $("viewSeg").querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b)); loadQueue(); };
-["fQueue", "fStatus"].forEach((id) => ($(id).onchange = loadQueue));
+["fQueue", "fStatus"].forEach((id) => ($(id).onchange = () => loadQueue()));
 let qTimer = null; $("fQ").oninput = () => { clearTimeout(qTimer); qTimer = setTimeout(loadQueue, 200); };
-let queueGeneration = 0; const knownQueues = new Set();
-async function loadQueue() {
-  if (!me || me.role === 'requester') return;
+let queueGeneration = 0, queueRows = [], queuePage = null; const knownQueues = new Set();
+$('qMore').onclick=()=>loadQueue(true,true);
+async function loadQueue(preserveSelection=false,more=false) {
+  if (!me || me.role === 'requester' || queueBulk.busy) return;
+  if (!preserveSelection) queueBulk.clear();
   const stamp = ++queueGeneration, person = me.id;
+  const filter={view:qView,status:$('fStatus').value,queue:$('fQueue').value,assignee:'',q:$('fQ').value};
+  queueBulk.loading(true);
   setStatus('qStatus','','Loading requests…');
   try {
-    const [rows, st] = await Promise.all([
-      backend.listTickets(session.load(), {view:qView,status:$('fStatus').value,queue:$('fQueue').value,assignee:'',q:$('fQ').value}), backend.stats(session.load())
+    $('qMore').disabled=true;
+    const [pages, st] = await Promise.all([
+      backend.internalQueuePage(session.load(),filter,more?(queuePage?.next||[]):[]), backend.stats(session.load())
     ]);
     if (stamp !== queueGeneration || me?.id !== person || me.role === 'requester') return;
+    if(!pages[0]){queueBulk.clear();throw Error('Access unavailable');}
+    queuePage=pages[0];queueRows=more?[...queueRows,...queuePage.rows]:queuePage.rows;
+    const rows=queueRows;
     const cards = [['open','Active requests',Number(st.new)+Number(st.open)+Number(st.waiting)],['mine','Assigned to me',st.mine],['unassigned','Need an owner',st.unassigned],['breached','Past their target',st.breached]];
     $('statGrid').innerHTML = cards.map(([v,l,n]) => `<button class="stat${qView === v ? ' active' : ''}" data-v="${v}" aria-pressed="${qView === v}"><span class="n">${n}</span><span class="l">${l}</span></button>`).join('');
     $('statGrid').onclick = e => { const el=e.target.closest('.stat'); if (!el) return; qView=el.dataset.v; $('viewSeg').querySelectorAll('button').forEach(b => b.classList.toggle('active',b.dataset.v===qView)); loadQueue(); };
     if ($('qCount')) $('qCount').textContent = Number(st.new)+Number(st.open)+Number(st.waiting) || '';
     const selected = $('fQueue').value; if (selected) knownQueues.add(selected); rows.forEach(r => {if(r.queue) knownQueues.add(r.queue);});
     $('fQueue').innerHTML = '<option value="">All teams</option>' + [...knownQueues].sort().map(q => `<option value="${esc(q)}"${q===selected?' selected':''}>${esc(q)}</option>`).join('');
-    $('qRows').innerHTML = rows.map(r => `<tr data-id="${r.id}"><td class="queue-subject"><div class="request-row-kicker"><span class="request-key">${esc(r.key)}</span><span class="priority-dot p-${esc(r.priority)}">${esc(r.priority)} priority</span></div><a class="request-title" href="#/t/${r.id}">${esc(plainMessage(r.subject))}</a><div class="rowsub">${esc(typeLabel(r.typeName))}${r.approval==='pending'?' · Approval needed':''}${Number(r.totalTasks)?` · ${r.openTasks} of ${r.totalTasks} tasks remaining`:''}</div></td><td data-label="Requested by">${esc(r.requesterName)}</td><td data-label="Status">${statusPill(r,true)}</td><td data-label="Assigned to">${esc(r.assigneeName || 'Not assigned')}<span class="rowsub">${esc(r.queue)}</span></td><td data-label="Target date">${due(opt(r.dueAt))}${r.breached && !opt(r.dueAt)?'<div class="due-overdue">Response overdue</div>':''}<span class="rowsub">Updated ${ago(r.updatedAt)}</span></td></tr>`).join('') || '<tr><td colspan="5" class="empty"><strong>No requests match this view.</strong><p>Try another filter or search term.</p></td></tr>';
+    $('qRows').innerHTML = rows.map(r => `<tr data-id="${r.id}"><td class="queue-select"><label class="queue-check"><input type="checkbox" data-select-ticket="${r.id}" aria-label="Select ${esc(r.key)}"></label></td><td class="queue-subject"><div class="request-row-kicker"><span class="request-key">${esc(r.key)}</span><span class="priority-dot p-${esc(r.priority)}">${esc(r.priority)} priority</span></div><a class="request-title" href="#/t/${r.id}">${esc(plainMessage(r.subject))}</a><div class="rowsub">${esc(typeLabel(r.typeName))}${r.approval==='pending'?' · Approval needed':''}${Number(r.totalTasks)?` · ${r.openTasks} of ${r.totalTasks} tasks remaining`:''}</div></td><td data-label="Requested by">${esc(r.requesterName)}</td><td data-label="Status">${statusPill(r,true)}</td><td data-label="Assigned to">${esc(r.assigneeName || 'Not assigned')}<span class="rowsub">${esc(r.queue)}</span></td><td data-label="Target date">${due(opt(r.dueAt))}${r.breached && !opt(r.dueAt)?'<div class="due-overdue">Response overdue</div>':''}<span class="rowsub">Updated ${ago(r.updatedAt)}</span></td></tr>`).join('') || '<tr><td colspan="6" class="empty"><strong>No requests match this view.</strong><p>Try another filter or search term.</p></td></tr>';
+    $('qPageCount').textContent=`${rows.length} of ${queuePage.total} matching requests`;
+    $('qMore').hidden=!queuePage.next.length;$('qMore').disabled=false;
+    queueBulk.setRows(rows,queuePage,filter);
     setStatus('qStatus','','');
     if (backend.autoAssignmentHealth) {
       const box=$('assignmentHealth'); box.replaceChildren(); box.classList.add('hidden');
@@ -329,7 +345,8 @@ async function loadQueue() {
       });
     }
 
-  } catch (_) { if(stamp===queueGeneration) setStatus('qStatus','err','We couldn’t refresh the workspace. Change a filter to try again.'); }
+  } catch (_) { if(stamp===queueGeneration) {setStatus('qStatus','err','We couldn’t refresh the workspace. Change a filter to try again.');$('qMore').disabled=false;} }
+  finally { if(stamp===queueGeneration)queueBulk.loading(false); }
 }
 
 // ---------- agent: file for someone ----------

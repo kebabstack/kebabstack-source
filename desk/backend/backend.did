@@ -573,6 +573,12 @@ type Rates =
    weekday: nat;
    weekend: nat;
  };
+type QueuePage =
+ record {
+   next: opt nat;
+   rows: vec TicketRow;
+   total: nat;
+ };
 type Publication =
  record {
    acceptedGaps: bool;
@@ -1469,6 +1475,29 @@ type Cancellation =
    from: int;
    reason: text;
  };
+type BulkTarget =
+ record {
+   id: nat;
+   updatedAt: int;
+ };
+type BulkOutcome =
+ record {
+   id: nat;
+   result: variant {
+             skipped: text;
+             unchanged;
+             updated;
+           };
+ };
+type BulkAction =
+ variant {
+   assign: text;
+   due: opt int;
+   status: record {
+             status: text;
+             waitingOn: text;
+           };
+ };
 type Audit__1 =
  record {
    action: text;
@@ -1607,6 +1636,12 @@ service : {
   attestDepartedService: (tok: text, id: nat, recordId: nat, revision:
    nat, reason: text) -> (Result);
   autoAssignmentHealth: (tok: text) -> (vec text) query;
+  bulkInternalTickets: (tok: text, targets: vec BulkTarget, action:
+   BulkAction) -> (variant {
+                     denied;
+                     invalid: text;
+                     ok: vec BulkOutcome;
+                   });
   cancelOffboarding: (tok: text, id: nat, revision: int, note: text) ->
    (record {
       detail: text;
@@ -1784,6 +1819,8 @@ service : {
       orgName: text;
       version: text;
     }) query;
+  internalQueuePage: (tok: text, f: Filter__1, before: opt nat) ->
+   (opt QueuePage) query;
   lifecycleHealth: (tok: text) ->
    (opt record {
           checkedAt: int;

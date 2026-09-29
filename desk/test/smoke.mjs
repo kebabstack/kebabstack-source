@@ -23,6 +23,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "myAvatarPortal": case "getCompanyLogo": case "tileIcon": return [];
     case "whoami": return [{ id: ME, email: "me@example.com", displayName: "Me Myself", role, groups: ["desk-agents"], orgName: "Acme", hubId: "aaaaa-aa", needsClaim: role === "admin", aiOn: true }];
     case "loginWithTicket": return [{ token: "t0k", email: "me@example.com", displayName: "Me", role, suiteToken: "su1te" }];
+    case "internalQueuePage": return [{rows:[row(1), row(2, {status:"waiting",waitingOn:"requester",dueAt:[],breached:false})],total:2n,next:[]}];
     case "myTickets": case "listTickets": return [row(1), row(2, { status: "waiting", waitingOn: "requester", dueAt: [], breached: false })];
     case "myApprovals": return [row(3, { approval: "pending" })];
     case "stats": return { total: 3n, new: 1n, open: 1n, waiting: 1n, resolved: 0n, closed: 0n, unassigned: 1n, breached: 1n, mine: 1n, approvals: 1n };
@@ -90,8 +91,14 @@ check(!window.document.getElementById("themeBtn") && !window.document.getElement
 check(!window.location.hash.includes("uht="), "ticket stripped from URL");
 const go = async (h) => { window.location.hash = h; window.dispatchEvent(new window.Event("hashchange")); for (let i = 0; i < 4; i++) await tick(); };
 await go("#/queue"); if (role !== "requester") check(document.querySelectorAll("#qRows tr").length === 2, "queue rows: " + document.querySelectorAll("#qRows tr").length);
+if(role!=='requester'){
+ document.getElementById('qSelectAll').click();check(/2 selected/.test(document.getElementById('queueBulk').textContent),'queue selection available');
+ document.getElementById('fStatus').dispatchEvent(new window.Event('change'));for(let i=0;i<4;i++)await tick();
+ check(!document.getElementById('queueBulk').textContent.includes('selected'),'changing filters clears bulk selection');
+ document.getElementById('qSelectAll').click();
+}
 const beforeWorkboard=calls.filter(x=>x==='workboardHome').length;
-await go('#/workboard');
+await go('#/workboard');check(document.getElementById('queueBulk').textContent==='','leaving queue clears bulk selection');
 if(role==='requester'){check(document.querySelector('#v-me').classList.contains('active'),'requester direct Workboard URL redirects');check(calls.filter(x=>x==='workboardHome').length===beforeWorkboard,'requester never fetches Workboard');check(!document.querySelector('[data-view=workboard]'),'requester has no Workboard navigation');}
 else{
   check(document.querySelectorAll('#v-workboard .wb-column').length===4,'Workboard renders through full Desk route');check(!!document.querySelector('[data-view=workboard]'),'staff gets Workboard navigation');

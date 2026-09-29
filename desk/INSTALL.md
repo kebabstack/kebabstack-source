@@ -244,3 +244,14 @@ normal tested format-2 release. Kitchen derives the recipe version from mops.tom
 Configure the owner only after the separately authorized production rollout.
 
 For the Workboard Operations card deploy Desk 0.26 then Hub 0.37 through the release executor. Existing screen approvals do not gain Workboard access; pair them again with the explicit Workboard choice if desired.
+
+## Internal support bulk actions (0.27)
+
+Deploy matching generated bindings, `queue-bulk.js` and `queue-bulk.css` with the
+backend through the tested format-2 release workflow after production approval.
+No persistent data type or Hub/Finance/Lunch policy changes are required. Check
+the committed stable baseline and run `tests/desk-bulk.test.mjs` with
+`KEBAB_WORKBOARD_BASELINE` pointing at the previous hub/desk/assets artifacts.
+The new queue is paged; legacy `listTickets` retains its existing 500-row contract.
+Bulk writes accept at most 50 explicit `(id, updatedAt)` targets per call, recheck
+current staff access and source boundaries, and report per-ticket outcomes.

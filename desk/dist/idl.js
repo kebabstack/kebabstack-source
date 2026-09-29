@@ -71,6 +71,7 @@ export const idlFactory = ({ IDL }) => {
   const ReportingScope = IDL.Record({ id: IDL.Nat, name: IDL.Text });
   const RecordState = IDL.Variant({ approved: IDL.Null, confirmed: IDL.Null, disputed: IDL.Null, excluded: IDL.Null, pending: IDL.Null });
   const Record = IDL.Record({ breakMinutes: IDL.Nat, confirmedAt: IDL.Int, confirmedBy: IDL.Text, delta: IDL.Int, endAt: IDL.Int, id: IDL.Nat, kind: Kind, layer: IDL.Nat, name: IDL.Text, note: IDL.Text, periodId: IDL.Nat, personId: IDL.Text, reason: IDL.Text, reviewedAt: IDL.Int, reviewedBy: IDL.Text, sourceKey: IDL.Text, startAt: IDL.Int, state: RecordState });
+  const QueuePage = IDL.Record({ next: IDL.Opt(IDL.Nat), rows: IDL.Vec(TicketRow), total: IDL.Nat });
   const Publication = IDL.Record({ acceptedGaps: IDL.Bool, at: IDL.Int, by: IDL.Text, names: IDL.Vec(Person) });
   const Impact = IDL.Variant({ degraded: IDL.Null, maintenance: IDL.Null, outage: IDL.Null });
   const PublicNotice = IDL.Record({ endsAt: IDL.Int, id: IDL.Nat, impact: Impact, phase: Phase, services: IDL.Vec(IDL.Text), startsAt: IDL.Int, title: IDL.Text, updatedAt: IDL.Int, updates: IDL.Vec(Update) });
@@ -135,6 +136,9 @@ export const idlFactory = ({ IDL }) => {
   const Config = IDL.Record({ defaultAssignee: IDL.Text, overrides: IDL.Vec(Override), revision: IDL.Nat });
   const Case = IDL.Record({ desk: IDL.Text, dueAt: IDL.Opt(IDL.Int), key: IDL.Text, person: IDL.Text, revision: IDL.Int, state: IDL.Text, ticket: IDL.Nat, url: IDL.Text });
   const Cancellation = IDL.Record({ at: IDL.Int, by: IDL.Text, from: IDL.Int, reason: IDL.Text });
+  const BulkTarget = IDL.Record({ id: IDL.Nat, updatedAt: IDL.Int });
+  const BulkOutcome = IDL.Record({ id: IDL.Nat, result: IDL.Variant({ skipped: IDL.Text, unchanged: IDL.Null, updated: IDL.Null }) });
+  const BulkAction = IDL.Variant({ assign: IDL.Text, due: IDL.Opt(IDL.Int), status: IDL.Record({ status: IDL.Text, waitingOn: IDL.Text }) });
   const Audit__1 = IDL.Record({ action: IDL.Text, at: IDL.Int, by: IDL.Text, reason: IDL.Text, recordId: IDL.Nat });
   const Audit = IDL.Record({ action: IDL.Text, at: IDL.Int, by: IDL.Text });
   const Absence = IDL.Record({ at: IDL.Int, by: IDL.Text, cancelledAt: IDL.Int, endAt: IDL.Int, id: IDL.Nat, name: IDL.Text, personId: IDL.Text, projectId: IDL.Nat, startAt: IDL.Int });
@@ -163,6 +167,7 @@ export const idlFactory = ({ IDL }) => {
     assign: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     attestDepartedService: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Nat, IDL.Text], [Result], []),
     autoAssignmentHealth: IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], ["query"]),
+    bulkInternalTickets: IDL.Func([IDL.Text, IDL.Vec(BulkTarget), BulkAction], [IDL.Variant({ denied: IDL.Null, invalid: IDL.Text, ok: IDL.Vec(BulkOutcome) })], []),
     cancelOffboarding: IDL.Func([IDL.Text, IDL.Nat, IDL.Int, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     cancelOncallAbsence: IDL.Func([IDL.Text, IDL.Nat], [Result], []),
     cancelOncallPlan: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Int, IDL.Text], [Result], []),
@@ -213,6 +218,7 @@ export const idlFactory = ({ IDL }) => {
     hub_upsert: IDL.Func([IDL.Vec(DirectoryRow)], [IDL.Nat], []),
     hub_usesGroup: IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], ["query"]),
     info: IDL.Func([], [IDL.Record({ appUrl: IDL.Text, hubId: IDL.Text, hubSet: IDL.Bool, orgName: IDL.Text, version: IDL.Text })], ["query"]),
+    internalQueuePage: IDL.Func([IDL.Text, Filter__1, IDL.Opt(IDL.Nat)], [IDL.Opt(QueuePage)], ["query"]),
     lifecycleHealth: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ checkedAt: IDL.Int, detail: IDL.Text, gap: IDL.Bool }))], ["query"]),
     linkWorkItem: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, Link, IDL.Bool], [Result__1], []),
     listCustomerProjects: IDL.Func([IDL.Text], [IDL.Vec(CustomerProject)], ["query"]),
