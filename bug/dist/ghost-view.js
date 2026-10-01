@@ -76,7 +76,7 @@ export class GhostView {
     this.exhaustMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,
       uniforms:{opacity:{value:1},power:{value:.7}},
       vertexShader:'attribute float band;varying vec2 tex;varying float hue;void main(){tex=uv;hue=band;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-      fragmentShader:'varying vec2 tex;varying float hue;uniform float opacity;uniform float power;void main(){float edge=max(0.,1.-abs(tex.x*2.-1.));float light=.28*edge+.72*pow(edge,4.);float fade=pow(1.-tex.y,1.45)*smoothstep(0.,.045,tex.y);vec3 c=mix(vec3(.22,1.8,3.),vec3(2.9,.25,1.7),hue);gl_FragColor=vec4(c,light*fade*opacity*power*.82);}' });
+      fragmentShader:'varying vec2 tex;varying float hue;uniform float opacity;uniform float power;void main(){float edge=max(0.,1.-abs(tex.x*2.-1.));float light=.28*edge+.72*pow(edge,4.);float fade=pow(max(0.,1.-tex.y),1.45)*smoothstep(0.,.045,tex.y);vec3 c=mix(vec3(.22,1.8,3.),vec3(2.9,.25,1.7),hue);gl_FragColor=vec4(c,light*fade*opacity*power*.82);}' });
     this.exhaust=mesh(exhaustGeometry(),this.exhaustMaterial,0,0,0,1,1,1,this.root);
     this.exhaust.frustumCulled=false;
     this.wake=new WakePath();this.engine=new T.Vector3();this.back=new T.Vector3();

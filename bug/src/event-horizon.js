@@ -8,7 +8,7 @@ export class EventHorizon {
       transparent:true,depthWrite:false,fog:false,uniforms:this.uniforms,
       vertexShader:'varying vec2 uv0;void main(){uv0=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:`varying vec2 uv0;uniform float clock;uniform float fade;
-      float band(float r,float at,float width){return exp(-pow((r-at)/width,2.));}
+      float band(float r,float at,float width){float x=(r-at)/width;return exp(-x*x);}
       void main(){
         vec2 p=(uv0-.5)*2.;p=mat2(.982,-.189,.189,.982)*p;
         float r=length(p),angle=atan(p.y,p.x);

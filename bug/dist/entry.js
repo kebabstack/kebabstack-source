@@ -3,6 +3,8 @@ import { loadingFailed, gameReady } from './loading.js';
 const $=id=>document.getElementById(id);
 gameReady(false);
 $('loadRetry').addEventListener('click', () => location.reload());
+const TIPS=['Release the charge just before the meter swings back: a perfect launch adds momentum.','Five coins in a row within 2.5 seconds each add bonus FLOW. At 100 FLOW, Overdrive starts by itself.','A really close pass of a mine or candle is worth +20 FLOW once you clear it.','Hold F to fire in short bursts. Holding forever overheats the blaster.','Press M for sound. The engine pitch follows your airspeed.','Save a prompt boost for the final crawl: you get 1.6 seconds to rescue a landing.'];
+$('loadTip').textContent='TIP · '+TIPS[Math.floor(Math.random()*TIPS.length)];
 document.body.dataset.mode=MODE;
 try{localStorage.setItem(MODE_KEY,MODE);}catch{}
 $('world').setAttribute('aria-label',`${MODE.toUpperCase()} flight world`);

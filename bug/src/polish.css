@@ -1,0 +1,163 @@
+/* Polish layer: bundled typography, instrument-panel HUD, chapter banners and
+   impact feedback. Loads after every other sheet; layout rules stay in style.css. */
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:300 700;font-display:swap;src:url(./assets/fonts/space-grotesk.woff2) format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url(./assets/fonts/jetbrains-mono.woff2) format('woff2')}
+@font-face{font-family:'Silkscreen';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/fonts/silkscreen-400.woff2) format('woff2')}
+@font-face{font-family:'Silkscreen';font-style:normal;font-weight:700;font-display:swap;src:url(./assets/fonts/silkscreen-700.woff2) format('woff2')}
+
+:root{--sans:'Space Grotesk',ui-sans-serif,system-ui,Arial,sans-serif;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--pixel:'Silkscreen','JetBrains Mono',monospace}
+body[data-mode="3d"]{font-family:var(--sans)}
+body[data-mode="3d"] button,body[data-mode="3d"] input{font-family:inherit}
+body[data-mode="3d"] .brand-sub,body[data-mode="3d"] .edition,body[data-mode="3d"] .icon-button,body[data-mode="3d"] .eyebrow,body[data-mode="3d"] .mission b,body[data-mode="3d"] .mission-number,body[data-mode="3d"] .legend,
+body[data-mode="3d"] .launch-controls label,body[data-mode="3d"] .control-label,body[data-mode="3d"] .range-labels,body[data-mode="3d"] .action-area>span,body[data-mode="3d"] .restart-button span,body[data-mode="3d"] .footer-meta,body[data-mode="3d"] .footer-meta kbd,
+body[data-mode="3d"] .boost-controls small,body[data-mode="3d"] .flight-stat>span,body[data-mode="3d"] .flight-stat strong,body[data-mode="3d"] .flight-path,body[data-mode="3d"] .journey-line i::after,body[data-mode="3d"] .commander-head,body[data-mode="3d"] .commander-copy b,
+body[data-mode="3d"] .commander .stage-card b,body[data-mode="3d"] .commander .stage-card small,body[data-mode="3d"] .commander-portrait>span,body[data-mode="3d"] .burn-panel>span,body[data-mode="3d"] .burn-panel>strong,body[data-mode="3d"] .burn-panel>small,body[data-mode="3d"] .ability-hud,
+body[data-mode="3d"] .fire-button,body[data-mode="3d"] .fire-button kbd,body[data-mode="3d"] .fire-controls small,body[data-mode="3d"] .flow-status #flowLabel,body[data-mode="3d"] #moonCombo,body[data-mode="3d"] .launch-coordinates,body[data-mode="3d"] .mode-caption,body[data-mode="3d"] .next-mode-label,body[data-mode="3d"] .mode-segments button span,
+body[data-mode="3d"] dialog .eyebrow,body[data-mode="3d"] .privacy-note,body[data-mode="3d"] .result-grid small,body[data-mode="3d"] .result-distance>span,body[data-mode="3d"] .bonus-report,body[data-mode="3d"] .combat-report,body[data-mode="3d"] .score-row>span,body[data-mode="3d"] .score-row small,
+body[data-mode="3d"] .text-button,body[data-mode="3d"] .primary-button,body[data-mode="3d"] .atlas-heading,body[data-mode="3d"] .atlas a,body[data-mode="3d"] .result-seals,body[data-mode="3d"] #profileStatus,body[data-mode="3d"] #boardStatus,body[data-mode="3d"] .local-season,body[data-mode="3d"] .name-label,body[data-mode="3d"] #resultNameHint,body[data-mode="3d"] #loading,body[data-mode="3d"] .toast b,body[data-mode="3d"] .lab,body[data-mode="3d"] .lab button,body[data-mode="3d"] .lab output{font-family:var(--mono)}
+body[data-mode="3d"] #flightWeather,body[data-mode="3d"] #flightPressure{font-family:var(--mono)}
+
+/* Header: a thin instrument strip. */
+body[data-mode="3d"] .game-header{background:linear-gradient(180deg,#0a1326f0,#0a1326d8);border-bottom:1px solid #7fb4ff22;box-shadow:0 1px 0 #ffffff06}
+body[data-mode="3d"] .brand{font-weight:700;letter-spacing:.02em;font-size:19px}
+body[data-mode="3d"] .brand-sub{font-size:8px;letter-spacing:.24em;color:#8fd8e4}
+body[data-mode="3d"] .edition{font-size:10px;letter-spacing:.14em}
+body[data-mode="3d"] .icon-button{border-radius:9px;height:36px;font-size:10px;letter-spacing:.06em;transition:background .15s,border-color .15s,transform .15s}
+body[data-mode="3d"] .icon-button:hover{border-color:#8fd8e455;background:#8fd8e410}
+body[data-mode="3d"] .icon-button:active{transform:translateY(1px)}
+body[data-mode="3d"] .profile-button{border-color:#8fd8e43a;background:#8fd8e40a}
+.sound-on{color:#9affd9!important;border-color:#9affd955!important;background:#9affd912!important;box-shadow:0 0 14px #9affd922}
+.sound-armed{color:#ffd48a!important}
+
+/* Intro hero. */
+body[data-mode="3d"] #intro .eyebrow{font-size:9px;letter-spacing:.24em;color:#86e3ef}
+body[data-mode="3d"] #intro h1{font-weight:700;font-size:clamp(54px,5.9vw,92px);line-height:.95;letter-spacing:-.05em;margin:22px 0;text-shadow:0 6px 40px #02071480}
+body[data-mode="3d"] #intro h1 em{background:linear-gradient(118deg,#9ff1f4 0%,#a7bdff 38%,#c89df6 70%,#f3a4c9 100%);background-clip:text;-webkit-background-clip:text;color:transparent}
+body[data-mode="3d"] #intro>p{font-size:14px;line-height:1.7;color:#b9c9de;max-width:400px}
+body[data-mode="3d"] .mode-segments{border-radius:14px;padding:4px;background:#0e1a33ee;border:1px solid #8fb6ff2e;box-shadow:0 10px 30px #040a1a66,inset 0 1px #ffffff0a}
+body[data-mode="3d"] .mode-segments button{border-radius:10px;font:700 15px var(--sans);letter-spacing:-.01em;transition:background .18s,color .18s}
+body[data-mode="3d"] .mode-segments button[aria-pressed=true]{background:linear-gradient(110deg,#aaf7df,#8fe0ef);color:#0f2a31;box-shadow:0 4px 18px #74d9e51f}
+body[data-mode="3d"] .mission{border-top-color:#8fb6ff26}
+body[data-mode="3d"] .mission b{letter-spacing:.14em}
+body[data-mode="3d"] .legend{font-size:8px;letter-spacing:.08em}
+body[data-mode="3d"] .legend>span{padding:5px 9px;border:1px solid #8fb6ff1f;border-radius:999px;background:#0b142a66}
+
+/* Control dock: glass with an energy edge. */
+body[data-mode="3d"] .control-dock{border-radius:18px;padding:18px 22px;background:linear-gradient(118deg,#0f1c33f2,#111f38ec 60%,#15213aef);border:1px solid #8fb6ff2e;box-shadow:0 18px 60px #020716a8,inset 0 1px #c4e6ff16;position:relative}
+body[data-mode="3d"] .control-dock::before{content:"";position:absolute;inset:-1px;border-radius:19px;padding:1px;background:linear-gradient(110deg,#7ef0e8 0%,transparent 28%,transparent 72%,#c79df6 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.45;pointer-events:none}
+body[data-mode="3d"] .dock-mark{border-color:#8fb6ff2a;background:#0a142866}
+body[data-mode="3d"] .launch-controls label,body[data-mode="3d"] .control-label{font-size:9px;letter-spacing:.14em;color:#b7c9e2}
+body[data-mode="3d"] .launch-controls label strong{color:#9ffbe2;font-weight:600}
+body[data-mode="3d"] .launch-controls input{height:4px;accent-color:#9ffbe2}
+body[data-mode="3d"] .range-labels{font-size:7px;letter-spacing:.08em;color:#8ea4c2}
+body[data-mode="3d"] .action-button{height:52px;border-radius:12px;font:700 12px var(--sans);letter-spacing:.09em;background:linear-gradient(110deg,#a7ffe1,#8be8ed);box-shadow:0 0 0 1px #ffffff1a inset,0 8px 28px #62dbe326;transition:box-shadow .2s,transform .12s}
+body[data-mode="3d"] .action-button:hover{box-shadow:0 0 0 1px #ffffff2a inset,0 10px 34px #62dbe340}
+body[data-mode="3d"] #actionFill{background:linear-gradient(90deg,#7ad8b3,#58c9d6 70%,#fff6c8);box-shadow:4px 0 18px #ffffff80}
+body[data-mode="3d"] .action-button::after{content:"";position:absolute;top:0;bottom:0;left:94%;width:6%;background:repeating-linear-gradient(90deg,#ffffff55 0 2px,transparent 2px 6px);opacity:.75;pointer-events:none}
+body[data-mode="3d"] .is-playing .action-button::after{display:none}
+body[data-mode="3d"] .action-button.rescue-ready{animation:rescue .7s ease-in-out infinite alternate;background:linear-gradient(110deg,#ffd27a,#ff9f6b);color:#3a1f0a}
+@keyframes rescue{from{box-shadow:0 0 0 1px #ffffff1a inset,0 0 10px #ff9f6b33}to{box-shadow:0 0 0 1px #ffffff40 inset,0 0 36px #ffb46b99}}
+body[data-mode="3d"] .action-area>span{font-size:7.5px;letter-spacing:.14em;color:#93a9c6;margin-top:9px}
+body[data-mode="3d"] #boostPips i{height:8px;border-radius:999px;background:linear-gradient(90deg,#aaffe0,#7ff0ee);box-shadow:0 0 10px #8df5e466;transition:background .25s,box-shadow .25s}
+body[data-mode="3d"] #boostPips i.used{background:#273a52;box-shadow:none}
+body[data-mode="3d"] .flow-status #flowLabel{font-size:8px;letter-spacing:.12em;color:#b7c9e2}
+body[data-mode="3d"] #flowMeter{height:5px;border-radius:999px;background:#1c2b45;overflow:hidden;margin-top:6px}
+body[data-mode="3d"] #flowFill{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#7ff0ee,#ffd27a);transition:width .15s linear}
+body[data-mode="3d"] .overdrive-active #flowFill{background:linear-gradient(90deg,#ffd27a,#fff3c8);box-shadow:0 0 12px #ffd27a}
+body[data-mode="3d"] .god-candle-active #flowFill{background:linear-gradient(90deg,#4dff9a,#c8ffd9);box-shadow:0 0 12px #4dff9a}
+body[data-mode="3d"] #moonCombo{display:block;font-size:7.5px;letter-spacing:.1em;color:#9fb3d0;margin-top:7px}
+body[data-mode="3d"] .fire-button{border-radius:12px;height:52px;font-size:11px;letter-spacing:.06em;background:linear-gradient(160deg,#3a2740,#2a1c33);border-color:#ff9e7a66;transition:background .15s,box-shadow .15s}
+body[data-mode="3d"] .fire-button.locked{background:linear-gradient(160deg,#124c4a,#0f3a3e);box-shadow:0 0 22px #63ffca2e}
+body[data-mode="3d"] .fire-controls small{font-size:7px;letter-spacing:.1em}
+body[data-mode="3d"] .footer-meta{font-size:8px;letter-spacing:.09em}
+body[data-mode="3d"] .footer-meta kbd{font-size:7px;padding:2px 4px;border-radius:4px}
+
+/* Flight HUD. */
+body[data-mode="3d"] .flight-hud{top:22px;left:32px;gap:26px;padding:12px 18px;border-radius:14px;background:#0a142a9e;border:1px solid #8fb6ff22;backdrop-filter:blur(12px);box-shadow:0 10px 30px #02071650}
+body[data-mode="3d"] .distance-block .eyebrow{font-size:8px;letter-spacing:.2em;color:#8fd8e4}
+body[data-mode="3d"] .distance-block b{font:700 52px/1 var(--sans);letter-spacing:-.05em;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#ffffff,#b9f5ec);background-clip:text;-webkit-background-clip:text;color:transparent}
+body[data-mode="3d"] .distance-block>div span{font:600 11px var(--mono);letter-spacing:.1em;color:#8fd8e4}
+body[data-mode="3d"] .flight-stat>span{font-size:7.5px;letter-spacing:.16em;color:#93a9c6}
+body[data-mode="3d"] .flight-stat strong{font-size:16px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:#eaf3ff}
+body[data-mode="3d"] .round-button{border-radius:10px;background:#0f1d35c4;border-color:#8fb6ff33}
+body[data-mode="3d"] .burn-panel{top:122px;left:32px;width:206px;border-radius:12px;background:#0a142a8a;border-color:#8fb6ff1c;backdrop-filter:blur(10px);padding:10px 14px}
+body[data-mode="3d"] .burn-panel>span{font-size:7px;letter-spacing:.16em}
+body[data-mode="3d"] .burn-panel>strong{font-size:20px;margin:5px 0}
+body[data-mode="3d"] .burn-panel>small{font-size:6px;letter-spacing:.14em}
+body[data-mode="3d"] .ability-hud{top:206px;left:32px;font-size:9px;letter-spacing:.1em;color:#9affd9;text-shadow:0 1px 8px #04121a}
+body[data-mode="3d"] .is-playing .flight-path>span{border-radius:8px;background:#0a142aa8;border-color:#8fb6ff22;font-size:8px;letter-spacing:.14em}
+body[data-mode="3d"] #flightWeather.incoming{color:#ffcf8a;animation:incoming 1s ease-in-out infinite}
+@keyframes incoming{50%{opacity:.45}}
+body[data-mode="3d"] .journey-line i.active{box-shadow:0 0 14px var(--chapter),0 0 0 3px #0a142a}
+
+/* Mission commander card. */
+body[data-mode="3d"] .commander{border-radius:14px;background:#0a142aeb;border:1px solid #8fb6ff2a;box-shadow:0 14px 40px #02071666;backdrop-filter:blur(12px);transition:opacity .35s,transform .35s}
+body[data-mode="3d"] .commander[data-visible=false]{opacity:0;transform:translateY(-6px)}
+body[data-mode="3d"] .commander-head{font-size:7.5px;letter-spacing:.18em}
+body[data-mode="3d"] .commander-copy b{font-size:9px;letter-spacing:.08em;color:var(--chapter)}
+body[data-mode="3d"] .commander-copy p{font:12px/1.55 var(--sans);color:#d2def0}
+body[data-mode="3d"] .commander-portrait{background:linear-gradient(160deg,#2a2370,#0f1a3c)}
+
+/* Chapter banner: a cinematic title card at the top of the corridor. */
+.chapter-banner{position:absolute;left:50%;top:17%;transform:translate(-50%,-14px);text-align:center;pointer-events:none;opacity:0;transition:opacity .45s,transform .55s cubic-bezier(.2,.8,.2,1);color:#eef5ff;z-index:3;filter:drop-shadow(0 4px 24px #02061a)}
+.chapter-banner.show{opacity:1;transform:translate(-50%,0)}
+.chapter-banner small{display:block;font:600 9px var(--mono);letter-spacing:.34em;color:var(--banner,#a9ffdd)}
+.chapter-banner b{display:block;font:700 clamp(30px,4vw,52px)/1 var(--sans);letter-spacing:-.04em;margin:10px 0 8px;text-transform:none}
+.chapter-banner span{display:block;font:500 12px var(--sans);color:#b8c8de;letter-spacing:.02em}
+.chapter-banner i{display:block;width:0;height:2px;margin:12px auto 0;background:linear-gradient(90deg,transparent,var(--banner,#a9ffdd),transparent);transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.chapter-banner.show i{width:min(320px,60vw)}
+body[data-mode="2d"] .chapter-banner b{font-family:var(--pixel);font-weight:700;letter-spacing:0;font-size:clamp(22px,3vw,36px)}
+body[data-mode="2d"] .chapter-banner small,body[data-mode="2d"] .chapter-banner span{font-family:var(--pixel)}
+
+/* Impact and surge feedback as full-screen vignettes. */
+.impact{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .5s;background:radial-gradient(ellipse at center,transparent 45%,#ff3b2e66 100%)}
+body.hit .impact{opacity:1;transition:opacity .05s}
+.surge{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .8s;background:radial-gradient(ellipse at center,transparent 50%,#ffc86a55 100%)}
+body.surge .surge{opacity:1;transition:opacity .15s}
+body.god-candle-active .surge{opacity:1;background:radial-gradient(ellipse at center,transparent 50%,#43ff9a44 100%)}
+body.overdrive-active .surge{opacity:1}
+
+/* Toast and result sheet. */
+body[data-mode="3d"] .toast{border-radius:12px;padding:12px 20px;backdrop-filter:blur(10px)}
+body[data-mode="3d"] dialog{border-radius:20px}
+body[data-mode="3d"] dialog h2{font-weight:700;letter-spacing:-.045em}
+body[data-mode="3d"] #resultDialog .result-distance b{font:700 84px/1 var(--sans);letter-spacing:-.06em}
+body[data-mode="3d"] .primary-button{border-radius:11px;font-size:11px;letter-spacing:.1em;font-weight:700;transition:transform .12s,box-shadow .2s}
+body[data-mode="3d"] .primary-button:hover{transform:translateY(-1px);box-shadow:0 10px 30px #77cee52a}
+body[data-mode="3d"] .secondary-button{border-radius:11px}
+body.new-best #resultTitle{background:linear-gradient(110deg,#fff6c8,#ffd27a 40%,#ffb18a 70%,#fff6c8);background-size:200% 100%;background-clip:text;-webkit-background-clip:text;color:transparent;animation:shimmer 2.4s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+body.new-best #resultDialog::before{height:3px;background:linear-gradient(90deg,#ffd27a,#fff6c8 50%,#ffd27a)}
+
+/* Loading. */
+body[data-mode="3d"] #loading{background:radial-gradient(ellipse at 50% 30%,#1d2a52,#070c1d 70%)}
+body[data-mode="3d"] #loading b{font:600 11px var(--mono);letter-spacing:.3em;color:#9ffbe2}
+body[data-mode="3d"] #loading span{font:13px var(--sans);color:#9fb3d1}
+body[data-mode="3d"] #loadProgress{height:6px;border-radius:999px;overflow:hidden;accent-color:#8fe8ef}
+body[data-mode="3d"] .loader-bug{filter:drop-shadow(0 0 22px #7ad8ff88)}
+.load-tip{display:block;max-width:360px;text-align:center;font:11px/1.6 var(--sans);color:#8ea2c2;letter-spacing:.01em;margin-top:6px}
+body[data-mode="2d"] .load-tip{font-family:var(--mono);color:#bdb4c9}
+
+@media(max-width:1050px){body[data-mode="3d"] .flight-hud{left:22px;gap:16px;padding:10px 14px}body[data-mode="3d"] .distance-block b{font-size:42px}body[data-mode="3d"] .burn-panel{left:22px;top:110px}body[data-mode="3d"] .ability-hud{left:22px;top:196px}}
+@media(max-width:750px){body[data-mode="3d"] .flight-hud{left:12px;right:12px;top:12px;padding:9px 12px;gap:12px}body[data-mode="3d"] .distance-block b{font-size:34px}body[data-mode="3d"] .burn-panel{background:transparent!important;border:0;padding:0;top:78px;left:14px}body[data-mode="3d"] .ability-hud{top:190px;left:14px}body[data-mode="3d"] .control-dock{border-radius:14px;padding:12px!important}body[data-mode="3d"] .action-button,body[data-mode="3d"] .fire-button{border-radius:10px}.chapter-banner{top:24%}.chapter-banner b{font-size:28px}.chapter-banner span{font-size:10px}}
+@media(max-height:500px){.chapter-banner{top:14%}.chapter-banner b{font-size:24px;margin:6px 0 4px}}
+
+/* 2D Retro: a true pixel face for the cabinet chrome, same layout. */
+body[data-mode="2d"]{font-family:var(--mono)}
+body[data-mode="2d"] #intro h1,body[data-mode="2d"] .distance-block b,body[data-mode="2d"] dialog h2,body[data-mode="2d"] .result-overview .result-distance b,body[data-mode="2d"] .action-button,body[data-mode="2d"] .brand{font-family:var(--pixel)!important}
+body[data-mode="2d"] #intro h1{font-weight:700;font-size:clamp(40px,5.2vw,74px);letter-spacing:0;line-height:1;text-shadow:4px 4px 0 #713449,8px 8px 0 #2b1b33}
+body[data-mode="2d"] #intro h1>span{font-family:var(--pixel);font-size:12px;top:0}
+body[data-mode="2d"] .brand{font-weight:700;font-size:15px;letter-spacing:.02em}
+body[data-mode="2d"] .distance-block b{font-weight:700;font-size:38px;letter-spacing:0;text-shadow:3px 3px 0 #4b2a3c}
+body[data-mode="2d"] .flight-stat strong,body[data-mode="2d"] .distance-block>div span{font-family:var(--mono)}
+body[data-mode="2d"] .action-button,body[data-mode="2d"] .action-button:hover{font-weight:700;font-size:12px;letter-spacing:.02em}
+body[data-mode="2d"] dialog h2{font-weight:700;font-size:26px;letter-spacing:0;line-height:1.2}
+body[data-mode="2d"] .result-overview .result-distance b{font-weight:700;font-size:54px;letter-spacing:0}
+body[data-mode="2d"] .eyebrow,body[data-mode="2d"] .mode-caption,body[data-mode="2d"] .control-label,body[data-mode="2d"] .launch-controls label{font-family:var(--pixel)!important;font-size:9px!important;letter-spacing:.05em!important}
+body[data-mode="2d"] .mode-segments button{font-family:var(--pixel);font-weight:700;font-size:13px}
+body[data-mode="2d"] .mode-segments button span{font-family:var(--mono)}
+body[data-mode="2d"] .impact{background:radial-gradient(ellipse at center,transparent 40%,#ff535b88 100%)}
+body[data-mode="2d"] .insert-coin{font-family:var(--pixel);animation:blink 1.1s steps(2) infinite}
+@keyframes blink{50%{opacity:.2}}
+body[data-mode="2d"] .primary-button,body[data-mode="2d"] .secondary-button{font-family:var(--pixel)!important;font-size:12px!important;letter-spacing:.02em}
+@media(max-width:700px){body[data-mode="2d"] #intro h1{font-size:40px!important}}

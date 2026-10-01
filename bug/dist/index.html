@@ -12,10 +12,15 @@
   <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./arcade.css">
   <link rel="stylesheet" href="./modes.css">
+  <link rel="stylesheet" href="./polish.css">
+  <link rel="preload" href="./assets/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="./assets/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
   <div id="world" aria-label="3D flight world"></div>
   <div class="grain" aria-hidden="true"></div>
+  <div class="impact" aria-hidden="true"></div>
+  <div class="surge" aria-hidden="true"></div>
   <header class="game-header">
     <a class="brand" href="./" aria-label="Ship the Bug home"><img src="./favicon.svg" alt="" width="36" height="36"><span>DFINITY<span class="brand-sub">MISSION CONTROL</span></span></a>
     <div class="edition"><i></i> SHIP THE BUG <span> / </span> ZÜRICH → CYBERSPACE</div>
@@ -65,6 +70,7 @@
       </div>
       <div class="footer-meta"><span id="controlHint"><kbd>SPACE</kbd> CHARGE / BOOST <span>·</span> <kbd>A</kbd><kbd>D</kbd> STEER <span>·</span> <kbd>F</kbd> FIRE <span>·</span> <kbd>C</kbd> CAMERA</span><span>CYBERSPACE ARCADE <i></i> PUBLIC CREW <span id="version"></span></span></div>
     </div>
+    <div id="chapterBanner" class="chapter-banner" aria-hidden="true"><small></small><b></b><span></span><i></i></div>
     <div id="touchSteer" class="touch-steer"><button id="leftBtn" aria-label="Steer left">←</button><button id="rightBtn" aria-label="Steer right">→</button></div>
   </main>
   <dialog id="steeringDialog" aria-labelledby="steeringTitle" aria-describedby="steeringDescription">
@@ -117,7 +123,7 @@
     <p id="profileSwitchNote" class="privacy-note"></p>
   </dialog>
   <dialog id="pauseDialog" aria-labelledby="pauseTitle"><span class="eyebrow">DEPLOYMENT ON HOLD</span><h2 id="pauseTitle">Take a breath.</h2><p>Your bug will wait right here.</p><button id="resumeBtn" class="primary-button">RESUME FLIGHT</button><button id="abortBtn" class="secondary-button">Start a new run</button></dialog>
-  <div id="loading" role="status" aria-live="polite"><img class="loader-bug" src="./favicon.svg" alt="" width="56" height="56"><b>PREPARING YOUR FLIGHT…</b><span id="loadMessage">Loading the game</span><progress id="loadProgress" max="100" value="5" aria-label="Preparing game"></progress><div id="loadRecovery" hidden><button id="loadRetry" class="secondary-button">Try again</button><a class="secondary-button" href="?mode=2d">Play 2D Retro</a></div></div>
+  <div id="loading" role="status" aria-live="polite"><img class="loader-bug" src="./favicon.svg" alt="" width="56" height="56"><b>PREPARING YOUR FLIGHT…</b><span id="loadMessage">Loading the game</span><progress id="loadProgress" max="100" value="5" aria-label="Preparing game"></progress><small id="loadTip" class="load-tip"></small><div id="loadRecovery" hidden><button id="loadRetry" class="secondary-button">Try again</button><a class="secondary-button" href="?mode=2d">Play 2D Retro</a></div></div>
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
   <script type="module" src="./entry.js"></script>
   <script>window.addEventListener('error',function(e){if(!document.body.classList.contains('loaded'))document.getElementById('loadMessage').textContent='Could not start the game. Open it through the included local server and check WebGL support.'});</script>

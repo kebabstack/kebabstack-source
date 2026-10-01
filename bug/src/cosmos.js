@@ -1,9 +1,53 @@
 import { createStellarSky } from './stellar.js';
 import * as T from './vendor/three.module.js';
 import { ascentAt, seededRandom, zoneIndex, ZONES, clamp } from './physics.js';
+import { POWERUPS } from './ecosystem.js';
+
+let cloudTexture = null;
+function cloudSprite() {
+  // One soft, slightly lumpy alpha disc shared by every cloud puff.
+  if (!cloudTexture) {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    for (const [x, y, r, a] of [[128, 140, 96, .9], [80, 150, 70, .8], [180, 150, 72, .8], [120, 100, 60, .7], [160, 110, 50, .6]]) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(.6, `rgba(255,255,255,${a * .45})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 256);
+    }
+    cloudTexture = new T.CanvasTexture(canvas); cloudTexture.colorSpace = T.SRGBColorSpace;
+  }
+  return cloudTexture;
+}
 
 // All landmarks are authored geometry. Nothing is loaded from an image CDN.
 export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
+  const colorOf = kind => POWERUPS[kind]?.color || '#b5ffd0';
+  const floorClock = { value: 0 }, floorTint = { value: new T.Color('#3d628e') };
+  // The data stream: a dark glassy slab with a faint grid and pulses that run
+  // ahead of the bug. Fog still applies, so it fades into the sky like before.
+  const floorMaterial = new T.ShaderMaterial({ fog: true, transparent: true, side: T.DoubleSide, depthWrite: true,
+    uniforms: { clock: floorClock, tint: floorTint, ...T.UniformsUtils.clone(T.UniformsLib.fog) },
+    vertexShader: `varying vec3 wp;
+      #include <fog_pars_vertex>
+      void main(){ vec4 mvPosition = modelViewMatrix * vec4(position, 1.); wp = position; gl_Position = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+      }`,
+    fragmentShader: `uniform float clock; uniform vec3 tint; varying vec3 wp;
+      #include <fog_pars_fragment>
+      void main(){
+        float along = -wp.z, across = wp.x;
+        vec2 cell = vec2(fract(across / 9.25 + .5), fract(along / 10.));
+        float gx = smoothstep(.045, 0., abs(cell.x - .5)) , gz = smoothstep(.04, 0., abs(cell.y - .5));
+        float grid = max(gx, gz) * .55;
+        float pulse = smoothstep(.985, 1., fract(along / 240. - clock * .12)) * (1. - smoothstep(0., 30., abs(across)) * .6);
+        float lane = smoothstep(3., 0., abs(abs(across) - 18.5)) * .35 + smoothstep(2., 0., abs(across)) * .25;
+        vec3 base = vec3(.055, .07, .15);
+        vec3 color = base + tint * (grid * .35 + lane * .5 + pulse * 1.6);
+        gl_FragColor = vec4(color, .92);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+        #include <fog_fragment>
+      }` });
   const edgeClock={value:0};
   const edgeMaterial=new T.ShaderMaterial({fog:true,uniforms:{clock:edgeClock,...T.UniformsUtils.clone(T.UniformsLib.fog)},
     vertexShader:`varying float distanceAlong;
@@ -20,7 +64,7 @@ export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
         #include <colorspace_fragment>
         #include <fog_fragment>
       }`});
-  const update=(clock,reduced)=>{edgeClock.value=reduced?0:clock;};
+  const update=(clock,reduced)=>{edgeClock.value=reduced?0:clock;floorClock.value=reduced?0:clock;};
   const glow = (color, intensity = 1.25) => mat(color, { emissive: color, emissiveIntensity: intensity, roughness: .36, metalness: .35 });
   const tube = (g, points, color, radius = .15) => {
     const mesh = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points), Math.max(16, points.length * 3), radius, 5, false), glow(color));
@@ -90,7 +134,7 @@ export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
         positions.push(-37, ay, -a, 37, ay, -a, -37, by, -b, 37, ay, -a, 37, by, -b, -37, by, -b);
       }
       const floor = new T.BufferGeometry(); floor.setAttribute('position', new T.Float32BufferAttribute(positions, 3)); floor.computeVertexNormals();
-      g.add(new T.Mesh(floor, mat('#151935', { roughness: .52, metalness: .3, transparent: true, opacity: .88, side: T.DoubleSide })));
+      const slab = new T.Mesh(floor, floorMaterial); slab.receiveShadow = true; g.add(slab);
       for (const x of [-37, -18.5, 0, 18.5, 37]) {
         const pts = [];
         for (let i = 0; i <= 20; i++) { const d = Math.max(105, start + i * 10); pts.push(V(x, ascentAt(d) + .12, -d)); }
@@ -115,11 +159,14 @@ export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
       }
     }
     if (chunk < 4) {
-      // Rounded clouds surround the ascent; the city remains below them.
-      for (let i = 0; i < 5; i++) {
+      // Soft cloud banks surround the ascent; the city remains below them.
+      for (let i = 0; i < 6; i++) {
         const d = start + random() * 200, side = i % 2 ? -1 : 1;
-        const x = side * (85 + random() * 100), y = 90 + random() * 45;
-        for (let p = 0; p < 3; p++) shape(g, 'sphere', mat('#e7dbea', { transparent: true, opacity: .55, depthWrite: false }), x + p * 13, y + random() * 6, -d, 25, 9, 15);
+        const x = side * (85 + random() * 110), y = 80 + random() * 55;
+        for (let p = 0; p < 4; p++) {
+          const puff = new T.Sprite(new T.SpriteMaterial({ map: cloudSprite(), color: p % 2 ? '#f3e9f1' : '#d9d2e6', transparent: true, opacity: .62, depthWrite: false, fog: true }));
+          puff.position.set(x + p * 16 + random() * 6, y + random() * 7 - p * 2, -d + random() * 8); puff.scale.set(46 + random() * 20, 24 + random() * 10, 1); g.add(puff);
+        }
       }
     }
     const d = start + 205, h = ascentAt(d);
@@ -191,5 +238,5 @@ export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
     return g;
   }
   const sky = createStellarSky;
-  return { glow, world, sky, emblem, update };
+  return { glow, world, sky, emblem, update, colorOf };
 }

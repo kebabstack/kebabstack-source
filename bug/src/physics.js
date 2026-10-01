@@ -4,7 +4,7 @@ import { burnRate } from './scoring.js';
 import { makeMines } from './mines.js';
 import { newFlow, flowCoin, flowCandle, breakFlow, flowNearMiss, stepFlow } from './overdrive.js';
 import { isRedCandle, candleHit } from './candle.js';
-export const VERSION = '0.19.0';
+export const VERSION = '0.20.0';
 export const PROMPT_BOOSTS = 5;
 export const STEP = 1 / 120;
 export const START_HEIGHT = 21.2;

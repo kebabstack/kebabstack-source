@@ -81,7 +81,7 @@ export class SpaceSky {
     const c = view.ctx; c.save(); c.globalAlpha = Math.min(1, elapsedDistance / 50, (580 - elapsedDistance) / 90);
     const width = Math.min(410, view.w - 32), x = view.w - width - 16;
     view.rect(x, 168, width, view.w < 700 ? 32 : 51, '#11152bc9');
-    view.text(region.title, view.w - 27, 177, region.color, view.w < 700 ? 10 : 12, 'right');
+    view.text(region.title, view.w - 27, 177, region.color, view.w < 700 ? 9 : 11, 'right', true);
     if (view.w >= 700) view.text(region.note, view.w - 27, 196, '#e1d5ed', 10, 'right');
     c.restore();
   }

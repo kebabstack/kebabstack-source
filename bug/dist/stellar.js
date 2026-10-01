@@ -22,9 +22,18 @@ export function createStellarSky(scene) {
   const skyMat = new T.ShaderMaterial({ side: T.BackSide, depthWrite: false,
     uniforms: { phase, time }, vertexShader: 'varying vec3 d; void main(){d=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
     fragmentShader: `${noise} varying vec3 d; uniform float phase; uniform float time;
-    void main(){vec3 v=normalize(d);float h=smoothstep(-.25,.8,v.y);
-      vec3 day=mix(vec3(.28,.29,.42),vec3(.035,.075,.17),h);
-      day+=vec3(.20,.085,.045)*pow(max(0.,1.-abs(v.y+.035)*4.),4.);
+    void main(){vec3 v=normalize(d);float h=v.y;
+      // Blue hour over the lake: indigo zenith, mauve haze, one warm glow low on the left.
+      vec3 zenith=vec3(.012,.026,.085),mid=vec3(.06,.10,.27),low=vec3(.13,.10,.20);
+      vec3 day=mix(low,mid,smoothstep(-.04,.22,h));day=mix(day,zenith,smoothstep(.18,.85,h));
+      vec3 sunDir=normalize(vec3(-.62,.05,-.42));float sunDot=max(0.,dot(v,sunDir));
+      day+=vec3(.95,.40,.16)*pow(sunDot,5.)*(1.-smoothstep(0.,.42,abs(h)))*.9;
+      day+=vec3(1.4,.85,.45)*pow(sunDot,36.);
+      day+=vec3(.26,.13,.10)*pow(max(0.,1.-abs(h+.015)*3.2),3.);
+      float cl=fbm(vec3(v.x/(abs(h)+.22)*.75,v.z/(abs(h)+.22)*.75,1.7)+vec3(0.,0.,time*.004));
+      float cloudMask=smoothstep(.48,.74,cl)*(1.-smoothstep(.04,.42,h))*smoothstep(-.03,.02,h);
+      vec3 cloudColor=vec3(.26,.17,.24)+vec3(.9,.42,.14)*pow(sunDot,3.)*.8;
+      day=mix(day,cloudColor,cloudMask*.6);
       vec3 q=v*4.;float warp=fbm(q*1.4+1.5);float cloud=fbm(q*3.+warp*4.);
       float spine=abs(v.y*.82+v.x*.45+.02+(warp-.4)*.45);
       float band=exp(-spine*spine*20.);float dust=smoothstep(.22,.65,cloud);
@@ -75,12 +84,12 @@ export function createStellarSky(scene) {
         color*=.07+.93*pow(light,.68);
         float cracks=pow(max(0.,1.-abs(storms-.42)*32.),3.)*rocky;
         color+=cracks*vec3(.62,.06,.17)*(1.-light)*.65;
-        float rim=pow(1.-max(0.,dot(normalize(vn),normalize(-vp))),3.);
+        float rim=pow(max(0.,1.-max(0.,dot(normalize(vn),normalize(-vp)))),3.);
         color+=high*rim*.33;gl_FragColor=vec4(color,phase);
       }` })); surface.scale.setScalar(radius); group.add(surface);
     const air = new T.Mesh(sphere, new T.ShaderMaterial({ side: T.BackSide, transparent: true, depthWrite: false, blending: T.AdditiveBlending,
       uniforms: { phase, color: { value: new T.Color(palette[1]) } }, vertexShader: sphereVertex,
-      fragmentShader: 'varying vec3 vn;varying vec3 vp;uniform vec3 color;uniform float phase;void main(){float rim=pow(1.-abs(dot(normalize(vn),normalize(-vp))),2.8);gl_FragColor=vec4(color*1.7,rim*phase*.85);}' }));
+      fragmentShader: 'varying vec3 vn;varying vec3 vp;uniform vec3 color;uniform float phase;void main(){float rim=pow(max(0.,1.-abs(dot(normalize(vn),normalize(-vp)))),2.8);gl_FragColor=vec4(color*1.7,rim*phase*.85);}' }));
     air.scale.setScalar(radius * 1.035); group.add(air); return group;
   }
   function disk(inner, outer, color, blackHole = false) {
@@ -93,7 +102,7 @@ export function createStellarSky(scene) {
       float gap=1.-smoothstep(.43,.46,t)*(1.-smoothstep(.49,.52,t));
       float edge=smoothstep(0.,.07,t)*(1.-smoothstep(.88,1.,t));
       float swirl=.75+.25*sin(a*3.-time*.17+r*.12);
-      vec3 c=mix(color,color*2.8+vec3(.6,.18,.04),hot*pow(1.-t,2.));
+      vec3 c=mix(color,color*2.8+vec3(.6,.18,.04),hot*pow(max(0.,1.-t),2.));
       gl_FragColor=vec4(c,stripe*gap*edge*phase*mix(.8,swirl,hot));}` }));
   }
   const giant = planet(170, ['#48335c', '#e9bd97']);

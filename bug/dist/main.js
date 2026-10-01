@@ -11,6 +11,8 @@ import { Community } from './community.js';
 import { VERSION, STEP, ZONES, createRun, beginCharge, cancelCharge, launch, boost, collect, stepRun, clamp, altitudeAt, zoneIndex, fire, findTarget, needsBoost } from './physics.js';
 import { POWERUPS } from './ecosystem.js';
 import { GameView } from './scene.js';
+import { ArcadeAudio } from './audio.js';
+import { ChapterBanner, countUp, bestScoreStore, mountSoundButton } from './juice.js';
 
 const $ = id => document.getElementById(id);
 const fmt = n => Math.floor(n).toLocaleString('en-US');
@@ -18,8 +20,11 @@ const today = () => Math.floor(Date.now() / 86400000);
 const storageKey = 'ship-the-bug-cyberspace-flights-s2';
 const newFlight = () => createRun(today(), crypto.getRandomValues(new Uint32Array(1))[0]);
 const state = { run: newFlight(), paused: false, keys: new Set(), touchSteer: 0, touchDirections: new Map(), touchFire: false, sound: false, saved: false, modalPause: false };
+const audio = new ArcadeAudio();
+const banner = new ChapterBanner();
+const best = bestScoreStore('ship-the-bug-best-3d');
 let spaceHeld = false;
-const inspecting = new URL(location.href).searchParams.get('test') === '1';
+const inspecting = new URL(location.href).searchParams.get('test') === '1' || location.hash === '#lab';
 const startupAt = performance.now(), frameTimes = [];
 let startupMs = 0;
 let ready = false;
@@ -34,21 +39,7 @@ const tilt = phone.tilt;
 for (const surface of document.querySelectorAll('main, .game-header, #world')) protectGameSurface(surface);
 const releaseHolds = [];
 function clearHolds() { spaceHeld = false; for (const release of releaseHolds) release(); }
-let audio = null, notice = null;
-
-function tone(freq = 500, duration = .1, type = 'sine', volume = .025, slide = 0) {
-  if (!state.sound) return;
-  try {
-    audio ||= new (window.AudioContext || window.webkitAudioContext)();
-    if (audio.state === 'suspended') void audio.resume();
-    const oscillator = audio.createOscillator(), gain = audio.createGain();
-    oscillator.type = type; oscillator.frequency.setValueAtTime(freq, audio.currentTime);
-    if (slide) oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), audio.currentTime + duration);
-    gain.gain.setValueAtTime(volume, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + duration);
-    oscillator.connect(gain); gain.connect(audio.destination); oscillator.start(); oscillator.stop(audio.currentTime + duration + .01);
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
-  } catch { /* Sound is optional; a refused AudioContext cannot block the game. */ }
-}
+let notice = null;
 function toast(title, sub = '', duration = 2.2) {
   notice = {text: title + (sub ? ' · ' + sub : ''), until: performance.now() + duration * 1000};
 }
@@ -84,18 +75,20 @@ function reset() {
   for (const d of document.querySelectorAll('dialog[open]')) d.close();
   state.run = newFlight(); state.run.angle = Number($('angle').value);
   state.paused = false; state.saved = false; state.keys.clear(); state.touchFire = false; state.touchSteer = 0; state.touchDirections.clear();
-  accumulator = 0; view.reset(state.run.day, state.run.seed);
-  document.body.classList.remove('is-playing', 'night');
+  accumulator = 0; view.reset(state.run.day, state.run.seed); banner.hide(); chargeTick = 0;
+  document.body.classList.remove('is-playing', 'night', 'hit', 'new-best');
   commander.reset(); community.reset(); community.begin(state.run); notice = null;
   $('saveBtn').disabled = false; $('saveBtn').textContent = 'Save only on this device'; $('localSaveNote').textContent = '';
   $('saveNote').textContent = 'Your result stays private until you choose Publish score.';
   $('dayLabel').textContent = new Date(state.run.day * 86400000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' }).toUpperCase() + ' / NEW ROUTE EVERY FLIGHT';
   updateHUD();
 }
+let chargeTick = 0;
 function actionStart() {
   if (!ready || community.authBusy || state.paused || hasDialog()) return;
+  audio.resumeIfWanted();
   if (phone.offer()) return;
-  if (state.run.phase === 'ready') { beginCharge(state.run); tone(160, .12, 'triangle'); }
+  if (state.run.phase === 'ready') { beginCharge(state.run); audio.ui(); chargeTick = 0; }
   else if (state.run.phase === 'flying') { if (!boost(state.run)) toast('OUT OF PROMPTS', 'Time to trust the trajectory.'); }
 }
 function actionEnd() {
@@ -136,21 +129,16 @@ function switchCamera() {
   $('cameraLabel').textContent = view.cameraMode === 'chase' ? 'CHASE' : 'CINEMA';
   $('cameraBtn').setAttribute('aria-label', `Camera: ${view.cameraMode}. Change camera`);
   toast(view.cameraMode === 'chase' ? 'CHASE CAMERA' : 'CINEMATIC CAMERA', 'Same bug. A different perspective.', 1.5);
+  audio.ui();
 }
 $('cameraBtn').addEventListener('click', switchCamera);
-function toggleSound() {
-  state.sound = !state.sound;
-  $('soundBtn').setAttribute('aria-pressed', String(state.sound));
-  $('soundBtn').setAttribute('aria-label', state.sound ? 'Mute sound' : 'Enable sound');
-  $('soundBtn').innerHTML = state.sound ? '<svg viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5ZM16 8q5 4 0 8m3-11q8 7 0 14"/></svg>' : '<svg viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5ZM16 8l6 8m0-8-6 8"/></svg>';
-  tone(520, .08, 'triangle');
-}
-$('soundBtn').addEventListener('click', toggleSound);
+const toggleSound = mountSoundButton($('soundBtn'), audio, on => { state.sound = on; });
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.isContentEditable) return;
   // Space still launches after using the angle slider; arrows keep editing its value.
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && !(e.target.id === 'angle' && e.code === 'Space')) return;
   if (!ready || community.authBusy || hasDialog()) return;
+  if (!e.repeat) audio.resumeIfWanted();
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { spaceHeld = true; actionStart(); } }
   else if (['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'].includes(e.code)) { e.preventDefault(); state.keys.add(e.code); }
   else if (['KeyF', 'KeyJ'].includes(e.code)) { e.preventDefault(); state.keys.add(e.code); if (!e.repeat) shoot(); }
@@ -158,6 +146,7 @@ document.addEventListener('keydown', e => {
   else if ((e.code === 'KeyP' || e.code === 'Escape') && !e.repeat) { e.preventDefault(); pause(); }
   else if (e.code === 'KeyC' && !e.repeat) switchCamera();
   else if (e.code === 'KeyM' && !e.repeat) toggleSound();
+  else if (inspecting && e.shiftKey && /^Digit[0-9]$/.test(e.code) && !e.repeat) { e.preventDefault(); const summary = view.toggleDebug(Number(e.code.slice(5))); toast('RENDER DEBUG', summary, 6); console.log('[debug]', summary); }
 });
 document.addEventListener('keyup', e => {
   state.keys.delete(e.code);
@@ -223,10 +212,13 @@ function showLocalScores() {
 }
 $('localTab').addEventListener('click', () => { community.local(); showLocalScores(); });
 function finish() {
-  const r = state.run;
-  $('resultTitle').textContent = r.zone >= 9 ? 'Hello, mainnet.' : r.zone >= 3 ? 'Well, it shipped.' : 'A promising bug.';
-  $('resultQuip').textContent = 'Out of momentum. ' + (r.mineHits ? 'Dodge red candles and ground mines, or clear them with a pulse.' : r.ghost.hits ? 'Try two quick pulses when Motoko circles in front.' : r.overheats > 1 ? 'Use shorter bursts so the blaster is ready when it matters.' : r.prompts ? 'You still had a boost. Save the next landing!' : 'A cleaner route or a lucky updraft could carry the next bug further.');
-  $('resultScore').textContent = fmt(scoreOf(r));
+  const r = state.run, score = scoreOf(r), previous = best.read(), record = !r.practice && score > previous;
+  if (record) best.write(score);
+  document.body.classList.toggle('new-best', record);
+  $('resultTitle').textContent = record && previous > 0 ? 'New personal best.' : r.zone >= 9 ? 'Hello, mainnet.' : r.zone >= 3 ? 'Well, it shipped.' : 'A promising bug.';
+  $('resultQuip').textContent = (record && previous > 0 ? `You beat your previous best of ${fmt(previous)} points. ` : 'Out of momentum. ') + (r.mineHits ? 'Dodge red candles and ground mines, or clear them with a pulse.' : r.ghost.hits ? 'Try two quick pulses when Motoko circles in front.' : r.overheats > 1 ? 'Use shorter bursts so the blaster is ready when it matters.' : r.prompts ? 'You still had a boost. Save the next landing!' : 'A cleaner route or a lucky updraft could carry the next bug further.');
+  countUp($('resultScore'), score, fmt, 1.1);
+  audio.finish(r.zone >= 3 || record);
   $('resultDistance').textContent = fmt(r.d) + ' m';
   $('resultBonus').textContent = `${fmt(r.d)} distance + ${r.coins} coins × ${COIN_BONUS} = ${fmt(scoreOf(r))} points`;
   void community.finish();
@@ -241,7 +233,6 @@ function finish() {
   if (!r.seals.size) $('resultSeals').textContent = 'Catch ecosystem artifacts to earn your mission patches.';
   $('resultDialog').showModal();
   $('resultTitle').focus({preventScroll:true}); $('resultDialog').scrollTop = 0;
-  tone(330, .3, 'triangle');
 }
 $('resultDialog').addEventListener('cancel', e => { e.preventDefault(); if (!state.run.publishing) reset(); });
 
@@ -308,30 +299,36 @@ function updateHUD() {
   $('fireBtn').style.setProperty('--charge', String(1 - Math.min(1, r.shotCooldown / .22)));
   view.target = target;
 }
+function flashBody(kind, ms = 420) {
+  document.body.classList.add(kind); clearTimeout(flashBody[kind]);
+  flashBody[kind] = setTimeout(() => document.body.classList.remove(kind), ms);
+}
 function processEvents() {
   for (const e of state.run.effects.splice(0)) {
     view.event(e, state.run);
     if (e.kind === 'zone') {
       commander.update(state.run);
-      tone(659, .2, 'triangle'); setTimeout(() => tone(880, .18, 'triangle'), 140);
-    } else if (e.kind === 'shot') {
-      tone(1300, .09, 'sawtooth', .012, -950);
-    } else if (e.kind === 'collect') {
-      if (e.type === 'cycle') {
-        tone(900 + state.run.combo % 6 * 90, .07, 'sine', .015);
-      }
+      const z = ZONES[e.index]; banner.show(`CHAPTER ${String(e.index + 1).padStart(2, '0')}`, z.name, z.tag, z.color);
+      audio.zone();
+    } else if (e.kind === 'shot') audio.shot();
+    else if (e.kind === 'launch') { audio.launch(e.label === 'PERFECT DEPLOY'); toast(e.label, e.sub, 2); }
+    else if (e.kind === 'collect') {
+      if (e.type === 'cycle') audio.coin(state.run.combo, state.run.elapsed);
+      else if (!['pad', 'hazard', 'mine'].includes(e.type)) audio.pickup();
     } else if (e.kind === 'done') finish();
-    else if (e.kind === 'bounce') tone(110, .09, 'triangle', .022, -60);
+    else if (e.kind === 'bounce') audio.bounce(e.strength || .5);
     else if (e.label) {
-      if(e.kind==='overdrive'){toast(e.label,e.sub,2.6);tone(e.godCandle?330:220,.55,'sawtooth',.018,990);}
-      else if(e.kind==='near-miss'){toast('CLOSE CALL','+20 FLOW',1.1);tone(740,.16,'sine',.015,210);}
-      else if (e.kind === 'boost' || e.kind === 'portal') tone(240, .35, 'sawtooth', .018, 800);
-      else if (['destroy','ghost-destroy','mine-destroy'].includes(e.kind)) tone(180, .3, 'sawtooth', .025, -130);
-      else if (e.kind === 'ghost-hit') { toast('MOTOKO PULSE HIT', '−33% momentum'); tone(130,.17,'square',.02,-70); }
-      else if (['hazard','mine-hit'].includes(e.kind)) tone(130, .17, 'square', .02, -70);
-      else if (e.kind === 'ghost-shot') tone(650,.18,'sawtooth',.018,-420);
-      else if (e.kind === 'ghost-warning') tone(310,.35,'triangle',.015,340);
-      else tone(340, .14, 'triangle', .022, 230);
+      if(e.kind==='overdrive'){toast(e.label,e.sub,2.6);audio.overdrive(Boolean(e.godCandle));flashBody('surge',900);}
+      else if(e.kind==='near-miss'){toast('CLOSE CALL','+20 FLOW',1.1);audio.nearMiss();}
+      else if (e.kind === 'boost' || e.kind === 'portal') { audio.boost(); if (e.kind === 'portal') toast(e.label, e.sub); }
+      else if (['destroy','ghost-destroy','mine-destroy'].includes(e.kind)) { audio.explosion(e.kind === 'ghost-destroy'); toast(e.label, e.sub, 1.6); }
+      else if (e.kind === 'ghost-hit') { toast('MOTOKO PULSE HIT', '−33% momentum'); audio.hit(); flashBody('hit'); }
+      else if (['hazard','mine-hit'].includes(e.kind)) { audio.hit(); flashBody('hit'); toast(e.label, e.sub, 1.8); }
+      else if (e.kind === 'shield') { audio.shield(); toast(e.label, e.sub, 1.6); }
+      else if (e.kind === 'ghost-shot') audio.ghostShot();
+      else if (e.kind === 'ghost-warning') { audio.warning(); toast(e.label, e.sub, 1.6); }
+      else if (e.kind === 'overheat') { audio.overheat(); toast(e.label, e.sub, 1.6); }
+      else { audio.pickup(); toast(e.label, e.sub, 1.8); }
     }
   }
 }
@@ -349,20 +346,32 @@ function frame(time) {
   view.adaptQuality?.(time - last, Boolean(last) && !document.hidden && !state.paused && !hasDialog());
   if (inspecting && last && state.run.phase === 'flying' && !state.paused && !hasDialog()) { if (frameTimes.length < 3600) frameTimes.push(time - last); }
   const dt = Math.min(.06, Math.max(0, (time - (last || time)) / 1000)); last = time;
-  if (!state.paused && !hasDialog() && !view.inspectGhost) {
+  const frozen = state.paused || hasDialog();
+  if (!frozen && !view.inspectGhost && !(view.hitStop > 0)) {
     accumulator = Math.min(accumulator + dt, .1);
     while (accumulator >= STEP) { tick(STEP); accumulator -= STEP; }
   } else accumulator = 0;
   // No motion during pause/help/result; an idle rooftop can still breathe.
-  view.update(state.run, state.paused || hasDialog() ? 0 : dt);
+  view.update(state.run, frozen ? 0 : dt);
+  const r = state.run;
+  if (r.phase === 'charging' && !frozen) {
+    // Audible charge ladder: ticks accelerate toward the sweet spot.
+    chargeTick += dt * (6 + r.charge * 16);
+    if (chargeTick >= 1) { chargeTick = 0; audio.chargeTick(r.charge); }
+  }
+  audio.flight(r.phase === 'flying' && !frozen, r.speed, r.flow.active > 0 ? 1 : r.boostTime > 0 ? .7 : 0, dt);
   hudTime += dt; if (hudTime > .06) { updateHUD(); hudTime = 0; }
 
   requestAnimationFrame(frame);
 }
 async function initialize() {
 try {
+  loadingProgress(10, 'Loading typography…');
+  // Canvas-drawn signs and score labels use the bundled display face; wait briefly for it.
+  try { await Promise.race([document.fonts.load('700 48px "Space Grotesk"'), new Promise(r => setTimeout(r, 1200))]); } catch { /* fallback face is fine */ }
   loadingProgress(15, 'Building the launch scene…'); await nextPaint();
   view = new GameView($('world'), state.run.day, state.run.seed);
+  if (inspecting) { window.__view = view; window.__state = state; window.__tick = tick; } // lab only: console-driven inspection
   const canvas = view.renderer.domElement;
   canvas.addEventListener('click', e => { if (e.pointerType === 'touch' || e.pointerType === 'pen' || (!e.pointerType && touchMedia.matches)) shoot(); });
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pause(); ready = false; loadingFailed('Graphics were interrupted. Reload to reconnect, or play 2D Retro.'); });
@@ -375,7 +384,7 @@ try {
   gameReady();
   requestAnimationFrame(frame);
   // Opt-in, visible inspection controls. No test controls are present at the normal URL.
-  if (new URL(location.href).searchParams.get('test') === '1') {
+  if (inspecting) {
     const lab = document.createElement('aside'); lab.className = 'lab'; lab.setAttribute('aria-label', 'Scene inspection');
     const labToggle = document.createElement('button'); labToggle.className = 'lab-toggle'; labToggle.textContent = 'Toggle inspection';
     labToggle.addEventListener('click', () => lab.classList.toggle('collapsed')); lab.append(labToggle);

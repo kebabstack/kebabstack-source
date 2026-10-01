@@ -1,5 +1,17 @@
 # Changelog — kebab-stack bug (Ship the Bug)
 
+## [0.20.0] — 2026-10-01
+
+Presentation release: same flight rules, same boards, same publication rules IDs (`moon-2026-09-30` / `arcade-2026-09-09`). Nothing in this release changes physics, scoring, course generation or the backend contract.
+
+- **3D rendering.** Multisampled HDR frame buffer (4× MSAA through bloom), a baked studio environment map for real reflections on the bug's clearcoat shell, coins and chrome, a warm key light plus a cool rim light, and a final flight pass with speed streaks, chromatic aberration at high energy, a soft vignette and tinted impact flashes. New blue-hour sky over Zürich with a warm horizon glow and drifting cloud banks; the data stream is now a shaded slab with a moving grid and forward pulses.
+- **3D feel.** GPU particle sparks and smoke replace the old mesh particles; engine exhaust while boosting; world-space floating labels (+50, PERFECT!, CLEARED, −40%); camera roll with steering, impact shake and a short hit-stop; a chapter title card on every zone change. Reduced motion disables shake, streaks, drifting motes and the banner's travel.
+- **2D Retro.** Three-frame wing flutter, pixel exhaust and speed streaks, spinning eight-frame coins, animated hazards and pickups, two Alpine parallax layers, drifting pixel clouds, a glowing data-stream floor in space, screen shake, launch charge halo, outlined pixel score labels and the bundled Silkscreen pixel face for the cabinet chrome and in-scene text.
+- **Audio.** A new procedural sound engine (no samples): airspeed-driven engine and wind beds, a pentatonic coin ladder, charge ticks, launch, boost, hits, explosions, shields, overdrive, chapter chimes and a result chord. Sound stays opt-in via **M** or the speaker button; the choice is remembered on this device.
+- **Interface.** Bundled Space Grotesk and JetBrains Mono (Silkscreen in 2D), a glass instrument HUD that stays readable over the bright early sky, a refined launch dock with a visible perfect-release zone, animated score count-up, a local personal best per mode with a highlighted "new personal best" result, and attribute selectors fixed so the intended 2D cabinet styling actually applies.
+- **Rendering safety.** The scene renders into a dedicated multisampled HDR buffer that is resolved once and copied through a NaN/Inf guard into a single-sample post chain; nothing blends back into the multisampled buffer. Shader `pow()` calls whose base could be extrapolated below zero at multisampled edges (Motoko's exhaust ribbons, the black-hole bands, planet rims and rings) are clamped. Without these, Apple GPUs produced a single NaN texel in the ghost's exhaust that the bloom blur smeared into a black, flickering frame. Loading no longer stalls in a hidden tab. The lab (`?test=1` or `#lab`) gains Shift+1…0 toggles for MSAA, environment map, flight pass, bloom, particles, labels, ghost, rim light, shadows and ribbons, plus `window.__view` / `__state` / `__tick` for console-driven inspection.
+- Verified: 171 frontend checks pass unchanged; both modes screenshot-tested in headless Chromium at desktop sizes; the ghost encounter, overdrive and zones 2–6 probed frame by frame on an Apple GPU after the fix (no dark frames).
+
 ## [0.19.0] — 2026-09-30
 
 - Fix the 3D bug drifting sideways with tilt off: lateral velocity now follows player input only. Former crosswind intervals are calm; forward winds and updrafts remain.

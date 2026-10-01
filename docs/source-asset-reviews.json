@@ -454,5 +454,69 @@
       "canister-reference"
     ],
     "reason": "Obvious repeated-letter synthetic canister strings in isolated jsdom fixtures; no network connection or real installation."
+  },
+  {
+    "path": "bug/src/assets/fonts/jetbrains-mono.woff2",
+    "sha256": "2c32b9b3ee358c119e210f6f5195f9bd34894d78a785ff2e95d60e718e400af4",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
+  },
+  {
+    "path": "bug/src/assets/fonts/silkscreen-400.woff2",
+    "sha256": "17bb6d80eeea10c69887aa64a1b48e70a3f540de50480da9ec933fac1996bf97",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
+  },
+  {
+    "path": "bug/src/assets/fonts/silkscreen-700.woff2",
+    "sha256": "30ad65d8dff39d9154b3e43fedfaeaea9767468238ea633272304b6fc82bdca7",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
+  },
+  {
+    "path": "bug/src/assets/fonts/space-grotesk.woff2",
+    "sha256": "a0d054c4af557de20afd6ca59f47ab353bcaec49c63ff04b6c9d39d0f8910557",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
+  },
+  {
+    "path": "bug/dist/assets/fonts/jetbrains-mono.woff2",
+    "sha256": "2c32b9b3ee358c119e210f6f5195f9bd34894d78a785ff2e95d60e718e400af4",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
+  },
+  {
+    "path": "bug/dist/assets/fonts/silkscreen-400.woff2",
+    "sha256": "17bb6d80eeea10c69887aa64a1b48e70a3f540de50480da9ec933fac1996bf97",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
+  },
+  {
+    "path": "bug/dist/assets/fonts/silkscreen-700.woff2",
+    "sha256": "30ad65d8dff39d9154b3e43fedfaeaea9767468238ea633272304b6fc82bdca7",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
+  },
+  {
+    "path": "bug/dist/assets/fonts/space-grotesk.woff2",
+    "sha256": "a0d054c4af557de20afd6ca59f47ab353bcaec49c63ff04b6c9d39d0f8910557",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
   }
 ]

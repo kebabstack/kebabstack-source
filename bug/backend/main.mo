@@ -69,7 +69,7 @@ persistent actor Bug {
   var adminGroup : Text = "bug-admins";
   var adminEmails : [Text] = [];
   var adminClaimed : Bool = false;
-  transient let BUILD_VERSION : Text = "0.19.0";
+  transient let BUILD_VERSION : Text = "0.20.0";
   transient let H : Int = 3_600_000_000_000;
   transient let DAY : Int = 86_400_000_000_000;
 

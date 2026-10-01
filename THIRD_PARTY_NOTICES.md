@@ -18,6 +18,19 @@ Dependencies installed at build time retain their own notices in their packages.
 | postal-mime 2.7.6 | `contracts/dist/vendor/postal-mime.js` and mail relay | [MIT-0](third-party/licenses/postal-mime-MIT-0.txt); Andris Reinman |
 | unpdf 1.8.1 and PDF.js | `contracts/dist/vendor/pdf-text.js` | [Build notice](contracts/dist/vendor/pdf-text-NOTICE.txt), [MIT](contracts/dist/vendor/unpdf-LICENSE.txt), [Apache-2.0](contracts/dist/vendor/pdfjs-LICENSE.txt) |
 
+## Bundled game fonts
+
+The following Latin-subset fonts are served locally from `bug/src/assets/fonts/`
+and copied unchanged to `bug/dist/assets/fonts/`. Each uses the SIL Open Font
+License 1.1; its copyright notice and full license are included beside the font.
+
+| File | Family / authors | License |
+| --- | --- | --- |
+| `space-grotesk.woff2` | Space Grotesk; Florian Karsten / The Space Grotesk Project Authors | [OFL 1.1](bug/src/assets/fonts/Space-Grotesk-OFL.txt) |
+| `jetbrains-mono.woff2` | JetBrains Mono; The JetBrains Mono Project Authors | [OFL 1.1](bug/src/assets/fonts/JetBrains-Mono-OFL.txt) |
+| `silkscreen-400.woff2` | Silkscreen Regular; Jason Kottke / The Silkscreen Project Authors | [OFL 1.1](bug/src/assets/fonts/Silkscreen-OFL.txt) |
+| `silkscreen-700.woff2` | Silkscreen Bold; Jason Kottke / The Silkscreen Project Authors | [OFL 1.1](bug/src/assets/fonts/Silkscreen-OFL.txt) |
+
 ## Images and marks
 
 The canonical Kebabstack product SVGs, PNG exports and drawing rules are included

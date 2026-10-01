@@ -9,19 +9,24 @@ import { createZurich } from './zurich.js';
 import { LaunchGuide } from './launch-guide.js';
 import * as T from './vendor/three.module.js';
 import { makeObjects, seededRandom, ZONES, clamp, ascentAt, altitudeAt } from './physics.js';
+import { POWERUPS } from './ecosystem.js';
 
 import { FlightFX } from './flight-fx.js';
 import { createCosmosKit } from './cosmos.js';
+import { Particles } from './particles.js';
+import { FloatingLabels } from './labels.js';
+import { FlightPostFX } from './post-fx.js';
+import { createEnvironment } from './environment.js';
 import { EffectComposer } from './vendor/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from './vendor/addons/postprocessing/RenderPass.js';
+import { TexturePass } from './vendor/addons/postprocessing/TexturePass.js';
 import { UnrealBloomPass } from './vendor/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './vendor/addons/postprocessing/OutputPass.js';
 
 const V = (x = 0, y = 0, z = 0) => new T.Vector3(x, y, z);
 const geometry = {
-  box: new T.BoxGeometry(1, 1, 1), sphere: new T.SphereGeometry(1, 18, 12),
+  box: new T.BoxGeometry(1, 1, 1), sphere: new T.SphereGeometry(1, 24, 16),
   cone: new T.ConeGeometry(1, 1, 6), cylinder: new T.CylinderGeometry(1, 1, 1, 20),
-  ring: new T.TorusGeometry(1, 0.12, 7, 28), coin: new T.TorusGeometry(1, 0.16, 6, 18),
+  ring: new T.TorusGeometry(1, 0.12, 7, 28), coin: new T.TorusGeometry(1, 0.17, 10, 36),
   diamond: new T.OctahedronGeometry(1, 0),
   // Rock ends at the snowline (77% of the peak height). A full rock cone
   // underneath the snow cone has identical faces and flickers from z-fighting.
@@ -49,9 +54,9 @@ function label(parent, text, width, x, y, z, { bg = '#172726', fg = '#eff5e4', h
   const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256;
   const ctx = canvas.getContext('2d');
   if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, 1024, 256); }
-  ctx.fillStyle = fg; ctx.font = `${font} ${size}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = fg; ctx.font = `${font} ${size}px "Space Grotesk", Arial, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(text, 512, 133, 960);
-  const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace;
+  const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace; texture.anisotropy = 4;
   const mesh = new T.Mesh(new T.PlaneGeometry(width, width * height), new T.MeshBasicMaterial({ map: texture, transparent: !bg, side: T.DoubleSide }));
   mesh.position.set(x, y, z); parent.add(mesh); return mesh;
 }
@@ -70,11 +75,28 @@ function infinity(parent, x, y, z, scale = 1, neon = false) {
 
 const cosmos = createCosmosKit({ V, shape, bar, label, mat, infinity });
 
+// A soft radial sprite shared by engine glows, the shield core and clouds.
+let glowTexture = null;
+function softDisc() {
+  if (glowTexture) return glowTexture;
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+  const ctx = canvas.getContext('2d'), g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.35, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+  glowTexture = new T.CanvasTexture(canvas); glowTexture.colorSpace = T.SRGBColorSpace; return glowTexture;
+}
+function glowSprite(color, scale, opacity = .8) {
+  const sprite = new T.Sprite(new T.SpriteMaterial({ map: softDisc(), color, transparent: true, opacity, depthWrite: false, blending: T.AdditiveBlending }));
+  sprite.scale.setScalar(scale); return sprite;
+}
+
 function createBug() {
   const root = new T.Group(), animated = new T.Group(); root.add(animated);
-  const ink = mat('#162625', { roughness: .36 }), red = mat('#ed6548', { roughness: .3, metalness: .08 });
+  const ink = new T.MeshPhysicalMaterial({ color: '#101a1c', roughness: .32, metalness: .1, clearcoat: .6, clearcoatRoughness: .25 });
+  const red = new T.MeshPhysicalMaterial({ color: '#e63a2a', roughness: .28, metalness: .02, clearcoat: 1, clearcoatRoughness: .12, sheen: .3, sheenColor: new T.Color('#ff9a7a') });
   shape(animated, 'sphere', ink, 0, 0, .15, 1.05, .63, 1.65);
   const wings = [], shells = [];
+  const wingMat = new T.MeshPhysicalMaterial({ color: '#dff6ff', transparent: true, opacity: .42, roughness: .15, metalness: 0, iridescence: .9, iridescenceIOR: 1.35, side: T.DoubleSide, depthWrite: false });
   for (const side of [-1, 1]) {
     const shell = new T.Group(); shell.position.set(side * .13, .15, .18); animated.add(shell);
     shape(shell, 'sphere', red, side * .46, .17, 0, .65, .8, 1.46);
@@ -83,7 +105,7 @@ function createBug() {
     }
     shells.push(shell);
     const wing = new T.Group(); wing.position.set(side * .2, .1, -.1); animated.add(wing);
-    shape(wing, 'sphere', mat('#edf9e4', { transparent: true, opacity: .65, roughness: .32, depthWrite: false }), side * 1.1, 0, .2, 1.42, .045, .7);
+    const blade = shape(wing, 'sphere', wingMat, side * 1.1, 0, .2, 1.42, .045, .7); blade.castShadow = false;
     wing.visible = false; wings.push(wing);
     for (let i = 0; i < 3; i++) {
       const a = V(side * .6, -.35, -.7 + i * .75), b = V(side * 1.35, -.65, -1 + i * .92), c = V(side * 1.65, -1, -.95 + i * 1.07);
@@ -91,23 +113,26 @@ function createBug() {
     }
   }
   shape(animated, 'sphere', ink, 0, -.02, -1.28, .85, .67, .74);
+  const eyeWhite = new T.MeshPhysicalMaterial({ color: '#fffdf0', roughness: .12, clearcoat: 1 });
   for (const side of [-1, 1]) {
-    shape(animated, 'sphere', '#fffdf0', side * .43, .32, -1.82, .36, .44, .29);
+    shape(animated, 'sphere', eyeWhite, side * .43, .32, -1.82, .36, .44, .29);
     shape(animated, 'sphere', ink, side * .43 + .04, .33, -2.08, .145, .2, .09);
-    shape(animated, 'sphere', '#ffffff', side * .43 + .085, .42, -2.15, .046);
+    shape(animated, 'sphere', mat('#ffffff', { emissive: '#ffffff', emissiveIntensity: .8 }), side * .43 + .085, .42, -2.15, .05);
     bar(animated, V(side * .4, .52, -1.25), V(side * .7, 1.12, -1.75), .055, ink);
-    shape(animated, 'sphere', ink, side * .7, 1.12, -1.75, .11);
+    shape(animated, 'sphere', mat('#79f8ff', { emissive: '#3fd8ff', emissiveIntensity: 1.6 }), side * .7, 1.12, -1.75, .11);
   }
   const engines = new T.Group(); animated.add(engines);
-  const flames = [];
+  const flames = [], glows = [];
+  const steel = new T.MeshStandardMaterial({ color: '#9fb6c2', metalness: .9, roughness: .25 });
   for (const side of [-1, 1]) {
-    const rocket = shape(engines, 'cylinder', mat('#8eaab3', { metalness: .7, roughness: .3 }), side * .88, .25, .9, .26, 1.2, .26); rocket.rotation.x = Math.PI / 2;
-    const nozzle = shape(engines, 'ring', cosmos.glow('#79f8ff'), side * .88, .25, 1.5, .25);
-    const flame = shape(engines, 'cone', mat('#85edff', { emissive: '#46bbff', emissiveIntensity: 1.7, transparent: true, opacity: .65 }), side * .88, .25, 2, .21, 1.3, .21); flame.rotation.x = Math.PI / 2; flames.push(flame);
+    const rocket = shape(engines, 'cylinder', steel, side * .88, .25, .9, .26, 1.2, .26); rocket.rotation.x = Math.PI / 2;
+    shape(engines, 'ring', cosmos.glow('#79f8ff'), side * .88, .25, 1.5, .25);
+    const flame = shape(engines, 'cone', mat('#85edff', { emissive: '#46bbff', emissiveIntensity: 2.2, transparent: true, opacity: .7, depthWrite: false }), side * .88, .25, 2, .21, 1.3, .21);
+    flame.rotation.x = Math.PI / 2; flame.castShadow = false; flames.push(flame);
+    const glow = glowSprite('#5fe4ff', 1.6, .75); glow.position.set(side * .88, .25, 1.6); engines.add(glow); glows.push(glow);
   }
-  return { root, animated, wings, shells, engines, flames };
+  return { root, animated, wings, shells, engines, flames, glows };
 }
-
 
 function bake(instances, group) {
   for (const [key, values] of instances) {
@@ -128,14 +153,14 @@ function terrain(chunk, day) {
     batches.get(key).push({ x, y, z, sx, sy, sz, rot });
   };
   const start = chunk * 200;
-  put('box', '#4b665f', 0, -.7, -start - 100, 760, 1.3, 200.1);
-  put('box', '#435366', 0, -.01, -start - 100, 20, .05, 200);
+  put('box', '#4a6560', 0, -.7, -start - 100, 760, 1.3, 200.1);
+  put('box', '#3d4b5e', 0, -.01, -start - 100, 20, .05, 200);
   put('box', '#8f9fa8', -11.7, .08, -start - 100, 3.3, .18, 200);
   put('box', '#8f9fa8', 11.7, .08, -start - 100, 3.3, .18, 200);
   for (let z = 0; z < 200; z += 14) put('box', '#d2d8bf', 0, .06, -start - z, .22, .02, 5);
   // Lake ribbon and bank, below the city skyline.
-  put('box', '#568379', -105, -.04, -start - 100, 56, .1, 200);
-  put('box', '#377f98', -105, .015, -start - 100, 46, .09, 200);
+  put('box', '#4f7d74', -105, -.04, -start - 100, 56, .1, 200);
+  put('box', '#3a86a3', -105, .015, -start - 100, 46, .09, 200);
   for (let i = 0; i < 9; i++) {
     const z = -start - i * 23 - random() * 5;
     for (const side of [-1, 1]) {
@@ -158,8 +183,8 @@ function terrain(chunk, day) {
       const px = side * (190 + random() * 180), ph = 55 + random() * 85, mountainRotation = random();
       // Mountains belong beyond the valley. Their base must never intrude into the flight corridor.
       if (chunk >= 0 && i % 3 === 0) {
-        put('mountain', ['#90aaa3', '#9fb6af', '#829c99'][i % 3], px, ph * .5, z - 110, ph * .7, ph, ph * .7, mountainRotation);
-        put('snowcap', '#e5e9dc', px, ph * .885, z - 110, ph * .161, ph * .23, ph * .161, mountainRotation);
+        put('mountain', ['#7f9aa6', '#8ea7b0', '#74919c'][i % 3], px, ph * .5, z - 110, ph * .7, ph, ph * .7, mountainRotation);
+        put('snowcap', '#eef2f4', px, ph * .885, z - 110, ph * .161, ph * .23, ph * .161, mountainRotation);
       }
       if (start > 450) {
         for (let t = 0; t < 4; t++) {
@@ -185,6 +210,8 @@ function terrain(chunk, day) {
   return g;
 }
 
+const coinGold = new T.MeshStandardMaterial({ color: '#ffcd5c', metalness: .95, roughness: .22, emissive: '#b86713', emissiveIntensity: .55 });
+const coinCore = new T.MeshStandardMaterial({ color: '#fff1bd', emissive: '#ffcf63', emissiveIntensity: 1.6, roughness: .3 });
 function pickup(obj) {
   if(isRedCandle(obj)) {
     const candle=createCandle(false,obj.hp>1);
@@ -196,8 +223,8 @@ function pickup(obj) {
     return g;
   }
   if (obj.kind === 'cycle') {
-    shape(g, 'coin', mat('#f6c660', { metalness: .42, roughness: .3, emissive: '#b86713', emissiveIntensity: 1.3 }), 0, 0, 0, 1.65);
-    shape(g, 'sphere', mat('#ffe8a3', { emissive: '#e3bb4d', emissiveIntensity: 1.2 }), 0, 0, 0, .24);
+    shape(g, 'coin', coinGold, 0, 0, 0, 1.65);
+    shape(g, 'sphere', coinCore, 0, 0, 0, .26);
   } else if (obj.kind === 'coffee') {
     shape(g, 'cylinder', '#f6f0da', 0, 0, 0, 1.1, 1.8, 1.1);
     shape(g, 'cylinder', '#624738', 0, .95, 0, .95, .06, .95);
@@ -212,53 +239,89 @@ function pickup(obj) {
     cosmos.emblem(obj.kind, g);
   } else if (obj.kind === 'pad') {
     shape(g, 'box', '#465f55', 0, -.4, 0, 9, .7, 8);
-    shape(g, 'box', mat('#c6fa7c', { emissive: '#a4da50', emissiveIntensity: .15 }), 0, 0, 0, 8, .2, 7);
+    shape(g, 'box', mat('#c6fa7c', { emissive: '#a4da50', emissiveIntensity: .35 }), 0, 0, 0, 8, .2, 7);
     for (let i = 0; i < 3; i++) {
       const a = shape(g, 'box', '#3f6844', -.9, .15, -2 + i * 1.5, 2.5, .1, .35); a.rotation.y = -.5;
       const b = shape(g, 'box', '#3f6844', .9, .15, -2 + i * 1.5, 2.5, .1, .35); b.rotation.y = .5;
     }
   }
-
+  if (!['cycle', 'pad', 'hazard', 'mine', 'coffee'].includes(obj.kind)) {
+    // Rare ecosystem artifacts get a soft halo so they read from far away.
+    const halo = glowSprite(cosmos.colorOf(obj.kind), 9, .35); halo.position.y = .4; g.add(halo);
+  }
   return g;
 }
 
 export class GameView {
   constructor(container, day, seed = day) {
     this.inspectGhost = false; this.day = day; this.seed = seed; this.container = container;
-    this.renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.15 : 1.4));
+    this.renderer = new T.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    // Pixel ratio: sharp on retina, but capped so the multisampled scene buffer stays affordable on large screens.
+    const pointerCoarse = matchMedia('(pointer: coarse)').matches;
+    let ratio = Math.min(window.devicePixelRatio || 1, pointerCoarse ? 1.15 : 1.5);
+    ratio = Math.min(ratio, Math.sqrt(4.2e6 / Math.max(1, innerWidth * innerHeight)));
+    this.renderer.setPixelRatio(Math.max(.75, ratio));
     this.frameBudget = new FrameBudget();
     this.initialPixelRatio = this.renderer.getPixelRatio();
     this.renderer.setSize(innerWidth, innerHeight);
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = T.PCFShadowMap;
-    this.renderer.toneMapping = T.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMapping = T.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.1;
     container.appendChild(this.renderer.domElement);
-    this.scene = new T.Scene(); this.scene.background = new T.Color('#273651');
-    this.scene.fog = new T.Fog('#273651', 160, 620);
+    this.scene = new T.Scene(); this.scene.background = new T.Color('#6a5a7c');
+    this.scene.fog = new T.Fog('#6a5a7c', 160, 620);
+    this.envTexture = createEnvironment(this.renderer); this.scene.environment = this.envTexture; this.scene.environmentIntensity = .55;
+    this.debug = { env: true, post: true, bloom: true, msaa: true, particles: true, labels: true, ghost: true, rim: true, shadows: true, fx: true };
     this.camera = new T.PerspectiveCamera(48, innerWidth / innerHeight, .15, 1400);
     this.camera.position.set(62, 44, 66);
     this.look = V(-22, 12, -8); this.camera.lookAt(this.look);
-    this.ambient = new T.HemisphereLight('#f2f3df', '#6a8478', 2); this.scene.add(this.ambient);
-    this.sun = new T.DirectionalLight('#fff2d1', 2.4); this.sun.position.set(-35, 90, 40);
-    this.sun.castShadow = true; this.sun.shadow.mapSize.set(1536, 1536);
+    this.ambient = new T.HemisphereLight('#f6ecd8', '#5d6f7d', 1.1); this.scene.add(this.ambient);
+    this.sun = new T.DirectionalLight('#ffe7c4', 2.3); this.sun.position.set(-35, 90, 40);
+    this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048);
     Object.assign(this.sun.shadow.camera, { left: -60, right: 60, top: 65, bottom: -60, near: 1, far: 240 });
-    this.sun.shadow.normalBias = .12; this.sun.shadow.bias = -.0001;
+    this.sun.shadow.normalBias = .1; this.sun.shadow.bias = -.00012; this.sun.shadow.radius = 3;
     this.scene.add(this.sun, this.sun.target);
+    // Cool rim from behind-left separates the bug and candles from the sky.
+    this.rim = new T.DirectionalLight('#7fb6ff', .9); this.scene.add(this.rim, this.rim.target);
     this.sky = cosmos.sky(this.scene);
     this.fx = new FlightFX(this.scene);
     this.ghost = new GhostView(this.scene);
+    this.motionReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.sparks = new Particles(this.scene, this.motionReduced);
+    this.labels = new FloatingLabels(this.scene);
+    this.post = new FlightPostFX();
+    // The scene renders into its own multisampled HDR buffer, which is resolved once and
+    // then copied into the (single-sample) post chain. Nothing ever blends back into the
+    // multisampled buffer: tile-based GPUs discard its contents after the resolve, so an
+    // additive composite there (as UnrealBloomPass does on the composer's own buffers)
+    // would paint over undefined memory and flicker black.
+    const samples = this.renderer.capabilities.isWebGL2 ? Math.min(4, this.renderer.capabilities.maxSamples || 0) : 0;
+    this.sceneTarget = new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples, depthBuffer: true, stencilBuffer: false });
     this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new T.Vector2(innerWidth, innerHeight), .55, .65, 1.15);
-    this.composer.addPass(this.bloom); this.composer.addPass(new OutputPass());
+    this.scenePass = new TexturePass(this.sceneTarget.texture);
+    // Copy with a guard: a single NaN or infinite texel (an extrapolated multisample at a
+    // shader edge, a driver quirk) would otherwise be smeared across the whole frame by
+    // the bloom blur and show up as a black screen. Bad texels become black pixels instead.
+    this.scenePass.material = new T.ShaderMaterial({ uniforms: { tDiffuse: { value: null }, opacity: { value: 1 } }, depthTest: false, depthWrite: false,
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+      fragmentShader: `uniform sampler2D tDiffuse; uniform float opacity; varying vec2 vUv;
+        void main(){ vec4 c = texture2D(tDiffuse, vUv);
+          if (any(isnan(c)) || any(isinf(c))) c = vec4(0., 0., 0., 1.);
+          gl_FragColor = vec4(clamp(c.rgb, 0., 4096.), 1.) * opacity; }` });
+    this.scenePass.uniforms = this.scenePass.material.uniforms;
+    this.composer.addPass(this.scenePass);
+    this.bloom = new UnrealBloomPass(new T.Vector2(innerWidth, innerHeight), .55, .7, 1.05);
+    this.composer.addPass(this.bloom); this.composer.addPass(this.post.pass); this.composer.addPass(new OutputPass());
+    this.resizeTargets();
     this.zurich = createZurich({V,shape,bar,label,mat,infinity,bake});
     this.hq = this.zurich.root; this.scene.add(this.hq);
     this.bug = createBug(); this.scene.add(this.bug.root);
     this.bug.root.position.set(0, 21.2, 0);
-    this.shieldMesh = shape(this.scene, 'sphere', mat('#72ffd4', { emissive: '#42d6b2', emissiveIntensity: 1, transparent: true, opacity: .17, wireframe: true }), 0, 0, 0, 3.3);
+    this.shieldMesh = shape(this.scene, 'sphere', new T.MeshPhysicalMaterial({ color: '#8dffe0', emissive: '#42d6b2', emissiveIntensity: .6, transparent: true, opacity: .22, roughness: .1, side: T.DoubleSide, depthWrite: false }), 0, 0, 0, 3.3);
+    this.shieldMesh.castShadow = false;
+    this.shieldWire = shape(this.scene, 'sphere', mat('#b9fff0', { emissive: '#8bffd9', emissiveIntensity: 1.2, transparent: true, opacity: .25, wireframe: true }), 0, 0, 0, 3.4);
     this.magnetRing = shape(this.scene, 'ring', cosmos.glow('#b9a0ff'), 0, 0, 0, 4); this.magnetRing.rotation.x = Math.PI / 2;
-    this.groundShadow = new T.Mesh(new T.CircleGeometry(2.1, 24), new T.MeshBasicMaterial({ color: '#2c5047', transparent: true, opacity: .2, depthWrite: false }));
+    this.groundShadow = new T.Mesh(new T.CircleGeometry(2.1, 24), new T.MeshBasicMaterial({ color: '#102a24', transparent: true, opacity: .2, depthWrite: false }));
     this.groundShadow.rotation.x = -Math.PI / 2; this.scene.add(this.groundShadow);
     this.chunks = new Map(); this.objects = []; this.pickups = new Map(); this.particles = [];
     this.coinInstances = new CoinInstances(this.scene, pickup({ kind: 'cycle', x: 0, y: 0, d: 0 }));
@@ -266,23 +329,35 @@ export class GameView {
     this.launchGuide = new LaunchGuide(this.scene);
     const trailGeom = new T.BufferGeometry(); trailGeom.setAttribute('position', new T.Float32BufferAttribute(new Float32Array(75 * 3), 3));
     this.trailMesh = new T.Line(trailGeom, new T.LineBasicMaterial({ color: '#ecb676', transparent: true, opacity: .55 })); this.trailMesh.frustumCulled = false; this.scene.add(this.trailMesh);
-    this.motionReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.cameraMode = 'chase'; this.lastPhase = 'ready'; this.time = 0; this.cameraIntro = 1;
+    this.shake = 0; this.roll = 0; this.hitStop = 0; this.moteClock = 0; this.lastBoostTime = 0;
     this.ensureWorld(0);
     this.coinInstances.update(this.pickups.values());
     window.addEventListener('resize', () => this.resize());
+  }
+  resizeTargets() {
+    const ratio = this.renderer.getPixelRatio();
+    this.sceneTarget.setSize(Math.max(1, Math.floor(innerWidth * ratio)), Math.max(1, Math.floor(innerHeight * ratio)));
+    this.composer.setPixelRatio(ratio); this.composer.setSize(innerWidth, innerHeight);
+  }
+  renderFrame(dt = 0) {
+    // Scene → multisampled buffer (resolved at the end of render) → post chain → canvas.
+    this.renderer.setRenderTarget(this.sceneTarget); this.renderer.clear();
+    this.renderer.render(this.scene, this.camera);
+    this.renderer.setRenderTarget(null);
+    this.composer.render(dt);
   }
   resize() {
     this.snapCamera = true; // Reframe immediately even when rotation paused the flight.
     this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix();
     this.renderer.setSize(innerWidth, innerHeight);
-    this.composer.setSize(innerWidth, innerHeight);
+    this.resizeTargets();
   }
   adaptQuality(ms, active = true) {
     if (!this.frameBudget.sample(ms, active)) return;
     const level = this.frameBudget.level;
     const ratio = Math.min(this.initialPixelRatio, level === 1 ? 1 : .75);
-    this.renderer.setPixelRatio(ratio); this.composer.setPixelRatio(ratio);
+    this.renderer.setPixelRatio(ratio); this.resizeTargets();
     this.bloom.enabled = level < 2;
   }
   async warmUp(run, progress) {
@@ -305,9 +380,9 @@ export class GameView {
       progress(65, 'Preparing graphics for a smoother first flight…'); await nextPaint();
       await this.renderer.compileAsync(this.scene, this.camera);
       // Compile both shadow configurations used by the rooftop and space regions.
-      this.composer.render(0); this.sun.castShadow = false;
+      this.renderFrame(0); this.sun.castShadow = false;
       await this.renderer.compileAsync(this.scene, this.camera);
-      this.composer.render(0);
+      this.renderFrame(0);
     } finally {
       for (const [object, visible, culled] of visibility) { object.visible = visible; object.frustumCulled = culled; }
       this.disposeGroup(samples);
@@ -358,15 +433,17 @@ export class GameView {
   disposeGroup(group) {
     this.scene.remove(group);
     group.traverse(o => {
-      if (!o.isMesh && !o.isLine) return;
+      if (!o.isMesh && !o.isLine && !o.isSprite) return;
       if (o.isInstancedMesh) o.dispose();
+      if (o.isSprite) { o.material.dispose(); return; } // the glow texture itself is shared
       if (!o.userData.sharedGeometry && !Object.values(geometry).includes(o.geometry)) o.geometry?.dispose();
-      if (o.material?.map) { o.material.map.dispose(); o.material.dispose(); }
+      if (o.material?.map && o.material.map !== glowTexture) { o.material.map.dispose(); o.material.dispose(); }
     });
   }
   reset(day, seed = day) {
     this.worldFirst = null; this.worldLast = null;
     this.inspectGhost = false; this.day = day; this.seed = seed; this.trail.length = 0; this.fx.reset(); this.ghost.reset(); this.target = null;
+    this.sparks.reset(); this.labels.reset(); this.shake = 0; this.roll = 0; this.hitStop = 0; this.post.flash.a = 0;
     // Restart returns directly to the roof; no long backwards camera trip through the entire run.
     if (innerWidth < 650 && innerHeight > innerWidth) {
       this.camera.position.set(54, 44, 75); this.look.set(-12, 21, -8);
@@ -378,29 +455,48 @@ export class GameView {
     for (const group of this.chunks.values()) this.disposeGroup(group);
     for (const { mesh } of this.pickups.values()) this.disposeGroup(mesh);
     this.chunks.clear(); this.pickups.clear(); this.objects = [];
-    for (const p of this.particles) this.scene.remove(p.mesh);
     this.particles.length = 0; this.ensureWorld(0);
   }
   burst(x, y, d, type) {
-    const color = type === 'cycle' ? '#ffe29a' : ['hazard','destroy','mine','mine-destroy'].includes(type) ? '#ff956d' : type === 'boost' ? '#7eeaff' : '#bafaad';
-    for (let i = 0; i < (this.motionReduced ? 3 : type === 'destroy' ? 28 : 12); i++) {
-      if (this.particles.length > 120) break;
-      const mesh = shape(this.scene, 'tetra', mat(color, { emissive: color, emissiveIntensity: .2 }), x, y, -d, (type === 'destroy' ? .5 : .12) + Math.random() * .25);
-      mesh.castShadow = false;
-      this.particles.push({ mesh, velocity: V((Math.random() - .5) * 24, Math.random() * 16, (Math.random() - .5) * 24), life: (type === 'destroy' ? 1 : .5) + Math.random() * .35 });
-    }
+    const z = -d;
+    if (type === 'cycle') this.sparks.coin(x, y, z);
+    else if (type === 'destroy') this.sparks.explosion(x, y, z, 1.1);
+    else if (['hazard', 'mine', 'mine-destroy'].includes(type)) this.sparks.explosion(x, y, z, .8);
+    else if (type === 'boost') this.sparks.burst(x, y, z, { count: 26, color: '#9df4ff', color2: '#ffffff', speed: 16, size: 1.3, life: .6, up: 2 });
+    else this.sparks.burst(x, y, z, { count: 22, color: '#bafaad', color2: '#e8ffe0', speed: 13, size: 1.2, life: .7, up: 4 });
   }
+  kick(amount) { this.shake = Math.min(1.6, this.shake + amount); }
   event(e, run) {
     this.fx.event(e, run, this.motionReduced);
-    if (['ghost-damage','ghost-destroy','wall-damage'].includes(e.kind)) this.burst(e.x,e.y+ascentAt(e.d),e.d,e.kind==='ghost-destroy'?'destroy':'boost');
+    const y = (e.y ?? run.y) + ascentAt(e.d ?? run.d), x = e.x ?? run.x, d = e.d ?? run.d;
+    if (['ghost-damage','ghost-destroy','wall-damage'].includes(e.kind)) {
+      this.burst(x, y, d, e.kind === 'ghost-destroy' ? 'destroy' : 'boost');
+      if (e.kind === 'ghost-destroy') { this.kick(.5); this.labels.show('DEBUGGED', x, y + 3, -d, { color: '#ff9ce8', scale: 1.2 }); }
+    }
     if (e.kind === 'wall-damage') { const found=this.pickups.get(e.id);if(found)found.mesh.traverse(m=>{if(m.userData.armor)m.visible=false;}); }
-    if (e.kind === 'boost') this.burst(run.x, altitudeAt(run), run.d, 'boost');
+    if (e.kind === 'boost') { this.burst(run.x, altitudeAt(run), run.d, 'boost'); this.kick(.18); }
+    if (e.kind === 'launch') { this.kick(.35); if (e.label === 'PERFECT DEPLOY') this.labels.show('PERFECT!', run.x, altitudeAt(run) + 4, -run.d, { color: '#b7ffd6', scale: 1.5, duration: 1.2 }); }
     if (['collect','destroy','mine-destroy'].includes(e.kind)) {
       const found = this.pickups.get(e.id); if (found) found.mesh.visible = false;
       this.burst(e.x, e.y + ascentAt(e.d), e.d, ['destroy','mine-destroy'].includes(e.kind) ? 'destroy' : e.type);
+      if (e.kind === 'collect' && e.type === 'cycle') this.labels.show('+50', e.x, y + 2.2, -e.d, { color: run.combo % 5 === 0 && run.combo > 0 ? '#fff6c8' : '#ffd36b', scale: run.combo % 5 === 0 && run.combo > 0 ? 1.2 : .85, duration: .8 });
+      if (e.kind === 'collect' && !['cycle', 'pad', 'hazard', 'mine'].includes(e.type)) this.labels.show((POWERUPS[e.type]?.name || e.type).toUpperCase(), e.x, y + 3, -e.d, { color: cosmos.colorOf(e.type), scale: 1.1 });
+      if (e.kind !== 'collect') { this.kick(.3); this.labels.show('CLEARED', e.x, y + 3, -e.d, { color: '#ffb27a', scale: 1 }); }
     }
+    if (['hazard', 'mine-hit', 'ghost-hit'].includes(e.kind)) {
+      this.kick(.9); this.hitStop = .07; this.post.hit('#ff4a3a', .32);
+      this.sparks.explosion(run.x, altitudeAt(run), -run.d, .7, '#ffb27a', '#ff5a3c');
+      this.labels.show(e.kind === 'ghost-hit' ? '−33%' : '−40%', run.x, altitudeAt(run) + 3, -run.d, { color: '#ff8c7a', scale: 1.15 });
+    }
+    if (e.kind === 'shield') { this.post.hit('#7dffd9', .2); this.labels.show('SHIELDED', run.x, altitudeAt(run) + 3, -run.d, { color: '#8dffe0', scale: 1.1 }); }
+    if (e.kind === 'near-miss') this.labels.show('CLOSE CALL +20', run.x, altitudeAt(run) + 2.5, -run.d, { color: '#9df4ff', scale: .95 });
+    if (e.kind === 'overdrive') { this.post.hit(e.godCandle ? '#38ff93' : '#ffd783', .22); this.kick(.25); }
+    if (e.kind === 'zone') this.post.hit(ZONES[e.index].color, .12);
+    if (e.kind === 'bounce') this.kick(.25 + (e.strength || 0) * .4);
   }
   update(run, dt) {
+    // A brief hit-stop freezes the picture on impact. main.js also skips physics while hitStop > 0.
+    if (this.hitStop > 0) { this.hitStop -= dt; dt = 0; }
     this.time += dt; const t = this.time;
     cosmos.update(t,this.motionReduced);
     const flying = run.phase === 'flying', ready = run.phase === 'ready' || run.phase === 'charging';
@@ -409,26 +505,35 @@ export class GameView {
     for (const group of this.chunks.values()) for (const m of group.userData.floaters || []) {
       m.position.y = m.userData.float.y + (this.motionReduced ? 0 : Math.sin(t * .45 + m.userData.float.phase) * 1.4);
     }
-    const sky = new T.Color(run.zone === 0 ? '#273651' : ZONES[run.zone].sky);
+    const sky = new T.Color(run.zone === 0 ? '#6a5a7c' : ZONES[run.zone].sky);
     this.scene.background.lerp(sky, 1 - Math.exp(-dt * 1.2)); this.scene.fog.color.copy(this.scene.background);
     const space = clamp((run.d - 160) / 600, 0, 1), height = altitudeAt(run), base = ascentAt(run.d);
-    this.scene.fog.near = 180 + space * 180; this.scene.fog.far = 680 + space * 480;
-    this.ambient.color.set(space > .6 ? '#91a6ff' : '#b4c5ef'); this.ambient.intensity = 1.55 - space * .05;
-    this.sun.castShadow = this.frameBudget.level === 0 && run.d < 550;
-    this.sun.intensity = 2.1 - space * .9; this.bloom.strength = .24 + space * .24;
+    this.scene.fog.near = 170 + space * 200; this.scene.fog.far = 640 + space * 520;
+    this.ambient.color.set(space > .6 ? '#8aa0ff' : '#f6ecd8'); this.ambient.intensity = 1.05 - space * .25;
+    this.scene.environmentIntensity = .55 + space * .25;
+    this.sun.castShadow = this.debug.shadows && this.frameBudget.level === 0 && run.d < 550;
+    this.sun.intensity = 2.3 - space * 1.1; this.bloom.strength = .38 + space * .32;
+    this.rim.intensity = .7 + space * .9;
     this.bug.root.position.set(run.x, height, -run.d);
+    const energy = run.flow.active > 0 ? 1 : run.boostTime > 0 ? .8 : 0;
     this.bug.engines.visible = flying && run.d > 200;
-    this.bug.flames.forEach(f => { f.scale.y = run.flow.active > 0 ? 4 : run.boostTime > 0 ? 3 : 1 + run.speed / 140; });
+    this.bug.flames.forEach(f => { f.scale.y = (run.flow.active > 0 ? 4 : run.boostTime > 0 ? 3 : 1 + run.speed / 140) * (this.motionReduced ? 1 : .9 + Math.sin(t * 40) * .1); });
+    this.bug.glows.forEach(g => { g.scale.setScalar(1.3 + energy * 1.6 + run.speed / 150 * .5); g.material.opacity = .45 + energy * .4; g.material.color.set(run.flow.godCandle && run.flow.active > 0 ? '#5dffa9' : run.flow.active > 0 ? '#ffd36b' : '#5fe4ff'); });
+    if (flying && (run.boostTime > 0 || run.flow.active > 0) && dt > 0) {
+      const dir = V(run.vx, run.vy, -run.speed).normalize();
+      for (const side of [-1, 1]) this.sparks.thrust(run.x + side * 1.1, height + .3, -run.d + 2.2, dir.x * 60, dir.y * 60, dir.z * 60, .8 + energy * .6, run.flow.godCandle && run.flow.active > 0 ? '#6dffb4' : run.flow.active > 0 ? '#ffd36b' : '#79efff');
+    }
     this.shieldMesh.visible = run.shield > 0; this.shieldMesh.position.copy(this.bug.root.position);
-    this.shieldMesh.rotation.y = t * .25;
+    this.shieldMesh.rotation.y = t * .25; this.shieldMesh.material.opacity = .16 + Math.sin(t * 4) * .05;
+    this.shieldWire.visible = run.shield > 0; this.shieldWire.position.copy(this.bug.root.position); this.shieldWire.rotation.set(t * .4, -t * .25, 0);
     this.magnetRing.visible = run.magnetTime > 0; this.magnetRing.position.copy(this.bug.root.position);
     this.magnetRing.scale.setScalar(4 + Math.sin(t * 3) * .3);
     this.magnetRing.rotation.z = t;
     const targetScale = ready ? 1.45 : 1.3; this.bug.root.scale.lerp(V(targetScale, targetScale, targetScale), 1 - Math.exp(-dt * 6));
-    this.bug.animated.rotation.z = ready ? Math.sin(t * 1.3) * .035 : -run.vx * .02;
+    this.bug.animated.rotation.z = ready ? Math.sin(t * 1.3) * .035 : -run.vx * .028;
     const slope = ascentAt(run.d + .5) - ascentAt(run.d - .5);
     this.bug.animated.rotation.x = ready ? 0 : Math.atan2(run.vy + slope * run.speed, run.speed) * .7;
-    this.bug.animated.rotation.y = ready ? Math.sin(t * .5) * .09 : -run.vx * .008;
+    this.bug.animated.rotation.y = ready ? Math.sin(t * .5) * .09 : -run.vx * .012;
     if (ready) this.bug.root.position.y += Math.sin(t * 2.1) * .09;
     for (let i = 0; i < 2; i++) {
       const side = i === 0 ? -1 : 1;
@@ -445,7 +550,7 @@ export class GameView {
       // the next lane. Derive visibility each frame so the warm-up resets safely.
       mesh.visible = !run.hits.has(obj.id) && obj.d >= run.d - obj.radius - 1.25;
       if (!mesh.visible) continue;
-      if (obj.kind === 'cycle') mesh.rotation.y = Math.sin(t * 1.8 + phase) * .55;
+      if (obj.kind === 'cycle') mesh.rotation.y = t * 1.6 + phase;
       if (obj.kind === 'coffee') mesh.rotation.y = t * .65;
       if (obj.kind === 'portal') mesh.rotation.z = Math.sin(t + phase) * .035;
       // Collision centers remain fixed. Mesh wobble is cosmetic and smaller than the pickup margin.
@@ -453,11 +558,10 @@ export class GameView {
       if (!['pad', 'hazard', 'mine'].includes(obj.kind)) mesh.position.y = obj.y + ascentAt(obj.d) + Math.sin(t * 1.4 + phase) * .2;
     }
     this.coinInstances.update(this.pickups.values());
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i]; p.life -= dt;
-      if (p.life <= 0) { this.scene.remove(p.mesh); this.particles.splice(i, 1); continue; }
-      p.mesh.position.addScaledVector(p.velocity, dt); p.velocity.y -= 13 * dt;
-      p.mesh.scale.multiplyScalar(Math.exp(-dt * 1.5)); p.mesh.rotation.x += dt * 3;
+    // Drifting motes give the cyberspace sections depth without geometry.
+    if (flying && space > .2 && dt > 0 && !this.motionReduced) {
+      this.moteClock += dt;
+      while (this.moteClock > .05) { this.moteClock -= .05; this.sparks.ambient(run.x + (Math.random() - .5) * 90, height + (Math.random() - .3) * 50, -run.d - 40 - Math.random() * 160, Math.random() < .5 ? ZONES[run.zone].color : '#cfe6ff'); }
     }
     if (flying) {
       this.trail.unshift(V(run.x, height, -run.d)); this.trail.length = Math.min(75, this.trail.length);
@@ -476,6 +580,7 @@ export class GameView {
         cameraPos.set(62, 44, 66); target.set(-22, 12, -8);
       }
       if (!this.motionReduced) { cameraPos.x += Math.sin(t * .14) * 1.5; cameraPos.y += Math.sin(t * .19) * .5; }
+      if (run.phase === 'charging' && !this.motionReduced) { const c = run.charge; cameraPos.x -= c * 4; cameraPos.z -= c * 3; cameraPos.y -= c * 2; }
     } else if (this.inspectGhost) {
       const g = run.ghost, y = g.y + ascentAt(g.d);
       const offset = V(7, 3, this.inspectGhost === 'rear' ? -12 : 12).applyQuaternion(this.ghost.craft.quaternion);
@@ -484,22 +589,55 @@ export class GameView {
       const behind = 24 + Math.min(run.speed * .035, 4);
       // Camera and look point follow the same rising path as the bug. A flat camera
       // would look into the uphill floor and hide the landmarks during the ascent.
-      cameraPos.set(run.x + (innerWidth < 650 && innerHeight > innerWidth ? 2.8 : 7.5), height + 6.8 + ascentAt(run.d - behind) - base, -run.d + behind);
-      target.set(run.x * .94, height - 3 + ascentAt(run.d + 32) - base, -run.d - 32);
+      cameraPos.set(run.x * .9 + (innerWidth < 650 && innerHeight > innerWidth ? 2.8 : 7.5), height + 6.8 + ascentAt(run.d - behind) - base, -run.d + behind);
+      target.set(run.x * .94 + run.vx * .12, height - 3 + ascentAt(run.d + 32) - base, -run.d - 32);
     } else {
       cameraPos.set(run.x + 30, height + 15 + ascentAt(run.d - 14) - base, -run.d + 14); target.set(run.x - 3, height - 4 + ascentAt(run.d + 15) - base, -run.d - 15);
     }
     const blend = this.snapCamera ? 1 : 1 - Math.exp(-dt * (ready ? 2 : 6));
-    this.camera.position.lerp(cameraPos, blend); this.look.lerp(target, blend); this.camera.lookAt(this.look);
+    this.camera.position.lerp(cameraPos, blend); this.look.lerp(target, blend);
+    // Impact shake: decaying layered sine noise, never while reduced motion is on.
+    this.shake = Math.max(0, this.shake - dt * 2.6);
+    if (this.shake > 0 && !this.motionReduced) {
+      const s = this.shake * this.shake * .9, k = t * 60;
+      this.camera.position.x += Math.sin(k * 1.3) * s; this.camera.position.y += Math.sin(k * 1.7 + 1) * s * .7; this.camera.position.z += Math.sin(k * .9 + 2) * s * .4;
+    }
+    this.camera.lookAt(this.look);
+    const rollTarget = flying && this.cameraMode === 'chase' && !this.motionReduced ? -run.vx * .004 : 0;
+    this.roll += (rollTarget - this.roll) * (this.snapCamera ? 1 : 1 - Math.exp(-dt * 4)); this.camera.rotateZ(this.roll);
     const desiredFov = ready ? (innerWidth < 650 ? 54 : 48) : 56 + Math.min(9, run.speed * .055) + (this.motionReduced ? 0 : run.boostTime * 6 + (run.flow.active>0?3:0));
     this.camera.fov = T.MathUtils.lerp(this.camera.fov, desiredFov, this.snapCamera ? 1 : 1 - Math.exp(-dt * 3)); this.camera.updateProjectionMatrix();
     this.snapCamera = false;
     this.sun.position.set(run.x - 40, height + 80, -run.d + 45); this.sun.target.position.set(run.x, height - 10, -run.d - 5);
+    this.rim.position.set(run.x + 30, height + 20, -run.d - 60); this.rim.target.position.set(run.x, height, -run.d);
     this.ghost.update(run, this.camera, this.time, this.motionReduced);
+    if (!this.debug.ghost) this.ghost.root.visible = false;
     this.sky.update(this.camera, run.d, this.time, this.motionReduced);
     this.fx.update(run, dt, this.motionReduced, this.target);
-    this.renderer.info.reset(); this.composer.render(dt);
+    if (!this.debug.fx) for (const r of this.fx.ribbons) r.visible = false;
+    this.sparks.update(dt, this.renderer.getPixelRatio()); this.labels.update(dt, this.motionReduced);
+    const streak = flying ? clamp((run.speed - 95) / 55, 0, .45) + (run.boostTime > 0 ? .4 : 0) + (run.flow.active > 0 ? .5 : 0) : 0;
+    this.post.update(dt, { streak: Math.min(1, streak), aberration: Math.min(1, streak * .7 + (run.hitTime > 0 ? .45 : 0)), reduced: this.motionReduced });
+    this.renderer.info.reset(); this.renderFrame(dt);
     this.lastPhase = run.phase;
+  }
+  // Lab only (?test=1 or #lab): Shift+1..0 toggles a rendering feature to isolate GPU-specific issues.
+  toggleDebug(n) {
+    const keys = ['msaa', 'env', 'post', 'bloom', 'particles', 'labels', 'ghost', 'rim', 'shadows', 'fx'];
+    const key = keys[(n + 9) % 10]; this.debug[key] = !this.debug[key]; const on = this.debug[key];
+    if (key === 'env') this.scene.environment = on ? this.envTexture : null;
+    if (key === 'post') this.post.enabledFlag = on;
+    if (key === 'bloom') this.bloom.enabled = on;
+    if (key === 'particles') { this.sparks.sparks.points.visible = on; this.sparks.smoke.points.visible = on; }
+    if (key === 'labels') { this.labels.enabled = on; if (!on) this.labels.reset(); }
+    if (key === 'rim') this.rim.visible = on;
+    if (key === 'msaa') {
+      const samples = on ? (this.renderer.capabilities.isWebGL2 ? Math.min(4, this.renderer.capabilities.maxSamples || 0) : 0) : 0;
+      this.sceneTarget.dispose();
+      this.sceneTarget = new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples, depthBuffer: true, stencilBuffer: false });
+      this.scenePass.map = this.sceneTarget.texture; this.resizeTargets();
+    }
+    return keys.map((k, i) => `${(i + 1) % 10}:${k}=${this.debug[k] ? 'on' : 'OFF'}`).join(' ');
   }
   stats() { const bug = this.bug.root.position.clone().project(this.camera), ghost = this.ghost.root.position.clone().project(this.camera); return { quality: this.frameBudget.level, pixelRatio: this.renderer.getPixelRatio(), ...this.zurich.stats(), ghostX: Math.round((ghost.x+1)*innerWidth/2), ghostY: Math.round((1-ghost.y)*innerHeight/2), bugX: Math.round((bug.x+1)*innerWidth/2), bugY: Math.round((1-bug.y)*innerHeight/2), calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles, geometries: this.renderer.info.memory.geometries, textures: this.renderer.info.memory.textures, chunks: this.chunks.size, objects: this.objects.length }; }
 }

@@ -3,7 +3,9 @@
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical product mark and shared foundations, with the documented immersive-game visual exception. The game has its own guest/Internet Identity controls and no suite account bar.
 
 Launch a ladybug from DFINITY's Zurich rooftop into the Internet Computer universe.
-Version 0.19.0 offers **3D Immersive** and **2D Retro** as a standalone game. Existing installations and their game URL are retained.
+Version 0.20.0 offers **3D Immersive** and **2D Retro** as a standalone game. 0.20 is a
+presentation release (rendering, feel, audio, typography); flight rules, boards and
+publication rules are unchanged from 0.19. Existing installations and their game URL are retained.
 Choose a mode before launch or after a flight; your preference is remembered on this device.
 Both modes use the same selected player, optional local callsign and Internet Identity sign-in.
 3D keeps Season 2 and its Early flights archive; 2D has its own Season 1 board.
@@ -186,6 +188,18 @@ It returns once when the grounded bug has little momentum and boosts remain. Rou
 pickups, combat and camera changes do not bring the portrait back. Control notices
 use the existing dock hint. No story message opens a modal over the bug. Cycle burn is **fictional
 arcade telemetry**, not real ICP spending or a measured platform burn rate.
+
+## What changed in 0.20
+
+3D renders through a multisampled HDR buffer with an environment map, a rim light and a
+final flight pass (speed streaks, aberration, vignette, impact flashes). Particles are GPU
+point sprites; score labels float in world space; the camera rolls with steering and
+shakes on impact. 2D gets wing flutter, exhaust, spinning coins, more parallax, shake and a
+pixel face. Both modes share a procedural audio engine (engine and wind beds follow
+airspeed, coins climb a pentatonic ladder) that stays opt-in under **M**. Fonts are bundled
+locally (OFL: Space Grotesk, JetBrains Mono, Silkscreen); no CDN is contacted. See the
+[changelog](CHANGELOG.md) for the full list. Physics, scoring, course generation and the
+backend contract did not change.
 
 ## Run, build and verify
 

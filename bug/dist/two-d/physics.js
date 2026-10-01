@@ -3,7 +3,7 @@ import { newGhost, stepGhost, ghostTarget, hitGhost } from './ghost.js';
 import { burnRate } from '../scoring.js';
 import { courseObjects, crossesCurrent } from './course.js';
 import { newFlow, flowCoin, breakFlow, flowNearMiss, stepFlow } from '../overdrive.js';
-export const VERSION = '0.19.0';
+export const VERSION = '0.20.0';
 export const PROMPT_BOOSTS = 5;
 export const STEP = 1 / 120;
 export const START_HEIGHT = 38;

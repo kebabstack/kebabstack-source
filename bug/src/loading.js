@@ -1,4 +1,5 @@
-export const nextPaint = () => new Promise(resolve => requestAnimationFrame(() => resolve()));
+// A hidden tab never paints; fall back to a timer so loading can finish in the background.
+export const nextPaint = () => new Promise(resolve => { if (document.hidden) setTimeout(resolve, 16); else requestAnimationFrame(() => resolve()); });
 export function loadingProgress(percent, message) {
   document.getElementById('loadProgress').value = percent;
   document.getElementById('loadMessage').textContent = message;

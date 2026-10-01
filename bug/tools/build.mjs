@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 await mkdir(new URL('dist/vendor/', root), { recursive: true });
-for (const name of ['candle.js', 'candle-view.js', 'coin-instances.js', 'frame-budget.js', 'loading.js', 'ruleset.js', 'player-session.js', 'entry.js', 'mode.js', 'modes.css', 'index.html', 'style.css', 'main.js', 'physics.js', 'scene.js', 'zurich.js', 'zurich-traffic.js', 'arcade.css', 'launch-guide.js', 'cosmos.js', 'stellar.js', 'webb-backdrop.js', 'event-horizon.js', 'celestial-crew.js', 'overdrive.js', 'flight-fx.js', 'ghost.js', 'dogfight.js', 'tilt.js', 'phone-steering.js', 'touch-controls.js', 'challenge.js', 'ghost-view.js', 'wake-path.js', 'mines.js', 'mine-view.js', 'scoring.js', 'result-board.js', 'commander.js', 'community.js', 'ecosystem.js', 'favicon.svg', 'app.js']) {
+for (const name of ['candle.js', 'candle-view.js', 'coin-instances.js', 'frame-budget.js', 'loading.js', 'ruleset.js', 'player-session.js', 'entry.js', 'mode.js', 'modes.css', 'index.html', 'style.css', 'main.js', 'physics.js', 'scene.js', 'zurich.js', 'zurich-traffic.js', 'arcade.css', 'launch-guide.js', 'cosmos.js', 'stellar.js', 'webb-backdrop.js', 'event-horizon.js', 'celestial-crew.js', 'overdrive.js', 'flight-fx.js', 'ghost.js', 'dogfight.js', 'tilt.js', 'phone-steering.js', 'touch-controls.js', 'challenge.js', 'ghost-view.js', 'wake-path.js', 'mines.js', 'mine-view.js', 'scoring.js', 'result-board.js', 'commander.js', 'community.js', 'ecosystem.js', 'favicon.svg', 'app.js',
+  'particles.js', 'post-fx.js', 'environment.js', 'labels.js', 'audio.js', 'juice.js', 'polish.css']) {
   await cp(new URL('src/' + name, root), new URL('dist/' + name, root));
 }
 for (const name of ['three.module.js', 'three.core.js']) await cp(new URL('node_modules/three/build/' + name, root), new URL('dist/vendor/' + name, root));
@@ -21,7 +22,7 @@ await writeFile(new URL('dist/index.html',root),html.replace('<meta charset="utf
 await writeFile(new URL('dist/.ic-assets.json5', root), JSON.stringify([{ match: '**/*', headers: { 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'no-referrer', 'Cache-Control':'no-cache' } }, { match:'index.html', headers:{ 'Content-Security-Policy':csp, 'X-Frame-Options':'DENY' } }],null,2)+'\n');
 console.log(`Built Ship the Bug ${pkg.version}. All runtime assets are local in dist/.`);
 
-const addons = ['postprocessing/EffectComposer.js', 'postprocessing/RenderPass.js', 'postprocessing/ShaderPass.js', 'postprocessing/UnrealBloomPass.js', 'postprocessing/OutputPass.js', 'postprocessing/MaskPass.js', 'postprocessing/Pass.js', 'shaders/CopyShader.js', 'shaders/LuminosityHighPassShader.js', 'shaders/OutputShader.js'];
+const addons = ['postprocessing/EffectComposer.js', 'postprocessing/RenderPass.js', 'postprocessing/TexturePass.js', 'postprocessing/ShaderPass.js', 'postprocessing/UnrealBloomPass.js', 'postprocessing/OutputPass.js', 'postprocessing/MaskPass.js', 'postprocessing/Pass.js', 'shaders/CopyShader.js', 'shaders/LuminosityHighPassShader.js', 'shaders/OutputShader.js'];
 for (const name of addons) {
   await mkdir(new URL('dist/vendor/addons/' + name.split('/')[0] + '/', root), { recursive: true });
   await cp(new URL('node_modules/three/examples/jsm/' + name, root), new URL('dist/vendor/addons/' + name, root));

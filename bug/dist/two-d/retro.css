@@ -23,8 +23,8 @@ dialog,#resultDialog{border-radius:2px;background:#1d2036;border:1px solid #ad92
 #boostPips i,.journey-line i{border-radius:0;box-shadow:none}
 dialog,#resultDialog{border:2px solid #8a688e;box-shadow:6px 6px 0 #0b1025}
 dialog h2,dialog h3{font-family:'Courier New',monospace;letter-spacing:-.045em}
-body[data-mode=2d] .mode-segments,body[data-mode=2d] .mode-segments button,body[data-mode=2d] .board-mode-tabs button{border-radius:2px;font-family:'Courier New',monospace}
-body[data-mode=2d] .mode-segments{border:2px solid #856586;box-shadow:3px 3px #111324}
-body[data-mode=2d] .mode-segments button[aria-pressed=true]{background:#ffd45c;box-shadow:2px 2px #bc7655}
+body[data-mode="2d"] .mode-segments,body[data-mode="2d"] .mode-segments button,body[data-mode="2d"] .board-mode-tabs button{border-radius:2px;font-family:'Courier New',monospace}
+body[data-mode="2d"] .mode-segments{border:2px solid #856586;box-shadow:3px 3px #111324}
+body[data-mode="2d"] .mode-segments button[aria-pressed=true]{background:#ffd45c;box-shadow:2px 2px #bc7655}
 
 #world canvas{cursor:crosshair}
