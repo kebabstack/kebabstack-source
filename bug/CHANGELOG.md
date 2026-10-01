@@ -1,5 +1,23 @@
 # Changelog — kebab-stack bug (Ship the Bug)
 
+## [0.19.0] — 2026-09-30
+
+- Fix the 3D bug drifting sideways with tilt off: lateral velocity now follows player input only. Former crosswind intervals are calm; forward winds and updrafts remain.
+- Add an automatic **ICP to the Moon** combo: three distinct coins and one shot-down red candle within six seconds, in either order. It starts a 3.2-second green God Candle with upward lift and mint trails, using the existing FLOW cooldown, late-flight diminishing returns and 150 m/s limit. Damage breaks the combo; a shield protects it. No extra prompt charges or invulnerability.
+- Replace floating walls and airborne mines with shared red candle bodies and wicks. Swept hit detection follows the visible shape; gold rings retain two-hit armor. Fully passed objects no longer block the chase camera. Floor mines, route density, Motoko and coin IDs stay intact. No new texture downloads or dynamic lights; the green/red materials are prewarmed.
+- Show combo progress, remaining time, active God Candle and result count. Document the combination in flight school; retain the original 2D help and mechanics. Reduced motion keeps the visual cue steady.
+- Version changed 3D gameplay explicitly as `moon-2026-09-30`; 2D keeps `arcade-2026-09-09`. Continue accepting the previous rules and preserve both boards/profiles without a season or schema reset. Older 3D bests reflect earlier balance.
+
+
+## [0.18.0] — 2026-09-30
+
+- Fix repeated “old game version” publication failures: separate gameplay rules from UI versions and accept the unchanged 0.16.0–0.17.5 payloads. Retain valid in-flight tickets, existing names, both boards, seasons and stable state.
+- Replace the optional suite login with standalone Internet Identity and guest play. Local names are optional and saved per player on this device; public reservation happens only on publication. Preserve existing guest keys and verified legacy associations, without transferring ownership by name. Remove suite account chrome and Hub-ticket redemption from the game.
+- Prepare 3D background textures, shaders, postprocessing and representative course effects before enabling launch; show progress and reload/2D recovery. Slow or failed images fall back to stars. Calibrate graphic detail before launch and reduce pixel density, shadows and bloom on sustained overload without changing physics. Avoid redundant world filtering at every physics step and batch coin rendering without changing collection or scoring.
+- Keep publication tied to the launching identity across expiry/account changes. Stop futile retry loops for permanent failures, preserve local saving, and retain exact-payload retries for connection errors. Prefetch flight tickets while preparing a launch.
+- Use isolated replica trust configuration for local tests; production retains the SDK trust anchor. Keep shared logos/tokens and the Kitchen recipe, with a scoped SDK topbar exception for the standalone game.
+- Verified 162 frontend/game checks, 29 historical backend/security checks, and populated upgrades using both the Mops and ICP recipe executables. Browser evidence and remaining device/real-II-login limits are recorded in `design/reviews/2026-09-30-bug-standalone.md`. Source publication does not deploy or change any installation.
+
 ## [0.17.5] — 2026-09-23
 - Keep score payload compatibility separate from the displayed app version so cosmetic releases do not prevent publishing valid flights. Exercise the browser payload version against the local backend.
 

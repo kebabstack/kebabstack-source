@@ -43,35 +43,11 @@ body{min-height:0}.game-header{padding-left:max(20px,env(safe-area-inset-left));
 .touch-steer{position:absolute;justify-content:space-between}
 .touch-steer button{display:grid;place-items:center;border:1px solid #91b6c66b;border-radius:50%;background:#16293de0;color:#e8f4ff;font:22px Arial,sans-serif;touch-action:none;user-select:none;backdrop-filter:blur(6px)}
 
-/* Hub navigation lives in a narrow profile dialog, regardless of viewport width. */
+/* Player profile controls remain reachable in narrow dialogs. */
 #profileDialog .dialog-close{width:44px;height:44px;right:10px;top:10px;border-radius:50%;display:grid;place-items:center}
 #profileDialog .dialog-close:hover{background:#213f300d}
 #profileDialog .dialog-close:focus-visible{outline-width:2px;outline-offset:1px}
 #profileDialog>h2{line-height:1.12;margin-bottom:20px}
-#suiteTopbar{container-type:inline-size;margin:0 0 18px}
-#suiteTopbar .ks-topbar{position:static;display:flex;flex-direction:column;align-items:stretch;gap:12px;height:auto;min-width:0;padding:14px;box-sizing:border-box;border:1px solid var(--ks-rule);border-radius:12px}
-#suiteTopbar .ks-brand{gap:10px;min-width:0}
-#suiteTopbar .ks-brand>div{min-width:0}
-#suiteTopbar .ks-brand b{font-size:14px;line-height:1.35;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#suiteTopbar .ks-brand img{max-width:80px;max-height:28px}
-#suiteTopbar .ks-brand .ks-mark svg{max-height:28px}
-#suiteTopbar .ks-spacer,#suiteTopbar #ks-extra{display:none}
-#suiteTopbar .ks-actions{display:grid;grid-template-columns:44px 44px 44px minmax(44px,1fr);gap:6px;min-width:0;width:100%;border-top:1px solid var(--ks-rule);padding-top:12px}
-#suiteTopbar .ks-topbar button{height:44px;min-width:0}
-#suiteTopbar .ks-round,#suiteTopbar .ks-menu-btn{width:44px;padding:0;justify-content:center}
-#suiteTopbar .ks-menu-btn .ks-word{display:none}
-#suiteTopbar .ks-ident{width:100%;justify-content:flex-end;padding:0 2px!important;gap:7px}
-#suiteTopbar .ks-ident-name{display:block;min-width:0;max-width:100%;font-size:12px}
-#suiteTopbar .ks-caret{display:none}
-#suiteTopbar .ks-avi{width:32px;height:32px}
-#suiteTopbar .ks-panel{position:static;inset:auto;width:100%;max-width:100%;margin-top:10px;box-shadow:none;overflow-wrap:anywhere}
-#suiteTopbar .ks-panel-head{padding:10px 12px 6px;gap:6px}
-#suiteTopbar .ks-panel-head a{min-height:44px;display:flex;align-items:center}
-#suiteTopbar .ks-apps{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));padding:4px 8px 8px}
-#suiteTopbar .ks-identpanel{padding:14px}
-#suiteTopbar .ks-signout{min-height:44px}
-@container (max-width:280px){#suiteTopbar .ks-ident-name{display:none}#suiteTopbar .ks-topbar{padding:12px}}
-
 /* Arcade pressure: readable status at the edge of the flight corridor. */
 .weapon-meter{height:4px;background:#dceaff24;border-radius:4px;margin-top:7px;overflow:hidden}
 .weapon-meter i{height:100%;display:block;width:0;background:linear-gradient(90deg,#8bf4d4,#ffcb7b,#ff826b)}
@@ -276,3 +252,10 @@ main button, .game-header button {touch-action:manipulation}
 @media(max-width:599px){.flow-status{font-size:6px;margin-top:6px}}
 @media(max-height:500px){.flow-status{font-size:6px;margin-top:4px}#flowMeter{height:3px;margin-top:3px}}
 @media(prefers-reduced-motion:reduce){#flowFill{transition:none}}
+
+/* The documented immersive-game exception includes these gameplay cues. */
+#moonCombo:not([hidden]){display:block;font:8px/1.5 ui-monospace,monospace;color:#c3dbd2;margin-top:6px;letter-spacing:0}
+.god-candle-active .control-dock{border-color:#57efa3;box-shadow:0 0 24px #25ed8325}
+.god-candle-active #flowFill{background:#57efa3}
+.god-candle-active .flow-status,.god-candle-active #moonCombo{color:#afffd0}
+@media(max-width:599px),(max-height:500px){#moonCombo:not([hidden]){font-size:7px;line-height:1.4;margin-top:4px}}

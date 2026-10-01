@@ -8,7 +8,7 @@ export const WEBB_REGIONS = [
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
 // One distant photographic layer, behind the existing 3D stars and planets.
-// Texture reads happen only in 3D and never hold up a launch or a scene update.
+// Prepare all three images before 3D launch; failed imagery uses the procedural sky.
 export class WebbBackdrop {
   constructor(scene, loader = new T.TextureLoader()) {
     this.scene = scene; this.loader = loader; this.images = new Map(); this.disposed = false;
@@ -41,14 +41,31 @@ export class WebbBackdrop {
     this.position = new T.Vector3();
   }
   request(index) {
-    if (this.disposed || !WEBB_REGIONS[index] || this.images.has(index)) return;
+    if (this.disposed || !WEBB_REGIONS[index]) return Promise.resolve();
+    if (this.images.has(index)) return this.images.get(index).promise;
     const entry = {ready: false, failed: false, texture: null}; this.images.set(index, entry);
+    let finish;
+    entry.promise = new Promise(resolve => { finish = resolve; });
+    entry.finish = finish;
     entry.texture = this.loader.load(`./assets/webb/${WEBB_REGIONS[index].file}`, texture => {
-      if(this.disposed){texture.dispose();return;}
+      if(this.disposed || entry.failed){texture.dispose();finish();return;}
       texture.colorSpace = T.SRGBColorSpace;
       texture.minFilter = T.LinearMipmapLinearFilter; texture.magFilter = T.LinearFilter;
-      entry.texture = texture; entry.ready = true;
-    }, undefined, () => { entry.failed = true; });
+      entry.texture = texture; entry.ready = true; finish();
+    }, undefined, () => { entry.failed = true; finish(); });
+    return entry.promise;
+  }
+  async preload(renderer, timeoutMs = 8000) {
+    const pending = WEBB_REGIONS.map((_, i) => this.request(i));
+    let timer;
+    try {
+      await Promise.race([Promise.all(pending), new Promise(resolve => { timer = setTimeout(resolve, timeoutMs); })]);
+      for (const entry of this.images.values()) {
+        if (entry.ready) renderer.initTexture(entry.texture);
+        else { entry.failed = true; entry.finish(); }
+      }
+    } finally { clearTimeout(timer); }
+    return [...this.images.values()].filter(entry => entry.ready).length;
   }
   update(camera, distance, clock, reduced = false) {
     if(this.disposed)return;
@@ -81,7 +98,7 @@ export class WebbBackdrop {
   }
   dispose() {
     this.disposed=true;this.scene.remove(this.mesh);
-    for(const entry of this.images.values())entry.texture?.dispose();
+    for(const entry of this.images.values()){entry.texture?.dispose();entry.finish();}
     this.images.clear();this.mesh.geometry.dispose();this.mesh.material.dispose();
   }
 }

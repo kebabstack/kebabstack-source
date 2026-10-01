@@ -4,3 +4,10 @@ body[data-mode=2d] .mode-segments{background:#242238}body[data-mode=2d] .mode-se
 @media(max-height:520px) and (orientation:landscape){.mode-picker{margin-bottom:10px}.mode-caption{display:none}.mode-segments{padding:2px}.mode-segments button{min-height:34px;min-width:85px;padding:6px 10px;font-size:13px}.mode-segments button span{font-size:8px}#intro .mission,#intro .legend{display:none}body[data-mode=2d] #intro h1{font-size:36px!important}body[data-mode=2d] #intro .launch-coordinates{display:none}}
 
 .webb-credits{margin:20px 0;padding:14px;border:1px solid #526a874d;border-radius:4px;font:14px/1.6 ui-monospace,monospace}.webb-credits summary{cursor:pointer}.webb-credits a{color:inherit;text-underline-offset:3px}.webb-credits p{font-size:14px!important}
+
+#loadProgress { width: min(280px, 70vw); height: 8px; accent-color: var(--ks-accent); }
+#loadRecovery { width: min(320px, 85vw); text-align: center; }
+#loadRecovery a { display: block; text-decoration: none; box-sizing: border-box; }
+#profileStatus:empty, #profileSwitchNote:empty { display: none; }
+#profileDialog button:disabled { opacity: .55; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .loader-bug { animation: none; } }

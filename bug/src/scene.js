@@ -1,5 +1,10 @@
 import { createMine, updateMine } from './mine-view.js';
+import { createCandle } from './candle-view.js';
+import { isRedCandle } from './candle.js';
 import { GhostView } from './ghost-view.js';
+import { nextPaint } from './loading.js';
+import { FrameBudget } from './frame-budget.js';
+import { CoinInstances } from './coin-instances.js';
 import { createZurich } from './zurich.js';
 import { LaunchGuide } from './launch-guide.js';
 import * as T from './vendor/three.module.js';
@@ -181,6 +186,10 @@ function terrain(chunk, day) {
 }
 
 function pickup(obj) {
+  if(isRedCandle(obj)) {
+    const candle=createCandle(false,obj.hp>1);
+    candle.position.set(obj.x,obj.y+ascentAt(obj.d),-obj.d);return candle;
+  }
   const g = obj.kind === 'mine' ? createMine() : new T.Group(); g.position.set(obj.x, obj.y + ascentAt(obj.d), -obj.d);
   if (obj.kind === 'mine') {
     if (!obj.airborne) g.rotation.x = Math.atan(ascentAt(obj.d + .5) - ascentAt(obj.d - .5));
@@ -208,15 +217,8 @@ function pickup(obj) {
       const a = shape(g, 'box', '#3f6844', -.9, .15, -2 + i * 1.5, 2.5, .1, .35); a.rotation.y = -.5;
       const b = shape(g, 'box', '#3f6844', .9, .15, -2 + i * 1.5, 2.5, .1, .35); b.rotation.y = .5;
     }
-  } else {
-    shape(g, 'box', mat('#561d36', { emissive: '#9e234c', emissiveIntensity: .8 }), 0, 0, 0, 6, 5, 1.1);
-    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) shape(g, 'box', i % 2 ? '#e48767' : '#d7765d', -2 + j * 2 + (i % 2) * .25, -1.6 + i * 1.6, .7, 1.8, 1.4, .4);
-    if (obj.hp > 1) {
-      const armor=shape(g,'ring',mat('#ffba75',{emissive:'#ff753a',emissiveIntensity:1.4}),0,0,.9,4.2);
-      armor.userData.armor=true;
-    }
-    label(g, '403', 3.5, 0, 0, 1, { bg: '#713b35', fg: '#ffe9c5', size: 135, height: .5 });
   }
+
   return g;
 }
 
@@ -225,6 +227,8 @@ export class GameView {
     this.inspectGhost = false; this.day = day; this.seed = seed; this.container = container;
     this.renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.15 : 1.4));
+    this.frameBudget = new FrameBudget();
+    this.initialPixelRatio = this.renderer.getPixelRatio();
     this.renderer.setSize(innerWidth, innerHeight);
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = T.PCFShadowMap;
@@ -257,6 +261,7 @@ export class GameView {
     this.groundShadow = new T.Mesh(new T.CircleGeometry(2.1, 24), new T.MeshBasicMaterial({ color: '#2c5047', transparent: true, opacity: .2, depthWrite: false }));
     this.groundShadow.rotation.x = -Math.PI / 2; this.scene.add(this.groundShadow);
     this.chunks = new Map(); this.objects = []; this.pickups = new Map(); this.particles = [];
+    this.coinInstances = new CoinInstances(this.scene, pickup({ kind: 'cycle', x: 0, y: 0, d: 0 }));
     this.trail = []; this.trailMesh = null;
     this.launchGuide = new LaunchGuide(this.scene);
     const trailGeom = new T.BufferGeometry(); trailGeom.setAttribute('position', new T.Float32BufferAttribute(new Float32Array(75 * 3), 3));
@@ -264,6 +269,7 @@ export class GameView {
     this.motionReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.cameraMode = 'chase'; this.lastPhase = 'ready'; this.time = 0; this.cameraIntro = 1;
     this.ensureWorld(0);
+    this.coinInstances.update(this.pickups.values());
     window.addEventListener('resize', () => this.resize());
   }
   resize() {
@@ -272,14 +278,72 @@ export class GameView {
     this.renderer.setSize(innerWidth, innerHeight);
     this.composer.setSize(innerWidth, innerHeight);
   }
+  adaptQuality(ms, active = true) {
+    if (!this.frameBudget.sample(ms, active)) return;
+    const level = this.frameBudget.level;
+    const ratio = Math.min(this.initialPixelRatio, level === 1 ? 1 : .75);
+    this.renderer.setPixelRatio(ratio); this.composer.setPixelRatio(ratio);
+    this.bloom.enabled = level < 2;
+  }
+  async warmUp(run, progress) {
+    progress(25, 'Loading the space scenery…'); await nextPaint();
+    const loaded = await this.sky.preload(this.renderer);
+    progress(45, 'Preparing the course and flight effects…'); await nextPaint();
+    // Sample every region and pickup once, without advancing or submitting a flight.
+    const samples = new T.Group(); this.scene.add(samples);
+    const visibility = [];
+    try {
+      for (const zone of ZONES) {
+        samples.add(cosmos.world(Math.floor(zone.at / 200), this.day));
+        await nextPaint();
+      }
+      for (const kind of ['cycle','coffee','portal','compiler','canister','identity','oisy','fusion','neuron','pad','hazard','mine']) {
+        samples.add(pickup({ kind, x: 0, y: 4, d: 200, hp: 2 }));
+      }
+      this.sky.update(this.camera, 3500, 0, true);
+      this.scene.traverse(object => { visibility.push([object, object.visible, object.frustumCulled]); object.visible = true; object.frustumCulled = false; });
+      progress(65, 'Preparing graphics for a smoother first flight…'); await nextPaint();
+      await this.renderer.compileAsync(this.scene, this.camera);
+      // Compile both shadow configurations used by the rooftop and space regions.
+      this.composer.render(0); this.sun.castShadow = false;
+      await this.renderer.compileAsync(this.scene, this.camera);
+      this.composer.render(0);
+    } finally {
+      for (const [object, visible, culled] of visibility) { object.visible = visible; object.frustumCulled = culled; }
+      this.disposeGroup(samples);
+    }
+    progress(90, loaded === 3 ? 'Checking the launch scene…' : 'Space scenery unavailable; preparing the starfield…');
+    await nextPaint(); this.update(run, 0); await nextPaint(); this.update(run, 0);
+    progress(95, 'Tuning graphics for this device…');
+    // A bounded preview catches sustained overload before launch. Further
+    // adaptation uses only active foreground frames, not a paused game.
+    // The early flight costs more than the static rooftop. Render a copy; never
+    // advance physics, consume a boost, collect a coin or replace the real run.
+    const preview = { ...run, phase: 'flying', d: 200, y: 30, speed: 80 };
+    this.snapCamera = true; this.update(preview, 0);
+    let previous = performance.now();
+    for (let i = 0; i < 48; i++) {
+      await nextPaint(); const now = performance.now();
+      this.adaptQuality(now - previous, !document.hidden); previous = now;
+      this.update(preview, 0);
+    }
+    this.frameBudget.clear();
+    this.snapCamera = true; this.update(run, 0);
+    progress(100, 'Ready to fly'); await nextPaint();
+  }
   ensureWorld(distance) {
     const first = Math.max(-1, Math.floor((distance - 180) / 200)), last = Math.floor((distance + 650) / 200);
+    // Physics runs at 120 Hz. Rebuild/filter only when the visible chunk range changes.
+    if (this.worldFirst === first && this.worldLast === last) return;
+    this.worldFirst = first; this.worldLast = last;
     for (let i = first; i <= last; i++) if (!this.chunks.has(i)) {
       const group = cosmos.world(i, this.day);
       if (i >= 1 && i <= 3) group.add(terrain(i, this.day));
       this.scene.add(group); this.chunks.set(i, group);
       if (i >= 0) for (const obj of makeObjects(this.seed, i)) {
-        const mesh = pickup(obj); this.scene.add(mesh); this.pickups.set(obj.id, { mesh, obj, phase: (obj.d % 11) }); this.objects.push(obj);
+        const mesh = pickup(obj);
+        if (obj.kind !== 'cycle') this.scene.add(mesh);
+        this.pickups.set(obj.id, { mesh, obj, phase: (obj.d % 11) }); this.objects.push(obj);
       }
     }
     for (const [i, group] of this.chunks) if (i < first || i > last) {
@@ -301,6 +365,7 @@ export class GameView {
     });
   }
   reset(day, seed = day) {
+    this.worldFirst = null; this.worldLast = null;
     this.inspectGhost = false; this.day = day; this.seed = seed; this.trail.length = 0; this.fx.reset(); this.ghost.reset(); this.target = null;
     // Restart returns directly to the roof; no long backwards camera trip through the entire run.
     if (innerWidth < 650 && innerHeight > innerWidth) {
@@ -349,7 +414,7 @@ export class GameView {
     const space = clamp((run.d - 160) / 600, 0, 1), height = altitudeAt(run), base = ascentAt(run.d);
     this.scene.fog.near = 180 + space * 180; this.scene.fog.far = 680 + space * 480;
     this.ambient.color.set(space > .6 ? '#91a6ff' : '#b4c5ef'); this.ambient.intensity = 1.55 - space * .05;
-    this.sun.castShadow = run.d < 550;
+    this.sun.castShadow = this.frameBudget.level === 0 && run.d < 550;
     this.sun.intensity = 2.1 - space * .9; this.bloom.strength = .24 + space * .24;
     this.bug.root.position.set(run.x, height, -run.d);
     this.bug.engines.visible = flying && run.d > 200;
@@ -375,14 +440,19 @@ export class GameView {
     const sh = 1 + Math.min(run.y, 60) * .023; this.groundShadow.scale.set(sh, sh, 1);
     this.groundShadow.material.opacity = .26 / (1 + run.y * .02);
     for (const { mesh, obj, phase } of this.pickups.values()) {
+      // Passed objects sit between the chase camera and the bug. Hide them once
+      // fully cleared, rather than letting an oversized foreground candle block
+      // the next lane. Derive visibility each frame so the warm-up resets safely.
+      mesh.visible = !run.hits.has(obj.id) && obj.d >= run.d - obj.radius - 1.25;
       if (!mesh.visible) continue;
       if (obj.kind === 'cycle') mesh.rotation.y = Math.sin(t * 1.8 + phase) * .55;
       if (obj.kind === 'coffee') mesh.rotation.y = t * .65;
       if (obj.kind === 'portal') mesh.rotation.z = Math.sin(t + phase) * .035;
       // Collision centers remain fixed. Mesh wobble is cosmetic and smaller than the pickup margin.
-      if (obj.kind === 'mine') updateMine(mesh, obj, t, this.motionReduced);
+      if (obj.kind === 'mine' && !obj.airborne) updateMine(mesh, obj, t, this.motionReduced);
       if (!['pad', 'hazard', 'mine'].includes(obj.kind)) mesh.position.y = obj.y + ascentAt(obj.d) + Math.sin(t * 1.4 + phase) * .2;
     }
+    this.coinInstances.update(this.pickups.values());
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i]; p.life -= dt;
       if (p.life <= 0) { this.scene.remove(p.mesh); this.particles.splice(i, 1); continue; }
@@ -431,5 +501,5 @@ export class GameView {
     this.renderer.info.reset(); this.composer.render(dt);
     this.lastPhase = run.phase;
   }
-  stats() { const bug = this.bug.root.position.clone().project(this.camera), ghost = this.ghost.root.position.clone().project(this.camera); return { ...this.zurich.stats(), ghostX: Math.round((ghost.x+1)*innerWidth/2), ghostY: Math.round((1-ghost.y)*innerHeight/2), bugX: Math.round((bug.x+1)*innerWidth/2), bugY: Math.round((1-bug.y)*innerHeight/2), calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles, geometries: this.renderer.info.memory.geometries, textures: this.renderer.info.memory.textures, chunks: this.chunks.size, objects: this.objects.length }; }
+  stats() { const bug = this.bug.root.position.clone().project(this.camera), ghost = this.ghost.root.position.clone().project(this.camera); return { quality: this.frameBudget.level, pixelRatio: this.renderer.getPixelRatio(), ...this.zurich.stats(), ghostX: Math.round((ghost.x+1)*innerWidth/2), ghostY: Math.round((1-ghost.y)*innerHeight/2), bugX: Math.round((bug.x+1)*innerWidth/2), bugY: Math.round((1-bug.y)*innerHeight/2), calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles, geometries: this.renderer.info.memory.geometries, textures: this.renderer.info.memory.textures, chunks: this.chunks.size, objects: this.objects.length }; }
 }

@@ -1,18 +1,19 @@
 import { compareFlight } from './result-board.js';
 import { scoreOf } from './scoring.js';
-import { mountSuite, topbarIdlFactory } from './app.js';
-import { connect } from './client-api.js';
-import { SCORE_VERSION } from './physics.js';
+import { connect, playerSession } from './client-api.js';
+import { RULESET, RULESET_3D } from './ruleset.js';
+import { validName } from './player-session.js';
 const $ = id => document.getElementById(id);
 const number = value => Number(value).toLocaleString('en-US');
 const unwrap = r => { if ('err' in r) throw new Error(r.err); return r.ok; };
 export class Community {
   constructor(ui) {
-    Object.assign(this, ui); this.mode=ui.mode==='2d'?'2d':'3d'; this.boardMode=this.mode; this.connection = null; this.pilot = null; this.isLocal = false; this.hubUrl = ''; this.tab = 'global'; this.loadId = 0; this.resultLoadId = 0; this.resultRun = null; this.resultRows = null;
+    Object.assign(this, ui); this.mode=ui.mode==='2d'?'2d':'3d'; this.boardMode=this.mode; this.connection = null; this.pilot = null; this.isLocal = false; this.session = ui.session || playerSession; this.profileLoadId = 0; this.authBusy = false; this.tab = 'global'; this.loadId = 0; this.resultLoadId = 0; this.resultRun = null; this.resultRows = null;
     $('profileBtn').addEventListener('click', () => this.openProfile());
     $('nameSaveBtn').addEventListener('click', () => this.saveName());
     $('playerName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); void this.saveName(); } });
-    $('hubLoginBtn').addEventListener('click', () => this.signInHub());
+    $('iiLoginBtn').addEventListener('click', () => this.signIn());
+    this.session.subscribe(() => { if (!this.authBusy) void this.boot(); });
     $('logoutBtn').addEventListener('click', () => this.signOut());
     $('scoresBtn').addEventListener('click', () => { this.showModal('scoresDialog'); void this.global(false,this.mode); });
     $('globalTab').addEventListener('click', () => this.global());
@@ -25,77 +26,77 @@ export class Community {
     $('resultBoardRetry').addEventListener('click', () => this.loadResult(this.getRun()));
     $('removeScoresBtn').addEventListener('click', () => this.remove());
   }
-  async api() {
-    if (!this.connection) this.connection = connect().then(c => { this.transport = c; this.isLocal = c.local; this.hubUrl = c.hubUrl; return c.actor; }).catch(e => { this.connection = null; throw e; });
-    return this.connection;
-  }
-  hubLoginUrl() {
-    const hub = new URL(this.hubUrl);
-    if (hub.protocol !== 'https:' || hub.username || hub.password) throw new Error('Invalid Hub URL');
-    const id = this.transport?.hubTileId;
-    const target = Number.isSafeInteger(id) && id > 0 ? String(id) : location.origin + '/';
-    hub.search = ''; hub.hash = ''; hub.searchParams.set('jump', target);
-    return hub.href;
-  }
-  async signInHub() {
-    if (['127.0.0.1', 'localhost'].includes(location.hostname)) {
-      $('profileStatus').textContent = 'Kebabstack sign-in needs the deployed HTTPS app URL registered in the hub. Public play works here already.'; return;
-    }
-    try { await this.api(); location.href = this.hubLoginUrl(); }
-    catch { $('profileStatus').textContent = 'Kebabstack is not configured for this deployment yet. Public play is available.'; }
+  async api(expected) {
+    if (!this.connection) this.connection = connect().then(c => { this.transport = c; this.isLocal = c.local; return c; }).catch(e => { this.connection = null; throw e; });
+    return (await this.connection).actor(expected);
   }
   async boot() {
-    const params = new URLSearchParams(location.hash.slice(1)); const ticket = params.get('uht');
-    if (ticket) { params.delete('uht'); history.replaceState(null, '', location.pathname + location.search + (params.size ? '#' + params : '')); }
+    // Old Hub launch URLs are scrubbed, never redeemed by the standalone game.
+    const params = new URLSearchParams(location.hash.slice(1));
+    if (params.has('uht')) { params.delete('uht'); history.replaceState(null, '', location.pathname + location.search + (params.size ? '#' + params : '')); }
+    const id = ++this.profileLoadId, player = this.session.snapshot();
+    this.pilot = { ...player, publicName: '' }; this.renderProfile();
     try {
-      const api = await this.api();
-      this.pilot = unwrap(ticket ? await api.arcadeLogin(ticket) : await api.arcadeProfile()); this.renderProfile();
-      if (ticket && !this.pilot.name && this.getRun().phase !== 'done') this.openProfile();
+      const profile = unwrap(await (await this.api(player.id)).arcadeProfile());
+      if (id !== this.profileLoadId || this.session.snapshot().id !== player.id) return;
+      this.pilot = { ...player, name: player.name || profile.name, publicName: profile.name };
+      this.renderProfile();
+      if (this.getRun().phase === 'ready') this.begin(this.getRun());
     } catch (e) {
-      $('profileStatus').textContent = e.message;
-      // A failed optional sign-in must not prevent guest play or publication.
-      if (ticket) {
-        try { this.pilot = unwrap(await (await this.api()).arcadeProfile()); this.renderProfile(); } catch {}
-      }
-      if (ticket && this.getRun().phase !== 'done') this.openProfile(e.message);
+      if (id === this.profileLoadId) $('profileStatus').textContent = e.message;
     }
   }
+  canChangePlayer() {
+    const r = this.getRun();
+    // A completed flight may restore its original player after expiry or an
+    // account change in another tab. Publication still checks its pinned owner.
+    return !r.publishing && (r.phase === 'ready' || (r.phase === 'done' && r.playerId && this.session.snapshot().id !== r.playerId));
+  }
   renderProfile() {
-    this.topbar?.destroy(); this.topbar = null;
-    $('suiteTopbar').replaceChildren(); $('suiteTopbar').hidden = !this.pilot?.hub;
-    if (this.pilot?.hub && this.pilot.hubId && this.transport) {
-      this.topbar = mountSuite($('suiteTopbar'), {
-        hub: { actor: this.transport.hubActor(topbarIdlFactory, this.pilot.hubId), token: this.pilot.suiteToken },
-        hubUrl: this.hubUrl, app: { name: 'Ship the Bug' },
-        onSignOut: () => this.signOut(), person: { displayName: this.pilot.name },
-      });
-    }
-    $('playerChip').textContent = this.pilot?.name || (this.pilot?.hub ? 'CHOOSE A NAME' : 'PLAY AS GUEST');
-    $('playerName').value = this.pilot?.name || '';
-    $('logoutBtn').hidden = !this.pilot?.hub;
-    $('hubLoginBtn').hidden = Boolean(this.pilot?.hub);
-    $('profileDescription').textContent = this.pilot?.hub ? 'Signed in through Kebabstack. Your callsign and sign-in work in both modes. 2D and 3D have separate scoreboards.' : 'Play and publish scores without signing in. Your callsign works in both modes and is remembered in this browser. Kebabstack sign-in is optional.';
+    const signedIn = this.pilot?.kind === 'ii';
+    $('playerChip').textContent = this.pilot?.name || (signedIn ? 'INTERNET IDENTITY' : 'PLAY AS GUEST');
+    // Preserve a callsign being edited when a background profile request finishes.
+    if (document.activeElement !== $('playerName')) $('playerName').value = this.pilot?.name || '';
+    $('logoutBtn').hidden = !signedIn;
+    $('iiLoginBtn').hidden = signedIn;
+    const locked = this.authBusy || !this.canChangePlayer();
+    $('iiLoginBtn').disabled = locked; $('logoutBtn').disabled = locked;
+    $('profileDescription').textContent = signedIn
+      ? 'Signed in with Internet Identity. Your published callsign and best scores follow this identity on this website. A local profile is optional.'
+      : 'Play immediately as a guest. Choose an optional name for this browser, or use Internet Identity to keep published scores across devices.';
+    $('profileSwitchNote').textContent = locked && !this.authBusy ? 'Finish this flight and choose Play again before changing player.' : '';
     if (this.resultRun === this.getRun()) {
       if (!this.resultRun.resultNameEdited) $('resultName').value = this.pilot?.name || '';
       this.renderResult();
     }
   }
-  openProfile(message = '') { $('profileStatus').textContent = message; this.showModal('profileDialog'); }
+  openProfile(message = '') { this.renderProfile(); $('profileStatus').textContent = message; this.showModal('profileDialog'); }
   async saveName() {
-    if ($('nameSaveBtn').disabled) return;
     const name = $('playerName').value.trim();
-    if (!/^[a-zA-Z0-9 ._-]{3,20}$/.test(name)) { $('profileStatus').textContent = 'Use 3–20 letters, numbers, spaces, dots, hyphens or underscores.'; return; }
-    $('nameSaveBtn').disabled = true; $('profileStatus').textContent = 'Reserving your callsign…';
+    if (!validName(name)) { $('profileStatus').textContent = 'Use 3–20 letters, numbers, spaces, dots, hyphens or underscores.'; return; }
     try {
-      this.pilot = unwrap(await (await this.api()).arcadeSetName(name)); this.renderProfile();
-      $('profileStatus').textContent = 'Callsign saved.'; this.closeModal('profileDialog');
-      if (this.getRun().phase === 'done') $('saveNote').textContent = 'Callsign ready. Choose Publish to share this flight.';
+      const player = this.session.snapshot();
+      this.session.saveName(name, player.id); this.profileLoadId++;
+      this.pilot = { ...this.pilot, ...player, name }; this.renderProfile();
+      $('profileStatus').textContent = 'Name saved on this device. Availability is checked when you publish a score.';
     } catch (e) { $('profileStatus').textContent = e.message; }
-    finally { $('nameSaveBtn').disabled = false; }
+  }
+  async signIn() {
+    if (this.authBusy || !this.canChangePlayer()) return;
+    this.authBusy = true; this.renderProfile(); $('profileStatus').textContent = 'Opening Internet Identity…';
+    try {
+      // Called directly from the click so popup blockers retain the user gesture.
+      await this.session.signIn(); await this.boot();
+      $('profileStatus').textContent = 'Signed in. Choose a callsign whenever you are ready.';
+    } catch { $('profileStatus').textContent = 'Sign-in did not complete. Your guest profile is still available. You can try signing in again.'; }
+    finally { this.authBusy = false; this.renderProfile(); }
   }
   async signOut() {
-    try { await (await this.api()).arcadeLogout(); this.pilot = null; this.renderProfile(); $('profileStatus').textContent = 'Signed out. Future flights use your browser guest profile.'; void this.boot(); }
+    if (this.authBusy || !this.canChangePlayer()) return;
+    this.authBusy = true; this.renderProfile();
+    try { await this.session.signOut(); await this.boot(); $('profileStatus').textContent = 'Signed out. Your original browser guest profile is ready.'; }
     catch (e) { $('profileStatus').textContent = e.message; }
+    finally { this.authBusy = false; this.renderProfile(); }
   }
   reset() {
     this.resultRun = null; this.resultRows = null; this.resultLoadId++;
@@ -103,7 +104,11 @@ export class Community {
     $('resultName').disabled = false; $('againBtn').disabled = false; $('againBtn').textContent = 'PLAY AGAIN · KEEP PRIVATE';
   }
   begin(run) {
-    run.ranking = this.api().then(a => this.mode==='2d'?a.arcadeBeginMode({twoD:null}):a.arcadeBegin()).then(unwrap).then(ticket => {
+    const current = this.session.snapshot();
+    if (run.ranking && !run.rankingError && run.playerId === current.id && Date.now() - run.rankingAt < 3_600_000) return;
+    run.rankingAt = Date.now();
+    const player = this.session.snapshot(); run.playerId = player.id; run.playerKind = player.kind;
+    run.ranking = this.api(player.id).then(a => this.mode==='2d'?a.arcadeBeginMode({twoD:null}):a.arcadeBegin()).then(unwrap).then(ticket => {
       // Routes use a per-flight random seed; an old rooftop tab must not fail at UTC midnight.
       run.rankingError = null;
       return ticket;
@@ -141,7 +146,7 @@ export class Community {
       rows=[...(rows||[])].filter(row=>row.name.toLowerCase()!==r.publication.best.name.toLowerCase());
       rows.push(r.publication.best); rows.sort((a,b)=>Number(b.score)-Number(a.score)||Number(a.at||0)-Number(b.at||0));
     }
-    const model = rows === null ? null : compareFlight(rows, flight, this.pilot?.name || '', Boolean(r.published));
+    const model = rows === null ? null : compareFlight(rows, flight, this.pilot?.publicName || '', Boolean(r.published));
     $('resultRank').textContent = this.resultRows===null ? '—' : model?.rank || '—';
     if (model?.rank?.startsWith('#') && Number(model.rank.slice(1))>100) $('resultRank').textContent='100+';
     $('resultRankLabel').textContent = model?.retained ? 'YOUR PUBLISHED BEST' : r.published ? 'PUBLISHED' : 'PRIVATE PREVIEW';
@@ -172,18 +177,23 @@ export class Community {
     try {
       const ticket = await r.ranking;
       if (this.getRun() !== r) return;
-      if (!ticket) throw new Error(r.rankingError || 'This flight did not connect to flight control. Keep it private and try another run.');
-      const api = await this.api(); if (this.getRun() !== r) return;
-      if (this.pilot?.name !== name) {
-        const oldName = this.pilot?.name;
-        this.pilot = unwrap(await api.arcadeSetName(name)); this.renderProfile();
+      if (!ticket) { const error = new Error(r.rankingError || 'This flight did not connect to flight control. Save it on this device and try another run.'); error.terminal = true; throw error; }
+      const api = await this.api(r.playerId); if (this.getRun() !== r) return;
+      if (this.pilot?.publicName !== name) {
+        const oldName = this.pilot?.publicName;
+        const saved = unwrap(await api.arcadeSetName(name));
+        await this.session.identity(r.playerId);
+        this.pilot = { ...this.session.snapshot(), name: saved.name, publicName: saved.name };
+        try { this.session.saveName(saved.name, r.playerId); } catch {}
+        this.renderProfile();
         if (this.getRun() !== r) return;
         // A rename changes the same pilot's historical board label too.
         this.resultRows = this.resultRows?.map(row => oldName && row.name.toLowerCase() === oldName.toLowerCase() ? { ...row, name: this.pilot.name } : row) ?? null;
       }
       const coins = r.coinIds.map(id => { const [,chunk,index] = id.split(':'); return BigInt(Number(chunk) * 21 + Number(index)); });
       r.publishAttempted = true;
-      const submission={runId:ticket.id,meters:BigInt(Math.floor(r.d)),coins,durationMs:BigInt(Math.round(r.elapsed*1000)),version:SCORE_VERSION};
+      const submission=r.submission ||= {runId:ticket.id,meters:BigInt(Math.floor(r.d)),coins,durationMs:BigInt(Math.round(r.elapsed*1000)),version:this.mode==='3d'?RULESET_3D:RULESET};
+      await this.session.identity(r.playerId);
       const receipt=unwrap(await api.arcadePublish(this.mode==='2d'?{twoD:null}:{threeD:null},submission));
       const row=receipt.flight; r.publication=receipt;
       r.published = true; if (this.getRun() !== r) return;
@@ -196,7 +206,13 @@ export class Community {
       this.renderResult(); await this.loadResult(r);
     } catch (e) {
       if (this.getRun() === r) {
-        $('saveNote').dataset.state='error'; $('saveNote').textContent = e.message + (r.publishAttempted ? ' Your result is still here. Retry this submission.' : ''); $('saveNote').scrollIntoView?.({block:'nearest'}); $('publishBtn').textContent='RETRY PUBLICATION'; $('publishBtn').disabled = false; $('resultName').disabled = false;
+        const terminal = e.terminal || /old game version|incompatible game rules|Flight expired|flight was replaced|flight is missing|outside the arcade limits|exceeds the flight speed|Duplicate coin|beyond the flight|Too many coins/i.test(e.message);
+        r.publicationBlocked = Boolean(terminal);
+        $('saveNote').dataset.state='error';
+        $('saveNote').textContent = e.message + (terminal ? ' This result can still be saved on this device.' : r.publishAttempted ? ' Your result is still here. You can retry this submission.' : '');
+        $('saveNote').scrollIntoView?.({block:'nearest'});
+        $('publishBtn').textContent=terminal ? 'PUBLICATION UNAVAILABLE' : 'RETRY PUBLICATION';
+        $('publishBtn').disabled = Boolean(terminal); $('resultName').disabled = false;
         if (r.publishAttempted) $('againBtn').textContent = 'PLAY AGAIN';
       }
     } finally {
@@ -217,7 +233,7 @@ export class Community {
     $('boardStatus').textContent = 'Connecting to the global flight crew…'; $('scoreList').replaceChildren();
     try {
       const api = await this.api(); const rows = await (archive ? api.arcadeArchive() : this.readBoard(api,selectedMode)); if (id !== this.loadId) return;
-      const own=rows.find(row=>this.pilot?.name && row.name.toLowerCase()===this.pilot.name.toLowerCase());
+      const own=rows.find(row=>this.pilot?.publicName && row.name.toLowerCase()===this.pilot.publicName.toLowerCase());
       $('boardStatus').textContent = this.isLocal ? 'Local canister test board. Deploy this app to open the same board worldwide.' : archive ? 'Early flights · original 3D rules · preserved archive' : `${selectedMode==='2d'?'2D · Season 1':'3D · Season 2'} · best score per pilot. ${own ? 'Your best: '+number(own.score)+' points.' : 'Scores in the other mode are on its own board.'}`;
       if (!rows.length) { const p = document.createElement('p'); p.className = 'score-empty'; p.textContent = archive ? 'No early public flights were recorded.' : `Be the first to ship a ${selectedMode.toUpperCase()} score.`; $('scoreList').append(p); }
       rows.forEach((r,i) => {

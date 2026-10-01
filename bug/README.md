@@ -1,11 +1,11 @@
 # Ship the Bug · 2D + 3D
 
-The interface follows the [shared Kebabstack standard](../design/README.md): canonical identity, semantic light/dark colours and common navigation/control sizes. Product access and workflow boundaries remain explicit.
+The interface follows the [shared Kebabstack standard](../design/README.md): canonical product mark and shared foundations, with the documented immersive-game visual exception. The game has its own guest/Internet Identity controls and no suite account bar.
 
 Launch a ladybug from DFINITY's Zurich rooftop into the Internet Computer universe.
-Version 0.17.0 offers **3D Immersive** and **2D Retro** in the existing Bug app and Hub tile.
+Version 0.19.0 offers **3D Immersive** and **2D Retro** as a standalone game. Existing installations and their game URL are retained.
 Choose a mode before launch or after a flight; your preference is remembered on this device.
-Both modes use the same callsign, browser identity and optional Hub sign-in.
+Both modes use the same selected player, optional local callsign and Internet Identity sign-in.
 3D keeps Season 2 and its Early flights archive; 2D has its own Season 1 board.
 The mode buttons in the scoreboard browse either board without changing your flight.
 Switching after a flight keeps it private unless you publish or save locally first.
@@ -13,20 +13,28 @@ An active flight or publication cannot be interrupted by the mode switch.
 
 See [installation and custom domains](INSTALL.md) to connect your own instance.
 
-Anyone can open the game URL and play immediately. Choose a callsign to publish a
-score. **Player profile → Sign in through Kebapstack** is optional. A previously verified
-public profile stays available in the same browser after Hub expiry or an outage;
-that remembered association grants no access to company data or settings.
-If an older session has already lost its identity record, the browser automatically
-returns to its own guest profile. Callsigns owned by other profiles remain protected. Hub users and browser
-guests compete on the same public leaderboard **within each mode on this deployment**. Independently
-installed stacks have independent boards; this is not a federation across every stack.
+Anyone can open the game URL and play as a guest. In **Player profile**, choose an
+optional name saved only in this browser, or **Sign in with Internet Identity**.
+No Hub membership, suite session or company directory is needed. Saving a local
+name does not reserve it on the public board; availability is checked on publication.
+Internet Identity restores published names and best scores on another device using
+the same website origin. Local profile drafts and private flight history remain on
+their device. Signing out returns to the original browser guest.
+
+Guest and Internet Identity are separate players: choosing the same name does not
+transfer scores or ownership. Existing browser keys and verified legacy public
+profile associations are retained. A former Hub identity is not automatically
+converted into an Internet Identity. Origin changes also create a different player;
+keep the existing canonical game URL. Independently installed games have independent
+boards, not a federation. Legacy company administration and private historical APIs
+remain protected in the backend for upgrade compatibility; the game UI never logs
+in through the Hub or redeems its tickets.
 
 **Points = floor(distance in metres) + 50 × collected coins.** Publishing is optional
 for each flight. A successful publication explicitly distinguishes a new best from a lower flight that retains the existing record. The receipt names the mode and confirms its saved best. An identical retry after a lost response is safe within the two-hour receipt window while this backend remains running; upgrades clear transient receipts. The scoreboard highlights your callsign, and 2D and 3D records remain separate. Only callsign, points, distance, coins and publication time are public.
 Choose **Remove my published scores** to remove your own public entry for the selected mode. Browser guest
-identity is stored locally; clearing browser data loses that identity. Hub identities
-use the Hub's stable person ID, so a reassigned email cannot inherit scores.
+identity is stored locally; clearing browser data loses that identity. Internet Identity
+keys public ownership to the authenticated principal. A local name alone is not a login.
 
 ## 2D Retro
 
@@ -58,18 +66,54 @@ are also separate. Only the selected renderer is loaded.
 
 3D adds ground pads on about 80% of 200 m chunks and a low coffee pickup every third chunk. Recovery pickups keep their diminishing returns; manual boost charges are not refilled.
 
-The sections below describe the retained 3D flight rules.
+The 3D flight now includes an optional **ICP to the Moon** combination: collect three
+coins and shoot down one red trading candle within six seconds, in either order.
+The MOON counter shows progress and remaining time. Completion automatically
+triggers a 3.2-second God Candle: a tall green candle under the bug, mint trails,
+extra forward thrust and upward lift. It uses the existing FLOW cooldown rather
+than stacking another booster. No prompt is spent or replenished, and the bug is
+still vulnerable. Unshielded damage clears the combo; the shield protects it.
+
+Red candles replace floating walls and air mines, with body/wick collision bounds
+matching their visible shape. Gold armor rings still require two pulses; ground
+mines keep their warning rings and escape lanes. Shared candle buffers need no new
+images, dynamic lights or extra enemies; their shaders are prepared before launch.
+Reduced motion keeps a steady candle cue without its growing/shrinking animation.
+2D retains its existing objects, flight balance and ordinary FLOW.
+
+The sections below describe the 3D flight rules.
 
 ## Webb space photography (3D)
 
 Three real Webb fields enter the 3D background with distance: Carina Cosmic Cliffs,
 Phantom Galaxy M74 and SMACS 0723 Deep Field. They are local image assets loaded
-progressively after launch, with crossfades, reduced-motion support and a retained
-procedural sky on loading failure. One depth-tested background layer keeps the bug,
+before the launch controls unlock, with crossfades, reduced-motion support and a retained
+procedural sky on loading failure or the eight-second image timeout. One depth-tested background layer keeps the bug,
 planets and obstacles in front; it fills chase and side views at phone and desktop
 aspects. These are photographic fields used as scenery, not an accurate sky map.
 Full image credits and linked sources are in the 3D help dialog and
 [the image credits](src/assets/webb/CREDITS.md).
+
+The loading screen also prepares shaders, postprocessing, representative course
+geometry and both shadow configurations. It does not simulate a flight. Loading
+failures offer reload and 2D fallback. Course filtering now runs only when its visible
+chunk range changes. Coin parts use shared instance batches instead of one draw
+call per coin part, retaining positions, animation and collection visibility. This moves initial GPU work before play; later course generation,
+device performance and browser scheduling can still cause slow frames. A short early-flight
+preview chooses visual quality before launch. Sustained slow rendering can then
+reduce pixel density, dynamic shadows and bloom in two steps. UI text stays sharp,
+physics and scoring stay unchanged, and quality does not oscillate within the page.
+Hidden/paused tabs and isolated long scheduling gaps do not lower quality.
+
+## Publication compatibility
+
+The publication rules ID is independent of the display/release version. Unchanged
+0.16.0–0.17.5 clients remain accepted, including still-valid tickets rejected by the
+previous version check. Future gameplay changes must explicitly version and review
+the rules; unknown rules remain rejected. 3D uses `moon-2026-09-30`; unchanged 2D uses
+`arcade-2026-09-09`. Both previous rules and records remain accepted. Season 2 is
+retained, so historical 3D bests reflect their earlier balance. Permanent rejection offers local saving
+and a new flight; transient network failures retain an exact-payload retry.
 
 ## After dark
 
@@ -120,16 +164,16 @@ an inline retry. On phones, the screen scrolls as one page.
 ## Fly
 
 - The outlined cyan/mint launch ribbon pulses along the predicted path and stays 10 CSS pixels wide on phones (8 on desktop). It responds to your angle and charge; reduced motion keeps it static.
-- Desktop steering uses A/D or the left/right arrow keys exclusively; mouse movement and dragging never steer. Phone tilt and touch arrows are unchanged.
+- Desktop steering uses A/D or the left/right arrow keys exclusively; mouse movement, dragging and weather never steer. Releasing input brakes lateral velocity without a persistent pull. Phone tilt and touch arrows are unchanged.
 - Hold Space (or the green touch button), release near full for a perfect launch. The charge meter swings back: holding forever loses the timing bonus. Space boosts five times.
 - Phones have separate left/right touch buttons. Before the first flight on each phone page visit, choose **USE TILT** or **USE ARROWS INSTEAD**. Tilt asks for motion permission only after your click and waits for a usable neutral reading. The small phone icon on the left edge switches it off/on; no persistent steering banner covers the scene. Pause and resume to set a new neutral grip. Screen rotation pauses and recalibrates. If access is denied or readings stop, the arrows remain usable. Sensor readings stay in this page and are never sent or stored.
-- Hold F/J or the FIRE button to shoot firewalls and Motoko. Use bursts: continuous firing overheats the blaster. Orange armored walls and the ghost need two hits. C changes camera; P/Escape pauses;
+- Hold F/J or the FIRE button to shoot red candles and Motoko. Use bursts: continuous firing overheats the blaster. Gold-ringed candles and the ghost need two hits. C changes camera; P/Escape pauses;
   R restarts; M toggles sound. Profile, help and scoreboard pause the flight.
 - Every gold ring adds 50 points and FLOW energy, without an immediate speed increase. Every launch remixes lanes and pickups. Steer toward risky coins or choose a safer line.
 - Coffee appears in about 70% of sections and floor pads in about 55%; airborne rewards sit lower and closer to the main flight lanes. Floor rescues are still lucky finds. Lift rewards diminish as the run gets longer, and air resistance increases with progress and time. Five manual boosts retain their power.
-- FLOW rewards clean flying: +4 per coin, +8 extra on every fifth consecutive coin (at most 2.5 seconds between coins), +20 for a close mine/firewall pass after completely clearing it. At 100, Overdrive starts automatically for 3.2 seconds: an initial +22 m/s and up to +4 m/s² thrust / +2 m/s² lift, with the same late-run diminishing returns as pickups. Speed remains capped at 150 m/s. Hits cancel FLOW, shields preserve it, and a five-second recovery prevents chaining. No extra button or leaderboard multiplier is added.
-- Wind gives a two-second warning before a gust: tailwinds and updrafts help, while crosswinds and headwinds require a correction.
-- Exploit mines start at 225 m: four on the floor per 200 m, plus one airborne mine per 200 m from the second minefield. Red warning rings mark their footprint. Each row leaves three floor lanes open, including two neighbouring ones; the openings shift gradually and the outside edges are no longer permanently safe. Fly above a ground mine, steer through the openings or clear it with one pulse. A collision costs 40% momentum unless an Identity shield absorbs it. Defusing adds 15 K simulated cycles and a separate counter, without extra leaderboard points.
+- FLOW rewards clean flying: +4 per coin, +8 extra on every fifth consecutive coin (at most 2.5 seconds between coins), +20 for a close mine/candle pass after completely clearing it. At 100, Overdrive starts automatically for 3.2 seconds: an initial +22 m/s and up to +4 m/s² thrust / +2 m/s² lift, with the same late-run diminishing returns as pickups. Speed remains capped at 150 m/s. Hits cancel FLOW, shields preserve it, and a five-second recovery prevents chaining. No extra button or leaderboard multiplier is added.
+- Wind gives a two-second warning before a gust: tailwinds and updrafts help, while headwinds slow the flight. 3D crosswind intervals are calm; no weather force changes your lane.
+- Exploit mines start at 225 m: four on the floor per 200 m, plus one airborne red candle per 200 m from the second minefield. Red warning rings mark ground-mine footprints. Each row leaves three floor lanes open, including two neighbouring ones; the openings shift gradually and the outside edges are no longer permanently safe. Fly above a ground mine, steer through the openings or clear it with one pulse. A collision costs 40% momentum unless an Identity shield absorbs it. Defusing adds 15 K simulated cycles and a separate counter, without extra leaderboard points.
 - Motoko follows the supplied spacecraft references: compact pink/violet armour, a round dark visor, yellow eyes and a recessed cyan rear thruster. Velocity-aligned banking and twelve cyan/magenta exhaust ribbons follow the engine’s previous world positions, bending through turns with a brighter soft glow. Instanced engine details keep draw calls low; the wake stops on pause and is hidden with reduced motion.
 - Motoko first patrols from 500 to 1,600 m, then returns from 2,200 m in recurring patrols with quiet gaps. It flies world-space approach, strafe and recovery curves, alternating sides. Its nose follows its velocity. A pink cannon charges for 0.8 seconds before a two-shot burst aimed at the locked lane. The shot does not follow later sideways dodges. Only projectile contact costs 33% momentum; the ghost body is harmless. The burst is followed by a 1.8-second climb-out. A short impact grace period prevents both shots from stacking momentum penalties. Two player hits debug Motoko and cancel its incoming pulse. An Identity shield blocks one shot. Debugging it gives eight seconds of peace and 75 K **simulated** cycles, not leaderboard points.
 
@@ -158,10 +202,12 @@ npm start
 
 `npm start` serves dist on localhost:4177. `npm run preview:backend` starts an isolated
 PocketIC backend for public guest testing in another terminal. It does not connect
-to production data. `?test=1` exposes visible scene inspection controls; those flights
-cannot be published. Runtime assets are bundled locally, without a CDN dependency.
+to production data. `?test=1` exposes visible scene inspection and initial-frame timing controls.
+Using scene simulation buttons marks that flight as practice and disables publication. Runtime assets are bundled locally, without a CDN dependency.
 The shared Hub client and tokens are copied from the canonical repository sources.
-The Hub topbar lives inside the player profile so it cannot obstruct the game.
+The unused Hub client remains byte-identical for release tooling compatibility; the
+standalone frontend does not import or mount it. Local preview tests use separate
+identities and canisters, never the public board.
 
 ## Upgrade and data safety
 
@@ -182,8 +228,8 @@ forward positions remain compatible with the server's reach checks.
 
 The old employee-only 2D boards stay private behind their original authenticated APIs.
 They are not copied to the public 3D board, and their distance-only ranking is not
-mixed with the new coin scoring. Existing chosen handles are reserved and recovered
-on Hub sign-in. Names outside the new callsign format remain in the archive; choose
+mixed with the new coin scoring. Existing chosen handles remain reserved; verified browser associations continue
+to recover them. The standalone UI does not offer new Hub sign-in. Names outside the new callsign format remain in the archive; choose
 a new callsign to publish a 3D run. Admin `resetBoards` clears both generations' boards.
 
 Hub-linked operations retain the SDK's maximum 60-second directory lease and fail

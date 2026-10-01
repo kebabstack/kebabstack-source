@@ -5,7 +5,7 @@ const server = await PocketIcServer.start({ttl:86_400});
 const pic = await PocketIc.create(server.getUrl()); await pic.setTime(Date.now());
 const {canisterId} = await pic.setupCanister({idlFactory,wasm:readFileSync(new URL('../backend/dist/backend.wasm',import.meta.url))});
 const port=await pic.makeLive();
-const config={backend:canisterId.toText(),host:`http://127.0.0.1:${port}`};
+const config={backend:canisterId.toText(),host:`http://127.0.0.1:${port}`,rootKey:[...await pic.getPubKey(await pic.getCanisterSubnetId(canisterId))]};
 writeFileSync('.preview-backend.json',JSON.stringify(config,null,2)+'\n');
 console.log('Local test leaderboard: '+config.host+' / '+config.backend);
 console.log('Keep this terminal open. In a second terminal: npm start');

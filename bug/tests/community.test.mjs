@@ -1,6 +1,7 @@
+import { RULESET, RULESET_3D } from '../src/ruleset.js';
+import { PlayerSession, validName } from '../src/player-session.js';
 import { compareFlight } from '../src/result-board.js';
 import { scoreOf } from '../src/scoring.js';
-import { SCORE_VERSION } from '../src/physics.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -11,32 +12,26 @@ async function setup(actor,hash='',deployment={}){
  if(!actor.arcadePublish)actor.arcadePublish=async(mode,s)=>{const r=await ('twoD' in mode?actor.arcadeSubmitMode(mode,s):actor.arcadeSubmit(s));return 'err' in r?r:{ok:{flight:r.ok,best:r.ok,improved:true,mode}};};
  const dom=new JSDOM(html,{url:(deployment.origin||'https://game.example.test/')+hash});
  const w=dom.window;let run={phase:'done',practice:false,d:460,coins:2,coinIds:['1:0:0','1:0:1'],elapsed:17,ranking:Promise.resolve({id:1n})};
- const Community=new Function('document','location','history','connect','SCORE_VERSION','mountSuite','topbarIdlFactory','compareFlight','scoreOf',source.replace('export class Community','class Community')+';return Community')(w.document,w.location,w.history,async()=>({actor,hubUrl:'https://hub.example.test',hubActor:()=>({}),hubTileId:deployment.hubTileId}),SCORE_VERSION,()=>({destroy(){}}),()=>({}),compareFlight,scoreOf);
+ let principal = deployment.signedIn ? 'ii-player' : null;
+ const identity = id => ({getPrincipal:()=>({toText:()=>id}),toJSON:()=>id});
+ const auth = { getPrincipal:()=>principal ? identity(principal).getPrincipal() : undefined, getStatus:()=>principal?'signed-in':'signed-out', getIdentity:async()=>identity(principal), signIn:async()=>{principal='ii-player';return identity(principal)}, signOut:async()=>{principal=null}, subscribe:()=>()=>{} };
+ const session = new PlayerSession({auth,storage:w.localStorage,createGuest:()=>identity('guest-player'),restoreGuest:s=>identity(JSON.parse(s))});
+ run.playerId=session.snapshot().id;run.playerKind=session.snapshot().kind;
+ actor.arcadeSetName ||= async name=>({ok:{name}});
+ const Community=new Function('document','location','history','connect','RULESET','RULESET_3D','playerSession','validName','compareFlight','scoreOf',source.replace('export class Community','class Community')+';return Community')(w.document,w.location,w.history,async()=>({actor:async expected=>{await session.identity(expected);return actor}}),RULESET,RULESET_3D,session,validName,compareFlight,scoreOf);
  const c=new Community({mode:deployment.mode,showModal:id=>w.document.getElementById(id).setAttribute('open',''),closeModal:id=>w.document.getElementById(id).removeAttribute('open'),getRun:()=>run});
- return {c,w,getRun:()=>run,setRun:r=>{run=r},$:id=>w.document.getElementById(id)};
+ return {c,w,session,auth,getRun:()=>run,setRun:r=>{run=r},$:id=>w.document.getElementById(id)};
 }
-test('custom and original domains sign in through the same bound Hub tile',async()=>{
- for(const origin of ['https://play.example.test/','https://original.example.test/']) {
-  const {c}=await setup({},'',{origin,hubTileId:6});await c.api();
-  assert.equal(c.hubLoginUrl(),'https://hub.example.test/?jump=6');
- }
-});
-test('unconfigured or invalid tile IDs retain the normal origin-based Hub return',async()=>{
- for(const hubTileId of [undefined,0,-1,1.5,'https://untrusted.example',Number.MAX_SAFE_INTEGER+1]) {
-  const {c}=await setup({},'',{hubTileId});await c.api();
-  assert.equal(new URL(c.hubLoginUrl()).searchParams.get('jump'),'https://game.example.test/');
- }
- const {c}=await setup({});await c.api();c.hubUrl='https://user:password@hub.example.test';assert.throws(()=>c.hubLoginUrl());
-});
 test('public guest names, publishes explicit coin bonus, and reads shared board without Hub',async()=>{
  let submits=0;const row={name:'GuestOne',meters:460n,coins:2n,score:560n};
- const {c,$}=await setup({arcadeProfile:async()=>({ok:{name:'',hub:false}}),arcadeSetName:async name=>({ok:{name,hub:false}}),arcadeSubmit:async s=>{submits++;assert.deepEqual(s.coins,[0n,1n]);return{ok:row}},arcadeLeaderboard:async()=>[row]});
+ const {c,$}=await setup({arcadeProfile:async()=>({ok:{name:'',hub:false}}),arcadeSetName:async name=>({ok:{name,hub:false}}),arcadeSubmit:async s=>{submits++;assert.deepEqual(s.coins,[0n,1n]);assert.equal(s.version,RULESET_3D);return{ok:row}},arcadeLeaderboard:async()=>[row]});
  await c.boot();assert.equal(submits,0);$('playerName').value='GuestOne';await c.saveName();assert.equal($('playerChip').textContent,'GuestOne');assert.equal(submits,0);
  $('resultName').value='GuestOne';await c.publish();assert.equal(submits,1);assert.match($('saveNote').textContent,/560 points saved/);await c.global();assert.match($('scoreList').textContent,/GuestOne/);assert.match($('scoreList').textContent,/460 m/);
 });
-test('Hub ticket is removed from URL and restored callsign renders without blocking public play',async()=>{
- const {c,$,w}=await setup({arcadeLogin:async t=>{assert.equal(t,'abcdefabcdefabcd');return{ok:{name:'OldCaptain',hub:true,hubId:'aaaaa-aa',suiteToken:'suite'}}}},'#uht=abcdefabcdefabcd');
- await c.boot();assert.equal(w.location.hash,'');assert.equal($('playerChip').textContent,'OldCaptain');assert.equal($('hubLoginBtn').hidden,true);assert.equal($('suiteTopbar').hidden,false);
+test('old Hub tickets are scrubbed without login and legacy public profiles remain accessible',async()=>{
+ const {c,$,w}=await setup({arcadeLogin:async()=>assert.fail('Hub sign-in removed'),arcadeProfile:async()=>({ok:{name:'OldCaptain',hub:true,hubId:'aaaaa-aa',suiteToken:'suite'}})},'#uht=abcdefabcdefabcd');
+ await c.boot();assert.equal(w.location.hash,'');assert.equal($('playerChip').textContent,'OldCaptain');assert.equal($('iiLoginBtn').hidden,false);assert.equal($('suiteTopbar'),null);
+ assert.doesNotMatch($('profileDescription').textContent,/Kebabstack/);
 });
 test('practice flights never submit and backend failure leaves publication retry available',async()=>{
  let submits=0;const {c,$,getRun}=await setup({arcadeSubmit:async()=>{submits++;throw Error('offline')}});c.pilot={name:'Pilot'};$('resultName').value='Pilot';getRun().practice=true;await c.publish();assert.equal(submits,0);getRun().practice=false;await c.publish();assert.equal(submits,1);assert.equal($('publishBtn').disabled,false);assert.match($('saveNote').textContent,/offline/);
@@ -97,7 +92,7 @@ test('publication locks its action during the write and an error makes correctio
 
 test('2D result uses only the 2D board and publishes the same shared callsign with a mode-bound ticket',async()=>{
  let started=0,submitted=0,wrong=0;const row={name:'SharedPilot',score:560n,meters:460n,coins:2n};
- const {c,$,getRun}=await setup({arcadeProfile:async()=>({ok:{name:'SharedPilot',hub:false}}),arcadeBeginMode:async mode=>{assert.deepEqual(mode,{twoD:null});started++;return{ok:{id:1n,day:20704n}};},arcadeLeaderboardMode:async mode=>{assert.deepEqual(mode,{twoD:null});return[row];},arcadeSubmitMode:async(mode,s)=>{assert.deepEqual(mode,{twoD:null});assert.equal(s.version,'0.17.0');submitted++;return{ok:row};},arcadeLeaderboard:async()=>{wrong++;return[];},arcadeSubmit:async()=>{wrong++;}},'',{mode:'2d'});
+ const {c,$,getRun}=await setup({arcadeProfile:async()=>({ok:{name:'SharedPilot',hub:false}}),arcadeBeginMode:async mode=>{assert.deepEqual(mode,{twoD:null});started++;return{ok:{id:1n,day:20704n}};},arcadeLeaderboardMode:async mode=>{assert.deepEqual(mode,{twoD:null});return[row];},arcadeSubmitMode:async(mode,s)=>{assert.deepEqual(mode,{twoD:null});assert.equal(s.version,RULESET);submitted++;return{ok:row};},arcadeLeaderboard:async()=>{wrong++;return[];},arcadeSubmit:async()=>{wrong++;}},'',{mode:'2d'});
  getRun().day=20704;await c.boot();c.begin(getRun());await getRun().ranking;await c.finish();$('resultName').value='SharedPilot';await c.publish();
  assert.equal(started,1);assert.equal(submitted,1);assert.equal(wrong,0);assert.match($('resultBoardStatus').textContent,/2D/);
 });
@@ -139,8 +134,8 @@ for (const mode of ['2d','3d']) test(`${mode} returning public player publishes 
   arcadeLeaderboard:async()=>published?[row]:[],arcadeLeaderboardMode:async()=>published?[row]:[],
  },'',{mode});
  await c.boot();c.begin(getRun());await getRun().ranking;await c.finish();
- assert.equal($('resultName').value,'DDA');assert.equal($('suiteTopbar').hidden,true);
- assert.equal($('logoutBtn').hidden,true);assert.match($('profileDescription').textContent,/without signing in/);
+ assert.equal($('resultName').value,'DDA');assert.equal($('suiteTopbar'),null);
+ assert.equal($('logoutBtn').hidden,true);assert.match($('profileDescription').textContent,/guest/);
  await c.publish();assert.equal(published,1);assert.equal(logins,0);assert.equal(logouts,0);
  assert.equal(getRun().published,true);assert.match($('saveNote').textContent,/560 points saved as DDA/);
 });
@@ -150,8 +145,38 @@ test('an expired optional Hub ticket still restores the browser public profile',
  assert.equal($('profileDialog').hasAttribute('open'),false);
 });
 
-test('score publication uses the gameplay protocol across cosmetic releases',async()=>{
- let payload;const {c,$}=await setup({arcadeSubmit:async s=>{payload=s;return{ok:{name:'Pilot',score:560n}}}});
- c.pilot={name:'Pilot'};$('resultName').value='Pilot';await c.publish();
- assert.equal(payload.version,SCORE_VERSION);
+test('optional guest names work locally without a backend and do not reserve names before publication',async()=>{
+ let writes=0;const {c,$,session}=await setup({arcadeProfile:async()=>{throw Error('offline')},arcadeSetName:async()=>writes++});
+ await c.boot();$('playerName').value='LocalPilot';await c.saveName();assert.equal(session.snapshot().name,'LocalPilot');assert.equal(writes,0);assert.match($('profileStatus').textContent,/Availability is checked/);
+});
+test('Internet Identity is optional, cancelled login keeps guest, and logout restores the guest profile',async()=>{
+ const {c,$,session,auth,getRun}=await setup({arcadeProfile:async()=>({ok:{name:''}}),arcadeBegin:async()=>({ok:{id:1n}})});
+ getRun().phase='ready';session.saveName('GuestPilot');await c.boot();
+ const login=auth.signIn;auth.signIn=async()=>{throw Error('Popup closed')};await c.signIn();assert.equal(c.pilot.name,'GuestPilot');assert.equal($('iiLoginBtn').disabled,false);
+ auth.signIn=login;await c.signIn();assert.equal(c.pilot.kind,'ii');assert.equal($('logoutBtn').hidden,false);
+ $('playerName').value='IIPilot';await c.saveName();await c.signOut();assert.equal(c.pilot.kind,'guest');assert.equal(c.pilot.name,'GuestPilot');
+});
+test('identity switching is blocked during an unfinished flight and during publication',async()=>{
+ const {c,auth,getRun}=await setup({});let logins=0;auth.signIn=async()=>{logins++};
+ for(const phase of ['charging','flying','done']){getRun().phase=phase;await c.signIn();assert.equal(logins,0);}
+ getRun().phase='ready';getRun().publishing=true;await c.signIn();assert.equal(logins,0);
+});
+test('a cross-tab account change cannot publish a guest flight through Internet Identity',async()=>{
+ let writes=0;const {c,$,auth}=await setup({arcadePublish:async()=>writes++,arcadeSetName:async()=>writes++});
+ c.pilot={name:'Pilot',publicName:'Pilot'};$('resultName').value='Pilot';await auth.signIn();await c.publish();
+ assert.equal(writes,0);assert.match($('saveNote').textContent,/belongs to the player/);
+});
+test('a completed guest flight can recover its original player after another tab signs into II',async()=>{
+ let writes=0;const row={name:'GuestPilot',score:560n,meters:460n,coins:2n};
+ const {c,$,auth,getRun}=await setup({arcadeProfile:async()=>({ok:{name:'GuestPilot'}}),arcadeLeaderboard:async()=>[],arcadePublish:async mode=>{writes++;return{ok:{flight:row,best:row,improved:true,mode}}}});
+ await c.boot();await auth.signIn();await c.boot();assert.equal(c.canChangePlayer(),true);
+ await c.signOut();assert.equal(c.session.snapshot().id,getRun().playerId);
+ $('resultName').value='GuestPilot';await c.publish();assert.equal(writes,1);assert.equal(getRun().published,true);
+});
+for(const message of ['This flight uses an old game version. Reload and fly again.','This flight uses incompatible game rules. Save it on this device, then reload before a new flight.','Flight expired. Start a new run.','This flight is missing or was already published.'])test(`permanent publication failure does not offer futile retries: ${message}`,async()=>{
+ let calls=0;const {c,$,getRun}=await setup({arcadePublish:async()=>{calls++;return{err:message}}});c.pilot={name:'Pilot',publicName:'Pilot'};$('resultName').value='Pilot';await c.publish();
+ assert.equal($('publishBtn').disabled,true);assert.equal($('againBtn').disabled,false);assert.equal($('saveBtn').disabled,false);assert.doesNotMatch($('saveNote').textContent,/Retry this submission/);assert.equal(getRun().phase,'done');await c.publish();assert.equal(calls,1);
+});
+test('late profile responses cannot overwrite a newly saved local name',async()=>{
+ let reply;const {c,$}=await setup({arcadeProfile:()=>new Promise(r=>reply=r)});const boot=c.boot();await new Promise(r=>setTimeout(r,0));$('playerName').value='MyDraft';await c.saveName();reply({ok:{name:'PreviousName'}});await boot;assert.equal(c.pilot.name,'MyDraft');
 });

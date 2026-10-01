@@ -1,5 +1,8 @@
 import { MODE, MODE_KEY } from './mode.js';
+import { loadingFailed, gameReady } from './loading.js';
 const $=id=>document.getElementById(id);
+gameReady(false);
+$('loadRetry').addEventListener('click', () => location.reload());
 document.body.dataset.mode=MODE;
 try{localStorage.setItem(MODE_KEY,MODE);}catch{}
 $('world').setAttribute('aria-label',`${MODE.toUpperCase()} flight world`);
@@ -20,13 +23,17 @@ async function start() {
   document.querySelector('#intro .launch-coordinates').textContent='Five boosts. Full send.';
   for(const id of ['cameraBtn','tiltBtn','steerGuide','touchSteer','steeringDialog','webbCredits'])$(id)?.remove();
   $('controlHint').innerHTML='MOUSE AIM <span>·</span> <kbd>SPACE</kbd> CHARGE / BOOST <span>·</span> <kbd>F</kbd> FIRE';
+  $('moonHelp').remove();$('moonCombo').remove();$('hazardLegend').textContent='PATCH FIREWALLS';
   const help=document.querySelectorAll('.help-list li');
   for(const row of help)row.innerHTML=row.innerHTML.replaceAll('green button','gold button');
   help[2].innerHTML='<b>Follow the arc.</b><span>Aim with the mouse, or drag on the sky. Hold to charge and release to launch. The slider and Space also work. Cyan solar currents give free lift; save your five boosts for the gaps.</span>';
+  help[3].querySelector('span').textContent='Press SPACE or the gold button mid-flight to boost. Five prompts per flight. Gold rings add 50 points each. Coffee, crystals and gates boost. Firewalls and mines cost momentum; dodge or clear them with a pulse. An Identity shield covers one hit. Orange armor needs two pulses. Lift pickups get weaker as pressure rises.';
+  help[4].querySelector('span').textContent=help[4].querySelector('span').textContent.replace('mine or candle','mine or firewall');
+  help[6].querySelector('b').textContent='Patch the firewall. With lasers.';
   help[5].querySelector('span').textContent='Motoko appears from 500 m in its own clear stretches, with no overlapping walls or mines. Watch the pink cannon charge, then time a boost or land two hits. The blaster leads its movement automatically.';
   help[6].querySelector('span').textContent='Hold F / J or FIRE. Nearby threats get automatic aim assistance. Fire in bursts to avoid overheating. Each coin adds 50 points; combat rewards are simulated cycles. A final 1.6-second window lets you use a remaining boost.';
   document.querySelector('#helpDialog > .privacy-note').textContent='P / Escape pauses · R restarts · M toggles sound. 2D and 3D share your callsign and sign-in, with separate scoreboards. Choose your next mode at the start or after a flight. Publishing is always your choice.';
   await ready;await import('./two-d/main.js');
  } else await import('./main.js');
 }
-start().catch(error=>{console.error(error);$('loadMessage').textContent='The game could not load. Reload to try again.';});
+start().catch(error=>{console.error(error);loadingFailed('The game could not load. Try again, or switch to 2D Retro.');});

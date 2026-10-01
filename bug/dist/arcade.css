@@ -54,16 +54,6 @@ dialog .name-label,.help-list b {color:#cee9f5}
 .atlas article {background:#14243a}.atlas article p {color:#aec3db}.atlas article h3 {color:#e2eeff}
 #steeringStatus,#steeringDialog>small {color:#aabbd2}
 .steering-illustration {background:linear-gradient(135deg,#223859,#1a4849);color:#a7f5e4;border:1px solid #92d8e345}
-/* Scope the shared Hub topbar's game surface without modifying its SDK copy. */
-#profileDialog #suiteTopbar {
-  --ks-bg:#0d192d;--ks-bg-sunk:#16263b;--ks-bg-elev:#1d3049;--ks-bg-card:#15253b;
-  --ks-fg:#e4eef9;--ks-fg-body:#e4eef9;--ks-fg-secondary:#b8cbe0;--ks-fg-muted:#9bafc8;
-  --ks-rule:#87abd33a;--ks-rule-strong:#87abd36b;--ks-accent:#96eddf;--ks-accent-strong:#327f83;
-  --ks-accent-dim:#7be3d81a;--ks-focus:#85ecff;
-  background:var(--ks-bg-sunk);border-color:var(--ks-rule);color:var(--ks-fg)
-}
-#profileDialog #suiteTopbar button,#profileDialog #suiteTopbar a {color:#dbeafa}
-
 #resultDialog {position:relative;background:#101b30;isolation:isolate}
 #resultDialog::before {content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,#78e9e8,#aa90ec 56%,#e499c6);pointer-events:none;z-index:1}
 .result-overview {position:relative;isolation:isolate;background:radial-gradient(ellipse at 5% 10%,#28466180,transparent 60%),linear-gradient(140deg,#18263d,#101b2f);overflow:hidden}

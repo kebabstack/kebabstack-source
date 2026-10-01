@@ -23,3 +23,13 @@ test('photographic layer covers all camera aspects inside the far plane and cann
   for(const sx of [-1,1])for(const sy of [-1,1]){const p=new T.Vector3(sx,sy,0).applyMatrix4(sky.mesh.matrixWorld).project(camera);assert.ok(Math.abs(Math.abs(p.x)-1.01)<1e-6);assert.ok(Math.abs(Math.abs(p.y)-1.01)<1e-6);assert.ok(p.z<1&&p.z>0);}
  }
 });
+
+test('3D preload uploads every successful texture before resolving and tolerates failed imagery',async()=>{
+ const {sky,jobs}=setup(),uploaded=[];const pending=sky.preload({initTexture:t=>uploaded.push(t)});
+ assert.equal(jobs.length,3);jobs[0].done(jobs[0].texture);jobs[1].error();jobs[2].done(jobs[2].texture);
+ assert.equal(await pending,2);assert.deepEqual(uploaded,[jobs[0].texture,jobs[2].texture]);sky.dispose();
+});
+test('a stalled optional texture never traps the loader or uploads late during a flight',async()=>{
+ const {sky,jobs}=setup(),uploaded=[];assert.equal(await sky.preload({initTexture:t=>uploaded.push(t)},5),0);
+ for(const job of jobs)job.done(job.texture);assert.equal(uploaded.length,0);assert.equal([...sky.images.values()].some(i=>i.ready),false);sky.dispose();
+});

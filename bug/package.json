@@ -1,6 +1,6 @@
 {
   "name": "kebabstack-bug",
-  "version": "0.17.5",
+  "version": "0.19.0",
   "private": true,
   "type": "module",
   "description": "Ship the Bug: 2D and 3D modes with shared pilots and separate leaderboards.",
@@ -13,9 +13,11 @@
     "preview:backend": "node tools/preview-backend.mjs",
     "test:backend": "node tests/backend.integration.mjs",
     "test:modes:backend": "node tests/modes.backend.mjs",
-    "test:public:backend": "node tests/public-session.backend.mjs"
+    "test:public:backend": "node tests/public-session.backend.mjs",
+    "test:standalone:backend": "node tests/standalone.backend.mjs"
   },
   "dependencies": {
+    "@icp-sdk/auth": "10.0.1",
     "@icp-sdk/core": "6.1.0",
     "three": "0.185.1"
   },

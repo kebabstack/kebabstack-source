@@ -1,3 +1,4 @@
+import { gameReady, loadingFailed } from '../loading.js';
 import { MODE, mountModeSwitcher, updateModeSwitchers } from '../mode.js';
 import { registerGameTools } from './game-tools.js';
 import { OVERDRIVE_SECONDS } from '../overdrive.js';
@@ -75,30 +76,30 @@ function reset() {
   state.paused = false; state.saved = false; state.keys.clear(); state.touchFire = false;
   accumulator = 0; view.reset(state.run.day, state.run.seed);
   document.body.classList.remove('is-playing', 'night');
-  commander.reset(); community.reset(); notice = null;
+  commander.reset(); community.reset(); community.begin(state.run); notice = null;
   $('saveBtn').disabled = false; $('saveBtn').textContent = 'Save only on this device'; $('localSaveNote').textContent = '';
-  $('saveNote').textContent = 'Your choice, every run. Nothing is sent to a server.';
+  $('saveNote').textContent = 'Your result stays private until you choose Publish score.';
   $('dayLabel').textContent = new Date(state.run.day * 86400000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' }).toUpperCase() + ' / NEW ROUTE EVERY FLIGHT';
   updateHUD();
 }
 function actionStart() {
-  if (state.paused || hasDialog()) return;
+  if (community.authBusy || state.paused || hasDialog()) return;
 
   if (state.run.phase === 'ready') { beginCharge(state.run); tone(160, .12, 'triangle'); }
   else if (state.run.phase === 'flying') { if (!boost(state.run)) toast('OUT OF PROMPTS', 'Time to trust the trajectory.'); }
 }
 function actionEnd() {
-  if (state.paused || hasDialog()) { cancelCharge(state.run); return; }
+  if (community.authBusy || state.paused || hasDialog()) { cancelCharge(state.run); return; }
   if (launch(state.run)) { community.begin(state.run); document.body.classList.add('is-playing'); updateHUD(); }
 }
 function bindHold(element) {
   releaseHolds.push(bindPress(element, {
-    start: () => { if (state.paused || hasDialog()) return false; actionStart(); },
+    start: () => { if (community.authBusy || state.paused || hasDialog()) return false; actionStart(); },
     end: actionEnd, cancel: () => cancelCharge(state.run)
   }));
   // Keyboard/screen-reader activation without a hold still gives a useful throw.
   element.addEventListener('click', e => {
-    if (e.detail === 0 && !state.paused && !hasDialog()) {
+    if (e.detail === 0 && !community.authBusy && !state.paused && !hasDialog()) {
 
       if (state.run.phase === 'ready') { beginCharge(state.run); state.run.charge = .65; actionEnd(); }
       else if (state.run.phase === 'flying') boost(state.run);
@@ -107,11 +108,11 @@ function bindHold(element) {
 }
 bindHold($('actionBtn'));
 function shoot() {
-  if (state.paused || hasDialog()) return false;
+  if (community.authBusy || state.paused || hasDialog()) return false;
   return fire(state.run, view.objects);
 }
 releaseHolds.push(bindPress($('fireBtn'), {
-  start: () => { if (state.paused || hasDialog()) return false; state.touchFire = true; shoot(); },
+  start: () => { if (community.authBusy || state.paused || hasDialog()) return false; state.touchFire = true; shoot(); },
   end: () => { state.touchFire = false; }
 }));
 $('fireBtn').addEventListener('click', e => { if (e.detail === 0) shoot(); });
@@ -136,7 +137,7 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.isContentEditable) return;
   // Space still launches after using the angle slider; arrows keep editing its value.
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && !(e.target.id === 'angle' && e.code === 'Space')) return;
-  if (hasDialog()) return;
+  if (community.authBusy || hasDialog()) return;
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { spaceHeld = true; actionStart(); } }
   else if (['KeyF', 'KeyJ'].includes(e.code)) { e.preventDefault(); state.keys.add(e.code); if (!e.repeat) shoot(); }
   else if (e.code === 'KeyR' && !e.repeat) { e.preventDefault(); reset(); }
@@ -330,7 +331,7 @@ try {
   mountModeSwitcher({getRun:()=>state.run});
   $('version').textContent = 'v' + VERSION;
   reset(); view.update(state.run, .016);
-  document.body.classList.add('loaded');
+  gameReady();
   const unregisterTools=registerGameTools(document.modelContext,{read:()=>({phase:state.run.phase,score:scoreOf(state.run),distance:Math.floor(state.run.d),boosts:state.run.prompts,paused:state.paused}),restart:reset});
   window.addEventListener('pagehide',unregisterTools,{once:true});
   requestAnimationFrame(frame);
@@ -338,5 +339,5 @@ try {
 
 } catch (error) {
   console.error(error);
-  $('loadMessage').textContent = 'The 2D game could not start. Reload to try again.';
+  loadingFailed('The 2D game could not start. Try again.');
 }

@@ -3,7 +3,12 @@ import Text "mo:core/Text";
 import Set "mo:core/Set";
 import T "../types";
 module {
-  public let version = "0.17.0";
+  // Gameplay compatibility is independent of the application release number.
+  public let version = "arcade-2026-09-09";
+  public func compatible(v : Text) : Bool {
+    v == version or v == "moon-2026-09-30" or v == "0.16.0" or v == "0.16.1" or v == "0.17.0" or
+    v == "0.17.1" or v == "0.17.2" or v == "0.17.3" or v == "0.17.4" or v == "0.17.5"
+  };
   public let coinBonus = 50;
   public let maxProfiles = 20000;
   public let maxRuns = 5000;
@@ -14,7 +19,7 @@ module {
     true
   };
   public func validate(r : T.Run, s : T.Submission, now : Int) : ?Text {
-    if (s.version != version and s.version != "0.16.0" and s.version != "0.16.1") return ?"This flight uses an old game version. Reload and fly again.";
+    if (not compatible(s.version)) return ?"This flight uses incompatible game rules. Save it on this device, then reload before a new flight.";
     if (r.id != s.runId) return ?"This flight was replaced or already submitted.";
     if (now > r.startedAt + runTtl) return ?"Flight expired. Start a new run.";
     if (s.durationMs < 2000 or s.durationMs > 1_800_000) return ?"Flight duration is outside the arcade limits.";

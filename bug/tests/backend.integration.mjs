@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {PocketIc,PocketIcServer,createIdentity} from '@dfinity/pic';
 import {execFileSync} from 'node:child_process';
-import {SCORE_VERSION,VERSION} from '../src/physics.js';
+import {RULESET as SCORE_VERSION} from '../src/ruleset.js';
+import {APP_VERSION as VERSION} from '../src/app.js';
 import {fileURLToPath} from 'node:url';
 import {idlFactory} from '../src/generated/backend.did.js';
 const root=fileURLToPath(new URL('../',import.meta.url));

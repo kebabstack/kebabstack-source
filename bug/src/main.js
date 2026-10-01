@@ -1,4 +1,6 @@
+import { loadingProgress, loadingFailed, nextPaint, gameReady } from './loading.js';
 import { MODE, mountModeSwitcher, updateModeSwitchers } from './mode.js';
+import { isRedCandle } from './candle.js';
 import { OVERDRIVE_SECONDS } from './overdrive.js';
 import { PhoneSteering } from './phone-steering.js';
 import { bindPress, protectGameSurface } from './touch-controls.js';
@@ -6,7 +8,7 @@ import { pressureOf } from './challenge.js';
 import { Commander } from './commander.js';
 import { COIN_BONUS, scoreOf, burnRate, burnMood } from './scoring.js';
 import { Community } from './community.js';
-import { VERSION, STEP, ZONES, createRun, beginCharge, cancelCharge, launch, boost, stepRun, clamp, altitudeAt, zoneIndex, fire, findTarget, needsBoost } from './physics.js';
+import { VERSION, STEP, ZONES, createRun, beginCharge, cancelCharge, launch, boost, collect, stepRun, clamp, altitudeAt, zoneIndex, fire, findTarget, needsBoost } from './physics.js';
 import { POWERUPS } from './ecosystem.js';
 import { GameView } from './scene.js';
 
@@ -17,6 +19,10 @@ const storageKey = 'ship-the-bug-cyberspace-flights-s2';
 const newFlight = () => createRun(today(), crypto.getRandomValues(new Uint32Array(1))[0]);
 const state = { run: newFlight(), paused: false, keys: new Set(), touchSteer: 0, touchDirections: new Map(), touchFire: false, sound: false, saved: false, modalPause: false };
 let spaceHeld = false;
+const inspecting = new URL(location.href).searchParams.get('test') === '1';
+const startupAt = performance.now(), frameTimes = [];
+let startupMs = 0;
+let ready = false;
 let view, last = 0, accumulator = 0, hudTime = 0;
 const commander = new Commander();
 const community = new Community({ mode: MODE, showModal, closeModal, getRun: () => state.run, toast });
@@ -48,7 +54,7 @@ function toast(title, sub = '', duration = 2.2) {
 }
 function showModal(id) {
   const replacing = hasDialog();
-  // Hub sign-in may finish while the phone chooser is open. Never stack them.
+  // Profile setup may open while the phone chooser is open. Never stack them.
   if (id !== 'steeringDialog' && $('steeringDialog').open) closeModal('steeringDialog');
   if (!replacing) state.modalPause = state.paused;
   state.paused = true; clearHolds();
@@ -74,26 +80,26 @@ $('pauseDialog').addEventListener('cancel', e => { e.preventDefault(); resume();
 $('resumeBtn').addEventListener('click', resume);
 $('pauseBtn').addEventListener('click', pause);
 function reset() {
-  clearHolds(); phone.cancelEnable(); tilt.recenter(); state.modalPause = false;
+  frameTimes.length = 0; clearHolds(); phone.cancelEnable(); tilt.recenter(); state.modalPause = false;
   for (const d of document.querySelectorAll('dialog[open]')) d.close();
   state.run = newFlight(); state.run.angle = Number($('angle').value);
   state.paused = false; state.saved = false; state.keys.clear(); state.touchFire = false; state.touchSteer = 0; state.touchDirections.clear();
   accumulator = 0; view.reset(state.run.day, state.run.seed);
   document.body.classList.remove('is-playing', 'night');
-  commander.reset(); community.reset(); notice = null;
+  commander.reset(); community.reset(); community.begin(state.run); notice = null;
   $('saveBtn').disabled = false; $('saveBtn').textContent = 'Save only on this device'; $('localSaveNote').textContent = '';
-  $('saveNote').textContent = 'Your choice, every run. Nothing is sent to a server.';
+  $('saveNote').textContent = 'Your result stays private until you choose Publish score.';
   $('dayLabel').textContent = new Date(state.run.day * 86400000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' }).toUpperCase() + ' / NEW ROUTE EVERY FLIGHT';
   updateHUD();
 }
 function actionStart() {
-  if (state.paused || hasDialog()) return;
+  if (!ready || community.authBusy || state.paused || hasDialog()) return;
   if (phone.offer()) return;
   if (state.run.phase === 'ready') { beginCharge(state.run); tone(160, .12, 'triangle'); }
   else if (state.run.phase === 'flying') { if (!boost(state.run)) toast('OUT OF PROMPTS', 'Time to trust the trajectory.'); }
 }
 function actionEnd() {
-  if (state.paused || hasDialog()) { cancelCharge(state.run); return; }
+  if (!ready || community.authBusy || state.paused || hasDialog()) { cancelCharge(state.run); return; }
   if (launch(state.run)) { community.begin(state.run); document.body.classList.add('is-playing'); updateHUD(); }
 }
 function bindHold(element) {
@@ -103,7 +109,7 @@ function bindHold(element) {
   }));
   // Keyboard/screen-reader activation without a hold still gives a useful throw.
   element.addEventListener('click', e => {
-    if (e.detail === 0 && !state.paused && !hasDialog()) {
+    if (e.detail === 0 && ready && !community.authBusy && !state.paused && !hasDialog()) {
       if (phone.offer()) return;
       if (state.run.phase === 'ready') { beginCharge(state.run); state.run.charge = .65; actionEnd(); }
       else if (state.run.phase === 'flying') boost(state.run);
@@ -144,7 +150,7 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.isContentEditable) return;
   // Space still launches after using the angle slider; arrows keep editing its value.
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && !(e.target.id === 'angle' && e.code === 'Space')) return;
-  if (hasDialog()) return;
+  if (!ready || community.authBusy || hasDialog()) return;
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { spaceHeld = true; actionStart(); } }
   else if (['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'].includes(e.code)) { e.preventDefault(); state.keys.add(e.code); }
   else if (['KeyF', 'KeyJ'].includes(e.code)) { e.preventDefault(); state.keys.add(e.code); if (!e.repeat) shoot(); }
@@ -219,14 +225,14 @@ $('localTab').addEventListener('click', () => { community.local(); showLocalScor
 function finish() {
   const r = state.run;
   $('resultTitle').textContent = r.zone >= 9 ? 'Hello, mainnet.' : r.zone >= 3 ? 'Well, it shipped.' : 'A promising bug.';
-  $('resultQuip').textContent = 'Out of momentum. ' + (r.mineHits ? 'Red rings mark mines. Try a gap or one well-timed pulse.' : r.ghost.hits ? 'Try two quick pulses when Motoko circles in front.' : r.overheats > 1 ? 'Use shorter bursts so the blaster is ready when it matters.' : r.prompts ? 'You still had a boost. Save the next landing!' : 'A cleaner route or a lucky updraft could carry the next bug further.');
+  $('resultQuip').textContent = 'Out of momentum. ' + (r.mineHits ? 'Dodge red candles and ground mines, or clear them with a pulse.' : r.ghost.hits ? 'Try two quick pulses when Motoko circles in front.' : r.overheats > 1 ? 'Use shorter bursts so the blaster is ready when it matters.' : r.prompts ? 'You still had a boost. Save the next landing!' : 'A cleaner route or a lucky updraft could carry the next bug further.');
   $('resultScore').textContent = fmt(scoreOf(r));
   $('resultDistance').textContent = fmt(r.d) + ' m';
   $('resultBonus').textContent = `${fmt(r.d)} distance + ${r.coins} coins × ${COIN_BONUS} = ${fmt(scoreOf(r))} points`;
   void community.finish();
   $('resultZone').textContent = ZONES[r.zone].name;
   $('resultTime').textContent = Math.round(r.elapsed) + ' sec';
-  $('resultCombat').textContent = `${r.destroyed} firewalls patched · ${r.minesCleared} mines defused · ${r.ghost.kills} ghosts debugged · ${r.shotsFired} pulses fired · ${r.flow.activations} overdrives · ${r.flow.nearMisses} close calls · ${fmt(r.burnTotal)} K simulated cycles`;
+  $('resultCombat').textContent = `${r.destroyed + r.minesCleared} obstacles cleared · ${r.ghost.kills} ghosts debugged · ${r.shotsFired} pulses fired · ${r.flow.activations} overdrives (${r.flow.moonActivations} God Candles) · ${r.flow.nearMisses} close calls · ${fmt(r.burnTotal)} K simulated cycles`;
   $('resultSeals').replaceChildren();
   for (const kind of r.seals) {
     const badge = document.createElement('span'); badge.textContent = POWERUPS[kind]?.name || kind;
@@ -277,10 +283,15 @@ function updateHUD() {
   $('burnFill').style.width = Math.min(100, burnRate(r) / 1.8) + '%';
   $('burnMood').textContent = burnMood(r);
   const flow=r.flow,flowValue=flow.active>0?flow.active/OVERDRIVE_SECONDS*100:flow.charge;
-  $('flowLabel').textContent=flow.active>0?`OVERDRIVE ${Math.ceil(flow.active)}s`:flow.cooldown>0?'FLOW · RECHARGING':`FLOW ${flow.charge}%`;
+  $('flowLabel').textContent=flow.active>0?`${flow.godCandle?'GOD CANDLE':'OVERDRIVE'} ${Math.ceil(flow.active)}s`:flow.cooldown>0?'FLOW · RECHARGING':`FLOW ${flow.charge}%`;
   $('flowFill').style.width=flowValue+'%';$('flowMeter').setAttribute('aria-valuenow',String(Math.round(flowValue)));
-  $('flowMeter').setAttribute('aria-valuetext',flow.active>0?`Overdrive active for ${Math.ceil(flow.active)} seconds`:`${flow.charge} percent charged`);
+  $('flowMeter').setAttribute('aria-valuetext',flow.active>0?`${flow.godCandle?'God Candle':'Overdrive'} active for ${Math.ceil(flow.active)} seconds`:`${flow.charge} percent charged`);
   document.body.classList.toggle('overdrive-active',r.phase==='flying'&&flow.active>0);
+  document.body.classList.toggle('god-candle-active',r.phase==='flying'&&flow.active>0&&flow.godCandle);
+  const moon=flow.moon,remaining=Math.max(0,Math.ceil(moon.expiresAt-r.elapsed));
+  $('moonCombo').hidden=false;
+  $('moonCombo').textContent=flow.active>0&&flow.godCandle?'ICP TO THE MOON':flow.active>0||flow.cooldown>0?'MOON · RECHARGING':`MOON ${moon.coins}/3 COINS · ${moon.candle?1:0}/1 RED${remaining?' · '+remaining+'s':''}`;
+  $('moonCombo').setAttribute('aria-label',flow.active>0&&flow.godCandle?'ICP to the Moon boost active':flow.active>0||flow.cooldown>0?'Moon combination recharging':`God Candle combination: ${moon.coins} of 3 coins, ${moon.candle?1:0} of 1 red candle destroyed. ${remaining?remaining+' seconds left.':'Complete both within 6 seconds, in any order.'}`);
   $('flightWeather').textContent = r.phase === 'flying' ? r.wind.label : 'ZÜRICH';
   $('flightWeather').classList.toggle('incoming', r.phase === 'flying' && r.wind.warning);
   $('flightPressure').textContent = r.phase === 'flying' ? ['CRUISE', 'TURBULENT', 'REDLINE'][Math.min(2, Math.floor(pressureOf(r)))] : 'MAINNET';
@@ -289,7 +300,7 @@ function updateHUD() {
   const target = findTarget(r, view.objects);
   $('fireBtn').disabled = r.phase !== 'flying' || r.stillTime > 0;
   $('fireBtn').classList.toggle('locked', Boolean(target));
-  $('fireStatus').textContent = r.overheated ? 'COOLING…' : target?.kind === 'ghost' ? `GHOST · ${r.ghost.hp} HIT${r.ghost.hp > 1 ? 'S' : ''}` : target?.kind === 'mine' ? 'MINE · 1 HIT' : target ? `LOCK · ${(target.hp || 1) - (r.wallDamage.get(target.id) || 0)} HIT${(target.hp || 1) > 1 ? 'S' : ''}` : 'BURSTS > SPAM';
+  $('fireStatus').textContent = r.overheated ? 'COOLING…' : target?.kind === 'ghost' ? `GHOST · ${r.ghost.hp} HIT${r.ghost.hp > 1 ? 'S' : ''}` : target && isRedCandle(target) ? `RED · ${(target.hp || 1) - (r.wallDamage.get(target.id) || 0)} HIT${(target.hp || 1) > 1 ? 'S' : ''}` : target?.kind === 'mine' ? 'MINE · 1 HIT' : target ? `LOCK · ${(target.hp || 1) - (r.wallDamage.get(target.id) || 0)} HIT${(target.hp || 1) > 1 ? 'S' : ''}` : 'BURSTS > SPAM';
   $('fireBtn').classList.toggle('overheated', r.overheated);
   $('weaponHeat').style.width = Math.round(r.weaponHeat * 100) + '%';
   $('weaponMeter').setAttribute('aria-valuenow', String(Math.round(r.weaponHeat * 100)));
@@ -312,7 +323,7 @@ function processEvents() {
     } else if (e.kind === 'done') finish();
     else if (e.kind === 'bounce') tone(110, .09, 'triangle', .022, -60);
     else if (e.label) {
-      if(e.kind==='overdrive'){toast('OVERDRIVE','Clean flying. Full energy!',2);tone(220,.55,'sawtooth',.018,990);}
+      if(e.kind==='overdrive'){toast(e.label,e.sub,2.6);tone(e.godCandle?330:220,.55,'sawtooth',.018,990);}
       else if(e.kind==='near-miss'){toast('CLOSE CALL','+20 FLOW',1.1);tone(740,.16,'sine',.015,210);}
       else if (e.kind === 'boost' || e.kind === 'portal') tone(240, .35, 'sawtooth', .018, 800);
       else if (['destroy','ghost-destroy','mine-destroy'].includes(e.kind)) tone(180, .3, 'sawtooth', .025, -130);
@@ -335,6 +346,8 @@ function tick(dt) {
   processEvents();
 }
 function frame(time) {
+  view.adaptQuality?.(time - last, Boolean(last) && !document.hidden && !state.paused && !hasDialog());
+  if (inspecting && last && state.run.phase === 'flying' && !state.paused && !hasDialog()) { if (frameTimes.length < 3600) frameTimes.push(time - last); }
   const dt = Math.min(.06, Math.max(0, (time - (last || time)) / 1000)); last = time;
   if (!state.paused && !hasDialog() && !view.inspectGhost) {
     accumulator = Math.min(accumulator + dt, .1);
@@ -346,17 +359,21 @@ function frame(time) {
 
   requestAnimationFrame(frame);
 }
+async function initialize() {
 try {
+  loadingProgress(15, 'Building the launch scene…'); await nextPaint();
   view = new GameView($('world'), state.run.day, state.run.seed);
   const canvas = view.renderer.domElement;
   canvas.addEventListener('click', e => { if (e.pointerType === 'touch' || e.pointerType === 'pen' || (!e.pointerType && touchMedia.matches)) shoot(); });
-  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pause(); toast('GRAPHICS PAUSED', 'The graphics context was lost. Reload to reconnect.', 30); });
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pause(); ready = false; loadingFailed('Graphics were interrupted. Reload to reconnect, or play 2D Retro.'); });
   mountModeSwitcher({getRun:()=>state.run});
   $('version').textContent = 'v' + VERSION;
-  reset(); view.update(state.run, .016);
-  document.body.classList.add('loaded');
-  requestAnimationFrame(frame);
+  reset();
   void community.boot();
+  await view.warmUp(state.run, loadingProgress);
+  startupMs = Math.round(performance.now() - startupAt); ready = true; last = 0; accumulator = 0;
+  gameReady();
+  requestAnimationFrame(frame);
   // Opt-in, visible inspection controls. No test controls are present at the normal URL.
   if (new URL(location.href).searchParams.get('test') === '1') {
     const lab = document.createElement('aside'); lab.className = 'lab'; lab.setAttribute('aria-label', 'Scene inspection');
@@ -447,6 +464,19 @@ try {
       for(let i=0;i<90;i++){stepRun(r,STEP,0,[]);processEvents();view.update(r,STEP);}
       state.paused=true;updateHUD();
     });lab.append(driveTest);
+    const moonTest=document.createElement('button');moonTest.textContent='Test God Candle';
+    moonTest.addEventListener('click',()=>{
+      reset();const r=state.run;r.practice=true;r.phase='flying';r.d=1980;r.y=24;r.speed=60;r.zone=zoneIndex(r.d);
+      document.body.classList.add('is-playing');view.ensureWorld(r.d);
+      const candle=view.objects.find(o=>isRedCandle(o)&&o.d>r.d+35&&o.d<r.d+150);
+      r.x=candle.x;r.y=candle.y;
+      for(let i=0;i<90&&!r.hits.has(candle.id);i++){fire(r,[candle]);stepRun(r,STEP,0,[candle]);processEvents();}
+      // Visible inspection only, using real collection and projectile code. As
+      // with the existing lab scenes, practice flights cannot be published.
+      for(const coin of view.objects.filter(o=>o.kind==='cycle'&&o.d>r.d).slice(0,3))collect(r,coin);
+      for(let i=0;i<50;i++){stepRun(r,STEP,0,[]);processEvents();view.update(r,STEP);}
+      view.snapCamera=true;view.update(r,0);state.paused=true;updateHUD();
+    });lab.append(moonTest);
     for (const kind of ['Boost rescue', 'Final stop']) {
       const b=document.createElement('button');b.textContent='Test '+kind;
       b.addEventListener('click',()=>{
@@ -457,9 +487,12 @@ try {
       });lab.append(b);
     }
     const output = document.createElement('output'); output.id = 'renderStats'; lab.append(output); document.body.append(lab);
-    setInterval(() => { output.textContent = JSON.stringify({ ...view.stats(), shots: state.run.shotsFired, patched: state.run.destroyed, minesCleared: state.run.minesCleared, mineHits: state.run.mineHits, projectiles: state.run.projectiles.length, coins: state.run.coins, score: scoreOf(state.run), flow:state.run.flow.charge,overdrive:state.run.flow.active,overdrives:state.run.flow.activations,nearMisses:state.run.flow.nearMisses,ghost: state.run.ghost.phase, ghostHits: state.run.ghost.hits, ghostKills:state.run.ghost.kills, ghostHp:state.run.ghost.hp, heat:Math.round(state.run.weaponHeat*100), elapsed:Math.round(state.run.elapsed), settling:state.run.stillTime, commander:document.getElementById('commander').dataset.visible, ghostVisible:state.run.ghost.fade>.5, tilt:tilt.enabled, steer:steering(), x:Math.round(state.run.x*10)/10 }); }, 800);
+    setInterval(() => { output.textContent = JSON.stringify({ startupMs, frameSamples: frameTimes.length, frameP95: Math.round([...frameTimes].sort((a,b)=>a-b)[Math.floor(frameTimes.length*.95)] || 0), maxFrameMs: Math.round(Math.max(0,...frameTimes)), slowFrames: frameTimes.filter(n=>n>50).length, ...view.stats(), shots: state.run.shotsFired, patched: state.run.destroyed, minesCleared: state.run.minesCleared, mineHits: state.run.mineHits, projectiles: state.run.projectiles.length, coins: state.run.coins, score: scoreOf(state.run), flow:state.run.flow.charge,overdrive:state.run.flow.active,overdrives:state.run.flow.activations,godCandles:state.run.flow.moonActivations,nearMisses:state.run.flow.nearMisses,ghost: state.run.ghost.phase, ghostHits: state.run.ghost.hits, ghostKills:state.run.ghost.kills, ghostHp:state.run.ghost.hp, heat:Math.round(state.run.weaponHeat*100), elapsed:Math.round(state.run.elapsed), settling:state.run.stillTime, commander:document.getElementById('commander').dataset.visible, ghostVisible:state.run.ghost.fade>.5, tilt:tilt.enabled, steer:steering(), x:Math.round(state.run.x*10)/10 }); }, 800);
   }
 } catch (error) {
   console.error(error);
-  $('loadMessage').textContent = 'A WebGL 2 browser is needed for this flight. Try a current Chrome, Safari or Firefox with graphics acceleration enabled.';
+  loadingFailed('3D could not start. Try again with graphics acceleration enabled, or play 2D Retro.');
 }
+
+}
+void initialize();

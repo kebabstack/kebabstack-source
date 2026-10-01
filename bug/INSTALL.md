@@ -1,12 +1,52 @@
 # Install or upgrade Ship the Bug
 
-Version 0.17.0 refines controls and scenery in both modes. Desktop 3D controls use
-keyboard steering; phone tilt and buttons are unchanged. Include the new
-`dist/wake-path.js` when synchronizing assets. The astronaut, curved exhaust and
-route lighting are cosmetic: gameplay, scoreboards, pilots and stable state retain
-their existing rules and types. Unchanged 0.16.0 and 0.16.1 flight payloads remain
-accepted. Upgrade the existing unified Bug backend/frontend in place, retaining
-custom-domain metadata and both mode boards.
+Version 0.19.0 adds the 3D God Candle combination, replaces airborne hazards with
+red candle models and removes automatic lateral weather drift. Deploy backend and
+frontend together: 3D submits `moon-2026-09-30`, while 2D retains
+`arcade-2026-09-09`. Both and the explicitly listed legacy versions are accepted;
+release numbers are still not rules identifiers. Keep both boards, profiles,
+canisters and canonical origin in place. There is no stable-schema change or season
+reset. Historical 3D records reflect their original balance.
+
+Include `candle.js` and `candle-view.js` through the normal frontend build. The
+combo uses no additional textures and is included in shader preparation. Validate
+neutral steering across weather cycles, genuine shot/coin combos in either order,
+expiry, damage, cooldown, reduced motion and the unchanged 2D mode. Run the populated
+upgrade regression with the committed pre-standalone baseline as before; the new
+rules must be accepted without reintroducing the recurring version rejection.
+
+
+Version 0.18.0 makes player sign-in standalone: guest browser identity, an optional
+local profile and Internet Identity. The frontend needs only its backend ID; the
+`__HUB_URL__` placeholder remains for existing Kitchen recipe compatibility and is
+not used by the game. Fresh standalone installations need no `setHub`, directory,
+suite account or admin claim. Existing Kitchen-managed installations retain their
+Hub binding and protected legacy APIs; do not erase these as part of the update.
+
+Upgrade the existing backend and frontend together without replacing canisters,
+changing the public origin or reinstalling. Existing guest keys, verified legacy
+public profile associations, names, both boards and private archives are retained.
+Guest, legacy Hub and Internet Identity players are not merged by name. Internet
+Identity is origin-bound: publish/share one canonical URL and do not configure a
+shared derivation origin or transfer identities across aliases.
+
+The backend now validates the stable rules identifier `arcade-2026-09-09`, not the
+UI version. Explicitly compatible 0.16.0–0.17.5 submissions remain accepted. This
+fixes the observed 0.17.5 frontend / 0.17.0-rules rejection. Still-valid rejected
+flight tickets survive an upgrade; reload alone could not fix the old backend.
+That 0.18.0 compatibility fix made no balance change or stable-schema migration;
+0.19.0 changes the 3D mechanics described above.
+
+Include the new `loading.js`, `frame-budget.js`, `coin-instances.js`, `ruleset.js`, `player-session.js` and rebuilt
+`client-api.js`. Pinned `@icp-sdk/auth` 10.0.1 supplies Internet Identity. Its popup
+uses the official `id.ai` service; calls to the game use the normal authenticated
+ICP endpoint. Production uses the SDK trust anchor. The local preview writes its
+isolated replica key into ignored runtime configuration; never publish that file.
+3D starts after texture/shader preparation. Failed or slow background images fall
+back to the procedural sky; test this as well as the successful loading path.
+
+The entries below describe earlier upgrade behavior; 0.18.0 replaces the optional
+Hub player-login flow described there.
 
 Version 0.16.1 separates public player ownership from optional Hub sessions.
 It adds a bounded browser-to-public-profile map; existing profile/score/run maps
@@ -68,7 +108,7 @@ space scenery/icons. Season 2 stays in place; older records reflect the earlier 
 budget. The shared recipe includes the new tile art for fresh installs. On an existing
 Hub, replace the Bug tile picture explicitly: Kitchen preserves admin-selected icons.
 
-## Existing Kebapstack installation
+## Existing Kebabstack installation
 
 Update recipe **bug** in the Kitchen. This upgrades the existing backend, keeps its
 state, refreshes frontend assets and keeps the Hub tile and URL. Do not remove the
@@ -125,7 +165,7 @@ bound to the browser and origin where they were created; the old address stays u
 
 Use the repository's pinned tools (`npm ci` at root and in `bug/`). Keep `moc` 1.12.0.
 From `bug/`, run `mops install --locked`, `npm run build:backend`, `npm run build`,
-`npm test`, and `npm run test:backend`. The build checks the committed stable baseline
+`npm test`, and `npm run test:backend`. Run `mops check --fix` before building. The build checks the committed stable baseline
 before generating Candid/browser bindings. The default backend integration check
 seeds synthetic profiles and scores, verifies both modes and invalid submissions,
 and checks a populated restart. Historical migration cases require explicit
@@ -136,32 +176,44 @@ Set `KEBAB_MODES_BASELINE_VERSION=0.12.0` with a 0.12.0 Wasm to seed and
 verify both populated mode boards. It checks unchanged 3D records, shared names, separate boards, cross-mode ticket
 rejection, replay protection, scoped deletion and a repeated upgrade.
 
+Also build the committed 0.17.4/0.17.5 source separately and run:
+
+```sh
+KEBAB_STANDALONE_BASELINE_WASM=/absolute/path/to/baseline.wasm npm run test:standalone:backend
+icp build
+KEBAB_CANDIDATE_WASM="$PWD/.icp/cache/artifacts/backend" KEBAB_STANDALONE_BASELINE_WASM=/absolute/path/to/baseline.wasm npm run test:standalone:backend
+```
+
+This reproduces the old-version failure in both modes, upgrades populated state,
+retries the rejected tickets and checks independent signed players, anonymous/admin
+rejection and repeat upgrades. It also verifies the actual recipe-built executable.
+Keep the committed `.most` baseline unchanged until compatibility has passed.
+Browser review and its remaining limits are recorded in
+[the 0.18 review](../design/reviews/2026-09-30-bug-standalone.md).
+
 Commit source and generated `dist/` with placeholders, then build Kitchen recipes
 from that clean checkout with `python3 kitchen/tools/pack-recipes.py --build`.
 This packs both renderers and the shared backend under the existing `bug` recipe ID.
 
-## Controller CLI upgrade
+## Production rollout
 
-First inspect `Kitchen.listInstalled`, both canister statuses and `backend.info()`.
-Link those **existing** IDs using `icp canister link`, and take snapshots. Build and
-compare `backend/backend.most` with `backend/dist/backend.most` before installing.
-Deploy the backend with `--mode upgrade --wasm-memory-persistence keep`. For frontend
-assets retain `@dfinity/asset-canister@v2.2.1`; the newer static-site recipe is a
-different implementation and must not replace the installed asset canister.
+Follow [Kitchen's release workflow](../kitchen/INSTALL.md): publish a tested format-2
+bundle, then use `kitchen/tools/release.mjs update --app bug` and `verify`. Publish
+and deploy the identical stamped artifact. Preserve immutable packages, bootstrap,
+custom-domain and installation metadata. Do not bypass the release catalogue or
+restamp Wasm at deployment. Production rollout requires explicit authorization.
 
-Patch `BACKEND_CANISTER_ID` and `HUB_URL` in a disposable copy of `dist/app.js` before
-upload. Repository values remain `__BACKEND_CANISTER_ID__` and `__HUB_URL__`. Never
-commit live IDs. Use `--no-create` on deploy and verify the resulting public URL,
-backend version, global board and Hub tile after the upgrade.
+## Fresh installations
 
-## Fresh Kitchen installation
+For an independent game, deploy the backend and static frontend from `icp.yaml`,
+configure the backend placeholder in a disposable frontend copy and retain the
+repository placeholders. Use a stable HTTPS origin for Internet Identity. No Hub
+setup call or public first-visitor claim is needed. Public players cannot reset
+other players' scores or acquire administrative access.
 
-Install **Ship the Bug** in Kitchen. It supplies canister IDs, calls controller-only
-`setHub`, connects the identity/roles lanes, and creates the tile. Manual installs
-follow the other Kebapstack apps: deploy the two canisters, patch the frontend
-placeholders, call `setHub`, and connect the backend plus frontend tile in the Hub.
-There is no public first-visitor admin claim. Public guest profiles cannot change
-Hub settings or reset other players' scores.
+Kitchen may still manage the existing `bug` recipe and tile, including its legacy
+controller-only Hub binding. This is an operator deployment option, not a player
+login requirement. Keep `@dfinity/asset-canister@v2.2.1` for existing frontends.
 
 ### Tests from the public source snapshot
 
@@ -171,5 +223,5 @@ release without private Git history. Historical migrations are separate: provide
 (early public arcade), each containing `backend.wasm` and `backend.did`, to run
 those retained migration cases. Without them, they are explicitly skipped.
 `KEBAB_MODES_BASELINE_WASM` and `KEBAB_MODES_BASELINE_VERSION` enable a previous
-mode-aware release upgrade. Score payload compatibility follows `SCORE_VERSION`;
+mode-aware release upgrade. Score payload compatibility follows `RULESET` and `RULESET_3D`;
 cosmetic app version bumps do not change that protocol.

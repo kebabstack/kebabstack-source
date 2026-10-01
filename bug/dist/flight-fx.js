@@ -1,10 +1,13 @@
 import * as T from 'three';
 import { ascentAt, altitudeAt } from './physics.js';
+import { createCandle } from './candle-view.js';
+import { OVERDRIVE_SECONDS } from './overdrive.js';
 
 const MAX = 90;
 export class FlightFX {
   constructor(scene) {
     this.scene = scene; this.time = 0; this.history = []; this.boostUntil = 0; this.clock = 0;
+    this.godCandle=createCandle(true);this.godCandle.visible=false;scene.add(this.godCandle);
     this.ribbons = [];
     for (const color of ['#58e7ff', '#ed80ff']) {
       const geo = new T.BufferGeometry(), uv = [], indices = [];
@@ -13,9 +16,9 @@ export class FlightFX {
       for (let i = 0; i < MAX; i++) { uv.push(0, i / (MAX - 1), 1, i / (MAX - 1)); if (i < MAX - 1) { const a = i * 2; indices.push(a,a+1,a+2,a+1,a+3,a+2); } }
       geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); geo.setIndex(indices); geo.setDrawRange(0, 0);
       const material = new T.ShaderMaterial({ transparent: true, depthWrite: false, side: T.DoubleSide, blending: T.AdditiveBlending,
-        uniforms: { color: { value: new T.Color(color) } },
+        uniforms: { color: { value: new T.Color(color) }, coreColor: { value: new T.Color(2.2,2.2,2.2) } },
         vertexShader: 'attribute float power; varying vec2 tex;varying float energy;void main(){tex=uv;energy=power;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-        fragmentShader: 'varying vec2 tex;varying float energy;uniform vec3 color;void main(){float crossFade=pow(max(0.,1.-abs(tex.x*2.-1.)),1.5);float core=pow(crossFade,5.);vec3 light=mix(color*1.6,vec3(2.2),core*.75);gl_FragColor=vec4(light,crossFade*energy*.85);}' });
+        fragmentShader: 'varying vec2 tex;varying float energy;uniform vec3 color;uniform vec3 coreColor;void main(){float crossFade=pow(max(0.,1.-abs(tex.x*2.-1.)),1.5);float core=pow(crossFade,5.);vec3 light=mix(color*1.6,coreColor,core*.75);gl_FragColor=vec4(light,crossFade*energy*.85);}' });
       const mesh = new T.Mesh(geo, material); mesh.frustumCulled = false; scene.add(mesh); this.ribbons.push(mesh);
     }
     const boltGeometry = new T.CylinderGeometry(1, 1, 1, 6);
@@ -53,6 +56,7 @@ export class FlightFX {
   }
   reset() {
     this.history.length = 0; this.boostUntil = 0; this.clock = 0;
+    this.godCandle.visible=false;
     for (const r of this.ribbons) { r.visible = false; r.geometry.setDrawRange(0, 0); }
     for (const b of this.bolts) b.visible = false;
     for (const b of this.enemyBolts) b.visible = false;
@@ -67,7 +71,7 @@ export class FlightFX {
   event(e, run, reduced) {
     if (e.kind === 'boost' || e.kind === 'fusion' || e.kind === 'overdrive') {
       this.boostUntil = this.time + 2.2;
-      if (!reduced) this.wave(run.x, altitudeAt(run), run.d + 2, e.kind==='overdrive'?'#ffd783':'#70f2ff', .7);
+      if (!reduced) this.wave(run.x, altitudeAt(run), run.d + 2, e.godCandle?'#38ff93':e.kind==='overdrive'?'#ffd783':'#70f2ff', .7);
     }
     if (['destroy','ghost-destroy','mine-destroy','mine-hit'].includes(e.kind) && !reduced) this.wave(e.x, e.y + ascentAt(e.d), e.d, e.kind==='ghost-destroy'?'#ff79e5':'#ff946d', .55);
     if (['ghost-shot','ghost-hit'].includes(e.kind) && !reduced) this.wave(e.x,e.y+ascentAt(e.d),e.d,'#ff4cc8',e.kind==='ghost-hit'?.4:.22);
@@ -75,6 +79,14 @@ export class FlightFX {
   update(run, dt, reduced, target) {
     this.time += dt;
     const driving=run.flow.active>0;
+    const moon=driving&&run.flow.godCandle;
+    this.godCandle.visible=run.phase==='flying'&&moon;
+    if(this.godCandle.visible) {
+      const grow=reduced?1:Math.min(1,(OVERDRIVE_SECONDS-run.flow.active)/.28,run.flow.active/.22);
+      const height=1.5*Math.max(.04,grow);
+      this.godCandle.scale.set(1.5,height,1.5);
+      this.godCandle.position.set(run.x,altitudeAt(run)-4.6*height-1,-run.d+.8);
+    }
     const energy = driving?1.12:Math.max(0, Math.min(1, (this.boostUntil - this.time) / .6));
     if (run.phase === 'flying' && dt > 0) {
       this.clock += dt;
@@ -85,12 +97,13 @@ export class FlightFX {
     }
     this.history = this.history.filter(p => this.time - p.time < 1.45).slice(0, MAX);
     this.ribbons.forEach((mesh, side) => {
-      mesh.material.uniforms.color.value.set(driving?(side?'#ffae57':'#6effe9'):(side?'#ed80ff':'#58e7ff'));
+      mesh.material.uniforms.color.value.set(moon?(side?'#baffd6':'#25f58c'):driving?(side?'#ffae57':'#6effe9'):(side?'#ed80ff':'#58e7ff'));
+      mesh.material.uniforms.coreColor.value.setRGB(...(moon?[.18,1.35,.45]:[2.2,2.2,2.2]));
       mesh.visible = run.phase === 'flying' && this.history.length > 1;
       const position = mesh.geometry.attributes.position, power = mesh.geometry.attributes.power;
       this.history.forEach((p, i) => {
         const age = this.time - p.time, taper = Math.max(0, 1 - age / 1.45), sign = side ? 1 : -1;
-        const width = (.09 + p.energy * (reduced ? .35 : .85)) * taper;
+        const width = (.09 + p.energy * (reduced ? .35 : moon ? .48 : .85)) * taper;
         const x = p.x + sign * (1.12 + (reduced ? 0 : age * p.energy * 2.1));
         const y = p.y + (reduced ? 0 : Math.sin(age * 8 + side) * age * p.energy * .65);
         position.setXYZ(i * 2, x - width, y, p.z); position.setXYZ(i * 2 + 1, x + width, y, p.z);

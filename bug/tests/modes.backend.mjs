@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';import {PocketIc,PocketIcServer,createIdentity} from '@dfinity/pic';import {idlFactory} from '../src/generated/backend.did.js';
-import {SCORE_VERSION,VERSION} from '../src/physics.js';
+import {RULESET as SCORE_VERSION} from '../src/ruleset.js';
+import {APP_VERSION as VERSION} from '../src/app.js';
 const baselineVersion=process.env.KEBAB_MODES_BASELINE_VERSION||(process.env.KEBAB_MODES_BASELINE_WASM?'0.11.0':SCORE_VERSION);
 const wasm=new URL('../backend/dist/backend.wasm',import.meta.url).pathname,baseline=process.env.KEBAB_MODES_BASELINE_WASM||wasm;
 if(!process.env.KEBAB_MODES_BASELINE_WASM)console.log('Current release: fresh setup and populated restart; historical upgrade requires KEBAB_MODES_BASELINE_WASM.');

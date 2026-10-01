@@ -109,7 +109,7 @@ export function createStellarSky(scene) {
     geo.setAttribute('position', new T.BufferAttribute(p, 3)); geo.setAttribute('color', new T.Float32BufferAttribute(c, 3));
     const line = new T.Line(geo, new T.LineBasicMaterial({ vertexColors: true, transparent: true, blending: T.AdditiveBlending, depthWrite: false, fog: false })); line.frustumCulled = false; scene.add(line); comets.push(line);
   }
-  return { update(camera, distance, clock, reduced = false) {
+  return { preload: renderer => webb.preload(renderer), update(camera, distance, clock, reduced = false) {
     phase.value = clamp((distance - 150) / 580, 0, 1); time.value = reduced ? 0 : clock;
     dome.position.copy(camera.position); stars.position.copy(camera.position); bodies.position.copy(camera.position);
     bodies.visible = phase.value > .01;

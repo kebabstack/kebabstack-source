@@ -2,10 +2,9 @@ import { pickupPower, pressureOf, weatherAt } from './challenge.js';
 import { newGhost, stepGhost, ghostTarget, hitGhost } from './ghost.js';
 import { burnRate } from './scoring.js';
 import { makeMines } from './mines.js';
-import { newFlow, flowCoin, breakFlow, flowNearMiss, stepFlow } from './overdrive.js';
-export const VERSION = '0.17.5';
-// Payload compatibility follows gameplay rules, not cosmetic app releases.
-export const SCORE_VERSION = '0.17.0';
+import { newFlow, flowCoin, flowCandle, breakFlow, flowNearMiss, stepFlow } from './overdrive.js';
+import { isRedCandle, candleHit } from './candle.js';
+export const VERSION = '0.19.0';
 export const PROMPT_BOOSTS = 5;
 export const STEP = 1 / 120;
 export const START_HEIGHT = 21.2;
@@ -44,7 +43,7 @@ export function seededRandom(seed) {
 }
 export function createRun(day = Math.floor(Date.now() / 86400000), seed = day) {
   return { phase: 'ready', day, seed, chargeTime: 0, weaponHeat: 0, overheated: false, overheats: 0, wind: weatherAt(seed, 0), wallDamage: new Map(), x: 0, y: START_HEIGHT, d: 0, vx: 0, vy: 0, speed: 0,
-    charge: 0, angle: 38, elapsed: 0, prompts: PROMPT_BOOSTS, cycles: 0, coins: 0, coinIds: [], burnTotal: 0, ghost: newGhost(), flow: newFlow(), combo: 0,
+    charge: 0, angle: 38, elapsed: 0, prompts: PROMPT_BOOSTS, cycles: 0, coins: 0, coinIds: [], burnTotal: 0, ghost: newGhost(), flow: newFlow(true), combo: 0,
     bounces: 0, highest: START_HEIGHT, zone: 0, stillTime: 0, effects: [], hits: new Set(), minesCleared: 0, mineHits: 0, mineWarning: false,
     trail: [], trailClock: 0, boostTime: 0, hitTime: 0, shield: 0, magnetTime: 0, anchor: 0, seals: new Set(), projectiles: [], shotCooldown: 0, shotsFired: 0, destroyed: 0 };
 }
@@ -85,6 +84,7 @@ export function segmentDistanceSq(a, b, point) {
 export const SHOT_INTERVAL = .22;
 function objectHit(a, b, obj, margin, world = false) {
   const point = {x:obj.x, y:obj.y + (world ? ascentAt(obj.d) : 0), d:obj.d};
+  if (isRedCandle(obj)) return candleHit(a,b,point,margin);
   const reach = obj.radius + margin;
   // Mines are broad, low hulls. Flying clearly above one must be a real escape,
   // not a hit against an invisible sphere much taller than the visible model.
@@ -158,12 +158,14 @@ export function stepProjectiles(run, dt, objects) {
       if (hit.kind === 'ghost') hitGhost(run);
       else if (hit.kind === 'mine') {
         run.hits.add(hit.id); run.minesCleared++; run.cycles += 15;
-        run.effects.push({ kind: 'mine-destroy', id: hit.id, x: hit.x, y: hit.y, d: hit.d, label: 'EXPLOIT DEFUSED', sub: '+15 K simulated cycles. One less nasty surprise.' });
+        if(isRedCandle(hit)) flowCandle(run);
+        run.effects.push({ kind: 'mine-destroy', id: hit.id, x: hit.x, y: hit.y, d: hit.d, label: isRedCandle(hit)?'RED CANDLE CLEARED':'EXPLOIT DEFUSED', sub: '+15 K simulated cycles. One less nasty surprise.' });
       } else {
         const damage = (run.wallDamage.get(hit.id) || 0) + 1; run.wallDamage.set(hit.id, damage);
         if (damage >= (hit.hp || 1)) {
           run.hits.add(hit.id); run.destroyed++; run.cycles += 25;
-          run.effects.push({ kind: 'destroy', id: hit.id, x: hit.x, y: hit.y, d: hit.d, label: 'FIREWALL PATCHED', sub: '+25 K simulated cycles. Corridor clear.' });
+          flowCandle(run);
+          run.effects.push({ kind: 'destroy', id: hit.id, x: hit.x, y: hit.y, d: hit.d, label: 'RED CANDLE CLEARED', sub: '+25 K simulated cycles. Corridor clear.' });
         } else run.effects.push({ kind: 'wall-damage', id: hit.id, x: hit.x, y: hit.y, d: hit.d });
       }
     }
@@ -212,8 +214,8 @@ export function collect(run, obj) {
     } else {
       breakFlow(run);
       run.speed *= obj.kind === 'mine' ? .6 : .55; run.vy = Math.min(2, run.vy); run.combo = 0; run.hitTime = 0.4;
-      if (obj.kind === 'mine') { run.mineHits++; run.effects.push({ kind: 'mine-hit', x: obj.x, y: obj.y, d: obj.d, label: 'EXPLOIT MINE', sub: '40% momentum lost. Find the gap or fire one pulse.' }); }
-      else run.effects.push({ kind: 'hazard', label: 'FIREWALL', sub: 'Have you tried opening port 443?' });
+      if (obj.kind === 'mine') { run.mineHits++; run.effects.push({ kind: 'mine-hit', x: obj.x, y: obj.y, d: obj.d, label: isRedCandle(obj)?'RED CANDLE':'EXPLOIT MINE', sub: '40% momentum lost. Find the gap or fire one pulse.' }); }
+      else run.effects.push({ kind: 'hazard', label: 'RED CANDLE', sub: 'Bearish. Dodge or clear it with your blaster.' });
     }
   }
   run.effects.push({ kind: 'collect', id: obj.id, type: obj.kind, x: obj.x, y: obj.y, d: obj.d });
@@ -227,7 +229,10 @@ export function stepRun(run, dt, steering = 0, objects = []) {
   run.shotCooldown = Math.max(0, run.shotCooldown - dt);
   run.weaponHeat = Math.max(0, run.weaponHeat - (run.overheated ? .34 : .26) * dt);
   if (run.overheated && run.weaponHeat <= .16) run.overheated = false;
-  run.wind = weatherAt(run.seed, run.elapsed);
+  const weather = weatherAt(run.seed, run.elapsed);
+  // Sideways motion belongs to the player. Keep the legacy weather sequence for
+  // other modes, but make crosswind intervals calm in 3D (including their label).
+  run.wind = weather.kind === 'crosswind' ? {kind:'calm',label:'CLEAR AIR',x:0,forward:0,lift:0,warning:false} : weather;
   const pressure = pressureOf(run);
   run.boostTime = Math.max(0, run.boostTime - dt);
   run.hitTime = Math.max(0, run.hitTime - dt);
@@ -236,7 +241,7 @@ export function stepRun(run, dt, steering = 0, objects = []) {
   // position. Wind and held steering cannot stretch this into a sideways crawl.
   if (run.stillTime > 0) { run.burnTotal += burnRate(run) * dt; settle(run, dt); return; }
   const before = { x: run.x, y: run.y, d: run.d };
-  run.vx += (clamp(steering, -1, 1) * 24 + run.wind.x - run.vx) * (1 - Math.exp(-4.5 * dt));
+  run.vx += (clamp(steering, -1, 1) * 24 - run.vx) * (1 - Math.exp(-4.5 * dt));
   run.x = clamp(run.x + run.vx * dt, -32, 32);
   const drive=run.flow.active>0?pickupPower(run):0;
   run.vy -= (GRAVITY - run.wind.lift - drive*2) * dt;
@@ -264,7 +269,7 @@ export function stepRun(run, dt, steering = 0, objects = []) {
   for (const obj of objects) {
     const reach = obj.kind === 'cycle' && run.magnetTime > 0 ? 18 : obj.radius + 1.25;
     if (run.hits.has(obj.id) || obj.d < before.d - reach || obj.d > run.d + reach) continue;
-    if (obj.kind === 'mine' ? objectHit(before, run, obj, 1.25) : segmentDistanceSq(before, run, obj) <= reach ** 2) collect(run, obj);
+    if (obj.kind === 'cycle' && run.magnetTime > 0 ? segmentDistanceSq(before, run, obj) <= reach ** 2 : objectHit(before, run, obj, 1.25)) collect(run, obj);
   }
   stepGhost(run, dt, before);
   // Track the near edge, but award only after the whole hazard has been passed.

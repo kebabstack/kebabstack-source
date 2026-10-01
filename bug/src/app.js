@@ -1,6 +1,3 @@
 export const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
 export const HUB_URL = "__HUB_URL__";
-export const APP_VERSION = "0.17.5";
-import { mountTopbar, topbarIdlFactory } from './hub-client.js';
-export { topbarIdlFactory };
-export function mountSuite(el, options) { return mountTopbar(el, options); }
+export const APP_VERSION = "0.19.0";

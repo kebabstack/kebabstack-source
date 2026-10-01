@@ -54,7 +54,7 @@ chosen operators, jurisdictions, controllers and external data flows.
 | [SDK](sdk/README.md) | Motoko and browser contracts for another app | alpha |
 | [Forms](forms/README.md) | Form builder with anonymous public links; review pipeline (received → in review → accepted/declined) with ratings, assignees, notes, insights and CSV; sharing, import, 90-day trash | alpha |
 | [Trust](trust/README.md) | Device posture from a read-only osquery agent: enrolment, checks and scores, per-person view, plain-language questions; owners from Assets | alpha |
-| [Bug](bug/README.md) | Ship the Bug — 2D/3D switch, shared profiles, public play, optional Hub sign-in and separate opt-in leaderboards | alpha |
+| [Bug](bug/README.md) | Ship the Bug — 2D/3D switch, shared profiles, guest play, optional local names or Internet Identity and separate opt-in leaderboards | alpha |
 | [Contracts](contracts/README.md) | Upload → AI review → SaaS overview; owners, seats, renewals, scoped license keys and 90-day reminders; USD/CHF/EUR costs and management reports without currency conversion; email relay configured separately | alpha |
 | [kebab-mcp](kebab-mcp/README.md) | Your apps from your AI assistant: an MCP server that signs into every app as the person through the hub (one-time code → personal token, live Candid, curated tools) | alpha |
 

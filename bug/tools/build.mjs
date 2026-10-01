@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 await mkdir(new URL('dist/vendor/', root), { recursive: true });
-for (const name of ['entry.js', 'mode.js', 'modes.css', 'index.html', 'style.css', 'main.js', 'physics.js', 'scene.js', 'zurich.js', 'zurich-traffic.js', 'arcade.css', 'launch-guide.js', 'cosmos.js', 'stellar.js', 'webb-backdrop.js', 'event-horizon.js', 'celestial-crew.js', 'overdrive.js', 'flight-fx.js', 'ghost.js', 'dogfight.js', 'tilt.js', 'phone-steering.js', 'touch-controls.js', 'challenge.js', 'ghost-view.js', 'wake-path.js', 'mines.js', 'mine-view.js', 'scoring.js', 'result-board.js', 'commander.js', 'community.js', 'ecosystem.js', 'favicon.svg', 'app.js']) {
+for (const name of ['candle.js', 'candle-view.js', 'coin-instances.js', 'frame-budget.js', 'loading.js', 'ruleset.js', 'player-session.js', 'entry.js', 'mode.js', 'modes.css', 'index.html', 'style.css', 'main.js', 'physics.js', 'scene.js', 'zurich.js', 'zurich-traffic.js', 'arcade.css', 'launch-guide.js', 'cosmos.js', 'stellar.js', 'webb-backdrop.js', 'event-horizon.js', 'celestial-crew.js', 'overdrive.js', 'flight-fx.js', 'ghost.js', 'dogfight.js', 'tilt.js', 'phone-steering.js', 'touch-controls.js', 'challenge.js', 'ghost-view.js', 'wake-path.js', 'mines.js', 'mine-view.js', 'scoring.js', 'result-board.js', 'commander.js', 'community.js', 'ecosystem.js', 'favicon.svg', 'app.js']) {
   await cp(new URL('src/' + name, root), new URL('dist/' + name, root));
 }
 for (const name of ['three.module.js', 'three.core.js']) await cp(new URL('node_modules/three/build/' + name, root), new URL('dist/vendor/' + name, root));

@@ -1,8 +1,13 @@
 import { execFileSync } from 'node:child_process';
+import { HttpAgent } from '@icp-sdk/core/agent';
 import { readFileSync, writeFileSync } from 'node:fs';
 const network = JSON.parse(execFileSync('icp', ['network','status','--json'], { encoding:'utf8' }));
 const ids = JSON.parse(readFileSync('.icp/cache/mappings/local.ids.json','utf8'));
 const backend = ids.backend;
 if (typeof backend !== 'string' || !network.api_url) throw new Error('Deploy the local backend first.');
-writeFileSync('.preview-backend.json', JSON.stringify({ backend, host: network.api_url }, null, 2)+'\n');
+const url = new URL(network.api_url);
+if (!['localhost','127.0.0.1','[::1]'].includes(url.hostname)) throw new Error('Local preview requires a loopback replica.');
+const agent = await HttpAgent.create({host:url.href});
+const status = await agent.status();
+writeFileSync('.preview-backend.json', JSON.stringify({ backend, host: network.api_url, rootKey: [...new Uint8Array(status.root_key)] }, null, 2)+'\n');
 console.log('Preview connected to local canister ' + backend + ' via ' + network.api_url);
