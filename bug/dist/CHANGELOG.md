@@ -1,5 +1,13 @@
 # Changelog — kebab-stack bug (Ship the Bug)
 
+## [0.20.1] — 2026-10-01
+
+- Release held steering/fire/charge controls when the pointer is released outside their button, including failed pointer capture. Returning with an unpressed mouse cancels a missed release; merely moving or parking the mouse never steers. Preserve independent touch pointers and cancel interrupted launches safely.
+- Fix the reproduced whole-game fade when Overdrive or God Candle starts: scope the surge overlay style to the overlay element, so the temporary body state no longer makes the entire game transparent for 900 ms.
+- Replace six undefined reversed-edge GLSL fades in the flight pass, floor and smoke with equivalent ordered-edge fades. If a postprocessing effect produces invalid pixels, retain the underlying scene instead of propagating a black frame.
+- Fit the flight HUD, all three statistics and an accessible pause control in two rows at narrow widths. Restore the 2D sound toggle on phones and make room for it in the header.
+- Keep the 0.20 presentation, physics, score/course generation, publication rules, seasons and backend contract. The backend changes only its build version; deploy as an upgrade of the existing canisters and origin.
+
 ## [0.20.0] — 2026-10-01
 
 Presentation release: same flight rules, same boards, same publication rules IDs (`moon-2026-09-30` / `arcade-2026-09-09`). Nothing in this release changes physics, scoring, course generation or the backend contract.

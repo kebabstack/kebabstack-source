@@ -3,9 +3,10 @@
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical product mark and shared foundations, with the documented immersive-game visual exception. The game has its own guest/Internet Identity controls and no suite account bar.
 
 Launch a ladybug from DFINITY's Zurich rooftop into the Internet Computer universe.
-Version 0.20.0 offers **3D Immersive** and **2D Retro** as a standalone game. 0.20 is a
+Version 0.20.1 offers **3D Immersive** and **2D Retro** as a standalone game. 0.20 is a
 presentation release (rendering, feel, audio, typography); flight rules, boards and
 publication rules are unchanged from 0.19. Existing installations and their game URL are retained.
+The 0.20.1 follow-up repairs the whole-page God Candle/Overdrive fade, released pointer controls, portable shader fades and narrow-screen HUD/sound controls. It keeps the same flight balance.
 Choose a mode before launch or after a flight; your preference is remembered on this device.
 Both modes use the same selected player, optional local callsign and Internet Identity sign-in.
 3D keeps Season 2 and its Early flights archive; 2D has its own Season 1 board.

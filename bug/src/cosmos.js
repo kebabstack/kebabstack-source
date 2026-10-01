@@ -37,10 +37,10 @@ export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
       void main(){
         float along = -wp.z, across = wp.x;
         vec2 cell = vec2(fract(across / 9.25 + .5), fract(along / 10.));
-        float gx = smoothstep(.045, 0., abs(cell.x - .5)) , gz = smoothstep(.04, 0., abs(cell.y - .5));
+        float gx = 1. - smoothstep(0., .045, abs(cell.x - .5)), gz = 1. - smoothstep(0., .04, abs(cell.y - .5));
         float grid = max(gx, gz) * .55;
         float pulse = smoothstep(.985, 1., fract(along / 240. - clock * .12)) * (1. - smoothstep(0., 30., abs(across)) * .6);
-        float lane = smoothstep(3., 0., abs(abs(across) - 18.5)) * .35 + smoothstep(2., 0., abs(across)) * .25;
+        float lane = (1. - smoothstep(0., 3., abs(abs(across) - 18.5))) * .35 + (1. - smoothstep(0., 2., abs(across))) * .25;
         vec3 base = vec3(.055, .07, .15);
         vec3 color = base + tint * (grid * .35 + lane * .5 + pulse * 1.6);
         gl_FragColor = vec4(color, .92);

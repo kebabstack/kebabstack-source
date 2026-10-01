@@ -34,7 +34,7 @@ const smokeFragment = `
   void main() {
     if (alpha <= 0.) discard;
     vec2 q = gl_PointCoord - .5; float r = length(q) * 2.;
-    float puff = smoothstep(1., .15, r);
+    float puff = 1. - smoothstep(.15, 1., r);
     gl_FragColor = vec4(color, puff * alpha * .55);
   }`;
 

@@ -297,6 +297,7 @@ export class GameView {
     // would paint over undefined memory and flicker black.
     const samples = this.renderer.capabilities.isWebGL2 ? Math.min(4, this.renderer.capabilities.maxSamples || 0) : 0;
     this.sceneTarget = new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples, depthBuffer: true, stencilBuffer: false });
+    this.post.pass.uniforms.sceneTexture.value = this.sceneTarget.texture;
     this.composer = new EffectComposer(this.renderer);
     this.scenePass = new TexturePass(this.sceneTarget.texture);
     // Copy with a guard: a single NaN or infinite texel (an extrapolated multisample at a
@@ -635,6 +636,7 @@ export class GameView {
       const samples = on ? (this.renderer.capabilities.isWebGL2 ? Math.min(4, this.renderer.capabilities.maxSamples || 0) : 0) : 0;
       this.sceneTarget.dispose();
       this.sceneTarget = new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples, depthBuffer: true, stencilBuffer: false });
+      this.post.pass.uniforms.sceneTexture.value = this.sceneTarget.texture;
       this.scenePass.map = this.sceneTarget.texture; this.resizeTargets();
     }
     return keys.map((k, i) => `${(i + 1) % 10}:${k}=${this.debug[k] ? 'on' : 'OFF'}`).join(' ');

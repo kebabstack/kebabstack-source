@@ -8,6 +8,7 @@ import { ShaderPass } from './vendor/addons/postprocessing/ShaderPass.js';
 export const FlightShader = {
   uniforms: {
     tDiffuse: { value: null },
+    sceneTexture: { value: null }, // unprocessed frame if an effect produces invalid pixels
     streak: { value: 0 },      // 0..1 radial blur strength
     aberration: { value: 0 },  // 0..1 channel split
     vignette: { value: .22 },
@@ -17,7 +18,7 @@ export const FlightShader = {
   },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float streak; uniform float aberration; uniform float vignette; uniform vec4 flash; uniform vec2 center; uniform float clock;
+    uniform sampler2D tDiffuse; uniform sampler2D sceneTexture; uniform float streak; uniform float aberration; uniform float vignette; uniform vec4 flash; uniform vec2 center; uniform float clock;
     varying vec2 vUv;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
@@ -39,9 +40,13 @@ export const FlightShader = {
         color.r = mix(color.r, texture2D(tDiffuse, vUv - shift).r, .85);
         color.b = mix(color.b, texture2D(tDiffuse, vUv + shift).b, .85);
       }
-      float v = smoothstep(.95, .25, dist * (1. + vignette * .4));
+      // Reversed smoothstep edges are undefined on some GPU drivers.
+      float v = 1. - smoothstep(.25, .95, dist * (1. + vignette * .4));
       color *= mix(1. - vignette, 1., v);
       color = mix(color, flash.rgb, flash.a);
+      // Keep the underlying flight visible if postprocessing produces NaN/Inf.
+      if (any(isnan(color)) || any(isinf(color))) color = texture2D(sceneTexture, vUv).rgb;
+      color = clamp(color, 0., 4096.);
       gl_FragColor = vec4(color, 1.);
     }`
 };

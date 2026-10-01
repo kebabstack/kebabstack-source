@@ -78,6 +78,8 @@ test('held arrow and fire have independent pointer lifetimes and cancel without 
   r.send(r.left,'pointerdown',1);r.send(r.fire,'pointerdown',2);
   assert.equal(steer,-1); assert.equal(firing,true);
   r.send(r.left,'pointerup',2);assert.equal(steer,-1);
+  assert.equal(firing,false,'pointer 2 releases fire even when its up targets the other button');
+  r.send(r.fire,'pointerdown',2);
   r.send(r.left,'pointercancel',1);assert.equal(steer,0);assert.equal(firing,true);
   r.send(r.left,'lostpointercapture',1);assert.equal(ends,1);
   r.w.dispatchEvent(new r.w.Event('blur')); assert.equal(firing,false);
@@ -88,6 +90,23 @@ test('cancelled launch never triggers release/launch; reset allows the next touc
   const reset=bindPress(r.left,{start:()=>{},end:()=>launches++,cancel:()=>cancels++},r.w);
   r.send(r.left,'pointerdown');reset();r.send(r.left,'pointerup');assert.equal(launches,0);assert.equal(cancels,1);
   r.send(r.left,'pointerdown',2);r.send(r.left,'pointerup',2);assert.equal(launches,1);
+});
+test('release outside a button clears steering even when pointer capture is unavailable', () => {
+  const r=controls(); let steer=0;
+  r.left.setPointerCapture=()=>{throw Error('capture unavailable');};
+  bindPress(r.left,{start:()=>{steer=-1;},end:()=>{steer=0;}},r.w);
+  r.send(r.left,'pointerdown',7);assert.equal(steer,-1);
+  r.send(r.w,'pointerup',8);assert.equal(steer,-1,'another pointer must not release this hold');
+  r.send(r.w,'pointerup',7);assert.equal(steer,0,'release outside cannot leave a latched arrow');
+});
+test('returning with an unpressed mouse cancels a missed release without launching or steering', () => {
+  const r=controls(); let steer=0,launches=0;
+  bindPress(r.left,{start:()=>{steer=1;},end:()=>{steer=0;launches++;},cancel:()=>{steer=0;}},r.w);
+  const move=buttons=>{const e=new r.w.Event('pointermove',{bubbles:true});Object.assign(e,{pointerId:1,pointerType:'mouse',buttons});r.w.dispatchEvent(e);};
+  move(0);assert.equal(steer,0,'hover alone never steers');
+  r.send(r.left,'pointerdown');move(1);assert.equal(steer,1,'an actual held button remains active');
+  move(0);assert.equal(steer,0);assert.equal(launches,0,'a cancelled gesture must not launch');
+  r.send(r.left,'pointerdown',2);r.send(r.left,'pointerup',2);assert.equal(launches,1,'the next normal press still works');
 });
 test('touch defaults and game callouts are suppressed while dialog fields stay editable', () => {
   const r=controls(); protectGameSurface(r.doc.querySelector('main'));bindPress(r.left,{start:()=>{}},r.w);

@@ -17,6 +17,13 @@ export function bindPress(element, { start, end = () => {}, cancel = end }, host
   });
   element.addEventListener('pointerup', event => release(event));
   for (const type of ['pointercancel', 'lostpointercapture']) element.addEventListener(type, event => release(event, true));
+  // Capture can fail or be interrupted. A release elsewhere must still clear
+  // this pointer's hold; returning with no mouse button down cancels a lost up.
+  host.addEventListener('pointerup', event => release(event));
+  host.addEventListener('pointercancel', event => release(event, true));
+  host.addEventListener('pointermove', event => {
+    if (event.pointerType === 'mouse' && event.buttons === 0) release(event, true);
+  });
   host.addEventListener('blur', () => release(null, true));
   element.ownerDocument.addEventListener('visibilitychange', () => { if (element.ownerDocument.hidden) release(null, true); });
   // WebKit's long-press recognizer also needs the touch default suppressed.

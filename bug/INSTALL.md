@@ -1,5 +1,9 @@
 # Install or upgrade Ship the Bug
 
+Version 0.20.1 fixes the boost fade, input release, shader portability and narrow
+layouts. Upgrade recipe **bug** in place; preserve both canisters, origin, boards and profiles. No
+schema or ruleset change is required. The backend differs only in BUILD_VERSION.
+
 Version 0.19.0 adds the 3D God Candle combination, replaces airborne hazards with
 red candle models and removes automatic lateral weather drift. Deploy backend and
 frontend together: 3D submits `moon-2026-09-30`, while 2D retains
