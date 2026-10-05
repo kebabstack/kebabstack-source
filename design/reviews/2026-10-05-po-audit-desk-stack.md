@@ -231,7 +231,7 @@ Personen-ID-Migration ist in Desk, Assets, Trust, Watch, Forms umgesetzt. **Cont
 
 ## 5. Repo- und Prozesshygiene
 
-- 24 `kebabstack-*`-Ordner unter `~/Documents/ChatGPT/` (Codex-Feature-Clones). `~/Documents/ChatGPT/kebabstack` (Produktions-Arbeitskopie, Branch `codex/desk-oncall-foundation`) hat **45 geänderte und 49 ungetrackte Dateien** seit 18./22. September; der Inhalt (On-call) ist inzwischen in `main` enthalten, die Kopie ist aber nicht aufgeräumt.
+- Rund zwei Dutzend lokale Feature-Clones des Repos existieren parallel; die ältere Produktions-Arbeitskopie trägt 45 geänderte und 49 ungetrackte Dateien vom 18./22. September. Der Inhalt (On-call) ist inzwischen in `main` enthalten, die Kopie ist aber nicht aufgeräumt.
 - Lokales `main` lag 3 Commits hinter `origin/main` (heute per fast-forward nachgezogen).
 - `.claude/`-Verzeichnis fehlt; AGENTS.md ist auf Codex zugeschnitten. Für Claude Code braucht es eine CLAUDE.md mit den Release-Regeln (Versions-Bump, Changelog, `moc --stable-compatible`, `runtime:check`).
 - 260 Releases in vier Wochen, keine Konsolidierungsphase; Release-Notes sind der Hauptteil der 216 000 Doku-Wörter.
