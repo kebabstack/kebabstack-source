@@ -30,7 +30,8 @@ desk/
 ```
 
 Status: alpha. **Slack intake** since 0.5.0: a support channel becomes a queue
-(message → request, bot answers in the thread, replies both ways, ✅ resolves);
+(message → request, bot answers in the thread, replies both ways, ✅ by the requester or
+Desk staff resolves, removing it reopens; a bystander's ✅ is ignored since 0.28.0);
 the Slack app is configured once in the hub and assigned to desk there. Teams
 intake is not shipped.
 
@@ -157,6 +158,14 @@ Subtasks share the parent's audience, owner and archive lifecycle. They do not
 create separate tickets, notification streams or nested task trees.
 
 Hub 0.37 Operations shows shared Workboard project totals and subtask progress; paired TV screens require explicit Workboard inclusion. See [the Operations scope](../docs/HUB-OPERATIONS.md).
+
+## Notification deliveries (0.28.0)
+
+Every answer from the Hub's notify lane is kept (last 200) and listed under **Settings →
+Log → Notification deliveries**. A refused lane, a missing recipient or an unreachable Hub
+is visible there instead of silent. The Hub decides about bell, Slack and e-mail from that
+point; acceptance by the Hub is not proof that a phone showed the message. Set **This desk's
+URL** under General, otherwise Slack replies and notifications carry no link to the request.
 
 ## Bulk actions in Internal support
 

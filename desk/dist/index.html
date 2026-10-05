@@ -56,7 +56,7 @@
     <!-- ===== my requests (everyone) ===== -->
     <section class="view" id="v-me">
       <div class="portal-hero">
-        <div><span class="eyebrow" id="meGreeting">YOUR IT SUPPORT</span><h2>Good work starts<br>with great support.</h2><p>Everything you need to get back to what you do best.</p><a class="button primary" href="#/new">How can we help? <span aria-hidden="true">↗</span></a></div>
+        <div><span class="eyebrow" id="meGreeting">YOUR IT SUPPORT</span><h2>Your requests</h2><p>Ask for help, follow progress and reply when your IT team needs something from you.</p><a class="button primary" href="#/new">How can we help? <span aria-hidden="true">↗</span></a></div>
         <div class="hero-art" aria-hidden="true"><div class="hero-orbit"></div><div class="hero-tile hero-tile-back">✦</div><div class="hero-tile hero-tile-front"><svg viewBox="0 0 48 48" fill="none"><path d="M11 24a13 13 0 0 1 26 0v10a6 6 0 0 1-6 6h-6M11 24v10M37 24v10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><rect x="7" y="23" width="9" height="13" rx="4" fill="currentColor"/><rect x="32" y="23" width="9" height="13" rx="4" fill="currentColor"/><rect x="19" y="37" width="9" height="6" rx="3" fill="currentColor"/></svg></div><span class="hero-spark">+</span></div>
       </div>
       <div id="meOverview" class="personal-stats"></div>
@@ -89,7 +89,7 @@
     <section class="view" id="v-queue">
       <div id="assignmentHealth" class="card hidden" role="status"></div>
       <div id="directoryFollowupHealth" class="card hidden" role="status"></div>
-      <div class="page-heading"><div><span class="eyebrow">INTERNAL SUPPORT</span><h2>Let’s move work forward.</h2><p class="lead">The right context. A clear next step. One request at a time.</p></div><a class="button primary" href="#/agent-new">Create a request <span aria-hidden="true">+</span></a></div>
+      <div class="page-heading"><div><span class="eyebrow">INTERNAL SUPPORT</span><h2>Internal support</h2><p class="lead">What colleagues asked for, from the portal, Slack and HR. Pick a request, assign it, reply.</p></div><a class="button primary" href="#/agent-new">Create a request <span aria-hidden="true">+</span></a></div>
       <div class="statgrid" id="statGrid"></div>
       <div class="filters">
         <div class="seg" id="viewSeg">
@@ -156,7 +156,7 @@
             <div class="card flat hidden" id="tCustomer"></div>
             <div class="card flat person-context hidden" id="tPersonContext"></div>
             <div class="card handling-card" id="tActions"><div id="tStaff"><h3>Request details</h3><label for="tState">Status</label><select id="tState"></select><div class="field-heading"><label for="tAssignee">Assigned to</label><button id="tAssignMe" class="text-button">Assign to me</button></div><select id="tAssignee"></select><label for="tPriority">Priority</label><select id="tPriority"><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><details class="routing-details"><summary>Routing &amp; target date</summary><label for="tQueue">Support team</label><div class="inline-control"><input type="text" id="tQueue" list="groupList" placeholder="Choose a team"><button id="tQueueSave" class="sm">Save team</button></div><label for="tDue">Target resolution date</label><input type="date" id="tDue"><button id="tDueSave" class="text-button">Save target date</button></details><button class="text-button" id="tAddChecklist">＋ Add a checklist</button></div></div>
-            <div class="card support-card" id="tSupportCard"><span class="eyebrow">YOU’RE IN GOOD HANDS</span><div id="tSupport"></div><p>Keep the conversation here. Your IT team has the context.</p></div>
+            <div class="card support-card" id="tSupportCard"><span class="eyebrow">YOUR REQUEST</span><div id="tSupport"></div><p>Keep the conversation here. Your IT team has the context.</p></div>
             <div class="card flat" id="tRequesterCard"><h3>Requested by</h3><div id="tRequester" class="requester-profile"></div></div>
             <div class="card flat" id="tTasksCard"><h3>Checklist <span class="count" id="tTaskCount"></span></h3><div id="tTasks"></div><div id="tTaskAdd" class="inline-control"><input type="text" id="tTaskTitle" aria-label="New checklist item" placeholder="Add a task"><button id="tTaskAddBtn" class="sm">Add</button></div></div>
             <details class="card flat" id="tFieldsCard"><summary>Request information</summary><button class="text-button" id="tFieldsEdit">Edit information</button><div id="tFieldsForm" class="hidden"></div></details>
@@ -188,11 +188,6 @@
           <div class="btnrow"><button id="sgSave" class="primary">Save</button><button id="sgSync">Sync directory now</button><span id="sgStatus" class="status" role="status"></span></div>
         </div>
         <div class="card"><h3>Permissions</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p><p id="sgRoleCounts" class="kv"></p></div>
-        <div class="card flat">
-          <h3>Demo data</h3>
-          <div class="kv">Evaluation instances: seeds ~13 requests across every state using people from your directory. One-shot.</div>
-          <div class="btnrow"><button id="sgSeed">Seed demo data</button><span id="sgSeedStatus" class="status" role="status"></span></div>
-        </div>
       </div>
 
       <div class="spane" id="sp-assignment"></div>

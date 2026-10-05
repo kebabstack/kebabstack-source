@@ -85,7 +85,7 @@ async function route() {
   if(v !== 'service-status') serviceStatus.clear();
   if (v === 'customers') lastList = '#/customers' + (arg && arg !== 'new' ? '/' + arg : '');
   if (['me','queue'].includes(v)) lastList = '#/' + v;
-  $('tBack').textContent = lastList.startsWith('#/workboard') ? '← Workboard' : lastList.startsWith('#/customers') ? '← Customer project' : lastList === '#/queue' ? '← Back to workspace' : '← My requests';
+  $('tBack').textContent = lastList.startsWith('#/workboard') ? '← Workboard' : lastList.startsWith('#/customers') ? '← Customer project' : lastList === '#/queue' ? '← Internal support' : '← My requests';
   $('pageError').classList.add('hidden');
   try {
   if (v === "me") await loadMe();
@@ -118,7 +118,7 @@ function renderNav() {
   $('layout').dataset.role = me.role;
   $('navCaption').textContent = me.role === 'requester' ? 'YOUR SUPPORT' : 'SUPPORT DESK';
   const previousCount = $('qCount')?.textContent || '';
-  const symbols = {workboard:"▥","service-status":"◉",reporting:"≡",oncall:'◷',customers:'◫',queue:'▤',me:'◫',new:'＋',settings:'⚙'};
+  const symbols = {workboard:"▥","service-status":"◉",reporting:"≡",oncall:'◷',customers:'◫',queue:'▤',me:'▣',new:'＋',settings:'⚙'};
   $("nav").innerHTML = items.map(([v, l, n]) => `<button type="button" class="navstep" data-view="${v}"><span class="nav-icon" aria-hidden="true">${symbols[v]}</span><span class="nav-label">${l}</span>${n ? `<span class="n" id="${n}">${previousCount}</span>` : ""}</button>`).join("");
   $("nav").onclick = (e) => { const el = e.target.closest(".navstep"); if (el) location.hash = "#/" + el.dataset.view; };
 
@@ -352,7 +352,7 @@ async function loadQueue(preserveSelection=false,more=false) {
       });
     }
 
-  } catch (_) { if(stamp===queueGeneration) {setStatus('qStatus','err','We couldn’t refresh the workspace. Change a filter to try again.');$('qMore').disabled=false;} }
+  } catch (_) { if(stamp===queueGeneration) {setStatus('qStatus','err','We couldn’t refresh the requests. Change a filter to try again.');$('qMore').disabled=false;} }
   finally { if(stamp===queueGeneration)queueBulk.loading(false); }
 }
 
@@ -423,11 +423,9 @@ async function loadGeneral() {
   $("sgOrg").value = s.orgName; $("sgUrl").value = s.appUrl; $("sgPrefix").value = s.keyPrefix; $("sgAutoClose").value = Number(s.autoCloseDays);
 
   $("sgRoleCounts").innerHTML = `Right now: <b>${s.adminCount}</b> admin(s), <b>${s.agentCount}</b> agent(s). You are <b>${esc(me.role)}</b> via ${esc(me.roleSource || "directory")}.${Number(s.agentCount) + Number(s.adminCount) === 0 ? ' <span class="pill off">nobody is staff yet</span>' : ""}`;
-  $("sgSeed").disabled = s.demoSeeded; setStatus("sgSeedStatus", "", s.demoSeeded ? "already seeded" : "");
 }
 $("sgSave").onclick = async () => { const r = await backend.updateSettings(session.load(), { appUrl: $("sgUrl").value.trim(), orgName: $("sgOrg").value.trim(), agentGroup: "", adminGroup: "", keyPrefix: $("sgPrefix").value.trim(), autoCloseDays: bigint($("sgAutoClose").value) }); setStatus("sgStatus", r.ok ? "ok" : "err", r.ok ? "saved" : r.detail); if (r.ok) { await refreshMe(); loadGeneral(); } };
 $("sgSync").onclick = async () => { setStatus("sgStatus", "", "syncing…"); const r = await backend.syncNow(session.load()); setStatus("sgStatus", r.ok ? "ok" : "err", r.detail); loadGeneral(); };
-$("sgSeed").onclick = async () => { if (!confirm("Seed ~13 demo requests? This cannot be undone.")) return; setStatus("sgSeedStatus", "", "seeding…"); const r = await backend.seedDemo(session.load()); setStatus("sgSeedStatus", r.ok ? "ok" : "err", r.detail); loadGeneral(); };
 
 // catalog admin
 let ctEditId = 0;

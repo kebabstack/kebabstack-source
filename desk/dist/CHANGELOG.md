@@ -9,6 +9,7 @@
 - Ticket page: a rejected status, owner, priority or date change no longer keeps showing the rejected value until navigation. Agents see the *Requested by* card again (role, department, location, manager); it had been rendered but hidden.
 - Settings: tab loads are awaited, so a failed load shows the page error instead of an empty pane; handlers that fail without their own error path report into the same box. The canonical-domain redirect now carries Workboard, Customer projects, Service status, Settings → Assignment and offboarding deep links.
 - Links: the configured desk address is joined with exactly one slash, so `https://desk.example` and `https://desk.example/` both produce `https://desk.example/#/t/7` in Slack messages and Hub notifications.
+- Wording and surfaces: the queue is called *Internal support* everywhere (heading, back link, errors); marketing lines on the queue, the portal and the ticket page gave way to one sentence that says what the page is for; the portal hero is compact. The *Seed demo data* card left Settings (the backend call remains for disposable evaluation installs).
 - Backend hygiene: automatic closing after the resolved period moves the ticket revision, so a stale bulk or status edit is rejected; expired customer API keys are removed from a snapshot instead of while iterating.
 - No stable-state or permission changes; existing tickets, Slack threads and settings are unchanged.
 
