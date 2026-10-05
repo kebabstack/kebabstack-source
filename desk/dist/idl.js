@@ -54,7 +54,7 @@ export const idlFactory = ({ IDL }) => {
   const Snapshot = IDL.Record({ checkedAt: IDL.Int, metrics: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)), schema: IDL.Nat, state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }) });
   const SlackBotView = IDL.Record({ botKnown: IDL.Bool, hasSigning: IDL.Bool, id: IDL.Nat, name: IDL.Text, teamName: IDL.Text });
   const SlackIntake = IDL.Record({ channel: IDL.Text, channelName: IDL.Text, createdAt: IDL.Int, enabled: IDL.Bool, hubBotId: IDL.Nat, id: IDL.Nat, lastEventAt: IDL.Int, lastResult: IDL.Text, name: IDL.Text, typeId: IDL.Nat });
-  const SlackStatus = IDL.Record({ bots: IDL.Vec(SlackBotView), credsAt: IDL.Int, credsError: IDL.Text, eventsUrl: IDL.Text, gateway: IDL.Text, intakes: IDL.Vec(SlackIntake), outbox: IDL.Nat });
+  const SlackStatus = IDL.Record({ appUrlSet: IDL.Bool, bots: IDL.Vec(SlackBotView), credsAt: IDL.Int, credsError: IDL.Text, eventsUrl: IDL.Text, gateway: IDL.Text, intakes: IDL.Vec(SlackIntake), outbox: IDL.Nat });
   const Shift = IDL.Record({ endAt: IDL.Int, layer: IDL.Nat, personId: IDL.Text, startAt: IDL.Int });
   const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, agentCount: IDL.Nat, agentGroup: IDL.Text, aiHubModel: IDL.Text, aiKeySet: IDL.Bool, aiModel: IDL.Text, aiProvider: IDL.Text, aiSource: IDL.Text, aiTriage: IDL.Bool, aiUrl: IDL.Text, appUrl: IDL.Text, autoCloseDays: IDL.Nat, demoSeeded: IDL.Bool, fileBytes: IDL.Nat, hubId: IDL.Text, keyPrefix: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat });
   const Service = IDL.Record({ checkedAt: IDL.Int, name: IDL.Text, state: IDL.Text, validUntil: IDL.Int });
@@ -102,6 +102,7 @@ export const idlFactory = ({ IDL }) => {
   const Page = IDL.Record({ audience: Audience, checkedAt: IDL.Int, description: IDL.Text, notices: IDL.Vec(PublicNotice), services: IDL.Vec(Service), slug: IDL.Text, title: IDL.Text });
   const Overview = IDL.Record({ canManage: IDL.Bool, deliveryReady: IDL.Bool, incidents: IDL.Vec(Incident), policy: IDL.Opt(Policy__1) });
   const Override = IDL.Record({ assignee: IDL.Text, typeId: IDL.Nat });
+  const NotifyRecord = IDL.Record({ at: IDL.Int, detail: IDL.Text, email: IDL.Text, ok: IDL.Bool, title: IDL.Text });
   const Notice = IDL.Record({ at: IDL.Int, by: IDL.Text, endsAt: IDL.Int, generation: IDL.Nat, id: IDL.Nat, impact: Impact, incidentId: IDL.Nat, message: IDL.Text, phase: Phase, projectId: IDL.Nat, requestKey: IDL.Text, revision: IDL.Nat, services: IDL.Vec(IDL.Text), startsAt: IDL.Int, title: IDL.Text, updatedAt: IDL.Int, updates: IDL.Vec(Update), withdrawnAt: IDL.Int });
   const Mapping = IDL.Record({ payrollId: IDL.Text, personId: IDL.Text });
   const Manifest = IDL.Record({ description: IDL.Text, name: IDL.Text, needs: IDL.Vec(IDL.Text), version: IDL.Text, wants: IDL.Vec(IDL.Text) });
@@ -229,6 +230,7 @@ export const idlFactory = ({ IDL }) => {
     myApprovals: IDL.Func([IDL.Text], [IDL.Vec(TicketRow)], ["query"]),
     myTickets: IDL.Func([IDL.Text], [IDL.Vec(TicketRow)], ["query"]),
     noteOncallIncident: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text], [Result], []),
+    notifyHealth: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ failed: IDL.Nat, recent: IDL.Vec(NotifyRecord), total: IDL.Nat }))], ["query"]),
     offboardingEntry: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Record({ person: PersonCard, ticketId: IDL.Opt(IDL.Nat), typeId: IDL.Opt(IDL.Nat) }))], ["query"]),
     offboardingHardware: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ context: Case, progress: Progress }))], []),
     oncallAlertSources: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Vec(SourceView))], ["query"]),

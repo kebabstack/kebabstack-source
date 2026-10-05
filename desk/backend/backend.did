@@ -342,6 +342,7 @@ type Snapshot =
  };
 type SlackStatus =
  record {
+   appUrlSet: bool;
    bots: vec SlackBotView;
    credsAt: int;
    credsError: text;
@@ -840,6 +841,14 @@ type Override =
  record {
    assignee: text;
    typeId: nat;
+ };
+type NotifyRecord =
+ record {
+   at: int;
+   detail: text;
+   email: text;
+   ok: bool;
+   title: text;
  };
 type Notice =
  record {
@@ -1850,6 +1859,12 @@ service : {
   myTickets: (tok: text) -> (vec TicketRow) query;
   noteOncallIncident: (tok: text, id: nat, revision: nat, "text": text) ->
    (Result);
+  notifyHealth: (tok: text) ->
+   (opt record {
+          failed: nat;
+          recent: vec NotifyRecord;
+          total: nat;
+        }) query;
   offboardingEntry: (tok: text, personId: text) ->
    (opt record {
           person: PersonCard;

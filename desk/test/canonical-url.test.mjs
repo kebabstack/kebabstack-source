@@ -21,3 +21,13 @@ test('reporting and on-call routes survive a canonical redirect without carrying
   assert.equal(canonicalDestination('https://desk.test','https://old.test/?ticket=secret'+route),'https://desk.test/'+route);
  }
 });
+
+// Workboard, customer projects, service status, the assignment settings tab and offboarding deep links must survive too.
+test('workboard, customer, status and settings routes survive a canonical redirect',()=>{
+ for(const route of ['#/workboard','#/workboard/3','#/workboard/projects','#/workboard/project/new','#/workboard/task/12','#/workboard/link/4','#/customers','#/customers/new','#/customers/7','#/customers/7/types','#/customers/7/settings','#/service-status','#/settings/assignment','#/offboarding/9']){
+  assert.equal(canonicalDestination('https://desk.test','https://old.test/?ticket=secret'+route),'https://desk.test/'+route,route);
+ }
+ for(const bad of ['#/workboard/evil','#/customers/7/delete','#/settings/root','#/offboarding/x']){
+  assert.equal(canonicalDestination('https://desk.test','https://old.test/'+bad),'https://desk.test/',bad);
+ }
+});

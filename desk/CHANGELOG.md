@@ -1,5 +1,17 @@
 # Changelog — kebab-stack desk
 
+## [0.28.0] — 2026-10-05
+
+- Slack: only the person who asked, or Desk staff, can resolve or reopen a request with ✅; a bystander's reaction is recorded on the intake and otherwise ignored. Messages back into Slack now leave in the order they were written (the outbox was last-in-first-out). The Slack settings tab warns when no desk address is configured, because Slack replies and Hub notifications then carry no link.
+- Notifications: every answer from the Hub's notify lane is recorded (last 200) and shown under Settings → Log as *Notification deliveries*, so a refused or failed delivery is visible instead of silent. Hub acceptance is not proof of a phone or Slack delivery.
+- Approvals: when the only possible approver is the requester themselves (a one-administrator company with a manager-approval type and no manager attribute), the request no longer waits forever; it starts without approval and says so in its activity.
+- Session: a failed 30-second access check no longer signs the agent out and discards reply drafts. The session is kept, a banner says Desk could not be reached, and the check retries. Sign-out still happens when Desk answers that the session is gone.
+- Ticket page: a rejected status, owner, priority or date change no longer keeps showing the rejected value until navigation. Agents see the *Requested by* card again (role, department, location, manager); it had been rendered but hidden.
+- Settings: tab loads are awaited, so a failed load shows the page error instead of an empty pane; handlers that fail without their own error path report into the same box. The canonical-domain redirect now carries Workboard, Customer projects, Service status, Settings → Assignment and offboarding deep links.
+- Links: the configured desk address is joined with exactly one slash, so `https://desk.example` and `https://desk.example/` both produce `https://desk.example/#/t/7` in Slack messages and Hub notifications.
+- Backend hygiene: automatic closing after the resolved period moves the ticket revision, so a stale bulk or status edit is rejected; expired customer API keys are removed from a snapshot instead of while iterating.
+- No stable-state or permission changes; existing tickets, Slack threads and settings are unchanged.
+
 ## [0.27.0] — 2026-09-29
 
 - Select internal support requests individually, all displayed rows or all matching filter results. Change their owner (including yourself or unassigned), status or target date in one reviewed action; load further rows without the old silent 500-row UI limit.

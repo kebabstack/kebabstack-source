@@ -42,6 +42,7 @@
 
 <div id="layout">
   <div id="topbar"></div>
+  <div id="netBanner" class="warnbox hidden" role="status">Desk could not be reached just now. Your session and drafts are kept; retrying automatically.</div>
   <div class="desk-shell">
   <aside class="desk-nav" aria-label="Desk navigation">
     <div class="nav-eyebrow" id="navCaption">Support workspace</div>
@@ -279,6 +280,7 @@
       </div>
 
       <div class="spane" id="sp-log">
+        <div class="card flat"><h3>Notification deliveries</h3><div class="kv" id="nhSummary">Loading…</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>When</th><th>To</th><th>Title</th><th>Result</th></tr></thead><tbody id="nhRows"></tbody></table></div></div>
         <div class="card flat"><h3>Admin log</h3><div class="kv">Settings and catalog changes. Ticket history lives on each ticket.</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div></div>
       </div>
     </section>

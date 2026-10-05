@@ -132,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.27.0"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.28.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -639,7 +639,7 @@ persistent actor Desk {
     let currentAdmin = admin(tok) ?? (return { ok = false; secret = ""; detail = "Access changed" });
     if (m.id != currentAdmin.id or p.revision != current.revision) return { ok = false; secret = ""; detail = "Project changed. Retry." };
     // Expired and revoked key hashes need not occupy unbounded storage.
-    for ((id, k) in customerKeys.entries()) if (k.expiresAt <= now() or k.revoked) customerKeys.remove(id);
+    for ((id, k) in Iter.toArray(customerKeys.entries()).vals()) if (k.expiresAt <= now() or k.revoked) customerKeys.remove(id); // snapshot first: never mutate while iterating
     if (customerKeys.size() >= 300 or customerKeys.values().toArray().filter(func k = k.projectId == projectId).size() >= 10) return { ok = false; secret = ""; detail = "Maximum 10 active keys per project" };
     let id = nextCustomerKey; nextCustomerKey += 1;
     customerKeys.add(id, { id; projectId; name = norm(name); scopes; hash = digest(secret); createdAt = now(); expiresAt = now() + days * D; revoked = false });
@@ -1577,7 +1577,30 @@ persistent actor Desk {
   // =====================================================================
   // notifications (through the hub, fire-and-forget)
   // =====================================================================
-  func ticketUrl(id : Nat) : Text = if (appUrl == "") "" else appUrl # "#/t/" # Nat.toText(id);
+  /// The configured desk address with exactly one trailing slash, so "https://desk.example" and "https://desk.example/" both yield "https://desk.example/#/t/7".
+  func appBase() : Text = if (appUrl == "") "" else if (Text.endsWith(appUrl, #char '/')) appUrl else appUrl # "/";
+  func ticketUrl(id : Nat) : Text = if (appUrl == "") "" else appBase() # "#/t/" # Nat.toText(id);
+
+  /// Every hub_notify answer is kept (last 200), so an admin can see when the Hub refused or missed a delivery
+  /// instead of wondering why nobody was told. Delivery to a phone or Slack is the Hub's job and is not asserted here.
+  public type NotifyRecord = { at : Int; email : Text; title : Text; ok : Bool; detail : Text };
+  let notifyLog = List.empty<NotifyRecord>();
+  func recordNotify(email : Text, title : Text, ok : Bool, detail : Text) {
+    if (List.size(notifyLog) >= 200) {
+      let all = List.toArray(notifyLog);
+      List.clear(notifyLog);
+      for (r in Array.sliceToArray<NotifyRecord>(all, 100, all.size()).vals()) List.add(notifyLog, r);
+    };
+    List.add(notifyLog, { at = now(); email; title; ok; detail = capText(detail, 200) });
+  };
+  public shared query func notifyHealth(tok : Text) : async ?{ total : Nat; failed : Nat; recent : [NotifyRecord] } {
+    switch (admin(tok)) { case null return null; case (?_) {} };
+    let all = List.toArray(notifyLog);
+    var failed = 0;
+    for (r in all.vals()) if (not r.ok) failed += 1;
+    let from = if (all.size() > 40) (all.size() - 40 : Nat) else 0;
+    ?{ total = all.size(); failed; recent = Array.reverse(Array.sliceToArray<NotifyRecord>(all, from, all.size())) };
+  };
 
   /// targets = person ids or addresses (group members come as addresses); a former colleague (no current address) is skipped
   func notify<system>(who : [Text], title : Text, id : Nat, kind : Text, dedupe : Text) {
@@ -1589,12 +1612,15 @@ persistent actor Desk {
     let targets = Array.sliceToArray<Text>(emails, 0, Nat.min(emails.size(), 25));
     let pid = projectOf(id);
     let safeTitle = if (pid == 0) title else "Customer support · New activity";
-    let url = if (pid == 0) ticketUrl(id) else appUrl # "#/customers/" # Nat.toText(pid);
+    let url = if (pid == 0) ticketUrl(id) else appBase() # "#/customers/" # Nat.toText(pid);
     ignore Timer.setTimer<system>(#seconds 0, func() : async () {
       let hub = Hub.hub(hubId);
       for (e in targets.vals()) {
         let allowed = switch (tickets.get(id)) { case (?t) not customerDue(t) and (pid == 0 or projectEmailAccess(e, pid)); case null false };
-        if (allowed) try { ignore await hub.hub_notify({ email = e; title = capText(safeTitle, 180); url; kind; dedupeKey = dedupe # ":" # e }) } catch (_) {};
+        if (allowed) {
+          let r = try { await hub.hub_notify({ email = e; title = capText(safeTitle, 180); url; kind; dedupeKey = dedupe # ":" # e }) } catch (err) { { ok = false; detail = "hub call failed: " # Error.message(err) } };
+          recordNotify(e, safeTitle, r.ok, r.detail);
+        };
       };
     });
   };
@@ -1789,6 +1815,14 @@ persistent actor Desk {
     if (rt.approval == "manager") {
       approver := switch (managerOf(emailOfPid(requester))) { case (?m) pidOf(m); case null "role:admin" };
     } else if (Text.startsWith(rt.approval, #text "group:")) approver := rt.approval;
+    // A one-person IT team: when the only possible approver is the requester themselves, the request would wait forever.
+    var approvalSkipped = "";
+    if (approver == "role:admin") {
+      let requesterEmail = emailOfPid(requester);
+      if (requesterEmail != "" and roleOf(requesterEmail) == "admin" and staffEmails().filter(func email = roleOf(email) == "admin" and email != requesterEmail).size() == 0) {
+        approver := ""; approvalSkipped := "approval not required: the requester is the only administrator, so nobody else could approve";
+      };
+    };
     if (approver != "") { status := "waiting"; waitingOn := "approval" };
     let assignment = if (Text.startsWith(requester, #text "customer:") or customerTypeId(rt.id)) ({ assignee = ""; reason = "" }) else Assignment.decide(autoAssignment, rt.id, func pid = Hub.directoryFresh(lastDirectoryPull) and workPersonActive(pid));
     if (status == "new" and assignment.assignee != "") status := "open";
@@ -1802,6 +1836,7 @@ persistent actor Desk {
     ignore addEvent(id, byEmail, byKind, "created", "via " # channel # " · " # rt.name, [("type", rt.name), ("queue", q)]);
     if (assignment.reason != "") ignore addEvent(id, "system", "system", "assign", "Automatic assignment: " # assignment.reason # (if (assignment.assignee == "") "" else " · " # personName(assignment.assignee)), [("assignee", assignment.assignee)]);
     if (rt.checklist.size() > 0) Map.add(ticketTasks, Nat.compare, id, Array.map<Text, Task>(rt.checklist, func(x) = ({ title = x; state = "open"; by = ""; at = 0 })));
+    if (approvalSkipped != "") ignore addEvent(id, "system", "system", "approval", approvalSkipped, [("decision", "not-required")]);
     if (approver != "") {
       Map.add(approvals, Nat.compare, id, { approver; state = "pending"; decidedBy = ""; at = t0; note = "" });
       ignore addEvent(id, "system", "system", "approval", "approval requested from " # approverLabel(approver), [("approver", approver)]);
@@ -2775,9 +2810,16 @@ persistent actor Desk {
     if (slackFlushing or List.size(slackOutbox) == 0) return;
     slackFlushing := true;
     try {
+      // FIFO: two replies on one thread must reach Slack in the order they were written.
+      // Take the oldest six, re-queue the rest before the first await so anything added meanwhile lines up behind them.
+      let queued = List.toArray(slackOutbox);
+      List.clear(slackOutbox);
+      let take = Nat.min(6, queued.size());
+      var i = take;
+      while (i < queued.size()) { List.add(slackOutbox, queued[i]); i += 1 };
       var n = 0;
-      label flush while (n < 6 and List.size(slackOutbox) > 0) {
-        let item = switch (List.removeLast(slackOutbox)) { case (?x) x; case null return }; // LIFO is fine: items are independent per ticket
+      label flush while (n < take) {
+        let item = queued[n];
         n += 1;
         let a = switch (Map.get(slackAnchor, Nat.compare, item.ticketId)) { case (?a) a; case null continue flush };
         let ic = switch (Map.get(slackIntakes, Nat.compare, a.intakeId)) { case (?ic) ic; case null continue flush };
@@ -2953,6 +2995,8 @@ persistent actor Desk {
     if (projectOf(tid) != 0) return;
     let who = if (email == "") "slack:" # user else pidOf(email);
     let kind = if (email != "" and isStaff(roleOf(email))) "agent" else "requester";
+    // Only the person who asked, or desk staff, may close or reopen a request from Slack. A bystander's ✅ is a reaction, not a decision.
+    if (kind != "agent" and who != t.requester) { touchIntake(ic.id, "✅ on " # t.key # " by someone other than the requester ignored"); return };
     if (added) {
       if (t.status == "resolved" or t.status == "closed") return;
       let r = applyStatus(t, "resolved", "", who, kind);
@@ -2975,14 +3019,14 @@ persistent actor Desk {
 
   // ---- admin API ----
   public type SlackBotView = { id : Nat; name : Text; teamName : Text; hasSigning : Bool; botKnown : Bool };
-  public type SlackStatus = { eventsUrl : Text; gateway : Text; bots : [SlackBotView]; credsAt : Int; credsError : Text; intakes : [SlackIntake]; outbox : Nat };
+  public type SlackStatus = { eventsUrl : Text; gateway : Text; bots : [SlackBotView]; credsAt : Int; credsError : Text; intakes : [SlackIntake]; outbox : Nat; appUrlSet : Bool };
   public shared query func slackStatus(tok : Text) : async ?SlackStatus {
     switch (admin(tok)) { case null return null; case (?_) {} };
     let bots = List.empty<SlackBotView>();
     for ((id, c) in Map.entries(slackCreds)) List.add(bots, { id; name = c.name; teamName = c.teamName; hasSigning = c.signing != ""; botKnown = c.botUserId != "" });
     let ics = List.empty<SlackIntake>();
     for ((_, ic) in Map.entries(slackIntakes)) List.add(ics, ic);
-    ?{ eventsUrl = slackEventsUrl(); gateway = slackGateway; bots = List.toArray(bots); credsAt = slackCredsAt; credsError = slackCredsError; intakes = List.toArray(ics); outbox = List.size(slackOutbox) };
+    ?{ eventsUrl = slackEventsUrl(); gateway = slackGateway; bots = List.toArray(bots); credsAt = slackCredsAt; credsError = slackCredsError; intakes = List.toArray(ics); outbox = List.size(slackOutbox); appUrlSet = appUrl != "" };
   };
   public shared func slackRefresh(tok : Text) : async { ok : Bool; count : Nat; detail : Text } {
     switch (admin(tok)) { case null return { ok = false; count = 0; detail = "admins only" }; case (?_) {} };
@@ -3082,7 +3126,7 @@ persistent actor Desk {
       } else if (t.status == "resolved" and autoCloseDays > 0 and hardwareCaseOf(t) == null) {
         switch (t.resolvedAt) {
           case (?r) { if (n > r + autoCloseDays * D) {
-            Map.add(tickets, Nat.compare, id, { t with status = "closed"; closedAt = ?n });
+            put({ t with status = "closed"; closedAt = ?n }); // through put(): the revision moves, so a stale bulk/status edit is rejected
             ignore addEvent(id, "system", "system", "status", "closed (auto, " # Nat.toText(autoCloseDays) # " days after resolved)", [("status", "closed")]);
           } };
           case null {};
@@ -3308,7 +3352,7 @@ persistent actor Desk {
     let project = oncallState.projects.get(projectId) ?? (return { ok = false; detail = "Project unavailable" });
     if (not responseFresh() or not oncallEligible(project, personId)) return { ok = false; detail = "Recipient access could not be verified" };
     if (not responseReady()) return { ok = false; detail = "Configure the canonical HTTPS Desk URL and Hub connection" };
-    let receipt = await Hub.hub(hubId).hub_notify({ email = emailOfPid(personId); title = "On-call · OC-" # incidentId.toText() # " needs your attention"; url = appUrl # "#/oncall/" # projectId.toText() # "/incident-" # incidentId.toText(); kind = "desk.oncall"; dedupeKey });
+    let receipt = await Hub.hub(hubId).hub_notify({ email = emailOfPid(personId); title = "On-call · OC-" # incidentId.toText() # " needs your attention"; url = appBase() # "#/oncall/" # projectId.toText() # "/incident-" # incidentId.toText(); kind = "desk.oncall"; dedupeKey });
     { ok = receipt.ok; detail = capText(receipt.detail, 180) }
   };
   func sendPlanningReminder(projectId : Nat,personId : Text,title : Text,path : Text,dedupeKey : Text) : async {ok : Bool;detail : Text} {

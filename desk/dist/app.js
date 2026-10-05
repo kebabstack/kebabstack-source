@@ -133,9 +133,9 @@ async function refreshMe() {
   const changed = me && (me.id !== w.id || me.role !== w.role || me.reporting !== w.reporting || JSON.stringify(me.groups) !== JSON.stringify(w.groups));
   if (changed) { queueBulk.clear(); assignment.clear(); workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); agentsAt = 0; catalogCache = []; agentsCache = []; }
   if (!me) lastList = w.role === "requester" ? "#/me" : "#/queue";
+  const first = !me;
   me = w;
-  renderNav();
-  profilePictures.load();
+  if (first || changed) { renderNav(); profilePictures.load(); } // rebuilding the menu every 30 s would steal keyboard focus
   if (changed) route();
   return true;
 }
@@ -169,7 +169,14 @@ async function boot() {
     loadGroupsDatalist();
     if (!location.hash || location.hash === "#/" || location.hash === "#") location.hash = me.role === "requester" ? "#/me" : "#/queue";
     else route();
-    setInterval(async () => { try { if (await refreshMe()) return; } catch (_) {} signOut(); setStatus("loginStatus", "err", "Your access could not be confirmed. Check the Hub connection and sign in again from the Hub."); }, 30000);
+    // Sign out only when Desk answered "no session". A failed call (network, gateway, upgrade) keeps the session and the drafts; we retry in 30 s.
+    setInterval(async () => {
+      let ok = false;
+      try { ok = await refreshMe(); } catch (_) { $("netBanner").classList.remove("hidden"); return; }
+      $("netBanner").classList.add("hidden");
+      if (ok) return;
+      signOut(); setStatus("loginStatus", "err", "Your access could not be confirmed. Check the Hub connection and sign in again from the Hub.");
+    }, 30000);
   } else {
     session.clear();
   }
@@ -394,16 +401,20 @@ const customerProjects = createCustomerProjects({root: $("v-customers"), api:()=
 const ticketView = createTicketView({profilePictures,$, getBackend:()=>backend, getMe:()=>me, getReturnRoute:()=>lastList, session, loadAgents, renderFields, collectFields, setStatus});
 
 // ---------- settings ----------
-function showSettings(tab) {
+async function showSettings(tab) {
   document.querySelectorAll(".stab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".spane").forEach((p) => p.classList.toggle("active", p.id === "sp-" + tab));
-  if (tab === "assignment") return assignment.show();
-  if (tab === "general") loadGeneral();
-  if (tab === "catalog") loadCatalogAdmin();
-  if (tab === "ai") loadAi();
-  if (tab === "slack") loadSlack();
-  if (tab === "log") loadLog();
+  // Awaited so a failed load reaches route()'s error box instead of leaving an empty pane.
+  const loaders = { assignment: () => assignment.show(), general: loadGeneral, catalog: loadCatalogAdmin, ai: loadAi, slack: loadSlack, log: loadLog };
+  await (loaders[tab] || loadGeneral)();
 }
+// Any button handler that fails without its own error path lands here instead of dying silently in the console.
+window.addEventListener("unhandledrejection", (e) => {
+  console.error(e.reason);
+  const box = $("pageError"); if (!box) return;
+  box.textContent = "Something could not be saved or loaded: " + (e.reason?.message || String(e.reason || "unknown error")) + ". Check your connection and try again.";
+  box.classList.remove("hidden");
+});
 $("stabs").onclick = (e) => { const b = e.target.closest(".stab"); if (b) location.hash = "#/settings/" + b.dataset.tab; };
 async function loadGeneral() {
   const s = opt(await backend.getSettings(session.load())); if (!s) return;
@@ -492,7 +503,7 @@ async function loadSlack() {
   const bots = st.bots;
   const on = st.intakes.some((i) => i.enabled) && bots.length > 0;
   $("skPill").textContent = bots.length === 0 ? "no bot yet" : on ? "on" : "ready"; $("skPill").className = "pill " + (on ? "on" : bots.length === 0 ? "off" : "");
-  $("skInfo").innerHTML = `<div>Bots from the hub</div><div>${bots.length ? bots.map((b) => `<b>${esc(b.name)}</b>${b.teamName ? " · " + esc(b.teamName) : ""}${b.hasSigning ? "" : ' <span class="pill off">no signing secret</span>'}`).join("<br>") : '<i>none — assign one to desk in the hub (Settings → Slack), then refresh</i>'}</div><div>Credentials</div><div>${Number(st.credsAt) ? "refreshed " + ago(st.credsAt) : "never fetched"}${st.credsError ? ` · <span class="pill off">${esc(st.credsError)}</span>` : ""}${Number(st.outbox) ? ` · ${Number(st.outbox)} message(s) waiting to go out` : ""}</div><div>Events URL</div><div class="mono">${esc(st.eventsUrl)}</div>`;
+  $("skInfo").innerHTML = `<div>Bots from the hub</div><div>${bots.length ? bots.map((b) => `<b>${esc(b.name)}</b>${b.teamName ? " · " + esc(b.teamName) : ""}${b.hasSigning ? "" : ' <span class="pill off">no signing secret</span>'}`).join("<br>") : '<i>none — assign one to desk in the hub (Settings → Slack), then refresh</i>'}</div><div>Credentials</div><div>${Number(st.credsAt) ? "refreshed " + ago(st.credsAt) : "never fetched"}${st.credsError ? ` · <span class="pill off">${esc(st.credsError)}</span>` : ""}${Number(st.outbox) ? ` · ${Number(st.outbox)} message(s) waiting to go out` : ""}</div><div>Events URL</div><div class="mono">${esc(st.eventsUrl)}</div>${st.appUrlSet === false ? `<div>Links</div><div><span class="pill off">no desk address</span> Set <b>This desk's URL</b> under <a href="#/settings/general">General</a>, otherwise Slack replies and Hub notifications carry no link to the request.</div>` : ""}`;
   $("skUrl").textContent = st.eventsUrl; $("skGateway").value = st.gateway;
   const typeName = (id) => (skTypes.find((t) => Number(t.id) === Number(id)) || {}).name || "?";
   const botName = (id) => { const b = bots.find((x) => Number(x.id) === Number(id)); return b ? (b.teamName || b.name) : "bot #" + id; };
@@ -530,6 +541,9 @@ $("skGatewaySave").onclick = async () => { const r = await backend.setSlackGatew
 async function loadLog() {
   const rows = await backend.adminLogRows(session.load());
   $("logRows").innerHTML = rows.map((r) => `<tr><td class="kv" style="white-space:nowrap">${fmt(r.at)}</td><td class="mono">${esc(r.who)}</td><td>${esc(r.what)}</td></tr>`).join("") || '<tr><td colspan="3" class="empty">Nothing yet.</td></tr>';
+  const nh = opt(await backend.notifyHealth(session.load()));
+  $("nhSummary").textContent = nh && Number(nh.total) ? `${Number(nh.total)} recorded deliveries to the Hub, ${Number(nh.failed)} failed. The Hub decides about bell, Slack and e-mail from there.` : "No deliveries recorded yet.";
+  $("nhRows").innerHTML = (nh?.recent || []).map((r) => `<tr><td class="kv" style="white-space:nowrap">${fmt(r.at)}</td><td class="mono">${esc(r.email)}</td><td>${esc(r.title)}</td><td>${r.ok ? '<span class="pill on">accepted by the Hub</span>' : `<span class="pill off">failed</span> ${esc(r.detail)}`}</td></tr>`).join("") || '<tr><td colspan="4" class="empty">Nothing yet.</td></tr>';
 }
 
 boot().finally(() => signIn.ready()).catch((e) => { console.error(e); setStatus("loginStatus", "err", "We couldn’t connect to Desk. Check your connection and try signing in again."); });
