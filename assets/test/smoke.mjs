@@ -335,7 +335,7 @@ if (role === "admin") {
   check($("v-offers").classList.contains("active") && document.querySelectorAll("#offerRows [data-offer]").length === 2, "offers listed: " + document.querySelectorAll("#offerRows [data-offer]").length);
   const card = document.querySelector('#offerRows [data-offer="7"]');
   check(/No warranty/.test(card.textContent) && !!card.querySelector("[data-accept]") && card.querySelector("[data-accept]").dataset.v === "2", "open offer shows the terms and accept with version 2");
-  card.querySelector('[data-f="street"]').value = "Seestrasse"; card.querySelector('[data-f="houseNo"]').value = "7b"; card.querySelector('[data-f="postalCode"]').value = "8802"; card.querySelector('[data-f="town"]').value = "Kilchberg";
+  card.querySelector('[data-f="agree"]').checked = true; card.querySelector('[data-f="street"]').value = "Seestrasse"; card.querySelector('[data-f="houseNo"]').value = "7b"; card.querySelector('[data-f="postalCode"]').value = "8802"; card.querySelector('[data-f="town"]').value = "Kilchberg";
   card.querySelector("[data-accept]").click(); for (let i = 0; i < 5; i++) await tick();
   check(calls.includes("acceptOffer"), "acceptOffer called with the address");
   const paidCard = document.querySelector('#offerRows [data-offer="8"]');

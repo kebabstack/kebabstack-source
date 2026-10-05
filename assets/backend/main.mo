@@ -61,7 +61,7 @@ persistent actor Assets {
   var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
   var photoBytes : Nat = 0; // total photo bytes held
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.17.0";
+  transient let BUILD_VERSION : Text = "0.18.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -1814,8 +1814,20 @@ persistent actor Assets {
   let dealDevices : Map.Map<Nat, { name : Text; serial : Text }> = Map.empty();
   func quoteHash(s : Sale) : Text {
     let device = switch (assets.get(s.assetId)) { case (?a) (a.id, a.serial, a.vendor, a.model, a.tag); case null (s.assetId, "", "", "", "") };
-    hex(Sha256.fromBlob(#sha256, to_candid(s.buyer, s.grossMinor, s.currency, s.vatRateBp, s.description, device, billing)));
+    // What the buyer accepted: buyer, price, VAT, description, device identity, seller identity, account and the terms.
+    // Deliberately not the payment days, number prefix, pricing rule or footer: changing those must not void an open offer (0.18.0).
+    let seller = (billing.legalName, billing.street, billing.houseNo, billing.postalCode, billing.town, billing.country, billing.uid, billing.vatRegistered, billing.vatRateBp, billing.iban, billing.currency, billing.waiverVersion, billing.waiverText, billing.lang);
+    hex(Sha256.fromBlob(#sha256, to_candid(s.buyer, s.grossMinor, s.currency, s.vatRateBp, s.description, device, seller)));
   };
+  var quoteSchema : Nat = 1; // 2 = quotes hash only offer-relevant billing fields; open links are re-stamped once after the upgrade
+  func rehashOpenDeals() {
+    if (quoteSchema >= 2) return;
+    for ((id, d) in deals.entries().toArray().values()) {
+      switch (sales.get(id)) { case (?s) { if (s.invoiceNo == "" and not d.revoked) deals.add(id, { d with quote = quoteHash(s) }) }; case null {} };
+    };
+    quoteSchema := 2;
+  };
+  transient let _quoteRehash = Timer.setTimer<system>(#seconds 0, func() : async () { rehashOpenDeals() });
   func externalLabel(s : Sale) : Text = s.buyer.name # " (external dealroom link)";
   func dealAudit(s : Sale, actorLabel : Text, action : Text, detail : Text) {
     let row : DealEvent = { at = now(); actorLabel; action; detail };
@@ -1853,6 +1865,15 @@ persistent actor Assets {
           sent += 1;
           let detail = await notifyPerson(row.email, row.title, appLink("sale/" # row.saleId.toText()), "assets.dealroom", key);
           if (detail == "") { dealNotices.remove(key) }
+          else if (row.attempts + 1 >= 12) {
+            // An hour of refusals (the link creator left, lost the lane, …): tell every active administrator once, then stop retrying.
+            var told = 0;
+            for (u in people.values().filter(func u = Hub.isActive(people, u.email) and roleOf(u.email) == "admin" and lower(u.email) != lower(row.email)).toArray().values()) {
+              if (told < 10) { told += 1; ignore await notifyPerson(u.email, row.title, appLink("sale/" # row.saleId.toText()), "assets.dealroom", key # "-fallback-" # lower(u.email)) };
+            };
+            dealNotices.remove(key);
+            switch (sales.get(row.saleId)) { case (?s) dealAudit(s, "system", "notice_failed", "Notification to " # row.email # " gave up after " # Nat.toText(row.attempts + 1) # " attempts (" # capText(detail, 120) # "); " # Nat.toText(told) # " administrator(s) informed instead"); case null {} };
+          }
           else { dealNotices.add(key, { row with attempts = row.attempts + 1; nextAt = now() + 300_000_000_000; detail = capText(detail, 300) }) };
         };
       };
@@ -2233,7 +2254,9 @@ persistent actor Assets {
     let status = if (s.status == "accepted" and material) "offered" else s.status;
     putSale({ s with buyer = b; grossMinor; netMinor = net; vatMinor = vat; vatRateBp = (if (billing.vatRegistered) billing.vatRateBp else 0); priceNote = capText(norm(priceNote), 300); description = descriptionNow; status; acceptedBy = (if (status == "offered" and s.status == "accepted") "" else s.acceptedBy); acceptedAt = (if (status == "offered" and s.status == "accepted") 0 else s.acceptedAt); acceptedHow = (if (status == "offered" and s.status == "accepted") "" else s.acceptedHow) });
     log(m.email, "sale #" # Nat.toText(id) # " edited" # (if (status != s.status) " — the buyer has to accept again" else ""));
-    { ok = true; detail = (if (status != s.status) "saved — price or buyer changed, so the offer goes back to the buyer" else "saved") };
+    var told = "";
+    if (status == "offered" and s.status == "accepted" and b.pid != "" and hubId != "") told := await notifyPerson(b.email, "An offer to you changed — please review the price and terms again", appLink("offers/" # Nat.toText(id)), "assets.offer", "offer-" # Nat.toText(id) # "-changed-" # Int.toText(now()));
+    { ok = true; detail = (if (status != s.status) (if (b.pid == "") "saved — the buyer has to accept again" else if (told == "") "saved — " # b.name # " was told to accept the changed offer again" else "saved — but " # b.name # " could NOT be notified: " # told) else "saved") };
   };
   /// Admins: the two things that must be true before hand-over: the device is wiped, and it left the company's device management.
   public shared func setSaleChecks(tok : Text, id : Nat, wiped : Bool, mdmRemoved : Bool) : async { ok : Bool; detail : Text } {
@@ -2249,21 +2272,23 @@ persistent actor Assets {
   public shared func offerSale(tok : Text, id : Nat) : async { ok : Bool; detail : Text } {
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
     let s = switch (Map.get(sales, Nat.compare, id)) { case (?s) s; case null return { ok = false; detail = "no such sale" } };
-    if (s.status != "draft" and s.status != "offered") return { ok = false; detail = "the sale is " # s.status };
-    putSale({ s with status = "offered"; waiverVersion = billing.waiverVersion });
+    let termsChanged = s.status == "accepted" and s.waiverVersion != billing.waiverVersion;
+    if (s.status != "draft" and s.status != "offered" and not termsChanged) return { ok = false; detail = (if (s.status == "accepted") "already accepted — issue the invoice" else "the sale is " # s.status) };
+    putSale({ s with status = "offered"; waiverVersion = billing.waiverVersion; acceptedBy = ""; acceptedAt = 0; acceptedHow = "" });
+    if (termsChanged) saleEvent(s, m.id, "hand-over terms changed after acceptance (v" # Nat.toText(s.waiverVersion) # " → v" # Nat.toText(billing.waiverVersion) # ") — the buyer has to accept again");
     saleEvent(s, m.id, "offered to " # s.buyer.name # " at " # moneyPretty(s.grossMinor) # " " # s.currency);
     var notified = "";
     if (s.buyer.pid != "" and hubId != "") {
       let link = appLink("offers/" # Nat.toText(id));
       notified := await notifyPerson(s.buyer.email, "A device is offered to you — review the price and terms", link, "assets.offer", "offer-" # Nat.toText(id) # "-" # Nat.toText(billing.waiverVersion));
     };
-    { ok = true; detail = (if (s.buyer.pid == "") "offered — an outside buyer signs the terms on paper; record it here" else if (notified == "") "offered — " # s.buyer.name # " was told through the hub and accepts under Offers" else "offered — but " # s.buyer.name # " could NOT be notified: " # notified # ". Tell them yourself, or fix it under Settings → Notifications") };
+    { ok = true; detail = (if (s.buyer.pid == "") "offered — an outside buyer accepts through a private dealroom link (External dealroom → Create private link)" else if (notified == "") "offered — " # s.buyer.name # " was told through the hub and accepts under Offers" else "offered — but " # s.buyer.name # " could NOT be notified: " # notified # ". Tell them yourself, or fix it under Settings → Notifications") };
   };
   /// The buyer's own offers and invoices (a colleague signed in through the hub).
   public shared query func myOffers(tok : Text) : async [SaleView] {
     let m = switch (me(tok)) { case (?m) m; case null return [] };
     let out = List.empty<SaleView>();
-    for ((_, s) in Map.entries(sales)) if (s.buyer.pid == m.id and s.status != "draft") List.add(out, saleView(s));
+    for ((_, s) in Map.entries(sales)) if (s.buyer.pid == m.id and s.status != "draft") List.add(out, buyerSaleView(s));
     Array.sort<SaleView>(List.toArray(out), func(a, b) = Int.compare(b.sale.updatedAt, a.sale.updatedAt));
   };
   /// The buyer accepts the hand-over terms (the version they were shown) with their own hub sign-in — this is the signature on page 2 of the invoice.
@@ -2278,6 +2303,7 @@ persistent actor Assets {
     if (not addressComplete(b.name, b.street, b.postalCode, b.town, b.country)) return { ok = false; detail = "your postal address is needed on the invoice: street, postal code, town and country" };
     putSale({ s with buyer = b; status = "accepted"; acceptedBy = m.id; acceptedAt = now(); acceptedHow = "online"; waiverVersion = billing.waiverVersion });
     saleEvent(s, m.id, "hand-over terms accepted online by " # m.displayName);
+    queueFinanceNotice(sales.get(id) ?? s, "accepted"); // IT learns about it through the Hub instead of by checking the list
     log(m.email, "sale #" # Nat.toText(id) # ": terms v" # Nat.toText(billing.waiverVersion) # " accepted online");
     { ok = true; detail = "" };
   };
@@ -2289,6 +2315,7 @@ persistent actor Assets {
     if (s.status != "offered" and s.status != "accepted") return { ok = false; detail = "the offer is " # s.status };
     putSale({ s with status = "cancelled"; cancelledAt = now(); cancelReason = "declined by the buyer" # (if (norm(note) != "") ": " # capText(norm(note), 200) else "") });
     saleEvent(s, m.id, "offer declined by " # m.displayName);
+    queueFinanceNotice(sales.get(id) ?? s, "declined");
     { ok = true; detail = "" };
   };
   /// Admins: an outside buyer (no hub account) signed the terms on paper — record it, so the invoice can be issued. The note says where the signed copy is.
@@ -2460,6 +2487,8 @@ persistent actor Assets {
       stillInAbm = abmHolds(a); handedOverAt = handedOverAt(s.id); phase = salePhase(s);
     };
   };
+  /// What a buyer may see of their own sale: never the company's purchase price, pricing rule or internal price note.
+  func buyerSaleView(s : Sale) : SaleView { let v = saleView(s); { v with proposal = null; sale = { s with priceNote = "" } } };
   func salePhase(s : Sale) : Text {
     if (s.status == "cancelled") "cancelled"
     else if (s.status == "issued") "invoice"
@@ -2537,7 +2566,7 @@ persistent actor Assets {
   /// One sale with everything the pages need — admins, or the buyer for their own.
   public shared query func getSale(tok : Text, id : Nat) : async ?SaleView {
     let m = switch (me(tok)) { case (?m) m; case null return null };
-    switch (Map.get(sales, Nat.compare, id)) { case (?s) { if (m.role == "admin" or m.role == "finance" or s.buyer.pid == m.id) ?saleView(s) else null }; case null null };
+    switch (Map.get(sales, Nat.compare, id)) { case (?s) { if (m.role == "admin" or m.role == "finance") ?saleView(s) else if (s.buyer.pid == m.id) ?buyerSaleView(s) else null }; case null null };
   };
   /// Admins: the device's purchase details (if any) and its open sale — for the device page.
   public shared query func saleOfDevice(tok : Text, assetId : Nat) : async { purchase : ?Purchase; sale : ?SaleView; proposal : ?{ proposedMinor : Nat; basis : Text }; billingReady : Text } {
@@ -2718,6 +2747,13 @@ persistent actor Assets {
   type FinanceNotice = { saleId : Nat; kind : Text; attempts : Nat; nextAt : Int; detail : Text; delivered : [Text]; complete : Bool };
   let financeNotices = Map.empty<Text, FinanceNotice>();
   transient var financeNoticeBusy = false;
+  func financeNoticeTitle(kind : Text, s : Sale) : Text {
+    let device = switch (assets.get(s.assetId)) { case (?a) deviceName(a); case null "device #" # s.assetId.toText() };
+    if (kind == "invoice") "Invoice ready for payment review: " # s.invoiceNo
+    else if (kind == "accepted") s.buyer.name # " accepted the offer — issue the invoice: " # device
+    else if (kind == "declined") s.buyer.name # " declined the offer: " # device
+    else "Paid — prepare hardware hand-over: " # s.invoiceNo;
+  };
   func queueFinanceNotice(s : Sale, kind : Text) {
     let key = s.id.toText() # ":" # kind;
     if (not financeNotices.containsKey(key)) financeNotices.add(key, { saleId = s.id; kind; attempts = 0; nextAt = 0; detail = "Waiting for Hub delivery"; delivered = []; complete = false });
@@ -2744,7 +2780,7 @@ persistent actor Assets {
           for (email in recipients.values()) if (not delivered.any(func e = e == email) and attempted < 10) {
             attempted += 1;
             if (Hub.isActive(people, email) and (roleOf(email) == "admin" or (n.kind == "invoice" and roleOf(email) == "finance"))) {
-              let result = await notifyPerson(email, (if (n.kind == "invoice") "Invoice ready for payment review: " else "Paid — prepare hardware hand-over: ") # s.invoiceNo, appLink("sale/" # s.id.toText()), "assets.finance", "finance-" # key # "-" # email);
+              let result = await notifyPerson(email, financeNoticeTitle(n.kind, s), appLink("sale/" # s.id.toText()), "assets.finance", "finance-" # key # "-" # email);
               if (result == "") delivered := delivered.concat([email]) else detail := result;
             } else detail := "Waiting for current Hub permissions";
           };

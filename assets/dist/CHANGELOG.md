@@ -1,5 +1,15 @@
 # Changelog — kebab-stack assets
 
+## [0.18.0] — 2026-10-05
+
+- Buyers no longer see the company's purchase price, pricing rule or internal price note on their own sale: `getSale` and `myOffers` return a buyer view without the proposal. Administrators and Finance see it as before.
+- A colleague's acceptance or decline now reaches IT through the Hub (and its Slack delivery) like a dealroom acceptance does; the decline dialog lets the buyer add a short reason, which is kept on the sale.
+- A sale accepted under older hand-over terms can be offered again (*Offer again — terms changed*) instead of being stuck between "accepted" and "issue the invoice". Editing a colleague's accepted sale tells the colleague through the Hub that they have to accept again; the result text now says what happened.
+- The private dealroom quote covers only what the buyer accepted — buyer, price, VAT, description, device, seller identity, account and terms. Payment days, number prefix, pricing rule and footer changes no longer invalidate every open link. Open links are re-stamped once after the upgrade; issued invoices and revoked links are untouched.
+- A dealroom notification that the Hub keeps refusing (for example because the link creator left) stops after an hour of retries: every active administrator is told once and the sale's dealroom history records it, instead of retrying forever.
+- Wording: offering a sale to an outside buyer points to the private dealroom link; the paper form is not a step in the product.
+- No stable-state removals; existing sales, invoices, PDFs, links and payments are unchanged.
+
 ## [0.17.0] — 2026-09-29
 
 - Add a Hub-only, paginated Workboard projection for current Assets administrators and Finance staff. Return a hardware title, invoice reference, next action and source link; omit buyer/contact, value, invoice contents and technical inventory data.

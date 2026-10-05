@@ -811,6 +811,7 @@ async function loadSale(id) {
   const acts = [];
   if (s.status === "draft" && s.buyer.pid) acts.push(`<button class="primary sm" data-act="offer">Offer to the buyer</button>`);
   if (s.status === "offered" && s.buyer.pid) acts.push(`<button class="sm" data-act="offer">Offer again (re-notify)</button>`);
+  if (s.status === "accepted" && s.buyer.pid && Number(v.waiverVersion) !== Number(s.waiverVersion)) acts.push(`<button class="primary sm" data-act="offer">Offer again (terms changed)</button>`);
   if (s.status === "accepted" && !deal?.exists) acts.push(`<button class="primary sm" data-act="issue">Issue the invoice</button>`);
 
   if (s.status !== "cancelled") acts.push(`<button class="sm" data-act="cancel">${["issued", "paid"].includes(s.status) ? "Cancel with credit note…" : "Cancel the sale…"}</button>`);
@@ -896,30 +897,58 @@ async function loadOffers(id) {
   // Keep the buyer-scoped API: even an app admin must not review/accept another buyer's offer here.
   if (detail) rows = /^[1-9][0-9]*$/.test(id) ? rows.filter((v) => String(v.sale.id) === id) : [];
   if (!rows.length) { $("offerRows").innerHTML = `<div class="empty">${detail ? "This offer is not available for your signed-in account. Use the account that received the notification, or ask IT to check the offer." : "nothing offered to you at the moment"}</div>`; return; }
+  // The same three steps the external dealroom shows: review & accept → invoice → payment & hand-over.
+  const steps = (v) => {
+    const idx = { offer: 0, invoice: 1, paid: 2, complete: 3 }[v.phase] ?? -1;
+    return `<ol class="sale-progress" aria-label="Where this sale stands">${["Review & accept", "Invoice", "Payment & hand-over"].map((l, i) => `<li class="${idx < 0 ? "" : i < idx ? "past" : i === idx ? "current" : ""}">0${i + 1} · ${l}</li>`).join("")}</ol>`;
+  };
+  const field = (sid, key, label, value, max, o = {}) => `<label${o.wide ? ' class="wide"' : ""} for="of-${sid}-${key}">${label}<input id="of-${sid}-${key}" type="text" data-f="${key}" value="${esc(value)}" maxlength="${max}"${o.auto ? ` autocomplete="${o.auto}"` : ""}${o.optional ? "" : " required"}></label>`;
+  const next = (v) => {
+    const s = v.sale, price = fmtMoney(s.grossMinor, s.currency);
+    if (s.status === "cancelled") return `<div class="notice warning"><strong>This sale is cancelled.</strong>${esc(s.cancelReason)}${s.invoiceNo ? " Do not pay the invoice; IT handles the credit note." : ""}</div>`;
+    if (Number(v.handedOverAt)) return `<div class="notice"><strong>Handed over on ${esc(fmt(v.handedOverAt))}.</strong>The device is yours. Your invoice stays here for download.</div>`;
+    if (s.status === "paid") return `<div class="notice"><strong>Payment received${Number(s.paidAt) ? " on " + esc(fmt(s.paidAt)) : ""}.</strong>IT prepares the device and arranges the hand-over with you.</div>`;
+    if (s.status === "issued") return `<div class="notice"><strong>Invoice ${esc(s.invoiceNo)} is ready.</strong>Please pay ${esc(price)} by ${esc(s.dueOn)}. IT confirms the payment and prepares the device for hand-over.</div>`;
+    if (s.status === "accepted") return `<div class="notice"><strong>You accepted on ${esc(fmt(s.acceptedAt))}.</strong>IT issues your invoice next; you will be notified here and through the Hub.</div>`;
+    return "";
+  };
   $("offerRows").innerHTML = rows.map((v) => {
-    const s = v.sale; const open = s.status === "offered"; const complete = s.buyer.street && s.buyer.postalCode && s.buyer.town;
-    return `<div class="card ${open ? "" : "flat"}" data-offer="${Number(s.id)}">
-      <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:200px"><h3 style="margin-bottom:2px">${esc(v.deviceName)}</h3><div class="kv">${v.deviceSerial ? "serial " + esc(v.deviceSerial) + " · " : ""}<span class="pill st-${esc(s.status)}">${esc(SALE_WORD[s.status] || s.status)}</span>${s.invoiceNo ? " · " + esc(s.invoiceNo) + " · due " + esc(s.dueOn) : ""}</div></div><div class="money">${esc(fmtMoney(s.grossMinor, s.currency))}</div></div>
-      <div class="kv" style="margin:6px 0">${esc(s.description)} · price incl. VAT ${esc((Number(s.vatRateBp) / 100).toString())}%</div>
-      ${open ? `<label>Hand-over terms (version ${Number(v.waiverVersion)})</label><div class="terms">${esc(v.waiverText)}</div>
-        <label>Your postal address for the invoice</label>
-        <div class="row"><div style="flex:2"><input type="text" data-f="street" placeholder="Street" value="${esc(s.buyer.street)}"></div><div><input type="text" data-f="houseNo" placeholder="No." value="${esc(s.buyer.houseNo)}"></div></div>
-        <div class="row"><div><input type="text" data-f="postalCode" placeholder="Postal code" value="${esc(s.buyer.postalCode)}"></div><div style="flex:2"><input type="text" data-f="town" placeholder="Town" value="${esc(s.buyer.town)}"></div><div><input type="text" data-f="country" placeholder="CH" maxlength="2" value="${esc(s.buyer.country || "CH")}"></div></div>
-        <div class="kv" style="margin-top:6px">The address goes on this invoice only — not into the company directory.</div>
-        <div class="btnrow"><button class="primary" data-accept="${Number(s.id)}" data-v="${Number(v.waiverVersion)}">I accept the terms and buy it</button><button class="sm" data-decline="${Number(s.id)}">Decline</button><span class="status" data-status></span></div>` : ""}
-      ${s.acceptedHow === "online" ? `<div class="kv" style="margin-top:8px">You accepted the terms on ${esc(fmt(s.acceptedAt))}.</div>` : ""}
-      ${s.pdfId && Number(s.pdfId) ? `<div class="btnrow"><button class="sm" data-dl="${Number(s.pdfId)}">Download invoice ${esc(s.invoiceNo)}</button>${s.creditPdfId && Number(s.creditPdfId) ? `<button class="sm" data-dl="${Number(s.creditPdfId)}">Credit note ${esc(s.creditNoteNo)}</button>` : ""}</div>` : s.status === "issued" || s.status === "paid" ? `<div class="kv" style="margin-top:8px">Invoice ${esc(s.invoiceNo)} — the PDF is being prepared by IT.</div>` : ""}
-      ${s.status === "cancelled" ? `<div class="kv" style="margin-top:8px">${esc(s.cancelReason)}</div>` : ""}
+    const s = v.sale, sid = Number(s.id), open = s.status === "offered", price = fmtMoney(s.grossMinor, s.currency);
+    return `<div class="card offer" data-offer="${sid}">
+      <div class="offer-head"><div><h3>${esc(v.deviceName)}</h3><div class="kv">${v.deviceSerial ? "serial " + esc(v.deviceSerial) + " · " : ""}<span class="pill st-${esc(s.status)}">${esc(SALE_WORD[s.status] || s.status)}</span>${s.invoiceNo ? " · " + esc(s.invoiceNo) + " · due " + esc(s.dueOn) : ""}</div></div><div class="money">${esc(price)}</div></div>
+      ${steps(v)}
+      <div class="kv">${esc(s.description)} · price incl. VAT ${esc((Number(s.vatRateBp) / 100).toString())}%</div>
+      ${next(v)}
+      ${open ? `<h4>Hand-over terms · version ${Number(v.waiverVersion)}</h4><div class="terms" tabindex="0" aria-label="Hand-over terms">${esc(v.waiverText)}</div>
+        <h4>Your postal address for the invoice</h4>
+        <div class="offer-fields">${field(sid, "street", "Street", s.buyer.street, 70, { wide: true, auto: "address-line1" })}${field(sid, "houseNo", "Building no. (optional)", s.buyer.houseNo, 16, { optional: true })}${field(sid, "postalCode", "Postal code", s.buyer.postalCode, 16, { auto: "postal-code" })}${field(sid, "town", "Town / city", s.buyer.town, 35, { auto: "address-level2" })}${field(sid, "country", "Country code (CH, DE, …)", s.buyer.country || "CH", 2, { auto: "country" })}</div>
+        <div class="kv">The address goes on this invoice only — not into the company directory.</div>
+        <label class="check"><input type="checkbox" data-f="agree"><span>I accept this offer for <b>${esc(price)}</b> and the hand-over terms above. Accepting with my company sign-in is my signature.</span></label>
+        <div class="btnrow"><button class="primary" data-accept="${sid}" data-v="${Number(v.waiverVersion)}">Accept — IT issues the invoice</button><span class="status" data-status role="status"></span></div>
+        <details class="offer-decline"><summary>Not taking this device? Decline the offer</summary><p class="kv">Declining cancels this sale and tells IT.</p><label for="of-${sid}-reason">Reason (optional)<textarea id="of-${sid}-reason" data-f="reason" rows="2" maxlength="300"></textarea></label><div class="btnrow"><button class="sm" data-decline="${sid}">Decline & cancel sale</button></div></details>` : ""}
+      ${s.acceptedHow === "online" && !open ? `<div class="kv">You accepted the terms (version ${Number(s.waiverVersion)}) on ${esc(fmt(s.acceptedAt))}.</div>` : ""}
+      ${s.pdfId && Number(s.pdfId) ? `<div class="btnrow"><button class="sm" data-dl="${Number(s.pdfId)}">Download invoice ${esc(s.invoiceNo)}</button>${s.creditPdfId && Number(s.creditPdfId) ? `<button class="sm" data-dl="${Number(s.creditPdfId)}">Credit note ${esc(s.creditNoteNo)}</button>` : ""}</div>` : s.status === "issued" || s.status === "paid" ? `<div class="kv">Invoice ${esc(s.invoiceNo)} — the PDF is being prepared by IT.</div>` : ""}
     </div>`;
   }).join("");
   $("offerRows").querySelectorAll("[data-accept]").forEach((b) => (b.onclick = async () => {
-    const card = b.closest("[data-offer]"); const f = (k) => card.querySelector(`[data-f="${k}"]`).value.trim(); const st = card.querySelector("[data-status]");
-    st.className = "status"; st.textContent = "saving…";
-    const r = await backend.acceptOffer(tok(), BigInt(b.dataset.accept), BigInt(b.dataset.v), [{ street: f("street"), houseNo: f("houseNo"), postalCode: f("postalCode"), town: f("town"), country: f("country") || "CH" }]);
-    st.className = "status " + (r.ok ? "ok" : "err"); st.textContent = r.ok ? "accepted — IT issues the invoice" : r.detail;
-    if (r.ok) loadOffers(id);
+    const card = b.closest("[data-offer]"); const f = (k) => card.querySelector(`[data-f="${k}"]`); const st = card.querySelector("[data-status]");
+    const address = { street: f("street").value.trim(), houseNo: f("houseNo").value.trim(), postalCode: f("postalCode").value.trim(), town: f("town").value.trim(), country: (f("country").value.trim() || "CH").toUpperCase() };
+    const missing = ["street", "postalCode", "town"].find((k) => !address[k]) || (address.country.length !== 2 ? "country" : "");
+    if (missing) { st.className = "status err"; st.textContent = "Street, postal code, town and a two-letter country code are needed on the invoice."; f(missing).focus(); return; }
+    if (!f("agree").checked) { st.className = "status err"; st.textContent = "Please tick the box to confirm you accept the offer and the terms."; f("agree").focus(); return; }
+    st.className = "status"; st.textContent = "saving…"; b.disabled = true;
+    try {
+      const r = await backend.acceptOffer(tok(), BigInt(b.dataset.accept), BigInt(b.dataset.v), [address]);
+      st.className = "status " + (r.ok ? "ok" : "err"); st.textContent = r.ok ? "Accepted. IT issues the invoice and you will be notified." : r.detail;
+      if (r.ok) loadOffers(id);
+    } finally { b.disabled = false; }
   }));
-  $("offerRows").querySelectorAll("[data-decline]").forEach((b) => (b.onclick = async () => { if (!confirm("Decline this offer? IT is told.")) return; const r = await backend.declineOffer(tok(), BigInt(b.dataset.decline), ""); if (!r.ok) alert(r.detail); loadOffers(id); }));
+  $("offerRows").querySelectorAll("[data-decline]").forEach((b) => (b.onclick = async () => {
+    const card = b.closest("[data-offer]"); const st = card.querySelector("[data-status]"); const reason = (card.querySelector('[data-f="reason"]')?.value || "").trim();
+    b.disabled = true; st.className = "status"; st.textContent = "declining…";
+    try { const r = await backend.declineOffer(tok(), BigInt(b.dataset.decline), reason); if (!r.ok) { st.className = "status err"; st.textContent = r.detail; return; } loadOffers(id); }
+    finally { b.disabled = false; }
+  }));
   $("offerRows").querySelectorAll("[data-dl]").forEach((b) => (b.onclick = async () => { const d = opt(await backend.saleDocument(tok(), BigInt(b.dataset.dl))); if (d) downloadBytes(d.name, new Uint8Array(d.bytes), d.mime); }));
 }
 
