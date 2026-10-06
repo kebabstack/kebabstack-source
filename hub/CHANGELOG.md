@@ -1,5 +1,9 @@
 # Changelog — kebab-stack hub
 
+## [0.38.1] — 2026-10-06
+
+- Team-room screen (`#/tv`): the layout is redrawn only where a number changed, so cards no longer fade in again every minute; a changed number glides to its new value. A quiet backdrop of slowly falling glyphs and soft sparks (canvas, about 24 frames per second, nothing while the tab is hidden), a live pulse beside the status line and an amber beacon on every flagged count make the wall screen feel alive without competing with the numbers. **Where to focus** now sizes to its signals instead of leaving an empty panel, and shows **All clear** when no approved source flags anything. Full screen and Disconnect fade out after six seconds and return on any touch, pointer or key. Trust with no enrolled devices says so instead of "0 of 0". Reduced-motion settings switch all motion off. No change to what the display API shares or to any backend behaviour.
+
 ## [0.38.0] — 2026-10-06
 
 - Lifecycle events now include `created`: a person who appears in the directory (SCIM, Okta, OpenTeam, local, invitation) after the Hub already knew its people. The first observation after this release only records what exists, and a source's joins count only once that source has been observed for 15 minutes, so an upgrade or an initial import (even one that arrives in several chunks) never produces join events. Desk 0.30 turns these into onboarding requests when told to.

@@ -64,6 +64,10 @@ approved aggregate scopes and never signs into an Owner account.
    Sources start unselected. **Include Workboard with Desk** is a separate unchecked choice. It requires Desk to be selected. Existing screen approvals keep their original data scope; re-pair a screen to include Workboard. A pairing code expires after ten minutes.
 3. Select **Approve this screen**. The TV connects automatically. Full screen
    expands the display; configure the device's sleep/kiosk settings separately.
+   Since Hub 0.38.1 the Full screen and Disconnect controls fade out after six
+   seconds of no input and return on any touch, pointer movement or key press;
+   the backdrop animation and number transitions follow the browser's
+   reduced-motion setting.
 4. To stop sharing, use **Revoke** beside the screen in Hub. **Disconnect** on
    the TV removes its local credential and requests server revocation. If that
    request cannot reach Hub, revoke it centrally. Renewal requires a new pairing;

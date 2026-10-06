@@ -60,32 +60,82 @@
     switch(app){
       case 'desk':return {value:m.active,unit:'open requests',detail:'Internal support',rows:[[m.breached,'past their service target'],[m.unassigned,'without an agent']],flag:m.breached+m.unassigned,focus:'requests need an owner or response'};
       case 'workboard':return {value:m.workOpen,unit:'open project tasks',detail:`${m.workProjects} shared projects · own tasks only`,rows:[[m.workOverdue,'past their target date'],[m.workWaiting,'waiting on something'],[m.workUnowned,'without an available owner']],flag:m.workOverdue+m.workWaiting+m.workUnowned,focus:'review project dates, blockers and ownership',note:`${m.workStepsDone} of ${m.workSteps} subtasks complete · dates use UTC`};
-      case 'trust':return {value:m.assessed?m.score:'—',unit:'verified device score',detail:`${m.assessed} of ${m.total} devices fully assessed`,rows:[[m.attention,'with failing checks'],[m.unverified,'not fully verified']],flag:m.attention+m.unverified,focus:'check failures and missing evidence',bar:m.total?m.assessed/m.total:0};
+      case 'trust':return {value:m.assessed?m.score:'—',unit:'verified device score',detail:m.total?`${m.assessed} of ${m.total} devices fully assessed`:'No devices enrolled yet',rows:[[m.attention,'with failing checks'],[m.unverified,'not fully verified']],flag:m.attention+m.unverified,focus:'check failures and missing evidence',bar:m.total?m.assessed/m.total:0};
       case 'assets':return {value:m.stock,unit:'devices ready in stock',detail:`${m.total} registered · ${m.assigned} assigned`,rows:[[m.preparing,'received, still being prepared']],flag:m.preparing,focus:'hardware needs preparation'};
       case 'contracts':return {value:m.due,unit:'decisions in the next 30 days',detail:`${m.total} active or cancelling contracts`,rows:[[m.overdue,'decision dates passed'],[m.unowned,'without an active owner'],[m.unknown,'decision dates unknown']],flag:m.overdue+m.unowned+m.unknown,focus:'review decisions and ownership'};
       case 'watch':return {value:m.alerts,unit:'domains with alerts',detail:`${m.enabled} domains monitored`,rows:[[m.warnings,'monitoring warnings'],[m.stale,'checks late or unsuccessful'],[m.unknown,'expiry dates unverified']],flag:m.alerts+m.warnings+m.stale+m.unknown+m.expiring,focus:'review domain evidence and expiry',note:`${m.expiring} expiring within ${m.expiryDays} days`};
     }
   }
+  // Quiet backdrop for the wall screen: a sparse rain of glyphs and a few soft sparks, drawn at ~24 fps
+  // on a canvas behind the cards. Off entirely with reduced motion, while hidden, and without canvas support.
+  function createBackdrop(canvas){
+    if(reducedMotion()||typeof requestAnimationFrame!=='function'||typeof canvas.getContext!=='function')return ()=>{};
+    const ctx=canvas.getContext('2d');if(!ctx)return ()=>{};
+    const glyphs='0123456789ABCDEF<>=+/·|';
+    let w=0,h=0,cell=24,columns=[],sparks=[],last=0,frame=0,stopped=false;
+    const rand=(a,b)=>a+Math.random()*(b-a);
+    const column=(x,fresh)=>({x,head:fresh?rand(-h,h):-rand(0,h),speed:rand(.3,.8)*cell,len:Math.round(rand(8,22)),seed:Math.floor(rand(0,1000)),wait:fresh?0:rand(2000,14000)});
+    const spark=()=>({x:rand(0,w),y:rand(0,h),r:rand(.6,2.2),t:rand(0,8000),life:rand(5000,11000)});
+    function size(){
+      const box=canvas.parentElement.getBoundingClientRect();
+      w=canvas.width=Math.max(1,Math.round(box.width));h=canvas.height=Math.max(1,Math.round(box.height));
+      cell=Math.max(18,Math.round(w/80));
+      columns=Array.from({length:Math.floor(w/cell)},(_,i)=>column(i*cell+cell/2,true)).filter(()=>Math.random()<.45);
+      sparks=Array.from({length:Math.round(w/60)},spark);
+      ctx.font=`${Math.round(cell*.62)}px ${getComputedStyle(canvas).getPropertyValue('--ks-mono')||'monospace'}`;ctx.textAlign='center';ctx.textBaseline='middle';
+    }
+    function draw(now){
+      if(stopped)return;frame=requestAnimationFrame(draw);
+      if(document.hidden){last=0;return;}
+      const dt=last?Math.min(120,now-last):0;if(last&&dt<40)return;last=now;
+      ctx.clearRect(0,0,w,h);
+      for(const c of columns){
+        if(c.wait>0){c.wait-=dt;continue;}
+        c.head+=c.speed*dt/1000;
+        if(c.head-c.len*cell>h){Object.assign(c,column(c.x,false));continue;}
+        for(let i=0;i<c.len;i++){
+          const y=c.head-i*cell;if(y<-cell||y>h+cell)continue;
+          const a=i===0?.5:.3*(1-i/c.len);
+          ctx.fillStyle=`rgba(143,211,167,${a.toFixed(3)})`;
+          ctx.fillText(glyphs[(c.seed+Math.floor(y/cell)*7+i*3)%glyphs.length],c.x,y);
+        }
+      }
+      for(const s of sparks){
+        s.t+=dt;if(s.t>s.life)Object.assign(s,spark(),{t:0});
+        const k=Math.sin(Math.PI*s.t/s.life),a=.7*k;if(a<=0)continue;
+        s.y-=dt*.004;
+        const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.r*4);g.addColorStop(0,`rgba(214,231,206,${a.toFixed(3)})`);g.addColorStop(1,'rgba(214,231,206,0)');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,s.r*4,0,Math.PI*2);ctx.fill();
+      }
+    }
+    size();window.addEventListener('resize',size);frame=requestAnimationFrame(draw);
+    return ()=>{stopped=true;cancelAnimationFrame(frame);window.removeEventListener('resize',size);};
+  }
+  const reducedMotion=()=>{try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch{return true;}};
   function createTV(root,api,options={}){
     const now=options.now||Date.now,storage=options.storage||localStorage;
-    let secret='',code='',pairExpires=0,state=null,entries=[],generation=0,closed=false,stateBusy=false,metricBusy=false,lastCheck=0,lastMetrics=0,lastHTML='',poll,aging;
+    let secret='',code='',pairExpires=0,state=null,entries=[],generation=0,closed=false,stateBusy=false,metricBusy=false,lastCheck=0,lastMetrics=0,lastCards=new Map(),poll,aging,idle;
     const $=s=>root.querySelector(s);
     root.className='tv-surface';
-    root.innerHTML='<header class="tv-header"><div><span class="tv-brand">kebabstack / operations</span><h1 data-title>One screen. Your stack.</h1></div><div class="tv-clock"><time data-clock></time><span data-expiry></span></div></header><section data-stage></section><footer class="tv-footer"><span data-status role="status">Preparing this screen…</span><div><button type="button" data-fullscreen>Full screen</button><button type="button" data-forget>Disconnect</button></div></footer>';
+    root.innerHTML='<canvas class="tv-backdrop" aria-hidden="true"></canvas><header class="tv-header"><div><span class="tv-brand">kebabstack / operations</span><h1 data-title>One screen. Your stack.</h1></div><div class="tv-clock"><time data-clock></time><span data-date></span><span data-expiry></span></div></header><section data-stage></section><footer class="tv-footer"><div class="tv-status"><span class="tv-live" aria-hidden="true"></span><span data-status role="status">Preparing this screen…</span></div><div class="tv-controls"><button type="button" data-fullscreen>Full screen</button><button type="button" data-forget>Disconnect</button></div></footer>';
     $('[data-fullscreen]').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await root.requestFullscreen();}catch{$('[data-status]').textContent='Full screen is unavailable. Use your browser’s full-screen control.';}};
     $('[data-forget]').onclick=()=>forget();
+    // Controls stay out of the way on a wall screen; a touch, pointer or key brings them back for a moment.
+    function wake(){root.classList.add('tv-awake');clearTimeout(idle);idle=setTimeout(()=>root.classList.remove('tv-awake'),6000);}
+    root.addEventListener('pointermove',wake);root.addEventListener('pointerdown',wake);root.addEventListener('keydown',wake);wake();
+    const stopBackdrop=createBackdrop($('.tv-backdrop'));
     function readStorage(){try{const s=JSON.parse(storage.getItem(storageKey)||'null');if(/^[0-9a-f]{64}$/.test(s?.secret)){secret=s.secret;code=/^[0-9a-f]{10}$/.test(s.code)?s.code:'';}}catch{}}
     function save(){storage.setItem(storageKey,JSON.stringify({secret,code}));}
-    function clock(){$('[data-clock]').textContent=new Date(now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
+    function clock(){const t=new Date(now());$('[data-clock]').textContent=t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});$('[data-date]').textContent=t.toLocaleDateString([], {weekday:'long',day:'numeric',month:'long'});}
     function reset(message,canPair=false){
-      state=null;entries=[];generation++;metricBusy=false;lastMetrics=0;lastHTML='';
+      state=null;entries=[];generation++;metricBusy=false;lastMetrics=0;lastCards=new Map();root.dataset.live='';
       $('[data-title]').textContent='One screen. Your stack.';$('[data-expiry]').textContent='';
       $('[data-stage]').innerHTML=`<div class="tv-pair"><span class="tv-kicker">OPERATIONS DISPLAY</span><h2>${esc(message)}</h2><p>No company data is shown until this screen has current approval.</p>${canPair?'<button type="button" data-new>Generate pairing code</button>':''}</div>`;
       $('[data-status]').textContent='Read-only screen · no Hub session';
       if(canPair)$('[data-new]').onclick=pair;
     }
     function pairing(expires){
-      pairExpires=expires;state=null;entries=[];lastHTML='';
+      pairExpires=expires;state=null;entries=[];lastCards=new Map();root.dataset.live='';
       const printed=code?code.toUpperCase().slice(0,5)+' · '+code.toUpperCase().slice(5):'New code needed';
       $('[data-stage]').innerHTML=`<div class="tv-pair"><span class="tv-kicker">PAIR THIS SCREEN</span><h2>Your IT, at a glance.</h2><p>On your own computer, open Hub → Operations → Screens.</p><strong class="tv-code">${esc(printed)}</strong><p>Enter this code and choose what this room may see.</p><small data-countdown></small></div>`;
       $('[data-status]').textContent='Waiting for a Hub Owner to approve this screen';
@@ -103,21 +153,41 @@
       finally{stateBusy=false;}
     }
     function bounded(promise){let timeout;return Promise.race([promise,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error('timeout')),20000);})]).finally(()=>clearTimeout(timeout));}
+    function card(e){
+      const head=`<span class="tv-kicker">${names[e.app]}</span>`;
+      if(!e.data)return {cls:'tv-card tv-unverified',flag:false,value:null,html:`${head}<strong class="tv-number">—</strong><h2>${e.waiting?'Checking source':'Source unverified'}</h2><p>${e.waiting?'Reading current totals…':'No current totals. Check this app in Hub.'}</p>`};
+      const p=summary(e.app,e.data.m),n=typeof p.value==='number'?number(p.value):p.value;
+      return {cls:'tv-card',flag:p.flag>0,value:typeof p.value==='number'?p.value:null,html:`${head}<strong class="tv-number">${n}</strong><h2>${p.unit}</h2><p>${p.detail}</p>${p.bar===undefined?'':`<div class="tv-bar" aria-label="Assessment coverage ${Math.round(p.bar*100)}%"><span style="width:${Math.max(0,Math.min(100,p.bar*100))}%"></span></div>`}<div class="tv-rows">${p.rows.map(([n,t])=>`<div><strong class="${n?'tv-flag':''}">${number(n)}</strong><span>${t}</span></div>`).join('')}</div>${p.note?`<small>${p.note}</small>`:''}<time class="tv-checked">Checked ${new Date(e.data.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time>`};
+    }
+    function focusCard(views,checked){
+      const focus=views.filter(e=>e.data&&summary(e.app,e.data.m).flag>0),complete=checked===entries.length;
+      const clear=!focus.length&&complete;
+      return {cls:'tv-card tv-focus'+(clear?' tv-clear':''),flag:false,value:null,html:`<span class="tv-kicker">THE NEXT CONVERSATION</span><h2>${clear?'All clear':'Where to focus'}</h2>${focus.length?`<div class="tv-signals">${focus.map(e=>`<div class="tv-signal"><strong>${names[e.app]}</strong><span>${summary(e.app,e.data.m).focus}</span></div>`).join('')}</div>`:`<p>${complete?'No follow-up flags in the approved sources.':'Check source coverage before drawing conclusions.'}</p>`}<small>Current snapshots · overlapping counts are not added up</small>`};
+    }
+    // Numbers glide to their new value instead of jumping; the first paint shows the final value at once.
+    function tween(el,from,to){
+      const n=el.querySelector('.tv-number');if(!n||typeof to!=='number'||typeof from!=='number'||from===to||to>=100000||reducedMotion()||typeof requestAnimationFrame!=='function')return;
+      const start=performance.now(),duration=700;
+      const step=t=>{if(closed||!n.isConnected)return;const k=Math.min(1,(t-start)/duration),v=Math.round(from+(to-from)*(1-Math.pow(1-k,3)));n.textContent=number(v);if(k<1)requestAnimationFrame(step);else n.textContent=number(to);};
+      requestAnimationFrame(step);
+    }
     function paint(){
       if(!state||closed||document.hidden)return;
-      $('[data-title]').textContent=state.name;$('[data-expiry]').textContent='Access ends '+date(state.expiresAt);
+      $('[data-title]').textContent=state.name;$('[data-expiry]').textContent='Access ends '+date(state.expiresAt);root.dataset.live='on';
       const checked=entries.filter(e=>e.data).length;
       const views=entries.flatMap(e=>e.app==='desk-workboard'?[{...e,app:'desk'},{...e,app:'workboard'}]:[e]);
-      const items=views.map(e=>{
-        const head=`<span class="tv-kicker">${names[e.app]}</span>`;
-        if(!e.data)return `<article class="tv-card tv-unverified">${head}<strong class="tv-number">—</strong><h2>${e.waiting?'Checking source':'Source unverified'}</h2><p>${e.waiting?'Reading current totals…':'No current totals. Check this app in Hub.'}</p></article>`;
-        const p=summary(e.app,e.data.m),n=typeof p.value==='number'?number(p.value):p.value;
-        return `<article class="tv-card">${head}<strong class="tv-number">${n}</strong><h2>${p.unit}</h2><p>${p.detail}</p>${p.bar===undefined?'':`<div class="tv-bar" aria-label="Assessment coverage ${Math.round(p.bar*100)}%"><span style="width:${Math.max(0,Math.min(100,p.bar*100))}%"></span></div>`}<div class="tv-rows">${p.rows.map(([n,t])=>`<div><strong class="${n?'tv-flag':''}">${number(n)}</strong><span>${t}</span></div>`).join('')}</div>${p.note?`<small>${p.note}</small>`:''}<time class="tv-checked">Checked ${new Date(e.data.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time></article>`;
+      const cards=views.map(e=>({key:`${e.cid}:${e.app}`,...card(e)}));
+      cards.push({key:'focus',...focusCard(views,checked)});
+      const grid=$('[data-stage] .tv-grid');
+      const sameShape=grid&&grid.children.length===cards.length&&cards.every((c,i)=>grid.children[i].dataset.key===c.key);
+      if(!sameShape){
+        lastCards=new Map(cards.map(c=>[c.key,c]));
+        $('[data-stage]').innerHTML=`<div class="tv-grid" data-count="${cards.length}">${cards.map(c=>`<article class="${c.cls}" data-key="${c.key}" data-flag="${c.flag}">${c.html}</article>`).join('')}</div>`;
+      }else cards.forEach((c,i)=>{
+        const previous=lastCards.get(c.key);if(previous&&previous.html===c.html&&previous.cls===c.cls)return;
+        const el=grid.children[i];el.className=c.cls;el.dataset.flag=String(c.flag);el.innerHTML=c.html;lastCards.set(c.key,c);
+        if(previous&&previous.value!==c.value){el.classList.remove('tv-changed');void el.offsetWidth;el.classList.add('tv-changed');tween(el,previous.value,c.value);}
       });
-      const focus=views.filter(e=>e.data&&summary(e.app,e.data.m).flag>0);
-      items.push(`<article class="tv-card tv-focus"><span class="tv-kicker">THE NEXT CONVERSATION</span><h2>Where to focus</h2>${focus.length?focus.map(e=>`<div class="tv-signal"><strong>${names[e.app]}</strong><span>${summary(e.app,e.data.m).focus}</span></div>`).join(''):`<p>${checked===entries.length?'No follow-up flags in the approved sources.':'Check source coverage before drawing conclusions.'}</p>`}<small>Current snapshots · overlapping counts are not added up</small></article>`);
-      const html=`<div class="tv-grid" data-count="${items.length}">${items.join('')}</div>`;
-      if(html!==lastHTML){lastHTML=html;$('[data-stage]').innerHTML=html;}
       $('[data-status]').textContent=`${checked} of ${entries.length} approved sources checked · read only`;
     }
     async function metrics(){
@@ -157,7 +227,7 @@
     readStorage();clock();reset('Checking this screen’s access…',!secret);
     if(secret)void check();else reset('A clear view for your team.',true);
     poll=setInterval(check,options.pollInterval??15000);aging=setInterval(age,1000);
-    return {check,forget,destroy(){closed=true;generation++;clearInterval(poll);clearInterval(aging);document.removeEventListener('visibilitychange',visibility);root.replaceChildren();}};
+    return {check,forget,destroy(){closed=true;generation++;clearInterval(poll);clearInterval(aging);clearTimeout(idle);stopBackdrop();document.removeEventListener('visibilitychange',visibility);root.replaceChildren();}};
   }
   window.KebabDisplays={createManager,createTV};
 })();
