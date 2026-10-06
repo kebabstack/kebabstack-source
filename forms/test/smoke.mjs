@@ -16,6 +16,7 @@ const form = { id: 1n, slug: "abcdef0123456789", title: "Idea box", description:
 const meta = (over = {}) => ({ id: 1n, slug: form.slug, title: form.title, status: { open: null }, allowEdit: true, cap: 0n, createdBy: ME, createdByName: "Me Myself", createdAt: now, updatedAt: now, subs: 2n, subsReceived: 1n, subsInReview: 0n, subsAccepted: 1n, subsDeclined: 0n, myRole: role === "admin" ? "owner" : "viewer", closesAt: 0n, ...over });
 const sub = (id, over = {}) => ({ id: BigInt(id), formId: 1n, num: BigInt(id), answers: JSON.stringify({ 1: "Lunch roulette", 2: "Team", 3: 4 }), submitterName: "Ada", submitterEmail: "", submittedAt: now, updatedAt: now, status: { received: null }, assignee: "", assigneeName: "", reviews: [], notes: [], people: [], ...over });
 const calls = [];
+const submissions=[];let routedFixture=false;
 globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
   calls.push(m);
   switch (m) {
@@ -35,8 +36,10 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "createForm": case "duplicateForm": return [meta({ id: 3n, slug: "0123456789abcdef", title: "Untitled form", status: { draft: null }, subs: 0n, subsReceived: 0n, subsAccepted: 0n })];
     case "publicForm": return [{ title: "Idea box", description: "Tell us", schema, allowEdit: true, open: true, capReached: false, closesAt: 0n, orgName: "Acme" }];
     case "previewForm": return [{ id: 1n, title: "Idea box", description: "Tell us", schema, allowEdit: true, status: { open: null }, myRole: "owner", closesAt: 0n }];
-    case "submitPublic": return { ok: true, num: 7n, detail: "" };
-    case "mySubmission": return [];
+    case "submitIntake": submissions.push(a); if(submissions.length===1)throw Error("Synthetic lost response");return { ok: true, num: 7n, detail: "" };
+    case "publicIntake": case "getIntake": return [{revision:0n,origins:[],contextKeys:[],privacyUrl:'',retentionDays:0n,graceUntil:0n}];
+    case "deliveryStatus": return routedFixture?[{state:"blocked",attempts:1n,ticketId:0n,url:"",detail:"Check the project"}]:[];
+    case "getDeskTarget": case "submissionContext": case "mySubmission": return [];
     case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "https://forms.test", orgName: "Acme", adminGroup: "forms-admins", adminEmails: ["me@example.com"], peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, forms: 2n, submissions: 2n, trashed: 1n, demoSeeded: false }];
     case "adminLogRows": return [{ at: now, who: "me@example.com", what: "x" }];
     default: return { ok: true, detail: "" };
@@ -65,11 +68,14 @@ if (mode === "public") {
   check(!calls.includes("whoami") && !calls.includes("loginWithTicket"), "respondents never touch the session lane: " + calls.join(","));
   check(/Idea box/.test($("fillWrap").textContent) && document.querySelectorAll("#fillWrap .fq").length >= 3, "fill page rendered questions: " + document.querySelectorAll("#fillWrap .fq").length);
   check($("fillOrg").textContent === "Acme", "org name on the fill brand line");
-  $("fNext").click(); await tick(); check(document.querySelectorAll("#fillWrap .fq.err").length >= 1 && !calls.includes("submitPublic"), "required validation blocks submit");
+  $("fNext").click(); await tick(); check(document.querySelectorAll("#fillWrap .fq.err").length >= 1 && !calls.includes("submitIntake"), "required validation blocks submit");
   const short = document.querySelector('#fillWrap [data-q="1"]'); short.value = "Lunch roulette"; short.dispatchEvent(new window.Event("input"));
   const radio = document.querySelector('#fillWrap input[name="q2"]'); radio.checked = true; radio.dispatchEvent(new window.Event("change"));
   $("fNext").click(); for (let i = 0; i < 6; i++) await tick();
-  check(calls.includes("submitPublic") && /Submission received/.test($("fillWrap").textContent) && /#7/.test($("fillWrap").textContent), "submitted + thank-you with number: " + $("fillWrap").textContent.slice(0, 80));
+  check($('fNext').textContent==='RETRY SAME RESPONSE' && $('idName').disabled,'uncertain submission retains a frozen draft');
+  $('fNext').click();for(let i=0;i<6;i++)await tick();
+  check(JSON.stringify(submissions[0])===JSON.stringify(submissions[1]),'retry resends the exact accepted-or-pending payload');
+  check(calls.includes("submitIntake") && /Submission received/.test($("fillWrap").textContent) && /#7/.test($("fillWrap").textContent), "submitted + thank-you with number: " + $("fillWrap").textContent.slice(0, 80));
   check(window.localStorage.getItem("ks-forms-sub-abcdef0123456789"), "edit token kept on the device");
 } else {
   check($("layout").classList.contains("on") && $("login").style.display === "none", "layout shown after ticket login");
@@ -101,8 +107,11 @@ if (mode === "public") {
     check(document.querySelectorAll("#dAssignList [data-email]").length === 2, "assignee picker rows");
     document.querySelector("#dAssignList [data-email]").click(); for (let i = 0; i < 6; i++) await tick(); check(calls.includes("assignSubmission"), "assigned via picker");
     document.querySelector("#dStars button[data-n='4']").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("rateSubmission"), "rated");
-    $("dClose").click();
+    routedFixture=true;document.querySelector('#tabSubs tr.rowlink').click();for(let i=0;i<4;i++)await tick();
+    check(!!$('retryDelivery')&&!$('dStars'),'routed response offers delivery recovery instead of a second review workflow');
+    routedFixture=false;$("dClose").click();
     await go("#/form/1/insights"); for (let i = 0; i < 4; i++) await tick(); check(document.querySelectorAll("#tabInsights .insq").length >= 1, "insights");
+    await go("#/form/1/publish");check(!!$("embedCode") && !!$("deskConnectForm") && /External mail is not connected/.test($("tabPublish").textContent),"publication and connection settings are discoverable");
     await go("#/trash"); check($("viewTrash").classList.contains("on") && document.querySelectorAll("#trashList .formrow").length === 1 && /purges in/.test($("trashList").textContent), "trash");
     await go("#/settings"); check($("viewSettings").classList.contains("on") && !$("sGroup") && !!document.querySelector("[data-hub-permissions-link]") && /2 forms/.test($("sMeta").textContent), "settings loaded");
     check(document.querySelectorAll("#logRows tr").length === 1, "admin log");

@@ -1,4 +1,4 @@
-# desk — concept (2026-09-02, historical draft)
+# desk — concept (2026-09-02, draft for Dominik)
 
 > Historical design/review record. It describes its stated date, not current
 > behavior or deployment instructions. Use README.md, docs/GAPS.md and the

@@ -262,3 +262,18 @@ New invoices notify the current effective Finance recipients, or Assets admins i
 ## Workboard compatibility
 
 Assets 0.17.0 and Hub 0.36.0 supply sale status to Desk 0.25.0. No additional local role, key or connector is needed. Use the central Assets admin or Finance assignment. Upgrade Hub and Assets before Desk via the suite release executor.
+
+## When photo reading is unavailable
+
+Assets 0.17.1 keeps the selected photo in the current browser draft and retries a
+known transient AI failure once. If reading still fails, use **Try reading again**
+or **Enter details manually**; the same photo can accompany the eventual saved
+hardware event. A draft is not durable storage: reloading/closing the page can
+lose it. Nothing is added to inventory until the operator saves the final step.
+
+HTTP 503 describes a failed AI-service response, not a completed device upload.
+For 401/403 check the Hub AI key/permissions; for 402/429 check the configured
+provider's billing or usage limit. The app displays sanitized guidance and the
+HTTP status, not provider response bodies. No automatic vendor/model switch is
+made. The one transient retry can make a second provider request; ordinary
+employees remain unable to invoke photo recognition.

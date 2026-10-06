@@ -2617,3 +2617,38 @@ test('assistants: concurrent code generation leaves only the latest code usable'
     assert.equal(results.filter(r=>r.ok).length,1,'at most one pending code per person after asynchronous minting');
   } finally { await pic.tearDown(); }
 });
+
+// The navigation hint is live, but never becomes console authorization.
+test('Hub console navigation: current global role, promotion, demotion, inactive profile and read-only suite token',async()=>{
+ const pic=await PocketIc.create(server.getUrl());try{
+  const {actor:hub,canisterId:hubId}=await initialized(pic);await settled(pic);
+  const {actor:app,canisterId:appId}=await install(pic,'assets');app.setPrincipal(controller);await app.setHub(hubId.toText());hub.setPrincipal(owner);
+  const c=await connectTestApp(hub,{name:'assets',canisterId:appId.toText(),note:'',lanes:['identity','roles'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[{name:'Assets',kind:'app',url:'https://assets.example.test'}]});
+  const card=(await hub.personCard('member@example.test'))[0];const policy=(await hub.getAppPermissions(c.id))[0];
+  assert.equal((await hub.setAppPermissions(c.id,policy.revision,{app:'assets',defaultRole:'member',people:[{id:card.pid,role:'admin'}],groups:[]})).ok,true);
+  hub.setPrincipal(member);const login=(await app.loginWithTicket((await hub.mintAppTicket('',c.tileId)).ticket))[0];assert.ok(login);hub.setPrincipal(stranger);
+  assert.deepEqual((await hub.suiteState(login.suiteToken))[0].hubRole,['']);
+  for(const role of ['owner','admin','helpdesk','']){hub.setPrincipal(owner);assert.equal((await hub.setPersonRole('member@example.test',role)).ok,true);hub.setPrincipal(stranger);assert.deepEqual((await hub.suiteState(login.suiteToken))[0].hubRole,[role]);assert.equal(await hub.amIAdmin(),false);await assert.rejects(()=>hub.listSsoProviders(), /assertion/i);}
+  hub.setPrincipal(owner);assert.equal(await hub.setLocalUserActive('member@example.test',false),true);hub.setPrincipal(stranger);assert.deepEqual(await hub.suiteState(login.suiteToken),[]);
+ }finally{await pic.tearDown()}
+});
+
+test('Assets photo reading: 503 recovery, secret-safe errors, member rejection and revocation during outcall',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});try{
+  const {actor:hub,canisterId:hubId}=await initialized(pic);await settled(pic);
+  const {actor:app,canisterId:appId,idlFactory}=await install(pic,'assets');app.setPrincipal(controller);await app.setHub(hubId.toText());hub.setPrincipal(owner);
+  const c=await connectTestApp(hub,{name:'assets',canisterId:appId.toText(),note:'',lanes:['identity','roles','ai'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[{name:'Assets',kind:'app',url:'https://assets.example.test'}]});
+  assert.equal((await hub.setAi({provider:'anthropic',url:'https://api.anthropic.com/v1/messages',model:'fixture-model',visionModel:[],key:'fixture-private-key'})).ok,true);
+  const login=async principal=>{hub.setPrincipal(principal);return (await app.loginWithTicket((await hub.mintAppTicket('',c.tileId)).ticket))[0].token};
+  hub.setPrincipal(owner);await hub.setPersonRole('helpdesk@example.test','admin');const adminToken=await login(helpdesk),memberToken=await login(member);await settled(pic);
+  const photo=Buffer.from([255,216,255,217]);assert.equal((await app.intakeRead(memberToken,photo,'image/jpeg')).ok,false);assert.equal((await pic.getPendingHttpsOutcalls()).length,0);
+  const defer=pic.createDeferredActor(idlFactory,appId);const ask=()=>defer.intakeRead(adminToken,photo,'image/jpeg');
+  for(const [status,retryable] of [[503,true],[401,false],[429,false]]){
+   const response=await ask(),req=await pendingContractsAi(pic);assert.equal(req.url,'https://api.anthropic.com/v1/messages');
+   await respondContractsAi(pic,req,{error:{message:'fixture-private-key'}} ,status);const r=await response();assert.equal(r.ok,false);assert.deepEqual(r.retryable,[retryable]);assert.match(r.detail,new RegExp('HTTP '+status));assert.doesNotMatch(r.detail,/fixture-private-key/);
+  }
+  const payload={content:[{type:'text',text:JSON.stringify({reads:[{kind:'serial',value:'EXAMPLE123',confidence:0.9}],vendor:'Example',model:'Laptop',kind:'laptop',sticker:'current',notes:''})}]};
+  const ok=await ask();await respondContractsAi(pic,await pendingContractsAi(pic),payload);assert.equal((await ok()).reads[0].value,'EXAMPLE123');assert.equal((await app.stats(adminToken)).total,0n,'reading never creates an asset');
+  const stale=await ask(),req=await pendingContractsAi(pic);hub.setPrincipal(owner);await hub.setPersonRole('helpdesk@example.test','');await app.syncNow(adminToken);await respondContractsAi(pic,req,payload);const denied=await stale();assert.equal(denied.ok,false);assert.deepEqual(denied.reads,[]);
+ }finally{await pic.tearDown()}
+});

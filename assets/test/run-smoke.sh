@@ -22,7 +22,7 @@ PY
 (cd "$T" && node smoke.mjs admin 2>/dev/null | tail -3 && node smoke.mjs admin noai 2>/dev/null | tail -3 && node smoke.mjs member 2>/dev/null | tail -3)
 (cd "$T" && node smoke.mjs admin ai admin-deal)
 (cd "$T" && for flow in auto retry rejected return signed canonical canonical-ticket; do node smoke.mjs member ai "$flow"; done)
-node --test test/canonical-url.test.mjs test/handover.test.mjs
+node --test test/intake.test.mjs test/canonical-url.test.mjs test/handover.test.mjs
 rm -rf "$T"
 
 (cd .. && for flow in accept decline reopen reload resume not-ready download-error hash-mismatch lost-response revoked; do node assets/test/dealroom.mjs "$flow"; done)

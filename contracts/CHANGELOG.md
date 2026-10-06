@@ -1,5 +1,9 @@
 # Changelog — kebab-stack contracts
 
+## [0.11.2] — 2026-09-29
+
+- Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.
+
 ## [0.11.1] — 2026-09-22
 
 - Keep shared global navigation visible while workspace content scrolls by pinning the mount host. Preserve normal-flow spacing and add scroll clearance for anchors and keyboard focus. No authorization, directory or data-model changes.

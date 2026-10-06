@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-crumbs"
-version = "0.6.1"
+version = "0.6.2"
 description = "Crumbs — cookieless website analytics for kebab-stack"
 
 [toolchain]

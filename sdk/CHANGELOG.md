@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.14.1] — 2026-09-29
+
+- Show a common Hub console link from the verified global Hub role, not local app roles. Hide it on missing/expired state or failed checks; reject stale heartbeat replies after token changes. Keep 44 px navigation controls at narrow widths. Hub 0.37.1 supplies the optional role hint; older Hubs keep the link hidden. Suite tokens remain read-only.
+
 ## [0.14.0] — 2026-09-29
 
 - Add the minimal Workboard source projection protocol: bounded pages, explicit ready/denied/unavailable states and source-owned workflow status. Existing directory, permissions, SSO and Lunch interfaces are unchanged.

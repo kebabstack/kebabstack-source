@@ -63,7 +63,7 @@ RECIPES = [
                 {"file": "/app.js", "from": "__HUB_URL__", "to": "${hubUrl}"}],
          post=[{"method": "setHub", "arg": "${hubId}"}], tile={"kind": "app", "note": "forms · public links · review"}),
     dict(id="bug", name="Ship the Bug", kind="app", icon="", app="bug",
-         description="Ship the Bug: standalone 2D and 3D play, optional local names or Internet Identity, and separate opt-in leaderboards.",
+         description="Ship the Bug: switch between 2D and 3D, with one profile, optional Hub sign-in and separate opt-in leaderboards.",
          patch=[{"file": "/app.js", "from": "__BACKEND_CANISTER_ID__", "to": "${backend}"},
                 {"file": "/app.js", "from": "__HUB_URL__", "to": "${hubUrl}"}],
          post=[{"method": "setHub", "arg": "${hubId}"}], tile={"kind": "app", "note": "2D + 3D arcade · separate leaderboards"}),

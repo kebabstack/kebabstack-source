@@ -1,3 +1,4 @@
+import { renderPublish } from "./publish.js";
 import { idlFactory } from "./idl.js";
 import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory } from "./hub-client.js";
 
@@ -404,6 +405,8 @@ async function enterWorkspace(id, tab) {
   $("tabBuild").style.display = tab === "build" ? "" : "none";
   $("tabSubs").style.display = tab === "subs" ? "" : "none";
   $("tabInsights").style.display = tab === "insights" ? "" : "none";
+  $("tabPublish").hidden = tab !== "publish";
+  if (tab === "publish") { await renderPublish({root:$("tabPublish"),backend,token:hubTok,form:f,editable:sh.myRole!=="viewer",canDelete:sh.myRole==="owner",isAdmin:me.role==="admin",backendId:BACKEND_CANISTER_ID,escape:esc,url:fillUrl(f.slug)}); return; }
   if (tab === "build") renderBuilder();
   else { await loadSubs(); if (tab === "subs") renderSubs(); else renderInsights(); }
 }
@@ -717,7 +720,9 @@ function fmtAnswer(q, v) {
   return String(v);
 }
 
-function openDrawer(subId) {
+let drawerRequest = 0;
+async function openDrawer(subId) {
+  const request=++drawerRequest, drawerToken=hubTok;
   const s = (FW.subs || []).find((x) => Number(x.id) === subId);
   if (!s) return;
   $("dTitle").textContent = "Submission #" + s.num;
@@ -726,16 +731,21 @@ function openDrawer(subId) {
   const qs = allQuestions();
   const myRating = s.reviews.find((r) => r.reviewer === me.id); // people are ids (forms 0.2.0)
   const who = personName(s);
-  const ro = FW.myRole === "viewer"; // read-only drawer for viewers
+  const workspace=FW;
+  let deliveryKnown;
+  try{deliveryKnown=(await backend.deliveryStatus(hubTok,s.id))[0];}catch{deliveryKnown={state:'unavailable'};}
+  if(FW!==workspace || request!==drawerRequest || drawerToken!==hubTok || !me)return;
+  const routed=!!deliveryKnown;
+  const ro = FW.myRole === "viewer" || routed;
   let html = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">` +
-    ["received", "inReview", "accepted", "declined"].map((k) =>
+    (routed ? ["received"] : ["received", "inReview", "accepted", "declined"]).map((k) =>
       `<span class="tag ${k} ${ro ? "" : "clickable"} ${vKey(s.status) === k ? "sel" : ""}" data-st="${k}"><span class="dot"></span>${SUBSTATUS_LBL[k]}</span>`).join("") + `</div>
     <div style="font:400 12px var(--ks-mono);color:var(--ks-fg-muted);margin-bottom:18px">${fmtD(s.submittedAt)}${Number(s.updatedAt) !== Number(s.submittedAt) ? " · edited " + fmtD(s.updatedAt) : ""}${s.submitterName || s.submitterEmail ? " · " + esc([s.submitterName, s.submitterEmail].filter(Boolean).join(" · ")) : " · anonymous"}</div>`;
   html += qs.map((q) => {
     const v = fmtAnswer(q, A[q.id]);
     return `<div class="ansitem"><div class="al">${esc(q.title || "Question " + q.id)}</div><div class="av ${v === null ? "muted" : ""}">${v === null ? "no answer" : esc(v)}</div></div>`;
   }).join("");
-  html += `<div class="dsec">Review</div>
+  if(!routed) html += `<div class="dsec">Review</div>
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-family:var(--ks-ui);font-size:14px">
       <span>Your rating:</span><span class="stars ${ro ? "ro" : ""}" id="dStars">${[1, 2, 3, 4, 5].map((n) => `<button data-n="${n}" ${ro ? "disabled" : ""} class="${myRating && Number(myRating.rating) >= n ? "on" : ""}">★</button>`).join("")}</span>
       ${s.reviews.length ? `<span style="color:var(--ks-fg-muted)">team avg ★ ${avgRating(s).toFixed(1)} (${s.reviews.length})</span>` : ""}
@@ -745,11 +755,18 @@ function openDrawer(subId) {
       <b>${s.assignee ? esc(s.assigneeName || s.assignee) : "—"}</b>
       ${ro ? "" : `<span class="pick" style="flex:1;min-width:200px"><input id="dAssignIn" placeholder="pick a colleague…" autocomplete="off" style="width:100%"><div class="list hidden" id="dAssignList"></div></span>${s.assignee ? `<button class="linkbtn" id="dUnassign">UNASSIGN</button>` : ""}`}
     </div>`;
-  html += `<div class="dsec">Notes (internal — respondents never see these)</div>` +
+  if(!routed) html += `<div class="dsec">Notes (internal — respondents never see these)</div>` +
     s.notes.map((n) => `<div class="noteitem"><div class="nh">${esc(who(n.author))} · ${fmtD(n.at)}</div>${esc(n.text)}</div>`).join("") +
     (ro ? "" : `<div class="notebox"><input id="dNote" placeholder="Add a note for the team" maxlength="2000"><button class="pill primary sm" id="dNoteAdd">Add</button></div>`) +
     (FW.myRole === "owner" ? `<div style="margin-top:30px"><button class="linkbtn" id="dDelete">DELETE SUBMISSION</button></div>` : "");
-  $("dBody").innerHTML = html;
+  if(routed && FW.myRole==='owner')html+='<p><button class="linkbtn" id="dDelete">DELETE FORM RESPONSE</button></p>';
+  $("dBody").innerHTML = html + '<section id="submissionDelivery" class="publish-panel" aria-live="polite"></section>';
+  const holder=$('submissionDelivery');
+  void Promise.all([backend.submissionContext(hubTok,s.id),backend.deliveryStatus(hubTok,s.id)]).then(([context,[delivery]])=>{
+    if(!holder.isConnected)return;
+    holder.innerHTML=(context.length?'<h3>Supplied page context</h3><p class="kv">Unverified values supplied by the embedding page.</p><dl>'+context.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl>':'')+(delivery?'<h3>Desk delivery</h3><p>'+esc(delivery.detail)+' · '+esc(delivery.state)+'</p>'+(delivery.url?'<a class="pill outline" href="'+esc(delivery.url)+'">Open ticket in Desk</a>':FW.myRole!=="viewer"?'<button class="pill outline" id="retryDelivery">Retry delivery</button>':'')+'<p class="kv">Desk owns the ticket workflow. Deleting this response does not delete its Desk ticket.</p>':'');
+    const retry=holder.querySelector('#retryDelivery');if(retry)retry.onclick=async()=>{retry.disabled=true;try{if(await backend.retryDelivery(hubTok,s.id)){retry.textContent='Queued · check again shortly';}else{retry.textContent='Could not queue. Reload the response.';}}catch{retry.textContent='Could not queue. Try again.';retry.disabled=false;}};
+  }).catch(()=>{if(holder.isConnected)holder.textContent='Delivery details unavailable. Reload to retry.';});
   $("subDrawer").classList.add("on");
 
   if (!ro) {
@@ -787,7 +804,7 @@ function openDrawer(subId) {
     else toast("Only the form owner can delete submissions");
   });
 }
-$("dClose").onclick = () => $("subDrawer").classList.remove("on");
+$("dClose").onclick = () => {drawerRequest++;$("subDrawer").classList.remove("on");};
 
 function exportCsv() {
   const qs = allQuestions();
@@ -881,8 +898,23 @@ async function enterFill(slug, urlTok, isPreview) {
   try { schema = JSON.parse(meta.schema); } catch (_) { schema = { sections: [] }; }
   FILL = { slug, meta, schema, pageIdx: 0, hist: [], A: {}, editToken: null, editing: false, preview: null };
 
+  const params = new URLSearchParams((location.hash.split('?')[1] || ''));
+  try{FILL.policy = (await backend.publicIntake(slug))[0];}catch{w.innerHTML='<div class="notice">Could not load the form settings. Reload to try again.</div>';return;}
+  FILL.context = (FILL.policy?.contextKeys || []).filter(k=>params.has('ctx_'+k)).map(k=>[k,params.get('ctx_'+k).slice(0,1000)]);
+  FILL.requestId = rndHex(32);
+  const embedded = window.parent !== window;
+  document.documentElement.classList.toggle('embed-form', embedded);
+  if (embedded) {
+    const parent = params.get('parent');
+    if (!FILL.policy?.origins.includes(parent)) { w.innerHTML='<div class="notice">This website is not enabled for embedding. Open the form directly.</div>'; return; }
+    const verifiedHost=await new Promise(resolve=>{let timer;const check=e=>{if(e.source===window.parent&&e.origin===parent&&e.data?.type==='kebabstack.forms.host'){clearTimeout(timer);window.removeEventListener('message',check);resolve(true);}};window.addEventListener('message',check);timer=setTimeout(()=>{window.removeEventListener('message',check);resolve(false);},4000);window.parent.postMessage({type:'kebabstack.forms.ready'},parent);});
+    if(!verifiedHost){w.innerHTML='<div class="notice">Could not verify the embedding website. Use the current embed script or open the form separately.</div>';return;}
+    const theme=params.get('theme');if(theme==='dark'||theme==='light')document.documentElement.setAttribute('data-theme',theme);else document.documentElement.setAttribute('data-theme',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    if(window.__formsResize)window.__formsResize.disconnect();
+    window.__formsResize=new ResizeObserver(()=>window.parent.postMessage({type:'kebabstack.forms.resize',height:Math.ceil(document.querySelector('#fillShell').getBoundingClientRect().height)},parent));window.__formsResize.observe(document.querySelector('#fillShell'));
+  }
   // edit lane: token from URL or a previous submission on this device
-  const stored = localStorage.getItem("ks-forms-sub-" + slug);
+  let stored = null; try { stored = localStorage.getItem("ks-forms-sub-" + slug); } catch {}
   const tok = urlTok || stored;
   if (tok && meta.allowEdit) {
     try {
@@ -967,14 +999,16 @@ function renderFillPage() {
     html += `<div class="fq" id="idCard">
       <div class="ft">About you${askN === "required" || askE === "required" ? ' <span class="req">*</span>' : ""}</div>
       <div class="fbody" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-        ${askN !== "off" ? `<input type="text" id="idName" placeholder="Your name${askN === "optional" ? " (optional)" : ""}" maxlength="200" value="${esc(FILL.idName || "")}">` : ""}
-        ${askE !== "off" ? `<input type="text" id="idEmail" placeholder="Your email${askE === "optional" ? " (optional)" : ""}" maxlength="200" value="${esc(FILL.idEmail || "")}">` : ""}
+        ${askN !== "off" ? `<label for="idName">Your name<input type="text" id="idName" placeholder="Your name${askN === "optional" ? " (optional)" : ""}" maxlength="200" value="${esc(FILL.idName || "")}"></label>` : ""}
+        ${askE !== "off" ? `<label for="idEmail">Your email<input type="email" id="idEmail" placeholder="Your email${askE === "optional" ? " (optional)" : ""}" maxlength="200" value="${esc(FILL.idEmail || "")}"></label>` : ""}
       </div>
       <div class="errmsg">Please fill in your details (with a valid email address).</div>
     </div>`;
   }
   if (s.title) html += `<div class="fillhead" style="border-top-width:2px;padding:18px 28px"><h2 style="font-size:24px">${esc(s.title)}</h2></div>`;
+  if(si===0 && FILL.context?.length) html += '<details class="intake-context"><summary>Context supplied by the website (unverified)</summary><dl>'+FILL.context.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl></details>';
   s.questions.forEach((q) => { html += fillQuestionHtml(q); });
+  html += '<label class="intake-honey" aria-hidden="true">Leave empty<input id="intakeWebsite" tabindex="-1" autocomplete="off"></label>';
   if (!s.questions.length) html += `<div class="notice">Nothing to answer in this section.</div>`;
   html += `<div class="fillnav">
     ${FILL.hist.length ? `<button class="pill outline sm" id="fBack">← Back</button>` : ""}
@@ -982,7 +1016,9 @@ function renderFillPage() {
     <span class="progress">SECTION ${si + 1} / ${secs.length}</span>
     <button class="pill primary" id="fNext">${nextTarget(s) === "s" ? (FILL.preview ? "FINISH PREVIEW" : FILL.editing ? "SAVE CHANGES" : "SUBMIT") : "NEXT →"}</button>
   </div>
-  <div style="margin-top:26px;font:400 11px var(--ks-mono);letter-spacing:.06em;color:var(--ks-fg-muted)">ANONYMOUS SUBMISSION · NOTHING BUT YOUR ANSWERS IS STORED</div>`;
+  <div style="margin-top:26px;font:400 11px var(--ks-mono);letter-spacing:.06em;color:var(--ks-fg-muted)">Your answers and any contact details or displayed context are sent to the form owner.</div>`;
+  if(FILL.policy?.privacyUrl)html+='<p><a target="_blank" rel="noopener noreferrer" href="'+esc(FILL.policy.privacyUrl)+'">Privacy notice</a></p>';
+  if(Number(FILL.policy?.retentionDays)>0)html+='<p class="kv">Responses are scheduled for deletion after '+Number(FILL.policy.retentionDays)+' days.</p>';
   w.innerHTML = html;
   bindFillPage(s);
   bindPreviewBanner(renderFillPage);
@@ -1116,12 +1152,15 @@ async function doSubmit() {
       renderDone(null, true);
       return;
     }
-    const editToken = FILL.meta.allowEdit ? rndHex(24) : "";
-    const r = await a.submitPublic(FILL.slug, (FILL.idName || "").trim().slice(0, 200), (FILL.idEmail || "").trim().slice(0, 200), payload, editToken);
-    if (!r.ok) { toast(r.detail || "Submission failed"); btn.disabled = false; btn.textContent = "SUBMIT"; return; }
-    if (editToken) { localStorage.setItem("ks-forms-sub-" + FILL.slug, editToken); FILL.editToken = editToken; }
+    const editToken = FILL.requestId;
+    FILL.pending ||= {slug:FILL.slug,name:(FILL.idName || "").trim().slice(0,200),email:(FILL.idEmail || "").trim().slice(0,200),payload,context:FILL.context || [],website:$("intakeWebsite")?.value || ""};
+    const pending=FILL.pending;
+    $("fillWrap").querySelectorAll('input,textarea,select,button').forEach(el=>{if(el!==btn)el.disabled=true;});
+    const r = await a.submitIntake(pending.slug,pending.name,pending.email,pending.payload,editToken,pending.context,pending.website);
+    if (!r.ok) { FILL.pending=null;$("fillWrap").querySelectorAll('input,textarea,select,button').forEach(el=>el.disabled=false);toast(r.detail || "Submission failed"); btn.disabled = false; btn.textContent = "SUBMIT"; return; }
+    if (editToken && FILL.meta.allowEdit) { try {localStorage.setItem("ks-forms-sub-" + FILL.slug, editToken);} catch {} FILL.editToken = editToken; }
     renderDone(r.num, false);
-  } catch (e) { toast("Submission failed: " + String(e).slice(0, 100)); btn.disabled = false; btn.textContent = "SUBMIT"; }
+  } catch (e) { toast(FILL.pending ? "Receipt could not be confirmed. Retry the same response; it will not be duplicated." : "Could not save changes. Please retry."); btn.disabled = false; btn.textContent = FILL.pending ? "RETRY SAME RESPONSE" : "SAVE CHANGES"; }
 }
 
 function renderDone(num, wasEdit) {
@@ -1134,7 +1173,7 @@ function renderDone(num, wasEdit) {
     <div style="margin-top:20px"><button class="pill outline sm" id="fillAgain">SUBMIT ANOTHER RESPONSE</button></div>`;
   const ce = $("copyEdit");
   if (ce) ce.onclick = () => navigator.clipboard.writeText(fillUrl(FILL.slug) + "?e=" + FILL.editToken).then(() => toast("Edit link copied"));
-  $("fillAgain").onclick = () => { localStorage.removeItem("ks-forms-sub-" + FILL.slug); location.reload(); };
+  $("fillAgain").onclick = () => { try{localStorage.removeItem("ks-forms-sub-" + FILL.slug);}catch{} location.reload(); };
 }
 
 

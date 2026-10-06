@@ -1,19 +1,24 @@
 {
   "version": 3,
-  "mopsTomlDepsHash": "684b7a9290053cb02e7468ba6b47b3f9b2d7b669b02b7c925242862963f70f8d",
+  "mopsTomlDepsHash": "a715e613c1de0457bc5ff508f856d2cdc9c04cdcdaff1c6c2145b37ac6aff705",
   "localDepsHash": "bbcb417d2939a273310ace52c22642ad50a9e78d2d0440be6be50957fe196f05",
   "deps": {
     "base": "0.11.1",
     "core": "2.6.1",
     "json": "1.4.0",
     "kebab-hub": "../sdk/motoko",
+    "sha2": "0.1.14",
     "xtended-numbers": "0.3.1"
   },
   "graph": {
     "base@0.11.1": {},
+    "core@2.2.0": {},
     "core@2.6.1": {},
     "json@1.4.0": {
       "xtended-numbers": "0.3.1"
+    },
+    "sha2@0.1.14": {
+      "core": "2.2.0"
     },
     "xtended-numbers@0.3.1": {
       "base": "0.11.1"
@@ -141,6 +146,14 @@
       "json@1.4.0/src/Parser.mo": "a08bf4928fed4d41505613bb0ccced32510c482cefbe3b7f10ed1a517d52e29f",
       "json@1.4.0/src/Types.mo": "276cb48956b3249f596587b8ba344abc13d5a945b7f64e5f84b107924629c698",
       "json@1.4.0/src/lib.mo": "958b42af7c4c4f8c534d6f0e9d781c0d1c693b0f51a538c47da771dd99aa77d0"
+    },
+    "sha2@0.1.14": {
+      "sha2@0.1.14/LICENSE": "0351aa17e901e2f426698e6199237119a18c8ea1674877e0eb4d694ee9c4b938",
+      "sha2@0.1.14/NOTICE": "2a2979e2cb91a7d903c3377ed8031a92e7fd467fd9ddb005f2ae2042ead1b4f1",
+      "sha2@0.1.14/README.md": "f06ce7acdfabd793202505e744591c6692b54eeb97f97689bc889fd1926a1de0",
+      "sha2@0.1.14/mops.toml": "ba73b13715683357925fb004b66e43a0f3fabb5fdce3028f13d12d4a297b3170",
+      "sha2@0.1.14/src/Sha256.mo": "d7c858eb1c097e9336ace80e754fb45b3c7b8e11884bebce3a228af5b4494c26",
+      "sha2@0.1.14/src/Sha512.mo": "8b9f809dd637e4490ca7c33a0c6911e4ab853a3c69a8b54304567ff502068559"
     },
     "xtended-numbers@0.3.1": {
       "xtended-numbers@0.3.1/LICENSE": "7caf02fc1ac48db886244237e0fa148cea6c360daabcbccd3e6d26da422bb06b",

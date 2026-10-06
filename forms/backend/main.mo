@@ -34,6 +34,9 @@ import Blob "mo:core/Blob";
 import Char "mo:core/Char";
 import Timer "mo:core/Timer";
 import Error "mo:core/Error";
+import Intake "Intake";
+import Sha256 "mo:sha2/Sha256";
+import Json "mo:json";
 
 persistent actor Forms {
   // =====================================================================
@@ -46,7 +49,7 @@ persistent actor Forms {
   var adminGroup : Text = "forms-admins"; // hub group → admins (settings only; everyone in the directory builds forms)
   var adminEmails : [Text] = [];
   var adminClaimed : Bool = false;
-  transient let BUILD_VERSION : Text = "0.5.1";
+  transient let BUILD_VERSION : Text = "0.6.0";
   transient let H : Int = 3_600_000_000_000;
 
   // =====================================================================
@@ -424,6 +427,144 @@ persistent actor Forms {
   let formTrash : Map.Map<Nat, Int> = Map.empty<Nat, Int>(); // formId -> deleted at; a trashed form is frozen and invisible
   var demoSeeded : Bool = false;
 
+  let intakePolicies = Map.empty<Nat, Intake.Policy>();
+  let intakeContexts = Map.empty<Nat, [(Text, Text)]>();
+  let intakeReceipts = Map.empty<Text, Intake.Receipt>();
+  var intakeBytesTotal : Nat = 0;
+  let intakeCosts = Map.empty<Nat,Nat>();
+  func releaseIntake(id : Nat) { let cost=intakeCosts.get(id) ?? 0;intakeBytesTotal:=if(intakeBytesTotal >= cost)intakeBytesTotal-cost else 0;intakeCosts.remove(id);intakeContexts.remove(id);deskDeliveries.remove(id) };
+  transient let DAY : Int = 86_400_000_000_000;
+  func policyOf(id : Nat) : Intake.Policy = intakePolicies.get(id) ?? ({ revision = 0; origins = []; contextKeys = []; privacyUrl = ""; retentionDays = 0; graceUntil = 0 });
+  public shared query func getIntake(tok : Text, id : Nat) : async ?Intake.Policy {
+    let m=me(tok) ?? (return null); let f=forms.get(id) ?? (return null); if(not canView(f,m.id))return null; ?policyOf(id)
+  };
+  public shared query func publicIntake(slug : Text) : async ?Intake.Policy {
+    let id=slugIndex.get(slug) ?? (return null);let f=forms.get(id) ?? (return null);if(isTrashed(id) or f.status==#draft)return null;?policyOf(id)
+  };
+  public shared func saveIntake(tok : Text,id : Nat, revision : Nat, origins : [Text], contextKeys : [Text],privacyUrl : Text,retentionDays : Nat) : async {ok : Bool;detail : Text} {
+    let m=me(tok) ?? (return {ok=false;detail="Sign in again"}); let f=forms.get(id) ?? (return {ok=false;detail="Form not found"});
+    if(not canEdit(f,m.id))return {ok=false;detail="Editor access required"};
+    let old=policyOf(id);if(retentionDays != old.retentionDays and formRole(f,m.id) != ?"owner")return {ok=false;detail="Only the form owner or a Forms admin can change automatic deletion"};if(old.revision != revision)return {ok=false;detail="Settings changed. Reload before saving."};
+    if(origins.size() > 10 or not origins.all(Intake.origin) or contextKeys.size() > 12 or not contextKeys.all(Intake.key))return {ok=false;detail="Use up to 10 exact HTTPS origins and 12 lowercase context keys"};
+    if(privacyUrl.size() > 500 or (privacyUrl != "" and not Text.startsWith(privacyUrl,#text "https://")) or retentionDays > 3650 or (retentionDays > 0 and retentionDays < 7))return {ok=false;detail="Use an HTTPS privacy notice and 7–3650 retention days, or 0 to disable automatic deletion"};
+    intakePolicies.add(id,{revision=revision+1;origins;contextKeys;privacyUrl;retentionDays;graceUntil=if(retentionDays > 0 and (old.retentionDays == 0 or retentionDays < old.retentionDays))now()+7*DAY else old.graceUntil});
+    {ok=true;detail="Saved. Shorter retention has a seven-day grace period."}
+  };
+  public shared query func submissionContext(tok : Text,id : Nat) : async [(Text,Text)] {
+    let m=me(tok) ?? (return []);let s=subs.get(id) ?? (return []);let f=forms.get(s.formId) ?? (return []);if(not canView(f,m.id))return [];intakeContexts.get(id) ?? []
+  };
+  public shared func submitIntake(slug : Text,name : Text,email : Text,answers : Text,requestId : Text,context : [(Text,Text)],website : Text) : async {ok : Bool;num : Nat;detail : Text} {
+    func fail(detail : Text) : {ok:Bool;num:Nat;detail:Text}={ok=false;num=0;detail};
+    if(not Intake.token(requestId) or website != "")return fail("Submission could not be accepted");
+    let id=slugIndex.get(slug) ?? (return fail("Form not found"));let f=forms.get(id) ?? (return fail("Form not found"));
+    if(isTrashed(id))return fail("Form not found");
+    let p=policyOf(id);if(context.size() > 12)return fail("Too much context");
+    var keys : [Text]=[];
+    for((k,v) in context.values()){if(not p.contextKeys.any(func x=x == k) or keys.any(func x=x == k) or v.size() > 1000)return fail("Invalid context");keys:=Array.concat(keys,[k])};
+    if(Text.encodeUtf8(answers).size() > MAX_ANSWERS or name.size() > 200 or email.size() > 200)return fail("Submission is too large");
+    let fingerprint=hex(Sha256.fromArray(#sha256,Blob.toArray(Text.encodeUtf8(Json.stringify(Json.obj([("name",#string name),("email",#string email),("answers",#string answers),("context",#array(context.map(func (k,v)=#array([#string k,#string v]))))]),null)))));
+    let rk=slug#":"#requestId;
+    switch(intakeReceipts.get(rk)){case (?old) {if(old.fingerprint != fingerprint)return fail("This submission reference was already used. Start a new response.");return {ok=true;num=old.num;detail="Already received"}};case null {}};
+    if(intakeReceipts.size() >= 60_000)return fail("Submission reference capacity reached. Contact the operator.");
+    let validation=Intake.validate(f.schema,answers,name,email);if(validation != "")return fail(validation);
+    let target=deskTargets.get(id);
+    if(target != null and not Intake.email(email))return fail("A contact email is required for Desk");
+    let payload=if(target != null)intakePayload(f,name,email,answers,context) else "";
+    if(target != null and (Text.encodeUtf8(payload).size() > 24_000 or Intake.str(Intake.parse(payload) ?? #null_,"body").size() > 8_000 or norm(name).size() > 100))return fail("This response is too long for the support team. Please shorten it.");
+    var intakeCost=Text.encodeUtf8(payload).size();for((k,v) in context.values())intakeCost+=Text.encodeUtf8(k).size()+Text.encodeUtf8(v).size();
+    if(answerBytesTotal+intakeBytesTotal+Text.encodeUtf8(answers).size()+intakeCost > MAX_ANSWER_BYTES_TOTAL)return fail("Storage is full. Contact the form owner.");
+    let subId=nextSubId;
+    let result=submitCommon<system>(slug,name,email,answers,requestId);
+    if(result.ok){intakeCosts.add(subId,intakeCost);intakeBytesTotal+=intakeCost;switch(target){case (?t)deskDeliveries.add(subId,{target=t;payload;secret="";state="queued";attempts=0;nextAt=now();ticketId=0;detail="Waiting for Desk"});case null {}};intakeContexts.add(subId,context);intakeReceipts.add(rk,{num=result.num;fingerprint;until=now()+30*DAY})}; result
+  };
+  func purgeIntake() {
+    let t=now();
+    for((key,receipt) in intakeReceipts.entries())if(receipt.until <= t)intakeReceipts.remove(key);
+    let due=List.empty<Nat>();
+    for((id,s) in subs.entries()){let p=policyOf(s.formId);if(p.retentionDays > 0 and t >= p.graceUntil and t-s.submittedAt >= p.retentionDays*DAY)due.add(id)};
+    for(id in due.values()){switch(subs.get(id)){case (?s){releaseBytes(s.answers);if(subsTotal > 0)subsTotal-=1};case null {}};subs.remove(id);releaseIntake(id)};
+  };
+
+  public type DeskTarget = { canister : Principal; sourceId : Nat; name : Text; url : Text; enabled : Bool };
+  public type DeliveryView = { state : Text; attempts : Nat; ticketId : Nat; url : Text; detail : Text };
+  type Delivery = { target : DeskTarget; payload : Text; secret : Text; state : Text; attempts : Nat; nextAt : Int; ticketId : Nat; detail : Text };
+  type DeskReceiver = actor {
+    formsSourceInfo : shared (Nat,Nat) -> async ?{name : Text;deskUrl : Text};
+    receiveForms : shared (Nat,Nat,Nat,Text) -> async {ok : Bool;ticketId : Nat;detail : Text};
+  };
+  let deskTargets = Map.empty<Nat,DeskTarget>();
+  let deskDeliveries = Map.empty<Nat,Delivery>();
+  transient let deliveryBusy = Map.empty<Nat,Bool>();
+  public shared query func getDeskTarget(tok : Text,id : Nat) : async ?DeskTarget {
+    let m=me(tok) ?? (return null);let f=forms.get(id) ?? (return null);if(not canView(f,m.id))return null;deskTargets.get(id)
+  };
+  public shared func connectDesk(tok : Text,id : Nat,canisterText : Text,sourceId : Nat) : async {ok : Bool;detail : Text} {
+    ignore admin(tok) ?? (return {ok=false;detail="Hub Forms admin permission required"});
+    let f=forms.get(id) ?? (return {ok=false;detail="Form not found"});
+    if(isTrashed(id) or f.allowEdit or Intake.str(Intake.parse(f.schema) ?? #null_,"askEmail") != "required")return {ok=false;detail="Require an email address and disable response editing before connecting Desk"};
+    let canister=Principal.fromText(canisterText);
+    if(Principal.isAnonymous(canister) or canister == Principal.fromText("aaaaa-aa"))return {ok=false;detail="Choose a Desk backend"};
+    let previous=deskTargets.get(id);
+    try {
+      let d : DeskReceiver=actor(Principal.toText(canister));let info=(await (with timeout=30) d.formsSourceInfo(sourceId,id)) ?? (return {ok=false;detail="Source not available for this Forms backend and form. Check the source in Desk."});
+      ignore admin(tok) ?? (return {ok=false;detail="Permission changed. Sign in again."});
+      let current=forms.get(id) ?? (return {ok=false;detail="Form removed"});
+      if(isTrashed(id) or current.updatedAt != f.updatedAt or previous != deskTargets.get(id))return {ok=false;detail="Settings changed. Reload before connecting."};
+      if(not Text.startsWith(info.deskUrl,#text "https://"))return {ok=false;detail="Desk needs its canonical HTTPS URL"};
+      deskTargets.add(id,{canister;sourceId;name=info.name;url=info.deskUrl;enabled=true});
+      {ok=true;detail="Connected. New responses will create Desk tickets. Existing responses stay in Forms."}
+    } catch(_){ {ok=false;detail="Desk could not be reached. Nothing changed."} }
+  };
+  public shared func pauseDesk(tok : Text,id : Nat) : async Bool {
+    ignore admin(tok) ?? (return false);let t=deskTargets.get(id) ?? (return false);deskTargets.add(id,{t with enabled=false});true
+  };
+  public shared query func deliveryStatus(tok : Text,id : Nat) : async ?DeliveryView {
+    let m=me(tok) ?? (return null);let sub=subs.get(id) ?? (return null);let f=forms.get(sub.formId) ?? (return null);if(not canView(f,m.id))return null;
+    let d=deskDeliveries.get(id) ?? (return null);
+    ?{state=d.state;attempts=d.attempts;ticketId=d.ticketId;url=if(d.ticketId == 0)"" else Text.trimEnd(d.target.url,#char '/')#"/#/t/"#d.ticketId.toText();detail=d.detail}
+  };
+  public shared func retryDelivery(tok : Text,id : Nat) : async Bool {
+    let m=me(tok) ?? (return false);let sub=subs.get(id) ?? (return false);let f=forms.get(sub.formId) ?? (return false);if(not canEdit(f,m.id))return false;
+    let d=deskDeliveries.get(id) ?? (return false);if(d.state == "delivered" or deliveryBusy.containsKey(id))return false;
+    deskDeliveries.add(id,{d with state="queued";attempts=0;nextAt=now();detail="Waiting for delivery"});true
+  };
+  func intakePayload(f : Form,name : Text,email : Text,answers : Text,context : [(Text,Text)]) : Text {
+    let schema=Intake.parse(f.schema) ?? #null_;let values=Intake.parse(answers) ?? #null_;
+    var body="Submitted through Forms. Contact details and supplied context are unverified.\n\n";
+    for(section in Intake.arr(schema,"sections").values())for(q in Intake.arr(section,"questions").values()) {
+      let key=switch(Json.getAsNat(q,"id")){case (#ok n)n.toText();case _ ""};
+      switch(Json.get(values,key)){case (?v){body#=Intake.str(q,"title")#": "#(switch(v){case (#string t)t;case _ Json.stringify(v,null)})#"\n\n"};case null {}};
+    };
+    if(context.size() > 0){body#="Supplied page context (unverified):\n";for((k,v) in context.values())body#=k#": "#v#"\n"};
+    Json.stringify(Json.obj([("name",#string(if(norm(name) == "")"External respondent" else norm(name))),("email",#string(email)),("subject",#string(capText(f.title,140)#" #"#f.nextNum.toText())),("body",#string body)]),null)
+  };
+  func deliver(id : Nat) : async () {
+    if(deliveryBusy.containsKey(id))return;
+    let sub=subs.get(id) ?? (return);let d=deskDeliveries.get(id) ?? (return);let configured=deskTargets.get(sub.formId) ?? (return);
+    if(d.state == "delivered" or d.attempts >= 10 or d.nextAt > now() or not configured.enabled or configured.canister != d.target.canister or configured.sourceId != d.target.sourceId or isTrashed(sub.formId))return;
+    deliveryBusy.add(id,true);
+    var job={d with state="sending";attempts=d.attempts+1};deskDeliveries.add(id,job);
+    try {
+      if(job.secret == "") {
+        let secret=hex(await (with timeout=30) ic00.raw_rand());
+        // No resurrection after deletion, retention, trash or a changed connection.
+        if(subs.get(id) == null or deskDeliveries.get(id) != ?job or deskTargets.get(sub.formId) != ?configured or isTrashed(sub.formId)){deliveryBusy.remove(id);return};
+        job:={job with secret};deskDeliveries.add(id,job);
+      };
+      let body=switch(Intake.parse(job.payload)){case (?#object_ xs)Json.stringify(#object_(Array.concat(xs,[("clientToken",#string(job.secret))])),null);case _ ""};
+      job:={job with state="sending";nextAt=now()+60_000_000_000};deskDeliveries.add(id,job);
+      let desk : DeskReceiver=actor(Principal.toText(job.target.canister));
+      let result=await (with timeout=30) desk.receiveForms(job.target.sourceId,sub.formId,id,body);
+      if(subs.get(id) != null and deskDeliveries.get(id) == ?job) {
+        deskDeliveries.add(id,{job with payload=if(result.ok)"" else job.payload;secret=if(result.ok)"" else job.secret;state=if(result.ok)"delivered" else "blocked";ticketId=result.ticketId;detail=capText(result.detail,300);nextAt=if(result.ok)0 else now()+300_000_000_000});
+      };
+    } catch(_) {
+      if(subs.get(id) != null and deskDeliveries.get(id) == ?job)deskDeliveries.add(id,{job with state="retrying";detail="Desk did not confirm delivery. Retrying safely.";nextAt=now()+300_000_000_000});
+    };
+    deliveryBusy.remove(id);
+  };
+
+
   func statusWord(s : FormStatus) : Text = switch (s) { case (#draft) "draft"; case (#open) "open"; case (#closed) "closed" };
   func isTrashed(id : Nat) : Bool = Map.containsKey(formTrash, Nat.compare, id);
   func sharesOf(id : Nat) : [(Text, Text)] = switch (Map.get(formShares, Nat.compare, id)) { case (?s) s; case null [] };
@@ -475,9 +616,10 @@ persistent actor Forms {
     ignore Map.delete(formShares, Nat.compare, id);
     ignore Map.delete(formDeadlines, Nat.compare, id);
     ignore Map.delete(formTrash, Nat.compare, id);
+    intakePolicies.remove(id);deskTargets.remove(id);
     let doomed = List.empty<Nat>();
     for ((k, s) in Map.entries(subs)) if (s.formId == id) List.add(doomed, k);
-    for (k in List.values(doomed)) { switch (Map.get(subs, Nat.compare, k)) { case (?s) releaseBytes(s.answers); case null {} }; ignore Map.delete(subs, Nat.compare, k); if (subsTotal > 0) subsTotal -= 1 };
+    for (k in List.values(doomed)) { switch (Map.get(subs, Nat.compare, k)) { case (?s) releaseBytes(s.answers); case null {} }; ignore Map.delete(subs, Nat.compare, k); releaseIntake(k); if (subsTotal > 0) subsTotal -= 1 };
   };
   func releaseBytes(a : Text) { let b = answerBytes(a); answerBytesTotal := (if (answerBytesTotal >= b) answerBytesTotal - b else 0) };
   func purgeTrash() {
@@ -519,6 +661,7 @@ persistent actor Forms {
     let m = switch (me(tok)) { case (?m) m; case null return { ok = false; detail = "no session" } };
     let f = switch (Map.get(forms, Nat.compare, id)) { case (?f) f; case null return { ok = false; detail = "no such form" } };
     if (not canEdit(f, m.id)) return { ok = false; detail = "you can look at this form but not change it" };
+    if(deskTargets.containsKey(id) and (args.allowEdit or Intake.str(Intake.parse(args.schema) ?? #null_,"askEmail") != "required"))return {ok=false;detail="Desk-connected forms require email and do not allow response editing"};
     let tt = norm(args.title);
     if (tt.size() == 0 or tt.size() > MAX_TEXT) return { ok = false; detail = "the title needs 1–4000 characters" };
     if (args.description.size() > MAX_TEXT) return { ok = false; detail = "the description is too long" };
@@ -675,6 +818,11 @@ persistent actor Forms {
     };
   };
   public shared func submitPublic(slug : Text, name : Text, email : Text, answers : Text, editToken : Text) : async { ok : Bool; num : Nat; detail : Text } {
+    let id=slugIndex.get(slug) ?? 0;
+    if(policyOf(id).revision > 0 or deskTargets.containsKey(id))return {ok=false;num=0;detail="Please reload the current form before submitting"};
+    submitCommon<system>(slug,name,email,answers,editToken)
+  };
+  func submitCommon<system>(slug : Text, name : Text, email : Text, answers : Text, editToken : Text) : { ok : Bool; num : Nat; detail : Text } {
     func fail(d : Text) : { ok : Bool; num : Nat; detail : Text } = { ok = false; num = 0; detail = d };
     let bytes = answerBytes(answers);
     if (answers.size() == 0 or bytes > MAX_ANSWERS) return fail("the answers are too large");
@@ -688,7 +836,7 @@ persistent actor Forms {
     if (isTrashed(f.id)) return fail("form not found");
     if (f.status != #open) return fail("this form is not accepting submissions");
     if (pastDeadline(f.id)) return fail("the response deadline has passed");
-    if (subsTotal >= MAX_SUBS_TOTAL or answerBytesTotal + bytes > MAX_ANSWER_BYTES_TOTAL) return fail("storage is full — tell the form owner");
+    if (subsTotal >= MAX_SUBS_TOTAL or answerBytesTotal + intakeBytesTotal + bytes > MAX_ANSWER_BYTES_TOTAL) return fail("storage is full — tell the form owner");
     let (total, _, _, _, _) = formCounts(f.id);
     if (total >= MAX_SUBS_PER_FORM) return fail("this form is full");
     if (f.cap > 0 and total >= f.cap) return fail("this form has reached its submission limit");
@@ -707,7 +855,7 @@ persistent actor Forms {
     if (editToken.size() < 16) return null;
     let id = switch (Map.get(slugIndex, Text.compare, slug)) { case (?id) id; case null return null };
     let f = switch (Map.get(forms, Nat.compare, id)) { case (?f) f; case null return null };
-    if (isTrashed(id)) return null;
+    if (isTrashed(id) or not f.allowEdit) return null;
     for ((_, s) in Map.entries(subs)) {
       if (s.formId == id and s.editToken == editToken) return ?{ num = s.num; answers = s.answers; updatable = f.allowEdit and f.status == #open and not pastDeadline(id); status = s.status };
     };
@@ -724,8 +872,10 @@ persistent actor Forms {
     if (pastDeadline(f.id)) return { ok = false; detail = "the response deadline has passed" };
     for ((k, s) in Map.entries(subs)) {
       if (s.formId == id and s.editToken == editToken) {
+        if(deskDeliveries.containsKey(s.id))return {ok=false;detail="This response is handled in Desk and cannot be edited here"};
+        if(policyOf(id).revision > 0 or intakeContexts.containsKey(s.id)){let error=Intake.validate(f.schema,answers,s.submitterName,s.submitterEmail);if(error != "")return {ok=false;detail=error}};
         let before = answerBytes(s.answers);
-        if (bytes > before and answerBytesTotal + (bytes - before) > MAX_ANSWER_BYTES_TOTAL) return { ok = false; detail = "storage is full — tell the form owner" };
+        if (bytes > before and answerBytesTotal + intakeBytesTotal + (bytes - before) > MAX_ANSWER_BYTES_TOTAL) return { ok = false; detail = "storage is full — tell the form owner" };
         let grown = answerBytesTotal + bytes; answerBytesTotal := (if (grown >= before) grown - before else 0);
         Map.add(subs, Nat.compare, k, { s with answers; updatedAt = now() }); return { ok = true; detail = "" };
       };
@@ -766,6 +916,7 @@ persistent actor Forms {
     let m = switch (me(tok)) { case (?m) m; case null return { ok = false; detail = "no session" } };
     let s = switch (Map.get(subs, Nat.compare, subId)) { case (?s) s; case null return { ok = false; detail = "no such submission" } };
     if (not canReview(s, m.id)) return { ok = false; detail = "viewers cannot review" };
+    if(deskDeliveries.containsKey(subId))return {ok=false;detail="Handle this response in Desk"};
     Map.add(subs, Nat.compare, subId, { s with status; updatedAt = now() });
     { ok = true; detail = "" };
   };
@@ -776,6 +927,7 @@ persistent actor Forms {
     if (e != "" and not active(e)) return { ok = false; detail = "pick the person from the directory" };
     let s = switch (Map.get(subs, Nat.compare, subId)) { case (?s) s; case null return { ok = false; detail = "no such submission" } };
     if (not canReview(s, m.id)) return { ok = false; detail = "viewers cannot assign" };
+    if(deskDeliveries.containsKey(subId))return {ok=false;detail="Handle this response in Desk"};
     Map.add(subs, Nat.compare, subId, { s with assignee = (if (e == "") "" else pidOf(e)); updatedAt = now() });
     { ok = true; detail = "" };
   };
@@ -787,6 +939,7 @@ persistent actor Forms {
     let s = switch (Map.get(subs, Nat.compare, subId)) { case (?s) s; case null return { ok = false; detail = "no such submission" } };
     if (not canReview(s, m.id)) return { ok = false; detail = "viewers cannot rate" };
     let others = Array.filter<Review>(s.reviews, func(r) = r.reviewer != m.id);
+    if(deskDeliveries.containsKey(subId))return {ok=false;detail="Handle this response in Desk"};
     Map.add(subs, Nat.compare, subId, { s with reviews = Array.concat(others, [{ reviewer = m.id; rating; at = now() }]); updatedAt = now() });
     { ok = true; detail = "" };
   };
@@ -798,6 +951,7 @@ persistent actor Forms {
     let s = switch (Map.get(subs, Nat.compare, subId)) { case (?s) s; case null return { ok = false; detail = "no such submission" } };
     if (not canReview(s, m.id)) return { ok = false; detail = "viewers cannot add notes" };
     if (s.notes.size() >= 200) return { ok = false; detail = "200 notes is plenty" };
+    if(deskDeliveries.containsKey(subId))return {ok=false;detail="Handle this response in Desk"};
     Map.add(subs, Nat.compare, subId, { s with notes = Array.concat(s.notes, [{ author = m.id; text = tt; at = now() }]); updatedAt = now() });
     { ok = true; detail = "" };
   };
@@ -808,7 +962,7 @@ persistent actor Forms {
     let s = switch (Map.get(subs, Nat.compare, subId)) { case (?s) s; case null return { ok = false; detail = "no such submission" } };
     switch (Map.get(forms, Nat.compare, s.formId)) { case (?f) { if (formRole(f, m.id) != ?"owner" or isTrashed(f.id)) return { ok = false; detail = "only the form owner deletes submissions" } }; case null {} };
     releaseBytes(s.answers);
-    ignore Map.delete(subs, Nat.compare, subId);
+    ignore Map.delete(subs, Nat.compare, subId); releaseIntake(subId);
     if (subsTotal > 0) subsTotal -= 1;
     { ok = true; detail = "" };
   };
@@ -898,5 +1052,8 @@ persistent actor Forms {
   });
 
   ignore Timer.recurringTimer<system>(#seconds 30, func() : async () { try { ignore await pullDirectory() } catch (_) {}; ignore Hub.pruneSessions(sessions); if (migrating()) { try { await migrateIds() } catch (_) {} } });
-  ignore Timer.recurringTimer<system>(#seconds 21_600, func() : async () { purgeTrash() });
+  transient let _deliveryTimer = Timer.recurringTimer<system>(#seconds 60,func() : async () {
+    var count=0;for((id,d) in deskDeliveries.entries())if(d.state != "delivered" and d.state != "blocked" and d.attempts < 10 and d.nextAt <= now() and count < 10){count+=1;await deliver(id)}
+  });
+  ignore Timer.recurringTimer<system>(#seconds 21_600, func() : async () { purgeTrash(); purgeIntake() });
 };

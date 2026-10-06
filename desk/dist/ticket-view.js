@@ -101,7 +101,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     $('tStepTitle').textContent = title; $('tStepText').textContent = text; $('tStepIcon').textContent = icon; $('tNextStep').dataset.state = t.status;
     const active = !['resolved','closed'].includes(t.status);
     html('tStatusBtns', mayWrite && !paused && !workflow ? `<button data-s="${active ? 'resolved' : 'open'}" data-w="">${active ? (staff ? 'Resolve request' : 'Mark as solved') : 'Reopen request'}</button>` : '');
-    toggle('tActions', staff); toggle('tStaff', staff); toggle('tSupportCard', !staff); toggle('tRequesterCard', false);
+    toggle('tActions', staff); toggle('tStaff', staff); toggle('tSupportCard', !staff); toggle('tRequesterCard', staff && !opt(full.customer)); // agents see who is asking: role, department, location, manager
     if (staff) {
       const states = [['new','Received'],['open','In progress'],['waiting:requester','Waiting for requester'],['waiting:third-party','Waiting for a partner'],['resolved','Resolved'],['closed','Closed']];
       if (t.waitingOn === 'approval') states.push(['waiting:approval','Awaiting approval']);
@@ -227,7 +227,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
       dirty.delete(button.id);
       setStatus(statusId,'ok','Saved');
       if (success) success(result);
-    } catch (e) { if (authorized()) setStatus(statusId,'err',error(e)); }
+    } catch (e) { if (authorized()) { dirty.clear(); setStatus(statusId,'err',error(e)); } } // a rejected change must not keep showing the rejected value
     finally { pending--; button.disabled = false; }
     if (same(id) && getMe()?.id === person) await load(id, {background:true});
   }

@@ -52,7 +52,7 @@ persistent actor Trust {
   var adminClaimed : Bool = false; // claimAdmin is one-shot
   var assetsId : Text = ""; // assets BACKEND canister id — where device owners come from
   var gatewayDomain : Text = "icp.net"; // the HTTP gateway agents connect through: <backend-id>.<domain>
-  transient let BUILD_VERSION : Text = "0.9.1";
+  transient let BUILD_VERSION : Text = "0.9.2";
   transient let H : Int = 3_600_000_000_000;
   transient let DAY : Int = 86_400_000_000_000;
 

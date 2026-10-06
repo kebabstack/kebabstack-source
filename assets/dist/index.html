@@ -115,6 +115,8 @@
   .stat .n { font: 500 20px/1.1 var(--ks-display); color: var(--ks-fg); }
   .stat .l { font: 500 9.5px var(--ks-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--ks-fg-secondary); margin-top: 2px; }
   @media (max-width: 600px) {
+    .shot { flex-direction: column; }
+    .shot > div { width: 100%; }
     .dev { display: grid; grid-template-columns: 40px minmax(0, 1fr); }
     .dev .t b { white-space: normal; overflow-wrap: anywhere; }
     .dev .t span { overflow-wrap: anywhere; }
@@ -201,7 +203,8 @@
         <div class="steps"><span class="step on" id="st1">1 · photo</span><span class="step" id="st2">2 · which device</span><span class="step" id="st3">3 · what happened</span></div>
         <div class="card flat">
           <div class="shot"><img id="shotImg" alt="" class="hidden"><div style="flex:1;min-width:0">
-            <div class="kv" id="readStatus">reading the photo…</div>
+            <div class="kv" id="readStatus" role="status" aria-live="polite">reading the photo…</div>
+            <div class="btnrow hidden" id="readRecovery"><button class="sm" id="ikRetryRead">Try reading again</button><button class="sm" id="ikManual">Enter details manually</button></div>
             <div class="reads" id="reads"></div>
             <div class="kv" id="readNotes"></div>
             <div class="row" style="margin-top:6px"><div><label for="ikQuery">Search by tag or serial</label><input type="search" id="ikQuery" placeholder="type or tap a reading above" autocomplete="off"></div></div>

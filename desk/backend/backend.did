@@ -342,6 +342,7 @@ type Snapshot =
  };
 type SlackStatus =
  record {
+   appUrlSet: bool;
    bots: vec SlackBotView;
    credsAt: int;
    credsError: text;
@@ -841,6 +842,14 @@ type Override =
    assignee: text;
    typeId: nat;
  };
+type NotifyRecord =
+ record {
+   at: int;
+   detail: text;
+   email: text;
+   ok: bool;
+   title: text;
+ };
 type Notice =
  record {
    at: int;
@@ -1177,6 +1186,21 @@ type Handoff =
    summary: text;
    to: text;
    toName: text;
+ };
+type FormsSource =
+ record {
+   canister: principal;
+   enabled: bool;
+   formId: nat;
+   id: nat;
+   projectId: nat;
+   typeId: nat;
+ };
+type FormsDelivery =
+ record {
+   detail: text;
+   ok: bool;
+   ticketId: nat;
  };
 type Filter__1 =
  record {
@@ -1549,6 +1573,8 @@ service : {
       id: nat;
       ok: bool;
     });
+  addFormsSource: (tok: text, projectId: nat, typeId: nat, formId: nat,
+   canisterText: text) -> (FormsDelivery);
   addLink: (tok: text, id: nat, kind: text, ref: text) ->
    (record {
       detail: text;
@@ -1759,6 +1785,7 @@ service : {
           displayName: text;
           email: text;
         }) query;
+  disableFormsSource: (tok: text, id: nat) -> (bool);
   discardOncallDraft: (tok: text, id: nat, revision: nat) -> (Result);
   eraseCustomerTicket: (tok: text, id: nat, expectedUpdatedAt: int,
    confirmation: text) -> (record {
@@ -1775,6 +1802,11 @@ service : {
           mime: text;
           name: text;
         }) query;
+  formsSourceInfo: (id: nat, formId: nat) ->
+   (opt record {
+          deskUrl: text;
+          name: text;
+        });
   getAutoAssignment: (tok: text) ->
    (opt
      record {
@@ -1831,6 +1863,7 @@ service : {
    bool) -> (Result__1);
   listCustomerProjects: (tok: text) -> (vec CustomerProject) query;
   listCustomerTypes: (tok: text, projectId: nat) -> (vec Type) query;
+  listFormsSources: (tok: text, projectId: nat) -> (vec FormsSource) query;
   listTickets: (tok: text, f: Filter__1) -> (vec TicketRow) query;
   loginWithTicket: (ticket: text) ->
    (opt
@@ -1850,6 +1883,12 @@ service : {
   myTickets: (tok: text) -> (vec TicketRow) query;
   noteOncallIncident: (tok: text, id: nat, revision: nat, "text": text) ->
    (Result);
+  notifyHealth: (tok: text) ->
+   (opt record {
+          failed: nat;
+          recent: vec NotifyRecord;
+          total: nat;
+        }) query;
   offboardingEntry: (tok: text, personId: text) ->
    (opt record {
           person: PersonCard;
@@ -1935,6 +1974,8 @@ service : {
    bool) -> (Result);
   publishServiceNotice: (tok: text, key: text, id: nat, revision: nat, input:
    Input__1) -> (Result);
+  receiveForms: (id: nat, formId: nat, submissionId: nat, payload: text) ->
+   (FormsDelivery);
   recordOncallWork: (tok: text, id: nat, key: text, input: WorkInput) ->
    (Result);
   /// Settings page: ask the hub again right now (after an owner set or rotated the key there).

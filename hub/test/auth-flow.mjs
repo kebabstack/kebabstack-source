@@ -7,20 +7,21 @@ const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 const section=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
 const auth=section('// Authentication controls share one state;','async function consoleSignOut()');
 const sso=section('const REDIRECT_URI =','// ---------- portal avatar');
+const consoleEntry=section('const consoleRequested =','async function afterLogin()');
 const bootstrap=html.slice(html.lastIndexOf('(async () => {'),html.lastIndexOf('</script>')).trim();
 function fixture(url='https://hub.test/'){
  const dom=new JSDOM(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,''),{url,runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window; Object.defineProperty(w,'crypto',{value:webcrypto});
  w.eval(`var authClient={isAuthenticated:async()=>false,logout:async()=>{window.loggedOut=true}}, anonBackend, backend;
- var $=id=>document.getElementById(id);var esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ var $=id=>document.getElementById(id);var opt=x=>x?.length?x[0]:null;var esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  var II_URL='https://identity.ic0.app',CANONICAL_ORIGIN='',IC_HOST='https://icp0.io',BACKEND_CANISTER_ID='aaaaa-aa',idlFactory={};
  function setStatus(id,cls,msg){$(id).className='status '+cls;$(id).textContent=msg}
  function showPortal(){window.portalOpened=true}
  function oidcPending(){return false}function oidcParamsFromHash(){return null}
- async function loadLibs(){}async function loadPortalLogo(){}async function afterLogin(){}
+ async function loadLibs(){}async function loadPortalLogo(){}async function afterLogin(){window.consoleOpened=true}
  async function ssoResume(){window.resumed=true;return false}
  var HttpAgent={create:async()=>({})},Actor={createActor:()=>anonBackend},AuthClient={create:async()=>authClient};
- `+auth+sso);
+ `+auth+sso+consoleEntry.replace("const consoleRequested", "var consoleRequested"));
  w.anonBackend={listSsoProvidersPublic:async()=>[{id:1n,name:'Company Okta'}],getSetup:async()=>({setupDone:true,orgName:'Example'})};
  w.eval('loginSettle()');return{w,dom};
 }
@@ -80,4 +81,23 @@ test('TV startup never resumes an Owner login or SSO session',async()=>{
  let opened=false;w.KebabDisplays={createTV:(root,api)=>{opened=true;assert.equal(root.id,'tv');assert.equal(api,w.anonBackend)}};
  await w.eval(bootstrap);assert.equal(opened,true);assert.equal(w.resumed,undefined);assert.equal(w.localStorage.getItem('uh-sso-token'),'private-owner-session');assert.equal(w.document.documentElement.dataset.surface,'display');
  dom.window.close();
+});
+
+test('explicit Hub console entry cannot resume into the employee menu',async()=>{
+ for(const authenticated of [false,true]){const {w,dom}=fixture('https://hub.test/?console=1#/home');w.authClient.isAuthenticated=async()=>authenticated;w.localStorage.setItem('uh-sso-token','company-session');w.anonBackend.ssoWhoami=async()=>[{active:true,email:'owner@example.test'}];
+ try{await w.eval(bootstrap);assert.equal(w.resumed,undefined);assert.equal(w.portalOpened,undefined);assert.equal(w.document.getElementById('ssoButtons').hidden,true);assert.match(w.document.getElementById('loginRole').textContent,/requires a passkey/);assert.equal(w.consoleOpened,authenticated?true:undefined);assert.equal(w.localStorage.getItem('uh-sso-token'),'company-session');assert.equal(w.location.search,'');}finally{dom.window.close()}}
+});
+test('app handoff takes precedence over an earlier console-entry request',async()=>{
+ const {w,dom}=fixture('https://hub.test/?jump=7');w.sessionStorage.setItem('ks-console-entry','1');w.ssoResume=async()=>{w.resumed=true;return true};try{await w.eval(bootstrap);assert.equal(w.resumed,true);assert.equal(w.consoleOpened,undefined);assert.equal(w.document.getElementById('ssoButtons').hidden,false)}finally{dom.window.close()}
+});
+
+test('console uses the matching authorized passkey; mismatched accounts and ordinary members stay out',async()=>{
+ for(const scenario of ['matching owner','different account','ordinary member']){
+  const {w,dom}=fixture('https://hub.test/?console=1#/home');w.sessionStorage.setItem('ks-console-entry','1');w.localStorage.setItem('uh-sso-token','company');
+  w.anonBackend.ssoWhoami=async()=>[{email:'owner@example.test',active:true}];
+  w.authClient.isAuthenticated=async()=>true;w.authClient.getIdentity=()=>({getPrincipal:()=>({toText:()=> 'test-passkey'})});
+  let adminChecks=0;const api={myAccess:async()=>({email:[scenario==='different account'?'someone@example.test':'owner@example.test']}),amIAdmin:async()=>{adminChecks++;return scenario!=='ordinary member'},myRole:async()=> 'owner'};w.Actor.createActor=()=>api;
+  w.eval(`async function loadYou(){} async function mountConsoleTopbar(){}function checkVersions(){}async function refreshConns(){}function applyRoute(){return false}function go(){window.openedConsole=true}`+section('const consoleRequested =','(async () => {'));
+  try{await w.prepareConsoleEntry();assert.equal(w.openedConsole,scenario==='matching owner'?true:undefined);assert.equal(w.portalOpened,undefined);if(scenario==='different account'){assert.equal(adminChecks,0);assert.equal(w.loggedOut,true);assert.match(w.document.getElementById('loginStatus').textContent,/owner@example.test/)}if(scenario==='ordinary member')assert.match(w.document.getElementById('loginStatus').textContent,/no Hub console access/);if(scenario==='matching owner')assert.equal(w.sessionStorage.getItem('ks-console-entry'),null);}finally{dom.window.close()}
+ }
 });

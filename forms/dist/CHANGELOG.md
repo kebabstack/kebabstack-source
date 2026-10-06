@@ -1,5 +1,17 @@
 # Changelog — kebab-stack forms
 
+## [0.6.0] — 2026-09-30
+
+- Add Publish & connect with themed, responsive embeds, explicit unverified page context and a separate appeal draft template.
+- Validate new public submissions on the server and deduplicate exact retries for 30 days. Configured forms reject the legacy submission endpoint.
+- Add opt-in response retention (7–3650 days), seven-day grace for shorter retention, and six-hour deletion sweeps including context and queued delivery copies.
+- Add admin-approved native Desk sources and a durable delivery queue. Ticket handling stays in Desk; no public API keys, employee identity matching or private ticket links are exposed to respondents.
+- Prepare an external mail relay contract only. External confirmation and reply mail remain disabled.
+
+## [0.5.2] — 2026-09-29
+
+- Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.
+
 ## [0.5.1] — 2026-09-22
 
 - Keep shared global navigation visible while workspace content scrolls by pinning the mount host. Preserve normal-flow spacing and add scroll clearance for anchors and keyboard focus. No authorization, directory or data-model changes.

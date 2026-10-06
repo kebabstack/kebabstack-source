@@ -144,6 +144,7 @@ type ReadResult =
    notes: text;
    ok: bool;
    reads: vec Read;
+   retryable: opt bool;
    sticker: text;
    vendor: text;
  };

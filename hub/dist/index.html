@@ -1372,7 +1372,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.37.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.37.1"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1662,7 +1662,7 @@ const idlFactory = ({ IDL }) => {
     ssoWhoami: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ active: IDL.Bool, displayName: IDL.Text, email: IDL.Text, expiresAt: IDL.Int, id: IDL.Text, provider: IDL.Text }))], ["query"]),
     startReview: IDL.Func([IDL.Record({ apps: IDL.Vec(IDL.Nat), dueDays: IDL.Nat, name: IDL.Text })], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, items: IDL.Nat, ok: IDL.Bool })], []),
     stats: IDL.Func([], [IDL.Record({ active: IDL.Nat, autoSyncSecs: IDL.Nat, connections: IDL.Nat, connectors: IDL.Nat, hookEvents: IDL.Nat, inactive: IDL.Nat, lastHookAt: IDL.Opt(IDL.Int), users: IDL.Nat })], ["query"]),
-    suiteState: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ active: IDL.Bool, displayName: IDL.Text, email: IDL.Text, expiresAt: IDL.Int, id: IDL.Text, provider: IDL.Text, unread: IDL.Nat }))], ["query"]),
+    suiteState: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ active: IDL.Bool, displayName: IDL.Text, email: IDL.Text, expiresAt: IDL.Int, hubRole: IDL.Opt(IDL.Text), id: IDL.Text, provider: IDL.Text, unread: IDL.Nat }))], ["query"]),
     supportDeskUrl: IDL.Func([], [IDL.Text], ["query"]),
     syncAll: IDL.Func([], [IDL.Vec(IDL.Tuple(IDL.Nat, SyncResult))], []),
     syncNow: IDL.Func([IDL.Nat], [SyncResult], []),
@@ -1791,14 +1791,14 @@ async function enterPortal() {
   portalFromConsole = true;
   showPortal(who);
   if (consoleTopbar) consoleTopbar.closeAll();
-  mountPortalTopbar(who).then((tb) => { tb.setExtraHidden("pConsoleBtn", false); });
+  mountPortalTopbar(who).then((tb) => tb.refresh());
 }
 function leavePortal(nav) {
   clearInterval(portalPoller);
   setTimeout(refreshConsoleBell, 300);
   if (consoleTopbar) consoleTopbar.closeAll();
   portalFromConsole = false;
-  if (portalTopbar) { portalTopbar.setExtraHidden("pConsoleBtn", true); portalTopbar.closeAll(); }
+  if (portalTopbar) { portalTopbar.closeAll(); }
   $("portal").classList.add("hidden");
   $("layout").classList.remove("hidden");
   if (nav !== false) go("dash");
@@ -3486,7 +3486,6 @@ async function mountPortalTopbar(u) {
     jump: (a) => { if (a.kind === "link" || a.kind === "oidc") openLinkTile(a.url); else jumpApp(Number(a.id), a.kind !== "win", a.kind === "win"); },
     theme: { get: () => (document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light"), set: applyTheme },
     ids: { avatar: "pAviTop", identName: "pNameTop", theme: "pThemeBtn", bell: "pBell", badge: "pBellN", brandLogo: "pLogo", brandHome: "pBrandHome" },
-    extra: [{ id: "pConsoleBtn", label: "Console", title: "Back to the admin console", hidden: !portalFromConsole, onClick: () => leavePortal(true) }],
     identSection: (box) => { const tpl = $("pMenu"); while (tpl.firstChild) box.appendChild(tpl.firstChild); },
     notifFooter: (box) => { const tpl = $("pNotifFootTpl"); while (tpl.firstChild) box.appendChild(tpl.firstChild); portalTopbarActor().myNotifications(pTok(), 1n).then((r) => { $("pNotifSlack").checked = r.slackDm; }).catch(() => {}); },
     onSignOut: ssoSignOut,
@@ -4135,6 +4134,7 @@ async function mountConsoleTopbar() {
     hub: { actor: () => backend, token: "" },
     hubUrl: location.origin + location.pathname,
     brandHref: "#/dash", brandTitle: "Home", onBrand: () => go("dash"),
+    hideConsole: true,
     app: { id: "hub", name: "Console", eyebrow: (window._setup && window._setup.orgName) || "" },
     person: { email: youPerson ? youPerson.email : "", displayName: youPerson ? (youPerson.displayName || youPerson.email) : roleName, role: window._role === "owner" || window._role === "admin" ? "admin" : "" },
     currentUrl: location.origin,
@@ -4778,6 +4778,21 @@ $("verBtn").onclick = async () => {
 };
 $("clClose").onclick = () => $("clOv").classList.add("hidden");
 
+const consoleRequested = () => sessionStorage.getItem("ks-console-entry") === "1";
+let consoleExpectedEmail = "";
+async function prepareConsoleEntry() {
+  $("loginTitle").textContent = "Open the Hub console.";
+  document.querySelector(".auth-intro").textContent = "Manage your company workspace with your linked passkey.";
+  $("ssoButtons").hidden = true;
+  document.querySelector(".auth-divider").hidden = true;
+  $("loginRole").textContent = "Company sign-in opens your apps. The Hub console currently requires a passkey linked to a Hub Owner, Admin or Helpdesk profile.";
+  const token = localStorage.getItem("uh-sso-token");
+  const company = token ? opt(await anonBackend.ssoWhoami(token)) : null;
+  consoleExpectedEmail = company?.active ? company.email : "";
+  if (await authClient.isAuthenticated()) await afterLogin();
+  else loginSettle("Continue with the passkey linked to your Hub profile.");
+}
+
 async function afterLogin() {
   loginState(true, "Verifying your workspace access…");
   const identity = authClient.getIdentity();
@@ -4785,6 +4800,14 @@ async function afterLogin() {
   const agent = await HttpAgent.create({ host: IC_HOST, identity });
   backend = Actor.createActor(idlFactory, { agent, canisterId: BACKEND_CANISTER_ID });
   window._agent = agent;
+  if (consoleRequested() && consoleExpectedEmail) {
+    const account = await backend.myAccess();
+    if (opt(account.email) !== consoleExpectedEmail) {
+      await authClient.logout();
+      loginFailure("Choose the passkey linked to " + consoleExpectedEmail + ". Your company session stays signed in.");
+      return;
+    }
+  }
   // invite-claim lane: any signed-in person, NOT admin-gated
   const inv = sessionStorage.getItem("ks-invite");
   if (inv) {
@@ -4827,6 +4850,10 @@ async function afterLogin() {
   }
   const isAdmin = await backend.amIAdmin();
   if (!isAdmin) {
+    if (consoleRequested()) {
+      loginFailure("This passkey has no Hub console access. Ask a Hub owner to check its profile link and central role.");
+      return;
+    }
     // Portal v2: a passkey linked to a directory entry lands in the portal
     let who = null;
     try { who = opt(await backend.portalWhoami("")); } catch (e) { console.error(e); }
@@ -4848,8 +4875,10 @@ async function afterLogin() {
     $("myPrincipal").textContent = principal;
     return;
   }
+  sessionStorage.removeItem("ks-console-entry");
   await loginLand();
   $("login").classList.add("hidden");
+  $("portal").classList.add("hidden");
   $("layout").classList.remove("hidden");
   try { window._role = await backend.myRole(); } catch (e) { window._role = "helpdesk"; } // fail closed
   $("whoChip").dataset.principal = principal;
@@ -4883,6 +4912,7 @@ async function afterLogin() {
   try {
     // Capture all entry parameters before scrubbing any of them. A jump may accompany ssostart.
     const entry = new URL(location.href), qs = entry.searchParams;
+    if (qs.get("console") === "1" && !qs.has("jump")) sessionStorage.setItem("ks-console-entry", "1");
     const signout = qs.has("signout") || !!sessionStorage.getItem("ks-signout");
     if (signout) sessionStorage.setItem("ks-signout", "1"); // Retry must finish sign-out if startup fails after the URL is scrubbed.
     const hasCallback = qs.has("code") || qs.has("error");
@@ -4891,7 +4921,7 @@ async function afterLogin() {
     if (qs.get("invite")) sessionStorage.setItem("ks-invite", qs.get("invite"));
     const oidcReq = oidcParamsFromHash(entry.hash, entry.search);
     if (oidcReq) sessionStorage.setItem("ks-oidc", JSON.stringify(oidcReq));
-    ["jump","signout","invite","ssostart"].forEach(k => qs.delete(k));
+    ["jump","signout","invite","ssostart","console"].forEach(k => qs.delete(k));
     // Preserve callback code/state and first-run claim until their dedicated handlers consume them.
     if (!hasCallback && oidcReq) { entry.hash = ""; entry.search = ""; }
     history.replaceState(null, "", entry.pathname + entry.search + entry.hash);
@@ -4915,7 +4945,7 @@ async function afterLogin() {
     if (invited) { $("loginTitle").textContent = "You’re invited."; $("loginRole").textContent = "Use a passkey to link your profile. You can create one during sign-in."; }
     authClient = await clientReady;
     if (signout) {
-      sessionStorage.removeItem("ks-signout"); sessionStorage.removeItem("uh-pkce"); sessionStorage.removeItem("uh-jump"); sessionStorage.removeItem("ks-oidc");
+      sessionStorage.removeItem("ks-console-entry"); sessionStorage.removeItem("ks-signout"); sessionStorage.removeItem("uh-pkce"); sessionStorage.removeItem("uh-jump"); sessionStorage.removeItem("ks-oidc");
       const t = localStorage.getItem("uh-sso-token"); localStorage.removeItem("uh-sso-token");
       await Promise.allSettled([t ? anonBackend.ssoLogout(t) : Promise.resolve(), authClient.logout()]);
       await providers; loginSettle("You’re signed out. Choose an account to continue."); return;
@@ -4924,6 +4954,7 @@ async function afterLogin() {
       if (await ssoHandleRedirect()) return;
       await providers; loginState(false, "Please start a new sign-in attempt."); return;
     }
+    if (consoleRequested() && !invited && !sessionStorage.getItem("uh-jump") && !oidcPending() && window._setup?.setupDone) { await providers; await prepareConsoleEntry(); return; }
     if (!invited && !(window._setup && !window._setup.setupDone) && await ssoResume()) return;
     if (await authClient.isAuthenticated()) { await afterLogin(); return; }
     await providers;

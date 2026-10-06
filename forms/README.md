@@ -25,3 +25,7 @@ Install through the **Kitchen** in your hub (recipe `forms`), or by hand per `IN
 Agents can open permission-checked summaries of related employee records in Desk.
 See [employee context and directory follow-up](../docs/LIFECYCLE.md) for the workflow,
 data boundaries and rollout. App roles remain managed in Hub.
+
+## Forms public intake
+
+See [public forms, embedding and the Desk handoff](INTAKE.md) for setup, privacy boundaries and alpha limitations. External mail is not connected.

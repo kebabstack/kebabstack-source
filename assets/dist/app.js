@@ -214,8 +214,12 @@ const NEEDS_TO = { handed_out: "To whom (from the directory)", loaned: "To whom 
 function toRowFor(act, rowId, labelId) { $(rowId).classList.toggle("hidden", !NEEDS_TO[act]); if (NEEDS_TO[act]) $(labelId).textContent = NEEDS_TO[act]; }
 
 // ---------- intake ----------
+let ikReadSequence = 0, ikSearchSequence = 0;
 let ik = null; // { photo:{bytes,mime,url}|null, reads:[], chosen: asset|null, create: input|null, action }
 function ikReset() {
+  ++ikReadSequence; ++ikSearchSequence; clearTimeout(qTimer);
+  if (ik?.photo?.url?.startsWith("blob:")) URL.revokeObjectURL(ik.photo.url);
+  $("readRecovery").classList.add("hidden"); $("ikRetryRead").disabled = false;
   ik = { photo: null, reads: [], chosen: null, create: null, action: "handed_out" };
   for (const id of ["ik1", "ik2", "ik3", "ikNewCard"]) $(id).classList.add("hidden");
   $("ik0").classList.remove("hidden"); $("recentCard").classList.remove("hidden");
@@ -231,41 +235,75 @@ $("camFile").onchange = () => ikPhoto($("camFile").files[0]);
 $("galFile").onchange = () => ikPhoto($("galFile").files[0]);
 $("handBtn").onclick = () => { ikReset(); ikStep1(); $("readStatus").textContent = "no photo — search by tag or serial, or add a new device"; setTimeout(() => $("ikQuery").focus(), 50); };
 function ikStep1() { $("ik0").classList.add("hidden"); $("recentCard").classList.add("hidden"); $("ik1").classList.remove("hidden"); }
+function ikStopReading() { ++ikReadSequence; if (ik) ik.reading = false; $("ikRetryRead").disabled = false; }
 async function ikPhoto(file) {
   if (!file) return;
   ikReset(); ikStep1();
+  const draft = ik, photoToken = session.load();
   $("camFile").value = ""; $("galFile").value = "";
-  $("readStatus").textContent = "preparing the picture…";
-  try { ik.photo = await shrink(file); } catch (e) { $("readStatus").textContent = String(e.message || e); return; }
-  $("shotImg").src = ik.photo.url; $("shotImg").classList.remove("hidden");
-  if (!me.aiOn) { $("readStatus").textContent = "photo kept · reading is off — search below or add by hand"; return; }
-  $("readStatus").textContent = "reading the photo…";
+  $("readStatus").textContent = "Preparing the picture…";
+  let photo;
+  try { photo = await shrink(file); } catch (_) { if (ik === draft) $("readStatus").textContent = "This picture could not be prepared. Choose a JPEG, PNG or WebP photo, or enter the device manually."; return; }
+  if (ik !== draft || photoToken !== session.load()) { if (photo.url?.startsWith("blob:")) URL.revokeObjectURL(photo.url); return; }
+  ik.photo = photo;
+  $("shotImg").src = photo.url; $("shotImg").classList.remove("hidden");
+  if (!me.aiOn) { $("readStatus").textContent = "Photo kept in this draft. Reading is off; search below or add the device manually."; return; }
+  await ikReadPhoto();
+}
+async function ikReadPhoto() {
+  if (!ik?.photo || ik.reading) return;
+  const draft = ik, sequence = ++ikReadSequence, token = session.load();
+  const current = () => ik === draft && sequence === ikReadSequence && token === session.load();
+  draft.reading = true;
+  $("readRecovery").classList.remove("hidden"); $("ikRetryRead").disabled = true;
+  $("readStatus").textContent = "Reading the photo… You can also enter the details manually.";
   let r;
-  try { r = await backend.intakeRead(session.load(), [...ik.photo.bytes], ik.photo.mime); } catch (e) { $("readStatus").textContent = "reading failed: " + String(e.message || e).slice(0, 140); return; }
-  if (!r.ok) { $("readStatus").textContent = r.detail; return; }
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      r = await backend.intakeRead(token, [...draft.photo.bytes], draft.photo.mime);
+      if (!current()) return;
+      if (r.ok || r.retryable?.[0] !== true || attempt === 1) break;
+      $("readStatus").textContent = "Photo reading is temporarily unavailable. Trying once more…";
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      if (!current()) return;
+    }
+  } catch (_) { r = { ok: false, detail: "Photo reading could not finish. Check your connection and try again." }; }
+  finally { if (current()) { draft.reading = false; $("ikRetryRead").disabled = false; } }
+  if (!current()) return;
+  if (!r.ok) {
+    const detail = /^the AI vendor answered \d+:/i.test(r.detail || "") ? "The photo-reading service is unavailable." : r.detail;
+    $("readStatus").textContent = (detail || "Photo reading could not finish.") + " Your photo is kept in this draft. Try again or enter the details manually.";
+    return;
+  }
+  $("readRecovery").classList.add("hidden");
   ik.reads = r.reads;
   const vendorModel = [r.vendor, r.model].filter(Boolean).join(" ");
   $("readStatus").textContent = r.reads.length ? `read ${r.reads.length} code${r.reads.length === 1 ? "" : "s"}${vendorModel ? " · " + vendorModel : ""}${r.sticker && r.sticker !== "unsure" ? " · sticker: " + r.sticker : ""}` : "no code could be read — search by hand or add the device" + (vendorModel ? ` (looks like ${vendorModel})` : "");
   $("reads").innerHTML = r.reads.map((x, i) => `<button class="read ${x.confidence < 0.6 ? "low" : ""}" data-i="${i}" title="tap to search for this reading"><span class="k">${esc(x.kind.replace("_", " "))}</span>${esc(x.value)}<span class="c">${Math.round(x.confidence * 100)}%</span></button>`).join("");
   $("readNotes").textContent = r.notes || "";
   // prefill the new-device form from the reading
-  $("nSerial").value = (r.reads.find((x) => x.kind === "serial") || {}).value || "";
-  $("nTag").value = (r.reads.find((x) => x.kind === "asset_tag") || {}).value || "";
-  $("nVendor").value = r.vendor || ""; $("nModel").value = r.model || ""; if (r.kind && [...$("nKind").options].some((o) => o.value === r.kind)) $("nKind").value = r.kind;
-  if (r.reads.length) ikSearch(r.reads.map((x) => x.value));
+  if (!$("nSerial").value) $("nSerial").value = (r.reads.find((x) => x.kind === "serial") || {}).value || "";
+  if (!$("nTag").value) $("nTag").value = (r.reads.find((x) => x.kind === "asset_tag") || {}).value || "";
+  if (!$("nVendor").value) $("nVendor").value = r.vendor || ""; if (!$("nModel").value) $("nModel").value = r.model || ""; if (r.kind && [...$("nKind").options].some((o) => o.value === r.kind)) $("nKind").value = r.kind;
+  if (r.reads.length) await ikSearch(r.reads.map((x) => x.value));
 }
 $("reads").onclick = (e) => { const b = e.target.closest(".read"); if (!b) return; const v = ik.reads[Number(b.dataset.i)].value; $("ikQuery").value = v; ikSearch([v]); };
 let qTimer = 0;
-$("ikQuery").oninput = () => { clearTimeout(qTimer); qTimer = setTimeout(() => { const v = $("ikQuery").value.trim(); if (v.length >= 3) ikSearch([v]); }, 250); };
+$("ikQuery").oninput = () => { ikStopReading(); ++ikSearchSequence; clearTimeout(qTimer); qTimer = setTimeout(() => { const v = $("ikQuery").value.trim(); if (v.length >= 3) ikSearch([v]); }, 250); };
 async function ikSearch(values) {
+  const draft = ik, sequence = ++ikSearchSequence, token = session.load();
+  const current = () => ik === draft && sequence === ikSearchSequence && token === session.load();
   setStatus("candStatus", "", "searching…");
   let c = [];
-  try { c = await backend.intakeMatch(session.load(), values); } catch (e) { setStatus("candStatus", "err", String(e.message || e).slice(0, 120)); return; }
+  try { c = await backend.intakeMatch(token, values); } catch (e) { if (!current()) return; setStatus("candStatus", "err", String(e.message || e).slice(0, 120)); return; }
+  if (!current()) return;
   setStatus("candStatus", "", "");
   $("cands").innerHTML = c.length ? c.map((x) => { const a = x.row.asset; return `<div class="cand"><span class="sc">${x.score}%</span><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · "))} · ${esc(STATUS_WORD[a.status] || a.status)}${x.row.assigneeName ? " · " + esc(x.row.assigneeName) : ""}<br>${esc(x.why)}</span></div><button class="sm primary" data-pick="${a.id}">This one</button></div>`; }).join("") : `<div class="empty">no device matches ${esc(values.join(", "))} — add it below, or fix the reading and search again</div>`;
   $("cands").querySelectorAll("[data-pick]").forEach((b) => (b.onclick = () => { const x = c.find((y) => Number(y.row.asset.id) === Number(b.dataset.pick)); ik.chosen = x.row.asset; ik.create = null; ikStep2(); }));
 }
-$("ikNew").onclick = () => { $("ikNewCard").classList.remove("hidden"); $("ikNewCard").scrollIntoView({ behavior: "smooth", block: "start" }); };
+$("ikRetryRead").onclick = () => ikReadPhoto();
+$("ikManual").onclick = () => $("ikNew").click();
+$("ikNew").onclick = () => { ikStopReading(); ++ikSearchSequence; $("readStatus").textContent = ik?.photo ? "Photo kept in this draft. Enter the device details below." : "Enter the device details below."; $("readRecovery").classList.add("hidden"); $("ikNewCard").classList.remove("hidden"); $("nSerial").focus(); $("ikNewCard").scrollIntoView({ behavior: "smooth", block: "start" }); };
 $("ikRestart").onclick = () => ikReset();
 $("ikUseNew").onclick = () => {
   const x = { tag: $("nTag").value.trim(), serial: $("nSerial").value.trim(), vendor: $("nVendor").value.trim(), model: $("nModel").value.trim(), kind: $("nKind").value, note: $("nNote").value.trim() };
@@ -273,6 +311,7 @@ $("ikUseNew").onclick = () => {
   ik.create = x; ik.chosen = null; ikStep2();
 };
 function ikStep2() {
+  ikStopReading(); ++ikSearchSequence;
   $("ik1").classList.add("hidden"); $("ik2").classList.remove("hidden");
   const a = ik.chosen || { ...ik.create, id: 0, status: "new", assignee: "" };
   $("ikDevName").textContent = ik.chosen ? deviceName(a) : `${deviceName(a)} (new)`;
@@ -811,6 +850,7 @@ async function loadSale(id) {
   const acts = [];
   if (s.status === "draft" && s.buyer.pid) acts.push(`<button class="primary sm" data-act="offer">Offer to the buyer</button>`);
   if (s.status === "offered" && s.buyer.pid) acts.push(`<button class="sm" data-act="offer">Offer again (re-notify)</button>`);
+  if (s.status === "accepted" && s.buyer.pid && Number(v.waiverVersion) !== Number(s.waiverVersion)) acts.push(`<button class="primary sm" data-act="offer">Offer again (terms changed)</button>`);
   if (s.status === "accepted" && !deal?.exists) acts.push(`<button class="primary sm" data-act="issue">Issue the invoice</button>`);
 
   if (s.status !== "cancelled") acts.push(`<button class="sm" data-act="cancel">${["issued", "paid"].includes(s.status) ? "Cancel with credit note…" : "Cancel the sale…"}</button>`);
@@ -896,30 +936,58 @@ async function loadOffers(id) {
   // Keep the buyer-scoped API: even an app admin must not review/accept another buyer's offer here.
   if (detail) rows = /^[1-9][0-9]*$/.test(id) ? rows.filter((v) => String(v.sale.id) === id) : [];
   if (!rows.length) { $("offerRows").innerHTML = `<div class="empty">${detail ? "This offer is not available for your signed-in account. Use the account that received the notification, or ask IT to check the offer." : "nothing offered to you at the moment"}</div>`; return; }
+  // The same three steps the external dealroom shows: review & accept → invoice → payment & hand-over.
+  const steps = (v) => {
+    const idx = { offer: 0, invoice: 1, paid: 2, complete: 3 }[v.phase] ?? -1;
+    return `<ol class="sale-progress" aria-label="Where this sale stands">${["Review & accept", "Invoice", "Payment & hand-over"].map((l, i) => `<li class="${idx < 0 ? "" : i < idx ? "past" : i === idx ? "current" : ""}">0${i + 1} · ${l}</li>`).join("")}</ol>`;
+  };
+  const field = (sid, key, label, value, max, o = {}) => `<label${o.wide ? ' class="wide"' : ""} for="of-${sid}-${key}">${label}<input id="of-${sid}-${key}" type="text" data-f="${key}" value="${esc(value)}" maxlength="${max}"${o.auto ? ` autocomplete="${o.auto}"` : ""}${o.optional ? "" : " required"}></label>`;
+  const next = (v) => {
+    const s = v.sale, price = fmtMoney(s.grossMinor, s.currency);
+    if (s.status === "cancelled") return `<div class="notice warning"><strong>This sale is cancelled.</strong>${esc(s.cancelReason)}${s.invoiceNo ? " Do not pay the invoice; IT handles the credit note." : ""}</div>`;
+    if (Number(v.handedOverAt)) return `<div class="notice"><strong>Handed over on ${esc(fmt(v.handedOverAt))}.</strong>The device is yours. Your invoice stays here for download.</div>`;
+    if (s.status === "paid") return `<div class="notice"><strong>Payment received${Number(s.paidAt) ? " on " + esc(fmt(s.paidAt)) : ""}.</strong>IT prepares the device and arranges the hand-over with you.</div>`;
+    if (s.status === "issued") return `<div class="notice"><strong>Invoice ${esc(s.invoiceNo)} is ready.</strong>Please pay ${esc(price)} by ${esc(s.dueOn)}. IT confirms the payment and prepares the device for hand-over.</div>`;
+    if (s.status === "accepted") return `<div class="notice"><strong>You accepted on ${esc(fmt(s.acceptedAt))}.</strong>IT issues your invoice next; you will be notified here and through the Hub.</div>`;
+    return "";
+  };
   $("offerRows").innerHTML = rows.map((v) => {
-    const s = v.sale; const open = s.status === "offered"; const complete = s.buyer.street && s.buyer.postalCode && s.buyer.town;
-    return `<div class="card ${open ? "" : "flat"}" data-offer="${Number(s.id)}">
-      <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:200px"><h3 style="margin-bottom:2px">${esc(v.deviceName)}</h3><div class="kv">${v.deviceSerial ? "serial " + esc(v.deviceSerial) + " · " : ""}<span class="pill st-${esc(s.status)}">${esc(SALE_WORD[s.status] || s.status)}</span>${s.invoiceNo ? " · " + esc(s.invoiceNo) + " · due " + esc(s.dueOn) : ""}</div></div><div class="money">${esc(fmtMoney(s.grossMinor, s.currency))}</div></div>
-      <div class="kv" style="margin:6px 0">${esc(s.description)} · price incl. VAT ${esc((Number(s.vatRateBp) / 100).toString())}%</div>
-      ${open ? `<label>Hand-over terms (version ${Number(v.waiverVersion)})</label><div class="terms">${esc(v.waiverText)}</div>
-        <label>Your postal address for the invoice</label>
-        <div class="row"><div style="flex:2"><input type="text" data-f="street" placeholder="Street" value="${esc(s.buyer.street)}"></div><div><input type="text" data-f="houseNo" placeholder="No." value="${esc(s.buyer.houseNo)}"></div></div>
-        <div class="row"><div><input type="text" data-f="postalCode" placeholder="Postal code" value="${esc(s.buyer.postalCode)}"></div><div style="flex:2"><input type="text" data-f="town" placeholder="Town" value="${esc(s.buyer.town)}"></div><div><input type="text" data-f="country" placeholder="CH" maxlength="2" value="${esc(s.buyer.country || "CH")}"></div></div>
-        <div class="kv" style="margin-top:6px">The address goes on this invoice only — not into the company directory.</div>
-        <div class="btnrow"><button class="primary" data-accept="${Number(s.id)}" data-v="${Number(v.waiverVersion)}">I accept the terms and buy it</button><button class="sm" data-decline="${Number(s.id)}">Decline</button><span class="status" data-status></span></div>` : ""}
-      ${s.acceptedHow === "online" ? `<div class="kv" style="margin-top:8px">You accepted the terms on ${esc(fmt(s.acceptedAt))}.</div>` : ""}
-      ${s.pdfId && Number(s.pdfId) ? `<div class="btnrow"><button class="sm" data-dl="${Number(s.pdfId)}">Download invoice ${esc(s.invoiceNo)}</button>${s.creditPdfId && Number(s.creditPdfId) ? `<button class="sm" data-dl="${Number(s.creditPdfId)}">Credit note ${esc(s.creditNoteNo)}</button>` : ""}</div>` : s.status === "issued" || s.status === "paid" ? `<div class="kv" style="margin-top:8px">Invoice ${esc(s.invoiceNo)} — the PDF is being prepared by IT.</div>` : ""}
-      ${s.status === "cancelled" ? `<div class="kv" style="margin-top:8px">${esc(s.cancelReason)}</div>` : ""}
+    const s = v.sale, sid = Number(s.id), open = s.status === "offered", price = fmtMoney(s.grossMinor, s.currency);
+    return `<div class="card offer" data-offer="${sid}">
+      <div class="offer-head"><div><h3>${esc(v.deviceName)}</h3><div class="kv">${v.deviceSerial ? "serial " + esc(v.deviceSerial) + " · " : ""}<span class="pill st-${esc(s.status)}">${esc(SALE_WORD[s.status] || s.status)}</span>${s.invoiceNo ? " · " + esc(s.invoiceNo) + " · due " + esc(s.dueOn) : ""}</div></div><div class="money">${esc(price)}</div></div>
+      ${steps(v)}
+      <div class="kv">${esc(s.description)} · price incl. VAT ${esc((Number(s.vatRateBp) / 100).toString())}%</div>
+      ${next(v)}
+      ${open ? `<h4>Hand-over terms · version ${Number(v.waiverVersion)}</h4><div class="terms" tabindex="0" aria-label="Hand-over terms">${esc(v.waiverText)}</div>
+        <h4>Your postal address for the invoice</h4>
+        <div class="offer-fields">${field(sid, "street", "Street", s.buyer.street, 70, { wide: true, auto: "address-line1" })}${field(sid, "houseNo", "Building no. (optional)", s.buyer.houseNo, 16, { optional: true })}${field(sid, "postalCode", "Postal code", s.buyer.postalCode, 16, { auto: "postal-code" })}${field(sid, "town", "Town / city", s.buyer.town, 35, { auto: "address-level2" })}${field(sid, "country", "Country code (CH, DE, …)", s.buyer.country || "CH", 2, { auto: "country" })}</div>
+        <div class="kv">The address goes on this invoice only — not into the company directory.</div>
+        <label class="check"><input type="checkbox" data-f="agree"><span>I accept this offer for <b>${esc(price)}</b> and the hand-over terms above. Accepting with my company sign-in is my signature.</span></label>
+        <div class="btnrow"><button class="primary" data-accept="${sid}" data-v="${Number(v.waiverVersion)}">Accept — IT issues the invoice</button><span class="status" data-status role="status"></span></div>
+        <details class="offer-decline"><summary>Not taking this device? Decline the offer</summary><p class="kv">Declining cancels this sale and tells IT.</p><label for="of-${sid}-reason">Reason (optional)<textarea id="of-${sid}-reason" data-f="reason" rows="2" maxlength="300"></textarea></label><div class="btnrow"><button class="sm" data-decline="${sid}">Decline & cancel sale</button></div></details>` : ""}
+      ${s.acceptedHow === "online" && !open ? `<div class="kv">You accepted the terms (version ${Number(s.waiverVersion)}) on ${esc(fmt(s.acceptedAt))}.</div>` : ""}
+      ${s.pdfId && Number(s.pdfId) ? `<div class="btnrow"><button class="sm" data-dl="${Number(s.pdfId)}">Download invoice ${esc(s.invoiceNo)}</button>${s.creditPdfId && Number(s.creditPdfId) ? `<button class="sm" data-dl="${Number(s.creditPdfId)}">Credit note ${esc(s.creditNoteNo)}</button>` : ""}</div>` : s.status === "issued" || s.status === "paid" ? `<div class="kv">Invoice ${esc(s.invoiceNo)} — the PDF is being prepared by IT.</div>` : ""}
     </div>`;
   }).join("");
   $("offerRows").querySelectorAll("[data-accept]").forEach((b) => (b.onclick = async () => {
-    const card = b.closest("[data-offer]"); const f = (k) => card.querySelector(`[data-f="${k}"]`).value.trim(); const st = card.querySelector("[data-status]");
-    st.className = "status"; st.textContent = "saving…";
-    const r = await backend.acceptOffer(tok(), BigInt(b.dataset.accept), BigInt(b.dataset.v), [{ street: f("street"), houseNo: f("houseNo"), postalCode: f("postalCode"), town: f("town"), country: f("country") || "CH" }]);
-    st.className = "status " + (r.ok ? "ok" : "err"); st.textContent = r.ok ? "accepted — IT issues the invoice" : r.detail;
-    if (r.ok) loadOffers(id);
+    const card = b.closest("[data-offer]"); const f = (k) => card.querySelector(`[data-f="${k}"]`); const st = card.querySelector("[data-status]");
+    const address = { street: f("street").value.trim(), houseNo: f("houseNo").value.trim(), postalCode: f("postalCode").value.trim(), town: f("town").value.trim(), country: (f("country").value.trim() || "CH").toUpperCase() };
+    const missing = ["street", "postalCode", "town"].find((k) => !address[k]) || (address.country.length !== 2 ? "country" : "");
+    if (missing) { st.className = "status err"; st.textContent = "Street, postal code, town and a two-letter country code are needed on the invoice."; f(missing).focus(); return; }
+    if (!f("agree").checked) { st.className = "status err"; st.textContent = "Please tick the box to confirm you accept the offer and the terms."; f("agree").focus(); return; }
+    st.className = "status"; st.textContent = "saving…"; b.disabled = true;
+    try {
+      const r = await backend.acceptOffer(tok(), BigInt(b.dataset.accept), BigInt(b.dataset.v), [address]);
+      st.className = "status " + (r.ok ? "ok" : "err"); st.textContent = r.ok ? "Accepted. IT issues the invoice and you will be notified." : r.detail;
+      if (r.ok) loadOffers(id);
+    } finally { b.disabled = false; }
   }));
-  $("offerRows").querySelectorAll("[data-decline]").forEach((b) => (b.onclick = async () => { if (!confirm("Decline this offer? IT is told.")) return; const r = await backend.declineOffer(tok(), BigInt(b.dataset.decline), ""); if (!r.ok) alert(r.detail); loadOffers(id); }));
+  $("offerRows").querySelectorAll("[data-decline]").forEach((b) => (b.onclick = async () => {
+    const card = b.closest("[data-offer]"); const st = card.querySelector("[data-status]"); const reason = (card.querySelector('[data-f="reason"]')?.value || "").trim();
+    b.disabled = true; st.className = "status"; st.textContent = "declining…";
+    try { const r = await backend.declineOffer(tok(), BigInt(b.dataset.decline), reason); if (!r.ok) { st.className = "status err"; st.textContent = r.detail; return; } loadOffers(id); }
+    finally { b.disabled = false; }
+  }));
   $("offerRows").querySelectorAll("[data-dl]").forEach((b) => (b.onclick = async () => { const d = opt(await backend.saleDocument(tok(), BigInt(b.dataset.dl))); if (d) downloadBytes(d.name, new Uint8Array(d.bytes), d.mime); }));
 }
 

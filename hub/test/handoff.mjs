@@ -37,7 +37,7 @@ test('passkey owner arriving from a tool is handed off before console initializa
  const{w,dom}=fixture();w.sessionStorage.setItem('uh-jump','3');let adminChecked=false;
  w.api.portalWhoami=async()=>[{active:true}];w.api.amIAdmin=async()=>{adminChecked=true;return true};
  w.authClient={getIdentity:()=>({getPrincipal:()=>({toText:()=> 'aaaaa-aa'})})};w.HttpAgent={create:async()=>({})};w.Actor={createActor:()=>w.api};
- w.eval('var backend,portalMode,IC_HOST="",BACKEND_CANISTER_ID="",idlFactory={};function loginState(){}function oidcPending(){return false}'+extract('async function afterLogin()','(async () => {'));
+ w.eval('var backend,portalMode,IC_HOST="",BACKEND_CANISTER_ID="",idlFactory={};function loginState(){}function oidcPending(){return false}'+extract('const consoleRequested =','(async () => {'));
  await w.afterLogin();assert.equal(adminChecked,false);assert.ok(w.destination);assert.equal(w.document.getElementById('layout').inert,true);dom.window.close();
 });
 test('network failure can be cancelled and a late response cannot navigate',async()=>{

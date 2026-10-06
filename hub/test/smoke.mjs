@@ -417,7 +417,7 @@ try {
   if (!d.getElementById("pBell") || !d.getElementById("pThemeBtn") || !d.getElementById("pNameTop") || !d.getElementById("pAviTop")) errors.push("topbar: compat ids missing");
   if (d.getElementById("pBellN").hidden || d.getElementById("pBellN").textContent !== "2") errors.push("topbar: unread badge from suiteState: " + d.getElementById("pBellN").textContent);
   if (!/Ana Ruiz/.test(d.getElementById("pNameTop").textContent) || d.getElementById("pAviTop").textContent !== "AR") errors.push("topbar: person");
-  if (!d.getElementById("pConsoleBtn") || !d.getElementById("pConsoleBtn").hidden) errors.push("topbar: Console button present but hidden when not coming from the console");
+  if (d.getElementById("pConsoleBtn") || !d.getElementById("ks-consoleLink")?.hidden) errors.push("topbar: old Console button must be removed; missing global role keeps the shared Hub link hidden");
   if (!/Menu/.test(d.getElementById("ks-appName").textContent) || d.getElementById("ks-fullMenu").hidden !== true) errors.push("topbar on the hub: brand says Menu, no 'Full menu' link to itself");
   d.getElementById("pBell").click(); await new Promise((r) => setTimeout(r, 40));
   if (d.getElementById("ks-notifPanel").hidden || d.querySelectorAll("#ks-notifList .ks-item").length !== 2 || d.querySelectorAll("#ks-notifList .ks-unread").length !== 1) errors.push("topbar: notification list on open");

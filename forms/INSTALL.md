@@ -43,3 +43,7 @@ tile URL `https://<forms-frontend>.icp.net/` (App, SSO ticket) → Connect.
 - The public fill page (`#/f/<slug>`) is reachable by anyone with the link; drafts and trashed forms answer "not found". Submissions are capped (5 000 per form, 50 000 in total) and rate-limited (600 per five minutes across all forms).
 - Respondents' edit links (`?e=<token>`) are the only way to change a submission; the token is kept on the respondent's device and never shown to reviewers.
 - Everyone in the hub directory can create forms. There is no per-person quota beyond the caps.
+
+## Forms public intake
+
+See [public forms, embedding and the Desk handoff](INTAKE.md) for setup, privacy boundaries and alpha limitations. External mail is not connected.

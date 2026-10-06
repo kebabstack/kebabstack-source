@@ -6,6 +6,7 @@
 <title>kebab-stack · forms</title>
 <link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/intake.css">
 <script>try{if(localStorage.getItem("ks-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -254,10 +255,12 @@ a:hover{color:var(--ks-accent)}
         <button data-tab="build" class="on">Build</button>
         <button data-tab="subs">Submissions <span id="tabSubCount"></span></button>
         <button data-tab="insights">Insights</button>
+        <button data-tab="publish">Publish & connect</button>
       </div>
     </div>
   </div>
   <div class="wrap">
+    <div id="tabPublish" hidden></div>
     <div id="tabBuild"></div>
     <div id="tabSubs" style="display:none"></div>
     <div id="tabInsights" style="display:none"></div>

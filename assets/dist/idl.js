@@ -13,7 +13,7 @@ export const idlFactory = ({ IDL }) => {
   const SaleView = IDL.Record({ acceptedByName: IDL.Text, checksByName: IDL.Text, createdByName: IDL.Text, creditNote: IDL.Opt(InvoiceData), deviceName: IDL.Text, deviceSerial: IDL.Text, deviceTag: IDL.Text, handedOverAt: IDL.Int, invoice: IDL.Opt(InvoiceData), phase: IDL.Text, proposal: IDL.Opt(IDL.Record({ basis: IDL.Text, proposedMinor: IDL.Nat })), sale: Sale, stillInAbm: IDL.Text, waiverText: IDL.Text, waiverVersion: IDL.Nat });
   const SaleSummary = IDL.Record({ assetId: IDL.Nat, buyerName: IDL.Text, creditNoteNo: IDL.Text, currency: IDL.Text, deviceName: IDL.Text, deviceTag: IDL.Text, grossMinor: IDL.Nat, id: IDL.Nat, invoiceNo: IDL.Text, mdmRemoved: IDL.Bool, phase: IDL.Text, receiptPending: IDL.Bool, status: IDL.Text, updatedAt: IDL.Int, wiped: IDL.Bool });
   const Read = IDL.Record({ confidence: IDL.Float64, kind: IDL.Text, value: IDL.Text });
-  const ReadResult = IDL.Record({ detail: IDL.Text, kind: IDL.Text, model: IDL.Text, notes: IDL.Text, ok: IDL.Bool, reads: IDL.Vec(Read), sticker: IDL.Text, vendor: IDL.Text });
+  const ReadResult = IDL.Record({ detail: IDL.Text, kind: IDL.Text, model: IDL.Text, notes: IDL.Text, ok: IDL.Bool, reads: IDL.Vec(Read), retryable: IDL.Opt(IDL.Bool), sticker: IDL.Text, vendor: IDL.Text });
   const Purchase = IDL.Record({ at: IDL.Int, by: IDL.Text, currency: IDL.Text, date: IDL.Text, note: IDL.Text, priceMinor: IDL.Nat });
   const Progress = IDL.Record({ bindings: IDL.Vec(IDL.Text), checkedAt: IDL.Int, open: IDL.Nat, sources: IDL.Nat, state: IDL.Text, total: IDL.Nat });
   const PhotoMeta = IDL.Record({ assetId: IDL.Nat, at: IDL.Int, by: IDL.Text, eventId: IDL.Nat, id: IDL.Nat, mime: IDL.Text, size: IDL.Nat });

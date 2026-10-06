@@ -5,6 +5,7 @@ export const idlFactory = ({ IDL }) => {
   const SubStatus = IDL.Variant({ accepted: IDL.Null, declined: IDL.Null, inReview: IDL.Null, received: IDL.Null });
   const SubView = IDL.Record({ answers: IDL.Text, assignee: IDL.Text, assigneeName: IDL.Text, formId: IDL.Nat, id: IDL.Nat, notes: IDL.Vec(Note), num: IDL.Nat, people: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Text)), reviews: IDL.Vec(Review), status: SubStatus, submittedAt: IDL.Int, submitterEmail: IDL.Text, submitterName: IDL.Text, updatedAt: IDL.Int });
   const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, appUrl: IDL.Text, demoSeeded: IDL.Bool, forms: IDL.Nat, hubId: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat, submissions: IDL.Nat, trashed: IDL.Nat });
+  const Policy = IDL.Record({ contextKeys: IDL.Vec(IDL.Text), graceUntil: IDL.Int, origins: IDL.Vec(IDL.Text), privacyUrl: IDL.Text, retentionDays: IDL.Nat, revision: IDL.Nat });
   const LegacyGrant = IDL.Record({ email: IDL.Text, role: IDL.Text, source: IDL.Text });
   const PermissionStatus = IDL.Record({ app: IDL.Text, directoryAt: IDL.Int, legacy: IDL.Vec(LegacyGrant), legacyGroups: IDL.Vec(IDL.Record({ name: IDL.Text, role: IDL.Text })), model: IDL.Nat, revision: IDL.Text });
   const OwnedObject = IDL.Record({ id: IDL.Text, kind: IDL.Text, meta: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
@@ -16,6 +17,8 @@ export const idlFactory = ({ IDL }) => {
   const Form = IDL.Record({ allowEdit: IDL.Bool, cap: IDL.Nat, createdAt: IDL.Int, createdBy: IDL.Text, description: IDL.Text, id: IDL.Nat, nextNum: IDL.Nat, schema: IDL.Text, slug: IDL.Text, status: FormStatus, title: IDL.Text, updatedAt: IDL.Int });
   const FormFull = IDL.Record({ form: Form, meta: FormMeta, shares: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Text)) });
   const DirectoryRow = IDL.Record({ active: IDL.Bool, attributes: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), displayName: IDL.Text, email: IDL.Text, externalId: IDL.Text, firstName: IDL.Text, id: IDL.Opt(IDL.Text), lastName: IDL.Text, source: IDL.Text });
+  const DeskTarget = IDL.Record({ canister: IDL.Principal, enabled: IDL.Bool, name: IDL.Text, sourceId: IDL.Nat, url: IDL.Text });
+  const DeliveryView = IDL.Record({ attempts: IDL.Nat, detail: IDL.Text, state: IDL.Text, ticketId: IDL.Nat, url: IDL.Text });
   const Context = IDL.Record({ checkedAt: IDL.Int, items: IDL.Vec(Item), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   return IDL.Service({
     addAdminEmail: IDL.Func([IDL.Text], [IDL.Bool], []),
@@ -23,12 +26,16 @@ export const idlFactory = ({ IDL }) => {
     adminLogRows: IDL.Func([IDL.Text], [IDL.Vec(LogRow)], ["query"]),
     assignSubmission: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     claimAdmin: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    connectDesk: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     createForm: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(FormMeta)], []),
     deleteForm: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     deleteSubmission: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    deliveryStatus: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(DeliveryView)], ["query"]),
     directory: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(IDL.Record({ department: IDL.Text, displayName: IDL.Text, email: IDL.Text }))], ["query"]),
     duplicateForm: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(FormMeta)], []),
+    getDeskTarget: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(DeskTarget)], ["query"]),
     getForm: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(FormFull)], ["query"]),
+    getIntake: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(Policy)], ["query"]),
     getSettings: IDL.Func([IDL.Text], [IDL.Opt(Settings)], ["query"]),
     hub_deactivate: IDL.Func([IDL.Vec(IDL.Text)], [IDL.Nat], []),
     hub_manifest: IDL.Func([], [Manifest], ["query"]),
@@ -45,12 +52,16 @@ export const idlFactory = ({ IDL }) => {
     listTrash: IDL.Func([IDL.Text], [IDL.Vec(IDL.Record({ deletedAt: IDL.Int, id: IDL.Nat, purgeAt: IDL.Int, subs: IDL.Nat, title: IDL.Text }))], ["query"]),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     mySubmission: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Record({ answers: IDL.Text, num: IDL.Nat, status: SubStatus, updatable: IDL.Bool }))], ["query"]),
+    pauseDesk: IDL.Func([IDL.Text, IDL.Nat], [IDL.Bool], []),
     previewForm: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Record({ allowEdit: IDL.Bool, closesAt: IDL.Int, description: IDL.Text, id: IDL.Nat, myRole: IDL.Text, schema: IDL.Text, status: FormStatus, title: IDL.Text }))], ["query"]),
     publicForm: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ allowEdit: IDL.Bool, capReached: IDL.Bool, closesAt: IDL.Int, description: IDL.Text, open: IDL.Bool, orgName: IDL.Text, schema: IDL.Text, title: IDL.Text }))], ["query"]),
+    publicIntake: IDL.Func([IDL.Text], [IDL.Opt(Policy)], ["query"]),
     purgeForm: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     rateSubmission: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     removeDemo: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     restoreForm: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    retryDelivery: IDL.Func([IDL.Text, IDL.Nat], [IDL.Bool], []),
+    saveIntake: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Vec(IDL.Text), IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     seedDemo: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setAdminEmails: IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setDeadline: IDL.Func([IDL.Text, IDL.Nat, IDL.Int], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
@@ -60,6 +71,8 @@ export const idlFactory = ({ IDL }) => {
     setShares: IDL.Func([IDL.Text, IDL.Nat, IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSubmissionStatus: IDL.Func([IDL.Text, IDL.Nat, SubStatus], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     signOut: IDL.Func([IDL.Text], [], []),
+    submissionContext: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))], ["query"]),
+    submitIntake: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), IDL.Text], [IDL.Record({ detail: IDL.Text, num: IDL.Nat, ok: IDL.Bool })], []),
     submitPublic: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, num: IDL.Nat, ok: IDL.Bool })], []),
     syncNow: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     updateForm: IDL.Func([IDL.Text, IDL.Nat, IDL.Record({ allowEdit: IDL.Bool, cap: IDL.Nat, description: IDL.Text, schema: IDL.Text, title: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),

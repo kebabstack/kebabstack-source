@@ -5,8 +5,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 node --check dist/app.js
+node --check dist/publish.js
+node --test test/embed.test.mjs
 T=$(mktemp -d)
-cp dist/index.html dist/app.js dist/idl.js dist/hub-client.js "$T/"
+cp dist/index.html dist/app.js dist/idl.js dist/hub-client.js dist/publish.js "$T/"
 cp test/agent-bundle.stub.js "$T/agent-bundle.js"
 cp test/smoke.mjs "$T/"
 [ -d node_modules ] && ln -s "$(pwd)/node_modules" "$T/node_modules" || true

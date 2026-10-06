@@ -132,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.27.0"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.29.2"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -639,7 +639,7 @@ persistent actor Desk {
     let currentAdmin = admin(tok) ?? (return { ok = false; secret = ""; detail = "Access changed" });
     if (m.id != currentAdmin.id or p.revision != current.revision) return { ok = false; secret = ""; detail = "Project changed. Retry." };
     // Expired and revoked key hashes need not occupy unbounded storage.
-    for ((id, k) in customerKeys.entries()) if (k.expiresAt <= now() or k.revoked) customerKeys.remove(id);
+    for ((id, k) in Iter.toArray(customerKeys.entries()).vals()) if (k.expiresAt <= now() or k.revoked) customerKeys.remove(id); // snapshot first: never mutate while iterating
     if (customerKeys.size() >= 300 or customerKeys.values().toArray().filter(func k = k.projectId == projectId).size() >= 10) return { ok = false; secret = ""; detail = "Maximum 10 active keys per project" };
     let id = nextCustomerKey; nextCustomerKey += 1;
     customerKeys.add(id, { id; projectId; name = norm(name); scopes; hash = digest(secret); createdAt = now(); expiresAt = now() + days * D; revoked = false });
@@ -693,7 +693,7 @@ persistent actor Desk {
     status_code = code; upgrade = null; body = Text.encodeUtf8(Json.stringify(body, null));
     headers = Array.concat([("Content-Type", "application/json; charset=utf-8"), ("Cache-Control", "no-store"), ("X-Content-Type-Options", "nosniff"), ("Referrer-Policy", "no-referrer"), ("Vary", "Origin")], if (origin == "") [] else [("Access-Control-Allow-Origin", origin), ("Access-Control-Allow-Methods", "GET, POST, OPTIONS"), ("Access-Control-Allow-Headers", "Authorization, Content-Type"), ("Access-Control-Max-Age", "600")]);
   };
-  func customerHttp<system>(req : HttpGwRequest) : HttpGwResponse {
+  func customerHttp<system>(req : HttpGwRequest, trustedFormsProject : ?Nat) : HttpGwResponse {
     let origin = headerOf(req.headers, "origin");
     let appOrigin = Text.trimEnd(appUrl, #char '/');
     var allowedOrigin = if (origin == appOrigin and Customers.origin(origin)) origin else "";
@@ -717,7 +717,7 @@ persistent actor Desk {
       let project = p ?? (return err(404, "Project not found"));
       if (origin != "") return err(403, "Secret API keys are for server-to-server use only");
       if (Customers.token(bearer)) key := customerKeys.values().find(func k = k.projectId == project.id and not k.revoked and k.expiresAt > now() and k.hash == digest(bearer));
-      if (key == null) return err(401, "Invalid or expired API key");
+      if (key == null and trustedFormsProject != ?project.id) return err(401, "Invalid or expired API key");
     } else if (mode == "customer" and parts[4] == "tickets") {
       ticketId := Nat.fromText(parts[5]) ?? 0;
       let c = customerContacts.get(ticketId) ?? (return err(404, "Ticket link is invalid or expired"));
@@ -729,7 +729,7 @@ persistent actor Desk {
     } else return err(404, "Not found");
     let project = p ?? (return err(404, "Project not found"));
     if (req.method == "OPTIONS") return customerResponse(204, #null_, allowedOrigin);
-    func permits(scope : Text) : Bool = switch (key) { case (?k) has(k.scopes, scope); case null false };
+    func permits(scope : Text) : Bool = switch (key) { case (?k) has(k.scopes, scope); case null trustedFormsProject == ?project.id and scope == "tickets:create" };
     if ((mode == "widgets" or mode == "projects") and parts.size() == 6 and parts[5] == "schema" and req.method == "GET") return customerResponse(200, customerSchema(project), allowedOrigin);
     if (mode == "projects" and parts.size() >= 7 and parts[5] == "tickets") ticketId := Nat.fromText(parts[6]) ?? 0;
     if (ticketId > 0) {
@@ -811,7 +811,7 @@ persistent actor Desk {
     if (customerContacts.size() >= 10_000) return err(503, "Customer ticket storage limit reached. Contact the support operator.");
     if (not customerQuota(project.id)) return err(429, "This project reached its intake limit. Please try again later.");
     // No Hub identity lookup, AI triage, lifecycle matching or email notification.
-    let id = createInternal<system>(workflowType(project, selected), "customer:" # Nat.toText(nextTicketId), subject, body, values.toArray(), selected.priority, if (mode == "widgets") "widget" else "customer-api", "customer:" # Nat.toText(nextTicketId), "requester", true);
+    let id = createInternal<system>(workflowType(project, selected), "customer:" # Nat.toText(nextTicketId), subject, body, values.toArray(), selected.priority, if (trustedFormsProject != null) "forms" else if (mode == "widgets") "widget" else "customer-api", "customer:" # Nat.toText(nextTicketId), "requester", true);
     customerContacts.add(id, { projectId = project.id; name; email; tokenHash = digest(secret); expiresAt = now() + 90 * D; fingerprint; schema = selected.fields });
     customerWorkflows.add(id, Workflows.start(selected));
     if (selected.steps.size() > 0 and selected.steps[0].group != "") { let t = tickets.get(id) ?? (return err(500, "Ticket unavailable")); tickets.add(id, { t with queue = selected.steps[0].group }) };
@@ -819,6 +819,52 @@ persistent actor Desk {
     customerRetries.add(retryKey, id);
     notifyQueue<system>(tickets.get(id) ?? (return err(500, "Ticket could not be created")), "Customer request · " # nextKey(id) # " " # subject, nextKey(id) # ":new");
     created(id, 201);
+  };
+
+  // Forms is a server-to-server source. Public respondents never receive a Desk key.
+  public type FormsSource = { id : Nat; projectId : Nat; typeId : Nat; formId : Nat; canister : Principal; enabled : Bool };
+  public type FormsDelivery = { ok : Bool; ticketId : Nat; detail : Text };
+  let formsSources = Map.empty<Nat, FormsSource>();
+  let formsDeliveries = Map.empty<Text, { fingerprint : Text; ticketId : Nat }>();
+  var nextFormsSource : Nat = 1;
+  public shared query func listFormsSources(tok : Text, projectId : Nat) : async [FormsSource] {
+    ignore admin(tok) ?? (return []); formsSources.values().toArray().filter(func x = x.projectId == projectId)
+  };
+  public shared func addFormsSource(tok : Text, projectId : Nat, typeId : Nat, formId : Nat, canisterText : Text) : async FormsDelivery {
+    ignore admin(tok) ?? (return {ok=false;ticketId=0;detail="Hub admin permission required"});
+    let p=customerProjects.get(projectId) ?? (return {ok=false;ticketId=0;detail="Project not found"});
+    let w=projectTypes(p).find(func w = w.id == typeId and w.enabled) ?? (return {ok=false;ticketId=0;detail="Choose an enabled request type"});
+    let canister=Principal.fromText(canisterText);
+    if(formId == 0 or Principal.isAnonymous(canister) or canister == Principal.fromText("aaaaa-aa") or w.fields.any(func f=f.required))return {ok=false;ticketId=0;detail="Choose a form and a request type without required extra fields. Form answers will appear in the ticket message."};
+    for(x in formsSources.values())if(x.projectId == projectId and x.canister == canister and x.formId == formId and x.enabled)return {ok=true;ticketId=x.id;detail="Already connected"};
+    if(formsSources.size() >= 300)return {ok=false;ticketId=0;detail="Forms source limit reached"};
+    let id=nextFormsSource;nextFormsSource+=1;formsSources.add(id,{id;projectId;typeId;formId;canister;enabled=true});
+    {ok=true;ticketId=id;detail="Source created. Connect this source in Forms."}
+  };
+  public shared func disableFormsSource(tok : Text,id : Nat) : async Bool {
+    ignore admin(tok) ?? (return false);let s=formsSources.get(id) ?? (return false);formsSources.add(id,{s with enabled=false});true
+  };
+  public shared ({caller}) func formsSourceInfo(id : Nat,formId : Nat) : async ?{ name : Text; deskUrl : Text } {
+    let s=formsSources.get(id) ?? (return null);if(not s.enabled or s.canister != caller or s.formId != formId)return null;
+    let p=customerProjects.get(s.projectId) ?? (return null);if(not p.enabled)return null;?{name=p.name;deskUrl=appUrl}
+  };
+  public shared ({caller}) func receiveForms(id : Nat,formId : Nat,submissionId : Nat,payload : Text) : async FormsDelivery {
+    func fail(detail : Text) : FormsDelivery={ok=false;ticketId=0;detail};
+    let s=formsSources.get(id) ?? (return fail("Source unavailable"));
+    if(not s.enabled or s.canister != caller or s.formId != formId)return fail("Source unavailable");
+    if(payload.size() > 24_000 or not Customers.shallow(payload))return fail("Request is too large or invalid");
+    let raw=switch(Json.parse(Hub.sanitizeSurrogates(payload))){case (#ok j)j;case _ return fail("Invalid request")};
+    let key=id.toText()#":"#submissionId.toText();let fingerprint=digest(payload);
+    switch(formsDeliveries.get(key)){case (?old){if(old.fingerprint != fingerprint)return fail("Submission already delivered with different content");let t=tickets.get(old.ticketId) ?? (return fail("The delivered ticket was deleted. It will not be recreated."));if(customerDue(t))return fail("The delivered ticket expired. It will not be recreated.");return {ok=true;ticketId=old.ticketId;detail="Already delivered"}};case null {}};
+    let p=customerProjects.get(s.projectId) ?? (return fail("Project unavailable"));
+    if(formsDeliveries.size() >= 50_000)return fail("Forms delivery receipt limit reached");
+    // Build the allowed payload explicitly; a source cannot choose another project/type.
+    let body=Json.stringify(Json.obj([("name",#string(jStr(raw,"name"))),("email",#string(jStr(raw,"email"))),("subject",#string(jStr(raw,"subject"))),("body",#string(jStr(raw,"body"))),("fields",Json.obj([])),("revision",Json.int(p.revision)),("typeId",Json.int(s.typeId)),("clientToken",#string(jStr(raw,"clientToken")))]),null);
+    let response=customerHttp<system>({method="POST";url="/support/v1/projects/"#s.projectId.toText()#"/tickets";headers=[];body=Text.encodeUtf8(body)},?s.projectId);
+    if(response.status_code != 200 and response.status_code != 201)return fail("Desk could not accept this response ("#debug_show(response.status_code)#"). Check the project, request type, quotas and required fields.");
+    let result=switch(Json.parse(Text.decodeUtf8(response.body) ?? "")){case (#ok j)j;case _ return fail("Invalid Desk response")};
+    let ticketId=switch(Json.getAsNat(result,"id")){case (#ok n)n;case _ return fail("Missing ticket reference")};
+    formsDeliveries.add(key,{fingerprint;ticketId});{ok=true;ticketId;detail="Delivered to Desk"}
   };
 
   // ---- Directory follow-up: private, durable cases linked to stable people ----
@@ -1577,7 +1623,30 @@ persistent actor Desk {
   // =====================================================================
   // notifications (through the hub, fire-and-forget)
   // =====================================================================
-  func ticketUrl(id : Nat) : Text = if (appUrl == "") "" else appUrl # "#/t/" # Nat.toText(id);
+  /// The configured desk address with exactly one trailing slash, so "https://desk.example" and "https://desk.example/" both yield "https://desk.example/#/t/7".
+  func appBase() : Text = if (appUrl == "") "" else if (Text.endsWith(appUrl, #char '/')) appUrl else appUrl # "/";
+  func ticketUrl(id : Nat) : Text = if (appUrl == "") "" else appBase() # "#/t/" # Nat.toText(id);
+
+  /// Every hub_notify answer is kept (last 200), so an admin can see when the Hub refused or missed a delivery
+  /// instead of wondering why nobody was told. Delivery to a phone or Slack is the Hub's job and is not asserted here.
+  public type NotifyRecord = { at : Int; email : Text; title : Text; ok : Bool; detail : Text };
+  let notifyLog = List.empty<NotifyRecord>();
+  func recordNotify(email : Text, title : Text, ok : Bool, detail : Text) {
+    if (List.size(notifyLog) >= 200) {
+      let all = List.toArray(notifyLog);
+      List.clear(notifyLog);
+      for (r in Array.sliceToArray<NotifyRecord>(all, 100, all.size()).vals()) List.add(notifyLog, r);
+    };
+    List.add(notifyLog, { at = now(); email; title; ok; detail = capText(detail, 200) });
+  };
+  public shared query func notifyHealth(tok : Text) : async ?{ total : Nat; failed : Nat; recent : [NotifyRecord] } {
+    switch (admin(tok)) { case null return null; case (?_) {} };
+    let all = List.toArray(notifyLog);
+    var failed = 0;
+    for (r in all.vals()) if (not r.ok) failed += 1;
+    let from = if (all.size() > 40) (all.size() - 40 : Nat) else 0;
+    ?{ total = all.size(); failed; recent = Array.reverse(Array.sliceToArray<NotifyRecord>(all, from, all.size())) };
+  };
 
   /// targets = person ids or addresses (group members come as addresses); a former colleague (no current address) is skipped
   func notify<system>(who : [Text], title : Text, id : Nat, kind : Text, dedupe : Text) {
@@ -1589,12 +1658,15 @@ persistent actor Desk {
     let targets = Array.sliceToArray<Text>(emails, 0, Nat.min(emails.size(), 25));
     let pid = projectOf(id);
     let safeTitle = if (pid == 0) title else "Customer support · New activity";
-    let url = if (pid == 0) ticketUrl(id) else appUrl # "#/customers/" # Nat.toText(pid);
+    let url = if (pid == 0) ticketUrl(id) else appBase() # "#/customers/" # Nat.toText(pid);
     ignore Timer.setTimer<system>(#seconds 0, func() : async () {
       let hub = Hub.hub(hubId);
       for (e in targets.vals()) {
         let allowed = switch (tickets.get(id)) { case (?t) not customerDue(t) and (pid == 0 or projectEmailAccess(e, pid)); case null false };
-        if (allowed) try { ignore await hub.hub_notify({ email = e; title = capText(safeTitle, 180); url; kind; dedupeKey = dedupe # ":" # e }) } catch (_) {};
+        if (allowed) {
+          let r = try { await hub.hub_notify({ email = e; title = capText(safeTitle, 180); url; kind; dedupeKey = dedupe # ":" # e }) } catch (err) { { ok = false; detail = "hub call failed: " # Error.message(err) } };
+          recordNotify(e, safeTitle, r.ok, r.detail);
+        };
       };
     });
   };
@@ -1789,6 +1861,14 @@ persistent actor Desk {
     if (rt.approval == "manager") {
       approver := switch (managerOf(emailOfPid(requester))) { case (?m) pidOf(m); case null "role:admin" };
     } else if (Text.startsWith(rt.approval, #text "group:")) approver := rt.approval;
+    // A one-person IT team: when the only possible approver is the requester themselves, the request would wait forever.
+    var approvalSkipped = "";
+    if (approver == "role:admin") {
+      let requesterEmail = emailOfPid(requester);
+      if (requesterEmail != "" and roleOf(requesterEmail) == "admin" and staffEmails().filter(func email = roleOf(email) == "admin" and email != requesterEmail).size() == 0) {
+        approver := ""; approvalSkipped := "approval not required: the requester is the only administrator, so nobody else could approve";
+      };
+    };
     if (approver != "") { status := "waiting"; waitingOn := "approval" };
     let assignment = if (Text.startsWith(requester, #text "customer:") or customerTypeId(rt.id)) ({ assignee = ""; reason = "" }) else Assignment.decide(autoAssignment, rt.id, func pid = Hub.directoryFresh(lastDirectoryPull) and workPersonActive(pid));
     if (status == "new" and assignment.assignee != "") status := "open";
@@ -1802,6 +1882,7 @@ persistent actor Desk {
     ignore addEvent(id, byEmail, byKind, "created", "via " # channel # " · " # rt.name, [("type", rt.name), ("queue", q)]);
     if (assignment.reason != "") ignore addEvent(id, "system", "system", "assign", "Automatic assignment: " # assignment.reason # (if (assignment.assignee == "") "" else " · " # personName(assignment.assignee)), [("assignee", assignment.assignee)]);
     if (rt.checklist.size() > 0) Map.add(ticketTasks, Nat.compare, id, Array.map<Text, Task>(rt.checklist, func(x) = ({ title = x; state = "open"; by = ""; at = 0 })));
+    if (approvalSkipped != "") ignore addEvent(id, "system", "system", "approval", approvalSkipped, [("decision", "not-required")]);
     if (approver != "") {
       Map.add(approvals, Nat.compare, id, { approver; state = "pending"; decidedBy = ""; at = t0; note = "" });
       ignore addEvent(id, "system", "system", "approval", "approval requested from " # approverLabel(approver), [("approver", approver)]);
@@ -2111,7 +2192,7 @@ persistent actor Desk {
       put(t);
       notifyOwners<system>(t, personName(who) # " commented · " # t.key, t.key # ":comment:" # Nat.toText(nextEventId));
     };
-    if (not fromSlack) slackMirrorPost(t.id, "*" # slackEsc(personName(who)) # "*: " # slackEsc(capText(b, 2_800)));
+    if (not fromSlack) slackMirrorSay(t.id, personName(who), slackEsc(capText(b, 2_800)));
   };
 
   public shared func addNote(tok : Text, id : Nat, body : Text) : async { ok : Bool; detail : Text } {
@@ -2746,6 +2827,12 @@ persistent actor Desk {
   };
 
   // ---- outbox: what desk says back into Slack, flushed by a timer (never blocks a button) ----
+  /// A person's reply, shown in Slack under that person's name (chat.postMessage `username`, needs chat:write.customize;
+  /// without the scope the name is prefixed in bold). The author rides in the otherwise unused `emoji` field of a post.
+  func slackMirrorSay(ticketId : Nat, author : Text, text : Text) {
+    if (not Map.containsKey(slackAnchor, Nat.compare, ticketId)) return;
+    List.add(slackOutbox, { ticketId; kind = "post"; text; emoji = capText(norm(author), 80); add = true });
+  };
   func slackMirrorPost(ticketId : Nat, text : Text) {
     if (not Map.containsKey(slackAnchor, Nat.compare, ticketId)) return;
     List.add(slackOutbox, { ticketId; kind = "post"; text; emoji = ""; add = true });
@@ -2764,27 +2851,45 @@ persistent actor Desk {
       slackMirrorPost(t.id, ":white_check_mark: *" # t.key # "* resolved" # (if (who == "") "" else " by " # slackEsc(who)) # ". Not fixed after all? Remove the :white_check_mark: from the first message (or reopen it in desk) and the team takes another look." # view);
     } else if ((t.status == "open" or t.status == "new") and (oldStatus == "resolved" or oldStatus == "closed")) {
       if (not fromSlack) slackMirrorReact(t.id, "white_check_mark", false);
+      slackMirrorReact(t.id, "lock", false);
       slackMirrorPost(t.id, ":leftwards_arrow_with_hook: *" # t.key # "* reopened" # (if (who == "") "" else " by " # slackEsc(who)) # "." # view);
     } else if (t.status == "waiting" and t.waitingOn == "requester") {
       slackMirrorPost(t.id, ":hourglass_flowing_sand: *" # t.key # "* — the team needs your input. Reply in this thread." # view);
-    } else if (t.status == "closed" and oldStatus != "closed" and oldStatus != "resolved") {
-      slackMirrorPost(t.id, ":lock: *" # t.key # "* closed" # (if (who == "") "" else " by " # slackEsc(who)) # "." # view);
+    } else if (t.status == "closed" and oldStatus != "closed") {
+      slackMirrorReact(t.id, "lock", true); // the first message shows the outcome, like ✅ does for resolved
+      if (oldStatus != "resolved") slackMirrorPost(t.id, ":lock: *" # t.key # "* closed" # (if (who == "") "" else " by " # slackEsc(who)) # "." # view);
     };
   };
   func flushSlackOutbox() : async () {
     if (slackFlushing or List.size(slackOutbox) == 0) return;
     slackFlushing := true;
     try {
+      // FIFO: two replies on one thread must reach Slack in the order they were written.
+      // Take the oldest six, re-queue the rest before the first await so anything added meanwhile lines up behind them.
+      let queued = List.toArray(slackOutbox);
+      List.clear(slackOutbox);
+      let take = Nat.min(6, queued.size());
+      var i = take;
+      while (i < queued.size()) { List.add(slackOutbox, queued[i]); i += 1 };
       var n = 0;
-      label flush while (n < 6 and List.size(slackOutbox) > 0) {
-        let item = switch (List.removeLast(slackOutbox)) { case (?x) x; case null return }; // LIFO is fine: items are independent per ticket
+      label flush while (n < take) {
+        let item = queued[n];
         n += 1;
         let a = switch (Map.get(slackAnchor, Nat.compare, item.ticketId)) { case (?a) a; case null continue flush };
         let ic = switch (Map.get(slackIntakes, Nat.compare, a.intakeId)) { case (?ic) ic; case null continue flush };
         let cred = switch (credOf(ic.hubBotId)) { case (?c) c; case null { touchIntake(ic.id, "no credentials for bot #" # Nat.toText(ic.hubBotId) # " — refresh from the hub"); continue flush } };
-        let p = if (item.kind == "post")
-          parseSlack(await slackApi(cred.token, "chat.postMessage", ?("{\"channel\":\"" # jsonEsc(a.channel) # "\",\"thread_ts\":\"" # jsonEsc(a.ts) # "\",\"text\":\"" # jsonEsc(item.text) # "\",\"unfurl_links\":false}")))
-        else
+        let post = func(text : Text, username : Text) : async { ok : Bool; json : Json.Json; detail : Text } {
+          parseSlack(await slackApi(cred.token, "chat.postMessage", ?("{\"channel\":\"" # jsonEsc(a.channel) # "\",\"thread_ts\":\"" # jsonEsc(a.ts) # "\",\"text\":\"" # jsonEsc(text) # "\"" # (if (username == "") "" else ",\"username\":\"" # jsonEsc(username) # "\"") # ",\"unfurl_links\":false}")))
+        };
+        let p = if (item.kind == "post") {
+          if (item.emoji == "") await post(item.text, "")
+          else {
+            // A reply by a person: own message under their name. Without chat:write.customize Slack refuses the override; then the name goes into the text.
+            let named = await post(item.text, item.emoji);
+            if (named.ok or not (Text.contains(named.detail, #text "missing_scope") or Text.contains(named.detail, #text "invalid_arguments"))) named
+            else { touchIntake(ic.id, "add the Slack scope chat:write.customize and reinstall the app, so replies appear under the agent's name"); await post("*" # item.emoji # "*: " # item.text, "") };
+          };
+        } else
           parseSlack(await slackApi(cred.token, (if (item.add) "reactions.add" else "reactions.remove"), ?("{\"channel\":\"" # jsonEsc(a.channel) # "\",\"timestamp\":\"" # jsonEsc(a.ts) # "\",\"name\":\"" # jsonEsc(item.emoji) # "\"}")));
         let benign = Text.contains(p.detail, #text "already_reacted") or Text.contains(p.detail, #text "no_reaction");
         if (not p.ok and not benign) touchIntake(ic.id, "could not " # item.kind # " into Slack: " # p.detail);
@@ -2817,7 +2922,7 @@ persistent actor Desk {
   public shared func http_request_update(req : HttpGwRequest) : async HttpGwResponse {
     if (Text.startsWith(req.url, #text "/status/v1/")) return statusHttp(req.url,req.method);
     if (Text.startsWith(req.url, #text "/oncall/v1/")) return alertHttp(req);
-    if (Text.startsWith(req.url, #text "/support/v1/")) return customerHttp<system>(req);
+    if (Text.startsWith(req.url, #text "/support/v1/")) return customerHttp<system>(req,null);
     if (Text.startsWith(req.url, #text "/slack/events")) return await slackEventsRoute<system>(req);
     plainRes(404, "not found");
   };
@@ -2921,7 +3026,9 @@ persistent actor Desk {
     var sensitive = false;
     for (f in rt.fields.vals()) if (f.sensitive) sensitive := true;
     let link = ticketUrl(id);
-    let ack = "Got it — *" # t.key # "* created: _" # jsonSafeText(subject) # "_." #
+    let shown = jsonSafeText(subject);
+    let stop = if (Text.endsWith(shown, #char '.') or Text.endsWith(shown, #char '!') or Text.endsWith(shown, #char '?')) "" else ".";
+    let ack = "Got it — *" # t.key # "* created: _" # shown # "_" # stop #
       (if (sensitive) "\n:lock: This kind of request needs details we do not collect in a channel — please also fill the form" # (if (link == "") "." else ": <" # link # "|open the form>.") else "") #
       "\nThe team follows up in this thread." # (if (link == "" or sensitive) "" else " <" # link # "|Open request>") #
       (if (email == "") "\n_Your Slack profile shows no e-mail we know, so this request is not linked to you in desk._" else "");
@@ -2938,12 +3045,23 @@ persistent actor Desk {
   func slackThreadReply<system>(ic : SlackIntake, cred : SlackCred, tid : Nat, user : Text, text : Text) : async () {
     let email = await slackEmail(cred, user);
     let t = switch (Map.get(tickets, Nat.compare, tid)) { case (?t) t; case null return };
-    if (t.status == "closed") { touchIntake(ic.id, "reply on closed " # t.key # " ignored"); return };
     if (projectOf(tid) != 0) return;
     let who = if (email == "") "slack:" # user else pidOf(email);
     let asStaff = email != "" and isStaff(roleOf(email)) and t.requester != who;
+    let finished = t.status == "resolved" or t.status == "closed";
+    // A thread reply always lands on the request, finished or not; nothing said in the thread is lost.
     addCommentInternal<system>(t, who, capText(text, 20_000), asStaff, true);
-    touchIntake(ic.id, "reply on " # t.key);
+    if (finished and not asStaff) {
+      // The person who asked writes again after resolve/close: the request is not done. Reopen it and say so in the thread.
+      switch (Map.get(tickets, Nat.compare, tid)) {
+        case (?cur) {
+          let r = applyStatus(cur, "open", "", who, "requester");
+          if (r.ok) { put(r.t); slackMirrorStatus(r.t, cur.status, personName(who), false); touchIntake(ic.id, "reply on " # t.key # " reopened it") }
+          else touchIntake(ic.id, "reply on " # t.key # " recorded; not reopened: " # r.detail);
+        };
+        case null {};
+      };
+    } else touchIntake(ic.id, "reply on " # t.key # (if (finished) " (finished request, comment recorded)" else ""));
   };
 
   /// ✅ added on the first message → resolved; ✅ removed → reopened.
@@ -2953,6 +3071,8 @@ persistent actor Desk {
     if (projectOf(tid) != 0) return;
     let who = if (email == "") "slack:" # user else pidOf(email);
     let kind = if (email != "" and isStaff(roleOf(email))) "agent" else "requester";
+    // Only the person who asked, or desk staff, may close or reopen a request from Slack. A bystander's ✅ is a reaction, not a decision.
+    if (kind != "agent" and who != t.requester) { touchIntake(ic.id, "✅ on " # t.key # " by someone other than the requester ignored"); return };
     if (added) {
       if (t.status == "resolved" or t.status == "closed") return;
       let r = applyStatus(t, "resolved", "", who, kind);
@@ -2975,14 +3095,14 @@ persistent actor Desk {
 
   // ---- admin API ----
   public type SlackBotView = { id : Nat; name : Text; teamName : Text; hasSigning : Bool; botKnown : Bool };
-  public type SlackStatus = { eventsUrl : Text; gateway : Text; bots : [SlackBotView]; credsAt : Int; credsError : Text; intakes : [SlackIntake]; outbox : Nat };
+  public type SlackStatus = { eventsUrl : Text; gateway : Text; bots : [SlackBotView]; credsAt : Int; credsError : Text; intakes : [SlackIntake]; outbox : Nat; appUrlSet : Bool };
   public shared query func slackStatus(tok : Text) : async ?SlackStatus {
     switch (admin(tok)) { case null return null; case (?_) {} };
     let bots = List.empty<SlackBotView>();
     for ((id, c) in Map.entries(slackCreds)) List.add(bots, { id; name = c.name; teamName = c.teamName; hasSigning = c.signing != ""; botKnown = c.botUserId != "" });
     let ics = List.empty<SlackIntake>();
     for ((_, ic) in Map.entries(slackIntakes)) List.add(ics, ic);
-    ?{ eventsUrl = slackEventsUrl(); gateway = slackGateway; bots = List.toArray(bots); credsAt = slackCredsAt; credsError = slackCredsError; intakes = List.toArray(ics); outbox = List.size(slackOutbox) };
+    ?{ eventsUrl = slackEventsUrl(); gateway = slackGateway; bots = List.toArray(bots); credsAt = slackCredsAt; credsError = slackCredsError; intakes = List.toArray(ics); outbox = List.size(slackOutbox); appUrlSet = appUrl != "" };
   };
   public shared func slackRefresh(tok : Text) : async { ok : Bool; count : Nat; detail : Text } {
     switch (admin(tok)) { case null return { ok = false; count = 0; detail = "admins only" }; case (?_) {} };
@@ -3082,7 +3202,7 @@ persistent actor Desk {
       } else if (t.status == "resolved" and autoCloseDays > 0 and hardwareCaseOf(t) == null) {
         switch (t.resolvedAt) {
           case (?r) { if (n > r + autoCloseDays * D) {
-            Map.add(tickets, Nat.compare, id, { t with status = "closed"; closedAt = ?n });
+            put({ t with status = "closed"; closedAt = ?n }); // through put(): the revision moves, so a stale bulk/status edit is rejected
             ignore addEvent(id, "system", "system", "status", "closed (auto, " # Nat.toText(autoCloseDays) # " days after resolved)", [("status", "closed")]);
           } };
           case null {};
@@ -3308,7 +3428,7 @@ persistent actor Desk {
     let project = oncallState.projects.get(projectId) ?? (return { ok = false; detail = "Project unavailable" });
     if (not responseFresh() or not oncallEligible(project, personId)) return { ok = false; detail = "Recipient access could not be verified" };
     if (not responseReady()) return { ok = false; detail = "Configure the canonical HTTPS Desk URL and Hub connection" };
-    let receipt = await Hub.hub(hubId).hub_notify({ email = emailOfPid(personId); title = "On-call · OC-" # incidentId.toText() # " needs your attention"; url = appUrl # "#/oncall/" # projectId.toText() # "/incident-" # incidentId.toText(); kind = "desk.oncall"; dedupeKey });
+    let receipt = await Hub.hub(hubId).hub_notify({ email = emailOfPid(personId); title = "On-call · OC-" # incidentId.toText() # " needs your attention"; url = appBase() # "#/oncall/" # projectId.toText() # "/incident-" # incidentId.toText(); kind = "desk.oncall"; dedupeKey });
     { ok = receipt.ok; detail = capText(receipt.detail, 180) }
   };
   func sendPlanningReminder(projectId : Nat,personId : Text,title : Text,path : Text,dedupeKey : Text) : async {ok : Bool;detail : Text} {

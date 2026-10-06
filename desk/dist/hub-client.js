@@ -126,7 +126,7 @@ export const topbarIdlFactory = ({ IDL }) => {
   const Notification = IDL.Record({ id: IDL.Nat, email: IDL.Text, fromApp: IDL.Text, title: IDL.Text, url: IDL.Text, kind: IDL.Text, at: IDL.Int, read: IDL.Bool, slack: IDL.Text });
   const AppLinkView = IDL.Record({ id: IDL.Nat, name: IDL.Text, url: IDL.Text, note: IDL.Text, kind: IDL.Text, connectorId: IDL.Nat, hidden: IDL.Bool, hasIcon: IDL.Bool });
   return IDL.Service({
-    suiteState: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ email: IDL.Text, displayName: IDL.Text, unread: IDL.Nat, expiresAt: IDL.Int, active: IDL.Bool, provider: IDL.Text }))], ["query"]),
+    suiteState: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ email: IDL.Text, displayName: IDL.Text, unread: IDL.Nat, expiresAt: IDL.Int, active: IDL.Bool, provider: IDL.Text, hubRole: IDL.Opt(IDL.Text) }))], ["query"]),
     myNotifications: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ total: IDL.Nat, unread: IDL.Nat, slackDm: IDL.Bool, items: IDL.Vec(Notification) })], ["query"]),
     markNotificationsRead: IDL.Func([IDL.Text, IDL.Vec(IDL.Nat)], [IDL.Nat], []),
     portalApps: IDL.Func([IDL.Text], [IDL.Vec(AppLinkView)], ["query"]),
@@ -179,9 +179,15 @@ html:has(.ks-topbar-host) { scroll-padding-top: calc(var(--ks-topbar-offset) + 1
 .ks-actions { display: flex; align-items: center; gap: 8px; min-width: 0; flex-shrink: 0; }
 .ks-topbar button { font: 550 14px/20px var(--ks-ui); letter-spacing: 0; text-transform: none; cursor: pointer; color: var(--ks-fg); background: transparent; border: 1px solid var(--ks-rule-strong); border-radius: 8px; padding: 0 16px; height: 44px; transition: border-color .15s, color .15s, background .15s; }
 .ks-topbar button:hover { border-color: var(--ks-accent); color: var(--ks-accent); }
-.ks-topbar button:focus-visible, .ks-panel button:focus-visible, .ks-panel a:focus-visible, .ks-panel input:focus-visible { outline: 3px solid var(--ks-focus); outline-offset: 4px; }
+.ks-topbar a:focus-visible, .ks-topbar button:focus-visible, .ks-panel button:focus-visible, .ks-panel a:focus-visible, .ks-panel input:focus-visible { outline: 3px solid var(--ks-focus); outline-offset: 4px; }
 .ks-round { width: 44px; padding: 0 !important; display: flex; align-items: center; justify-content: center; position: relative; }
 .ks-menu-btn { display: flex; align-items: center; gap: 7px; }
+.ks-console-link { height:44px; min-width:44px; padding:0 12px; flex-shrink:0; box-sizing:border-box; font:550 14px/20px var(--ks-ui); color:var(--ks-fg); border:1px solid var(--ks-rule-strong); border-radius:8px; text-decoration:none; }
+.ks-console-link svg { width:18px; height:18px; flex-shrink:0; }
+.ks-console-link:hover { color:var(--ks-accent); border-color:var(--ks-accent); }
+.ks-console-link[hidden] { display:none; }
+
+
 .ks-badge { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--ks-accent-strong, var(--ks-accent)); color: var(--ks-fg-inverse, #fff); font: 600 10.5px/17px var(--ks-mono); text-align: center; letter-spacing: 0; }
 @keyframes ks-pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 .ks-badge.ks-pop { animation: ks-pop .3s ease; }
@@ -265,6 +271,7 @@ html:has(.ks-topbar-host) { scroll-padding-top: calc(var(--ks-topbar-offset) + 1
   .ks-menu-btn .ks-word { display: none; }
 }
 @media(max-width:480px){.ks-brand .ks-app-mark{display:none}.ks-brand b{max-width:calc(100vw - 246px)}.ks-brand a{min-height:44px}.ks-brand .ks-mark svg{width:24px;height:30px}}
+@media(max-width:480px){.ks-has-console .ks-brand b{max-width:max(0px,calc(100vw - 294px))}}
 @media(prefers-reduced-motion:reduce){.ks-topbar *,.ks-panel *{transition:none!important;animation:none!important}}
 
 `;
@@ -305,7 +312,7 @@ export function mountTopbar(el, opts) {
   el.classList.add("ks-topbar-host");
   const o = Object.assign({ pollMs: 30000, currentUrl: location.origin }, opts || {});
   const onHub = originOf(o.hubUrl) !== "" && originOf(o.hubUrl) === location.origin;
-  for (const k of ["extra", "identSection", "notifFooter", "jump", "brandHref", "onBrand", "theme", "ids", "brandTitle"]) if (o[k] !== undefined && !onHub) { console.warn(`kebab topbar: option "${k}" is for the hub only — ignored`); delete o[k]; }
+  for (const k of ["extra", "identSection", "notifFooter", "jump", "brandHref", "onBrand", "theme", "ids", "brandTitle", "hideConsole"]) if (o[k] !== undefined && !onHub) { console.warn(`kebab topbar: option "${k}" is for the hub only — ignored`); delete o[k]; }
   const pollMs = Math.min(60000, Math.max(15000, Number(o.pollMs) || 30000));
   const ids = Object.assign({ avatar: "ks-avatar", identName: "ks-identName", theme: "ks-theme", bell: "ks-bell", badge: "ks-badge", brandLogo: "ks-brandLogo", brandHome: "ks-brandHome", menuBtn: "ks-menuBtn" }, o.ids || {});
   const theme = o.theme || {
@@ -317,7 +324,7 @@ export function mountTopbar(el, opts) {
   let token = (o.hub && o.hub.token) || "";
   let person = Object.assign({ email: "", displayName: "" }, o.person || {});
   let state = undefined; // undefined = not asked yet · null = no valid token · object = live
-  let missed = 0, lastBeat = 0, reconnectShown = false, destroyed = false, timer = 0;
+  let missed = 0, lastBeat = 0, reconnectShown = false, destroyed = false, timer = 0, beatSequence = 0;
   let notifCache = { items: [], unread: 0, total: 0 }, listKnown = false;
   let appsCache = null, appsErr = false;
   const iconCache = {};
@@ -332,6 +339,7 @@ export function mountTopbar(el, opts) {
       <div class="ks-spacer"></div>
       <div class="ks-actions">
         <span id="ks-extra"></span>
+        <a class="ks-menu-btn ks-console-link" id="ks-consoleLink" href="${escT(hubBase + '?console=1#/home')}" title="Hub console" aria-label="Hub console" hidden>${appLogoHtml("hub")}<span class="ks-word">Hub</span></a>
         <button class="ks-menu-btn" id="${ids.menuBtn}" title="Your apps" aria-label="Your apps" aria-haspopup="dialog" aria-controls="ks-appsPanel" aria-expanded="false">${GRID_SVG}<span class="ks-word">Apps</span></button>
         <button class="ks-round ks-bell" id="${ids.bell}" title="Notifications" aria-label="Notifications" aria-haspopup="dialog" aria-controls="ks-notifPanel" aria-expanded="false">${BELL_SVG}<span class="ks-badge" id="${ids.badge}" aria-hidden="true" hidden>0</span></button>
         <button class="ks-round" id="${ids.theme}" title="Switch to dark" aria-label="Switch to dark">${MOON_SVG}</button>
@@ -422,15 +430,24 @@ export function mountTopbar(el, opts) {
     lastN = n; setTitle(n);
     els.bell.title = n ? `${n} new notification${n === 1 ? "" : "s"}` : "Notifications"; els.bell.setAttribute("aria-label", els.bell.title);
   };
+  const paintConsole = () => {
+    const role = state?.hubRole?.[0];
+    const allowed = !o.hideConsole && hubBase && !missed && state?.active && Number(state.expiresAt) / 1e6 > Date.now() && ["owner", "admin", "helpdesk"].includes(role);
+    $("ks-consoleLink").hidden = !allowed;
+    el.classList.toggle("ks-has-console", !!allowed);
+  };
   const heartbeat = async (force) => {
     const a = actorOf(); if (destroyed || !a) { paintBadge(); return; }
     if (!force && Date.now() - lastBeat < 2000) return; // focus + visibilitychange fire together
     lastBeat = Date.now();
+    const sequence = ++beatSequence;
     try {
       const r = await a.suiteState(token);
+      if (destroyed || sequence !== beatSequence) return;
       state = r && r.length ? r[0] : null; missed = 0;
       if (state) { if (state.displayName && !person.displayName) person.displayName = state.displayName; if (state.email && !person.email) person.email = state.email; paintPerson(); }
-    } catch (e) { missed += 1; }
+    } catch (e) { if (destroyed || sequence !== beatSequence) return; missed += 1; }
+    paintConsole();
     paintBadge();
     if (!els.identPanel.hidden) renderIdent();
     if (o.onState) { try { o.onState(state); } catch (e) {} }
@@ -520,7 +537,7 @@ export function mountTopbar(el, opts) {
     els, get state() { return state; }, get person() { return person; },
     refresh: () => heartbeat(true), refreshList, refreshApps,
     setPerson(p) { person = Object.assign(person, p || {}); paintPerson(); if (!els.identPanel.hidden) renderIdent(); },
-    setToken(t) { token = t || ""; appsCache = null; listKnown = false; state = undefined; missed = 0; heartbeat(true); loadAvatar(); },
+    setToken(t) { ++beatSequence; token = t || ""; appsCache = null; listKnown = false; state = undefined; missed = 0; paintConsole(); heartbeat(true); loadAvatar(); },
     setApp(a) { if (a && a.id != null) $("ks-appMark").innerHTML = appLogoHtml(a.id); if (a && a.name != null) els.appName.textContent = a.name; if (a && a.eyebrow != null) { els.eyebrow.textContent = a.eyebrow; els.eyebrow.hidden = !a.eyebrow; } },
     setExtraHidden(id, hidden) { const b = $(id); if (b) b.hidden = !!hidden; },
     openNotifications() { closeAll(); els.notifPanel.hidden = false; els.bell.setAttribute("aria-expanded", "true"); lastTrigger = els.bell; renderList(); refreshList(); renderFoot(); },

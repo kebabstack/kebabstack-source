@@ -119,7 +119,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.37.0";
+  transient let BUILD_VERSION : Text = "0.37.1";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -5227,13 +5227,14 @@ persistent actor UserHub {
 
   /// The topbar's heartbeat (every 30 s from every open tab): who am I, how many unread, when does this token end.
   /// null = no valid session/token → the topbar shows "reconnect". Cheap: one pass over the inbox, no list.
-  public shared query ({ caller }) func suiteState(token : Text) : async ?{ email : Text; displayName : Text; unread : Nat; expiresAt : Int; active : Bool; provider : Text; id : Text } {
+  public shared query ({ caller }) func suiteState(token : Text) : async ?{ email : Text; displayName : Text; unread : Nat; expiresAt : Int; active : Bool; provider : Text; id : Text; hubRole : ?Text } {
     let s = switch (portalOrSuiteSession(caller, token)) { case (?s) s; case null return null };
     if (Time.now() > s.expiresAt) return null;
     let active = accessOf(s.email) == #active;
     var unread = 0;
     if (active) for ((_, n) in Map.entries(notifications)) if (n.email == s.email and not n.read) unread += 1;
-    ?{ email = s.email; displayName = s.displayName; unread; expiresAt = s.expiresAt; active; provider = s.provider; id = pidForEmail(s.email) };
+    // Navigation hint only. Suite tokens never authorize console API calls.
+    ?{ email = s.email; displayName = s.displayName; unread; expiresAt = s.expiresAt; active; provider = s.provider; id = pidForEmail(s.email); hubRole = ?(if (active) hubRoleOf(s.email) else "") };
   };
   public shared ({ caller }) func markNotificationsRead(sessionToken : Text, ids : [Nat]) : async Nat {
     let s = switch (portalOrSuiteSession(caller, sessionToken)) { case (?s) s; case null return 0 };

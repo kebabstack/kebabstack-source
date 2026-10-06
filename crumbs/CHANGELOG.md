@@ -1,5 +1,9 @@
 # Crumbs changelog
 
+## [0.6.2] — 2026-09-29
+
+- Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.
+
 ## [0.6.1] — 2026-09-23
 
 - Move website context into a compact page heading, put Add website in All websites, and show access metadata in Settings. Group saved-filter actions in a keyboard-accessible disclosure. Bound report selectors so reports, rather than administration, lead the page. No analytics or permission changes.

@@ -255,3 +255,7 @@ the committed stable baseline and run `tests/desk-bulk.test.mjs` with
 The new queue is paged; legacy `listTickets` retains its existing 500-row contract.
 Bulk writes accept at most 50 explicit `(id, updatedAt)` targets per call, recheck
 current staff access and source boundaries, and report per-ticket outcomes.
+
+## Forms public intake
+
+See [public forms, embedding and the Desk handoff](../forms/INTAKE.md) for setup, privacy boundaries and alpha limitations. External mail is not connected.

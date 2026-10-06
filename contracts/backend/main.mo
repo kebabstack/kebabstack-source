@@ -66,7 +66,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // trusted relay identities (the mail worker) — intake lane only
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.11.1";
+  transient let BUILD_VERSION : Text = "0.11.2";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 

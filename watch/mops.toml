@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-watch"
-version = "0.10.1"
+version = "0.10.2"
 description = "kebab-stack watch — the company's domains watched: DNS changes, posture, certificates, lookalikes, expiry, with the evidence"
 
 [toolchain]

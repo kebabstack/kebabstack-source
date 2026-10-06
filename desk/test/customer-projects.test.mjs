@@ -53,3 +53,11 @@ test('public type selection uses only its fields and preserves the chosen type o
  let calls=[];const dom=publicPage('form/'+'ab'.repeat(32)+'/8',async(url,args)=>{if(url.endsWith('/schema'))return response({name:'Orbit',revision:4,defaultTypeId:7,fields:[],requestTypes:[{id:7,name:'General',description:'Questions',fields:[]},{id:8,name:'Refund',description:'Review a purchase',fields:[{key:'order_id',title:'Order',kind:'text',required:true,options:[]}]}]});calls.push(JSON.parse(args.body));throw Error('Response lost');});await tick();const d=dom.window.document;assert.equal(d.getElementById('requestType').value,'8');for(const[id,value]of Object.entries({name:'Customer',email:'customer@test.example',subject:'Refund',body:'Please review','field-order_id':'O-123'}))d.getElementById(id).value=value;
  const form=d.getElementById('requestForm');form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await tick();assert.equal(d.getElementById('requestType').disabled,true);form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await tick();assert.deepEqual(calls[1],calls[0]);assert.equal(calls[0].typeId,8);assert.deepEqual(calls[0].fields,{order_id:'O-123'});dom.window.close();
 });
+
+test('Forms sources offer eligible request types, send exact project/form mapping and expose no API secret',async()=>{
+ const {root,ui,api}=context();let saved;
+ api.listFormsSources=async()=>[];api.listCustomerTypes=async()=>[{id:7n,name:'General',enabled:true,fields:[]},{id:8n,name:'Refund',enabled:true,fields:[{required:true}]}];
+ api.addFormsSource=async(...args)=>{saved=args;return{ok:true,ticketId:4n,detail:'Created'};};
+ await ui.show('1','settings');await tick();const form=root.querySelector('#formsSourceForm');assert.ok(form);assert.equal(form.elements.typeId.options.length,1);
+ form.elements.canister.value='aaaaa-aa';form.elements.formId.value='12';form.dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();assert.deepEqual(saved,['staff-session',1n,7n,12n,'aaaaa-aa']);assert.match(form.textContent,/Source 4 created/);assert.match(root.textContent,/External mail is not connected/);
+});

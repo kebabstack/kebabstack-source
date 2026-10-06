@@ -47,6 +47,15 @@ type Review =
    rating: nat;
    reviewer: text;
  };
+type Policy =
+ record {
+   contextKeys: vec text;
+   graceUntil: int;
+   origins: vec text;
+   privacyUrl: text;
+   retentionDays: nat;
+   revision: nat;
+ };
 type PermissionStatus =
  record {
    app: text;
@@ -169,6 +178,22 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
+type DeskTarget =
+ record {
+   canister: principal;
+   enabled: bool;
+   name: text;
+   sourceId: nat;
+   url: text;
+ };
+type DeliveryView =
+ record {
+   attempts: nat;
+   detail: text;
+   state: text;
+   ticketId: nat;
+   url: text;
+ };
 type Context =
  record {
    checkedAt: int;
@@ -216,6 +241,11 @@ service : {
                                 detail: text;
                                 ok: bool;
                               });
+  connectDesk: (tok: text, id: nat, canisterText: text, sourceId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   createForm: (tok: text, title: text) -> (opt FormMeta);
   /// Soft delete — the form rests in the owner's trash for 90 days; its public link stops working meanwhile.
   deleteForm: (tok: text, id: nat) -> (record {
@@ -228,6 +258,7 @@ service : {
       detail: text;
       ok: bool;
     });
+  deliveryStatus: (tok: text, id: nat) -> (opt DeliveryView) query;
   /// People picker (sharing, assignees): active directory members matching q.
   directory: (tok: text, q: text) ->
    (vec record {
@@ -237,7 +268,9 @@ service : {
         }) query;
   /// Copy a form you can see into a fresh draft you own (definition + settings; no submissions, shares or deadline).
   duplicateForm: (tok: text, id: nat) -> (opt FormMeta);
+  getDeskTarget: (tok: text, id: nat) -> (opt DeskTarget) query;
   getForm: (tok: text, id: nat) -> (opt FormFull) query;
+  getIntake: (tok: text, id: nat) -> (opt Policy) query;
   getSettings: (tok: text) -> (opt Settings) query;
   hub_deactivate: (emails: vec text) -> (nat);
   hub_manifest: () -> (Manifest) query;
@@ -287,6 +320,7 @@ service : {
           status: SubStatus;
           updatable: bool;
         }) query;
+  pauseDesk: (tok: text, id: nat) -> (bool);
   /// Internal preview: any status incl. drafts, sign-in + access required, never creates a submission.
   previewForm: (tok: text, slug: text) ->
    (opt
@@ -312,6 +346,7 @@ service : {
        schema: text;
        title: text;
      }) query;
+  publicIntake: (slug: text) -> (opt Policy) query;
   /// Delete forever, straight from the trash (owner only).
   purgeForm: (tok: text, id: nat) -> (record {
                                         detail: text;
@@ -332,6 +367,13 @@ service : {
                                           detail: text;
                                           ok: bool;
                                         });
+  retryDelivery: (tok: text, id: nat) -> (bool);
+  saveIntake: (tok: text, id: nat, revision: nat, origins: vec text,
+   contextKeys: vec text, privacyUrl: text, retentionDays: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   seedDemo: (tok: text) -> (record {
                               detail: text;
                               ok: bool;
@@ -377,6 +419,20 @@ service : {
       ok: bool;
     });
   signOut: (tok: text) -> ();
+  submissionContext: (tok: text, id: nat) -> (vec record {
+                                                    text;
+                                                    text;
+                                                  }) query;
+  submitIntake: (slug: text, name: text, email: text, answers: text,
+   requestId: text, context: vec record {
+                                   text;
+                                   text;
+                                 }, website: text) ->
+   (record {
+      detail: text;
+      num: nat;
+      ok: bool;
+    });
   submitPublic: (slug: text, name: text, email: text, answers: text,
    editToken: text) -> (record {
                           detail: text;

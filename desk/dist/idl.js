@@ -54,7 +54,7 @@ export const idlFactory = ({ IDL }) => {
   const Snapshot = IDL.Record({ checkedAt: IDL.Int, metrics: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)), schema: IDL.Nat, state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }) });
   const SlackBotView = IDL.Record({ botKnown: IDL.Bool, hasSigning: IDL.Bool, id: IDL.Nat, name: IDL.Text, teamName: IDL.Text });
   const SlackIntake = IDL.Record({ channel: IDL.Text, channelName: IDL.Text, createdAt: IDL.Int, enabled: IDL.Bool, hubBotId: IDL.Nat, id: IDL.Nat, lastEventAt: IDL.Int, lastResult: IDL.Text, name: IDL.Text, typeId: IDL.Nat });
-  const SlackStatus = IDL.Record({ bots: IDL.Vec(SlackBotView), credsAt: IDL.Int, credsError: IDL.Text, eventsUrl: IDL.Text, gateway: IDL.Text, intakes: IDL.Vec(SlackIntake), outbox: IDL.Nat });
+  const SlackStatus = IDL.Record({ appUrlSet: IDL.Bool, bots: IDL.Vec(SlackBotView), credsAt: IDL.Int, credsError: IDL.Text, eventsUrl: IDL.Text, gateway: IDL.Text, intakes: IDL.Vec(SlackIntake), outbox: IDL.Nat });
   const Shift = IDL.Record({ endAt: IDL.Int, layer: IDL.Nat, personId: IDL.Text, startAt: IDL.Int });
   const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, agentCount: IDL.Nat, agentGroup: IDL.Text, aiHubModel: IDL.Text, aiKeySet: IDL.Bool, aiModel: IDL.Text, aiProvider: IDL.Text, aiSource: IDL.Text, aiTriage: IDL.Bool, aiUrl: IDL.Text, appUrl: IDL.Text, autoCloseDays: IDL.Nat, demoSeeded: IDL.Bool, fileBytes: IDL.Nat, hubId: IDL.Text, keyPrefix: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat });
   const Service = IDL.Record({ checkedAt: IDL.Int, name: IDL.Text, state: IDL.Text, validUntil: IDL.Int });
@@ -102,6 +102,7 @@ export const idlFactory = ({ IDL }) => {
   const Page = IDL.Record({ audience: Audience, checkedAt: IDL.Int, description: IDL.Text, notices: IDL.Vec(PublicNotice), services: IDL.Vec(Service), slug: IDL.Text, title: IDL.Text });
   const Overview = IDL.Record({ canManage: IDL.Bool, deliveryReady: IDL.Bool, incidents: IDL.Vec(Incident), policy: IDL.Opt(Policy__1) });
   const Override = IDL.Record({ assignee: IDL.Text, typeId: IDL.Nat });
+  const NotifyRecord = IDL.Record({ at: IDL.Int, detail: IDL.Text, email: IDL.Text, ok: IDL.Bool, title: IDL.Text });
   const Notice = IDL.Record({ at: IDL.Int, by: IDL.Text, endsAt: IDL.Int, generation: IDL.Nat, id: IDL.Nat, impact: Impact, incidentId: IDL.Nat, message: IDL.Text, phase: Phase, projectId: IDL.Nat, requestKey: IDL.Text, revision: IDL.Nat, services: IDL.Vec(IDL.Text), startsAt: IDL.Int, title: IDL.Text, updatedAt: IDL.Int, updates: IDL.Vec(Update), withdrawnAt: IDL.Int });
   const Mapping = IDL.Record({ payrollId: IDL.Text, personId: IDL.Text });
   const Manifest = IDL.Record({ description: IDL.Text, name: IDL.Text, needs: IDL.Vec(IDL.Text), version: IDL.Text, wants: IDL.Vec(IDL.Text) });
@@ -119,6 +120,8 @@ export const idlFactory = ({ IDL }) => {
   const HttpGwRequest = IDL.Record({ body: IDL.Vec(IDL.Nat8), headers: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), method: IDL.Text, url: IDL.Text });
   const History = IDL.Record({ revision: IDL.Nat, rules: IDL.Vec(Rule) });
   const Header = IDL.Record({ adjustmentOf: IDL.Nat, approvedAt: IDL.Int, approvedBy: IDL.Text, batchId: IDL.Text, coverageIssues: IDL.Nat, coverageNote: IDL.Text, createdAt: IDL.Int, createdBy: IDL.Text, deleteAt: IDL.Int, endAt: IDL.Int, id: IDL.Nat, projectId: IDL.Nat, revision: IDL.Nat, sourceChanged: IDL.Bool, startAt: IDL.Int, timezone: IDL.Text, title: IDL.Text });
+  const FormsSource = IDL.Record({ canister: IDL.Principal, enabled: IDL.Bool, formId: IDL.Nat, id: IDL.Nat, projectId: IDL.Nat, typeId: IDL.Nat });
+  const FormsDelivery = IDL.Record({ detail: IDL.Text, ok: IDL.Bool, ticketId: IDL.Nat });
   const Filter__1 = IDL.Record({ assignee: IDL.Text, q: IDL.Text, queue: IDL.Text, status: IDL.Text, view: IDL.Text });
   const Filter = IDL.Record({ completed: IDL.Bool, mine: IDL.Bool, offset: IDL.Nat, projectId: IDL.Opt(IDL.Nat), search: IDL.Text });
   const Export = IDL.Variant({ err: IDL.Text, ok: IDL.Record({ batchId: IDL.Text, csv: IDL.Text, filename: IDL.Text }) });
@@ -147,6 +150,7 @@ export const idlFactory = ({ IDL }) => {
     activateReportingCompensation: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, Input__2], [Result], []),
     addAdminEmail: IDL.Func([IDL.Text], [IDL.Bool], []),
     addFile: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Vec(IDL.Nat8)], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
+    addFormsSource: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Nat, IDL.Text], [FormsDelivery], []),
     addLink: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     addNote: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     addReportingAdjustment: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text, IDL.Int, IDL.Text], [Result], []),
@@ -195,12 +199,14 @@ export const idlFactory = ({ IDL }) => {
     decideOncallHandoff: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Variant({ accept: IDL.Null, cancel: IDL.Null, decline: IDL.Null })], [Result], []),
     decideOncallInterval: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Nat, IDL.Variant({ accept: IDL.Null, cancel: IDL.Null, decline: IDL.Null })], [Result], []),
     directory: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(IDL.Record({ department: IDL.Text, displayName: IDL.Text, email: IDL.Text }))], ["query"]),
+    disableFormsSource: IDL.Func([IDL.Text, IDL.Nat], [IDL.Bool], []),
     discardOncallDraft: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat], [Result], []),
     eraseCustomerTicket: IDL.Func([IDL.Text, IDL.Nat, IDL.Int, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     explainReportingCoverage: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text], [Result], []),
     exportCustomerTicket: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Text)], ["query"]),
     exportReportingPeriod: IDL.Func([IDL.Text, IDL.Nat], [Export], []),
     fileData: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ data: IDL.Vec(IDL.Nat8), mime: IDL.Text, name: IDL.Text }))], ["query"]),
+    formsSourceInfo: IDL.Func([IDL.Nat, IDL.Nat], [IDL.Opt(IDL.Record({ deskUrl: IDL.Text, name: IDL.Text }))], []),
     getAutoAssignment: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ config: Config, people: IDL.Vec(Person), requestTypes: IDL.Vec(IDL.Record({ enabled: IDL.Bool, id: IDL.Nat, name: IDL.Text })), warnings: IDL.Vec(IDL.Text) }))], ["query"]),
     getSettings: IDL.Func([IDL.Text], [IDL.Opt(Settings)], ["query"]),
     getTicket: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(TicketFull)], ["query"]),
@@ -223,12 +229,14 @@ export const idlFactory = ({ IDL }) => {
     linkWorkItem: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, Link, IDL.Bool], [Result__1], []),
     listCustomerProjects: IDL.Func([IDL.Text], [IDL.Vec(CustomerProject)], ["query"]),
     listCustomerTypes: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(Type)], ["query"]),
+    listFormsSources: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(FormsSource)], ["query"]),
     listTickets: IDL.Func([IDL.Text, Filter__1], [IDL.Vec(TicketRow)], ["query"]),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     moveCustomerStep: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     myApprovals: IDL.Func([IDL.Text], [IDL.Vec(TicketRow)], ["query"]),
     myTickets: IDL.Func([IDL.Text], [IDL.Vec(TicketRow)], ["query"]),
     noteOncallIncident: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text], [Result], []),
+    notifyHealth: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ failed: IDL.Nat, recent: IDL.Vec(NotifyRecord), total: IDL.Nat }))], ["query"]),
     offboardingEntry: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Record({ person: PersonCard, ticketId: IDL.Opt(IDL.Nat), typeId: IDL.Opt(IDL.Nat) }))], ["query"]),
     offboardingHardware: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ context: Case, progress: Progress }))], []),
     oncallAlertSources: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Vec(SourceView))], ["query"]),
@@ -253,6 +261,7 @@ export const idlFactory = ({ IDL }) => {
     publicServiceStatus: IDL.Func([IDL.Text], [IDL.Opt(Page)], ["query"]),
     publishOncallPlan: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Bool], [Result], []),
     publishServiceNotice: IDL.Func([IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, Input__1], [Result], []),
+    receiveForms: IDL.Func([IDL.Nat, IDL.Nat, IDL.Nat, IDL.Text], [FormsDelivery], []),
     recordOncallWork: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, WorkInput], [Result], []),
     refreshAi: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     refreshReportingPeriod: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat], [Result], []),

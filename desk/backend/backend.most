@@ -156,6 +156,15 @@ type File__569085171 =
     size : Nat;
     ticketId : Nat
   };
+type FormsSource__545926750 =
+  {
+    canister : Principal;
+    enabled : Bool;
+    formId : Nat;
+    id : Nat;
+    projectId : Nat;
+    typeId : Nat
+  };
 type Handoff__705417245 =
   {
     at : Int;
@@ -881,6 +890,16 @@ actor {
       var root : Node__430031793<Text, ConnectorUser__173861307>;
       var size : Nat__58649523
     };
+  stable formsDeliveries :
+    {
+      var root : Node__430031793<Text, {fingerprint : Text; ticketId : Nat}>;
+      var size : Nat__58649523
+    };
+  stable formsSources :
+    {
+      var root : Node__430031793<Nat, FormsSource__545926750>;
+      var size : Nat__58649523
+    };
   stable groupsCache :
     {var root : Node__430031793<Text, [Text]>; var size : Nat__58649523};
   stable hardwareProgress :
@@ -918,6 +937,7 @@ actor {
   stable var nextCustomerProject : Nat;
   stable var nextEventId : Nat;
   stable var nextFileId : Nat;
+  stable var nextFormsSource : Nat;
   stable var nextLogId : Nat;
   stable var nextSlackIntakeId : Nat;
   stable var nextTicketId : Nat;

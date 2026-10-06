@@ -1,5 +1,10 @@
 # Changelog — kebab-stack hub
 
+## [0.37.1] — 2026-09-29
+
+- Expose the current global Hub role in the read-only topbar heartbeat. Show the Hub console link in the employee workspace and official apps independently of how the menu was opened; never derive it from an app-local role.
+- Give explicit console entry its own linked-passkey sign-in path. Company SSO sessions and read-only suite tokens do not gain console API permissions. Prevent silently entering the console as another already signed-in profile. Directory, Finance, Lunch and existing permissions are unchanged.
+
 ## [0.37.0] — 2026-09-29
 
 - Show Desk Workboard as its own Operations card: open tasks, waiting work, overdue target dates, unavailable owners and subtask progress in shared projects. Personal/archived/completed work and linked ticket/sale duplicates are excluded; dates use UTC.

@@ -61,7 +61,7 @@ persistent actor Assets {
   var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
   var photoBytes : Nat = 0; // total photo bytes held
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.17.0";
+  transient let BUILD_VERSION : Text = "0.18.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -695,12 +695,13 @@ persistent actor Assets {
   transient let VISION_PROMPT : Text = "You read photos of IT devices — usually the back of a laptop, phone or tablet, or an inventory sticker. Return ONLY a JSON object, no prose: {\"reads\":[{\"kind\":\"serial|asset_tag|imei|model|other\",\"value\":\"exact printed text\",\"confidence\":0.0-1.0}],\"vendor\":\"Apple|Dell|Lenovo|...|\",\"model\":\"as printed or recognisable, else empty\",\"kind\":\"laptop|phone|tablet|monitor|accessory|other\",\"sticker\":\"current|old|none|unsure\",\"notes\":\"one short sentence\"}. Transcribe characters exactly as printed — never guess a missing character; when 0/O, 1/I/L, 5/S or 8/B are ambiguous, keep the printed shape and lower the confidence below 0.6. An inventory sticker usually shows a short code like INV-0042 or a barcode with digits; serial numbers are longer (Apple 10-12 characters, Dell 7, Lenovo 8). Include every distinct code you can read.";
 
   public type Read = { kind : Text; value : Text; confidence : Float };
-  public type ReadResult = { ok : Bool; detail : Text; reads : [Read]; vendor : Text; model : Text; kind : Text; sticker : Text; notes : Text };
-  func noRead(d : Text) : ReadResult = { ok = false; detail = d; reads = []; vendor = ""; model = ""; kind = ""; sticker = ""; notes = "" };
+  public type ReadResult = { retryable : ?Bool; ok : Bool; detail : Text; reads : [Read]; vendor : Text; model : Text; kind : Text; sticker : Text; notes : Text };
+  func noRead(d : Text) : ReadResult = { retryable = ?false; ok = false; detail = d; reads = []; vendor = ""; model = ""; kind = ""; sticker = ""; notes = "" };
 
   /// One vision call. Returns a parsed result or ok=false with a plain reason.
-  func aiRead(img : Blob, mime : Text) : async ReadResult {
+  func aiRead(tok : Text, img : Blob, mime : Text) : async ReadResult {
     await refreshHubAi();
+    if (admin(tok) == null) return noRead("Your Assets administrator access has expired. Sign in again.");
     let cr = switch (hubAi) { case (?c) c; case null return noRead("no AI key — an owner sets one under the hub's Settings → AI and grants this app the AI lane") };
     let b64 = Base64.encode(img);
     let anthropic = cr.provider == "anthropic";
@@ -715,22 +716,29 @@ persistent actor Assets {
       { name = "Authorization"; value = "Bearer " # cr.key }, { name = "Content-Type"; value = "application/json" },
     ];
     let req : HttpRequestArgs = { url = cr.url; max_response_bytes = ?200_000; headers; body = ?Text.encodeUtf8(body); method = #post; transform = null; is_replicated = ?false };
-    let res = try { await (with timeout = 90) icHttp.http_request(req) } catch (e) { return noRead("the AI vendor did not answer: " # Error.message(e)) };
+    let res = try { await (with timeout = 90) icHttp.http_request(req) } catch (_) { return { noRead("Photo reading could not reach the AI service. Your photo is still in this draft.") with retryable = ?true } };
     try { await Hub.hub(hubId).hub_aiUsed(1) } catch (_) {};
     let txt = switch (Text.decodeUtf8(res.body)) { case (?t) t; case null return noRead("unreadable answer from the AI vendor") };
-    if (res.status != 200) return noRead("the AI vendor answered " # Nat.toText(res.status) # ": " # capText(txt, 200));
+    if (res.status != 200) {
+      let temporary = res.status == 500 or res.status == 502 or res.status == 503 or res.status == 504 or res.status == 529;
+      let advice = if (temporary) "The photo-reading service is temporarily unavailable."
+        else if (res.status == 401 or res.status == 403) "The AI service refused access. A Hub owner can check Settings → AI."
+        else if (res.status == 402 or res.status == 429) "The AI service has reached an account or usage limit. A Hub owner can check the provider account."
+        else "The AI service could not read this photo. A Hub owner can check the configured vision model.";
+      return { noRead(advice # " (HTTP " # Nat.toText(res.status) # ")") with retryable = ?temporary };
+    };
     let outer = switch (Json.parse(txt)) { case (#ok(j)) j; case (#err(_)) return noRead("the AI vendor sent no JSON") };
     let content = if (anthropic) {
       switch (Json.get(outer, "content")) { case (?#array(items)) { var t = ""; for (it in items.vals()) if (jStr(it, "type") == "text") t := jStr(it, "text"); t }; case (_) "" };
     } else jStr(outer, "choices[0].message.content");
     if (content == "") return noRead("the model returned nothing");
-    let j = switch (Json.parse(stripFences(content))) { case (#ok(j)) j; case (#err(_)) return noRead("the model did not answer in the agreed format: " # capText(content, 160)) };
+    let j = switch (Json.parse(stripFences(content))) { case (#ok(j)) j; case (#err(_)) return noRead("The AI service returned an unreadable result. Try a clearer photo or enter the details manually.") };
     let reads = List.empty<Read>();
     for (r in jArr(j, "reads").vals()) {
       let v = norm(jStr(r, "value"));
       if (v != "" and v.size() <= 64 and List.size(reads) < 8) List.add(reads, { kind = lower(jStr(r, "kind")); value = v; confidence = jNum(r, "confidence") });
     };
-    { ok = true; detail = ""; reads = List.toArray(reads); vendor = capText(norm(jStr(j, "vendor")), 40); model = capText(norm(jStr(j, "model")), 80); kind = lower(norm(jStr(j, "kind"))); sticker = lower(norm(jStr(j, "sticker"))); notes = capText(norm(jStr(j, "notes")), 200) };
+    { retryable = ?false; ok = true; detail = ""; reads = List.toArray(reads); vendor = capText(norm(jStr(j, "vendor")), 40); model = capText(norm(jStr(j, "model")), 80); kind = lower(norm(jStr(j, "kind"))); sticker = lower(norm(jStr(j, "sticker"))); notes = capText(norm(jStr(j, "notes")), 200) };
   };
 
   // =====================================================================
@@ -982,7 +990,9 @@ persistent actor Assets {
     switch (admin(tok)) { case null return noRead("admins only"); case (?_) {} };
     if (img.size() == 0 or img.size() > MAX_PHOTO) return noRead("photo must be 1 byte – 900 KB");
     if (mime != "image/jpeg" and mime != "image/png" and mime != "image/webp") return noRead("JPEG, PNG or WebP");
-    await aiRead(img, mime);
+    let result = await aiRead(tok, img, mime);
+    if (admin(tok) == null) return noRead("Your Assets administrator access has expired. Sign in again.");
+    result;
   };
   public type Candidate = { row : AssetRow; score : Nat; why : Text };
   /// Fuzzy match of read codes against tags and serials. Scores: 100 exact · 90 after confusable folding · 75 tail/head match · 60 one edit · 50 two edits.
@@ -1814,8 +1824,20 @@ persistent actor Assets {
   let dealDevices : Map.Map<Nat, { name : Text; serial : Text }> = Map.empty();
   func quoteHash(s : Sale) : Text {
     let device = switch (assets.get(s.assetId)) { case (?a) (a.id, a.serial, a.vendor, a.model, a.tag); case null (s.assetId, "", "", "", "") };
-    hex(Sha256.fromBlob(#sha256, to_candid(s.buyer, s.grossMinor, s.currency, s.vatRateBp, s.description, device, billing)));
+    // What the buyer accepted: buyer, price, VAT, description, device identity, seller identity, account and the terms.
+    // Deliberately not the payment days, number prefix, pricing rule or footer: changing those must not void an open offer (0.18.0).
+    let seller = (billing.legalName, billing.street, billing.houseNo, billing.postalCode, billing.town, billing.country, billing.uid, billing.vatRegistered, billing.vatRateBp, billing.iban, billing.currency, billing.waiverVersion, billing.waiverText, billing.lang);
+    hex(Sha256.fromBlob(#sha256, to_candid(s.buyer, s.grossMinor, s.currency, s.vatRateBp, s.description, device, seller)));
   };
+  var quoteSchema : Nat = 1; // 2 = quotes hash only offer-relevant billing fields; open links are re-stamped once after the upgrade
+  func rehashOpenDeals() {
+    if (quoteSchema >= 2) return;
+    for ((id, d) in deals.entries().toArray().values()) {
+      switch (sales.get(id)) { case (?s) { if (s.invoiceNo == "" and not d.revoked) deals.add(id, { d with quote = quoteHash(s) }) }; case null {} };
+    };
+    quoteSchema := 2;
+  };
+  transient let _quoteRehash = Timer.setTimer<system>(#seconds 0, func() : async () { rehashOpenDeals() });
   func externalLabel(s : Sale) : Text = s.buyer.name # " (external dealroom link)";
   func dealAudit(s : Sale, actorLabel : Text, action : Text, detail : Text) {
     let row : DealEvent = { at = now(); actorLabel; action; detail };
@@ -1853,6 +1875,15 @@ persistent actor Assets {
           sent += 1;
           let detail = await notifyPerson(row.email, row.title, appLink("sale/" # row.saleId.toText()), "assets.dealroom", key);
           if (detail == "") { dealNotices.remove(key) }
+          else if (row.attempts + 1 >= 12) {
+            // An hour of refusals (the link creator left, lost the lane, …): tell every active administrator once, then stop retrying.
+            var told = 0;
+            for (u in people.values().filter(func u = Hub.isActive(people, u.email) and roleOf(u.email) == "admin" and lower(u.email) != lower(row.email)).toArray().values()) {
+              if (told < 10) { told += 1; ignore await notifyPerson(u.email, row.title, appLink("sale/" # row.saleId.toText()), "assets.dealroom", key # "-fallback-" # lower(u.email)) };
+            };
+            dealNotices.remove(key);
+            switch (sales.get(row.saleId)) { case (?s) dealAudit(s, "system", "notice_failed", "Notification to " # row.email # " gave up after " # Nat.toText(row.attempts + 1) # " attempts (" # capText(detail, 120) # "); " # Nat.toText(told) # " administrator(s) informed instead"); case null {} };
+          }
           else { dealNotices.add(key, { row with attempts = row.attempts + 1; nextAt = now() + 300_000_000_000; detail = capText(detail, 300) }) };
         };
       };
@@ -2233,7 +2264,9 @@ persistent actor Assets {
     let status = if (s.status == "accepted" and material) "offered" else s.status;
     putSale({ s with buyer = b; grossMinor; netMinor = net; vatMinor = vat; vatRateBp = (if (billing.vatRegistered) billing.vatRateBp else 0); priceNote = capText(norm(priceNote), 300); description = descriptionNow; status; acceptedBy = (if (status == "offered" and s.status == "accepted") "" else s.acceptedBy); acceptedAt = (if (status == "offered" and s.status == "accepted") 0 else s.acceptedAt); acceptedHow = (if (status == "offered" and s.status == "accepted") "" else s.acceptedHow) });
     log(m.email, "sale #" # Nat.toText(id) # " edited" # (if (status != s.status) " — the buyer has to accept again" else ""));
-    { ok = true; detail = (if (status != s.status) "saved — price or buyer changed, so the offer goes back to the buyer" else "saved") };
+    var told = "";
+    if (status == "offered" and s.status == "accepted" and b.pid != "" and hubId != "") told := await notifyPerson(b.email, "An offer to you changed — please review the price and terms again", appLink("offers/" # Nat.toText(id)), "assets.offer", "offer-" # Nat.toText(id) # "-changed-" # Int.toText(now()));
+    { ok = true; detail = (if (status != s.status) (if (b.pid == "") "saved — the buyer has to accept again" else if (told == "") "saved — " # b.name # " was told to accept the changed offer again" else "saved — but " # b.name # " could NOT be notified: " # told) else "saved") };
   };
   /// Admins: the two things that must be true before hand-over: the device is wiped, and it left the company's device management.
   public shared func setSaleChecks(tok : Text, id : Nat, wiped : Bool, mdmRemoved : Bool) : async { ok : Bool; detail : Text } {
@@ -2249,21 +2282,23 @@ persistent actor Assets {
   public shared func offerSale(tok : Text, id : Nat) : async { ok : Bool; detail : Text } {
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
     let s = switch (Map.get(sales, Nat.compare, id)) { case (?s) s; case null return { ok = false; detail = "no such sale" } };
-    if (s.status != "draft" and s.status != "offered") return { ok = false; detail = "the sale is " # s.status };
-    putSale({ s with status = "offered"; waiverVersion = billing.waiverVersion });
+    let termsChanged = s.status == "accepted" and s.waiverVersion != billing.waiverVersion;
+    if (s.status != "draft" and s.status != "offered" and not termsChanged) return { ok = false; detail = (if (s.status == "accepted") "already accepted — issue the invoice" else "the sale is " # s.status) };
+    putSale({ s with status = "offered"; waiverVersion = billing.waiverVersion; acceptedBy = ""; acceptedAt = 0; acceptedHow = "" });
+    if (termsChanged) saleEvent(s, m.id, "hand-over terms changed after acceptance (v" # Nat.toText(s.waiverVersion) # " → v" # Nat.toText(billing.waiverVersion) # ") — the buyer has to accept again");
     saleEvent(s, m.id, "offered to " # s.buyer.name # " at " # moneyPretty(s.grossMinor) # " " # s.currency);
     var notified = "";
     if (s.buyer.pid != "" and hubId != "") {
       let link = appLink("offers/" # Nat.toText(id));
       notified := await notifyPerson(s.buyer.email, "A device is offered to you — review the price and terms", link, "assets.offer", "offer-" # Nat.toText(id) # "-" # Nat.toText(billing.waiverVersion));
     };
-    { ok = true; detail = (if (s.buyer.pid == "") "offered — an outside buyer signs the terms on paper; record it here" else if (notified == "") "offered — " # s.buyer.name # " was told through the hub and accepts under Offers" else "offered — but " # s.buyer.name # " could NOT be notified: " # notified # ". Tell them yourself, or fix it under Settings → Notifications") };
+    { ok = true; detail = (if (s.buyer.pid == "") "offered — an outside buyer accepts through a private dealroom link (External dealroom → Create private link)" else if (notified == "") "offered — " # s.buyer.name # " was told through the hub and accepts under Offers" else "offered — but " # s.buyer.name # " could NOT be notified: " # notified # ". Tell them yourself, or fix it under Settings → Notifications") };
   };
   /// The buyer's own offers and invoices (a colleague signed in through the hub).
   public shared query func myOffers(tok : Text) : async [SaleView] {
     let m = switch (me(tok)) { case (?m) m; case null return [] };
     let out = List.empty<SaleView>();
-    for ((_, s) in Map.entries(sales)) if (s.buyer.pid == m.id and s.status != "draft") List.add(out, saleView(s));
+    for ((_, s) in Map.entries(sales)) if (s.buyer.pid == m.id and s.status != "draft") List.add(out, buyerSaleView(s));
     Array.sort<SaleView>(List.toArray(out), func(a, b) = Int.compare(b.sale.updatedAt, a.sale.updatedAt));
   };
   /// The buyer accepts the hand-over terms (the version they were shown) with their own hub sign-in — this is the signature on page 2 of the invoice.
@@ -2278,6 +2313,7 @@ persistent actor Assets {
     if (not addressComplete(b.name, b.street, b.postalCode, b.town, b.country)) return { ok = false; detail = "your postal address is needed on the invoice: street, postal code, town and country" };
     putSale({ s with buyer = b; status = "accepted"; acceptedBy = m.id; acceptedAt = now(); acceptedHow = "online"; waiverVersion = billing.waiverVersion });
     saleEvent(s, m.id, "hand-over terms accepted online by " # m.displayName);
+    queueFinanceNotice(sales.get(id) ?? s, "accepted"); // IT learns about it through the Hub instead of by checking the list
     log(m.email, "sale #" # Nat.toText(id) # ": terms v" # Nat.toText(billing.waiverVersion) # " accepted online");
     { ok = true; detail = "" };
   };
@@ -2289,6 +2325,7 @@ persistent actor Assets {
     if (s.status != "offered" and s.status != "accepted") return { ok = false; detail = "the offer is " # s.status };
     putSale({ s with status = "cancelled"; cancelledAt = now(); cancelReason = "declined by the buyer" # (if (norm(note) != "") ": " # capText(norm(note), 200) else "") });
     saleEvent(s, m.id, "offer declined by " # m.displayName);
+    queueFinanceNotice(sales.get(id) ?? s, "declined");
     { ok = true; detail = "" };
   };
   /// Admins: an outside buyer (no hub account) signed the terms on paper — record it, so the invoice can be issued. The note says where the signed copy is.
@@ -2370,7 +2407,7 @@ persistent actor Assets {
     let rows = paymentRows(s);
     let paid = paymentTotal(rows);
     if (paid >= s.grossMinor) return { ok = false; detail = "Already paid" };
-    recordPayment(m, s, rows.size(), { amountMinor = s.grossMinor - paid; paidOn = isoFromDays(todayDays()); reference = note; reason = ""; reverses = null; requestId = "mark-paid-" # rows.size().toText() })
+    recordPayment(m, s, rows.size(), { amountMinor = s.grossMinor - paid; paidOn = isoFromDays(todayDays()); reference = note; reason = "Payment confirmed by Finance"; reverses = null; requestId = "mark-paid-" # rows.size().toText() })
   };
 
   /// Admins: cancel. Before the invoice: the sale just ends. After: a numbered credit note is created (the invoice number stays used — ranges are gapless) and the device goes back to stock unless it was already paid.
@@ -2460,6 +2497,8 @@ persistent actor Assets {
       stillInAbm = abmHolds(a); handedOverAt = handedOverAt(s.id); phase = salePhase(s);
     };
   };
+  /// What a buyer may see of their own sale: never the company's purchase price, pricing rule or internal price note.
+  func buyerSaleView(s : Sale) : SaleView { let v = saleView(s); { v with proposal = null; sale = { s with priceNote = "" } } };
   func salePhase(s : Sale) : Text {
     if (s.status == "cancelled") "cancelled"
     else if (s.status == "issued") "invoice"
@@ -2537,7 +2576,7 @@ persistent actor Assets {
   /// One sale with everything the pages need — admins, or the buyer for their own.
   public shared query func getSale(tok : Text, id : Nat) : async ?SaleView {
     let m = switch (me(tok)) { case (?m) m; case null return null };
-    switch (Map.get(sales, Nat.compare, id)) { case (?s) { if (m.role == "admin" or m.role == "finance" or s.buyer.pid == m.id) ?saleView(s) else null }; case null null };
+    switch (Map.get(sales, Nat.compare, id)) { case (?s) { if (m.role == "admin" or m.role == "finance") ?saleView(s) else if (s.buyer.pid == m.id) ?buyerSaleView(s) else null }; case null null };
   };
   /// Admins: the device's purchase details (if any) and its open sale — for the device page.
   public shared query func saleOfDevice(tok : Text, assetId : Nat) : async { purchase : ?Purchase; sale : ?SaleView; proposal : ?{ proposedMinor : Nat; basis : Text }; billingReady : Text } {
@@ -2566,8 +2605,20 @@ persistent actor Assets {
   public type PaymentInput = { amountMinor : Nat; paidOn : Text; reference : Text; reason : Text; reverses : ?Nat; requestId : Text };
   public type PaymentEntry = { id : Nat; amountMinor : Nat; paidOn : Text; reference : Text; reason : Text; reverses : ?Nat; requestId : Text; by : Text; at : Int };
   let salePayments = Map.empty<Nat, [PaymentEntry]>();
+  func legacyPayment(s : Sale) : [PaymentEntry] {
+    if (s.paidAt == 0 and s.status != "paid") [] else {
+      let at = if (s.paidAt == 0) now() else s.paidAt;
+      [{ id = 1; amountMinor = s.grossMinor; paidOn = isoFromDays(at / 86_400_000_000_000); reference = s.paidNote; reason = "Payment confirmed before the Finance ledger was introduced"; reverses = null; requestId = "legacy-payment"; by = "Legacy record"; at }]
+    }
+  };
+  func normalizedPayment(p : PaymentEntry) : PaymentEntry {
+    if (p.reason == "" and Text.startsWith(p.requestId, #text "mark-paid-")) ({ p with reason = "Payment confirmed before the Finance ledger was introduced" }) else p
+  };
   func paymentRows(s : Sale) : [PaymentEntry] {
-    salePayments.get(s.id) ?? (if (s.paidAt == 0) [] else [{ id = 1; amountMinor = s.grossMinor; paidOn = isoFromDays(s.paidAt / 86_400_000_000_000); reference = s.paidNote; reason = "Payment confirmed before the Finance ledger was introduced"; reverses = null; requestId = "legacy-payment"; by = "Legacy record"; at = s.paidAt }])
+    switch (salePayments.get(s.id)) {
+      case (?rows) { if (rows.size() == 0 and (s.paidAt != 0 or s.status == "paid")) legacyPayment(s) else rows.map(normalizedPayment) };
+      case null legacyPayment(s);
+    }
   };
   func paymentTotal(rows : [PaymentEntry]) : Nat {
     var amount : Int = 0;
@@ -2718,6 +2769,13 @@ persistent actor Assets {
   type FinanceNotice = { saleId : Nat; kind : Text; attempts : Nat; nextAt : Int; detail : Text; delivered : [Text]; complete : Bool };
   let financeNotices = Map.empty<Text, FinanceNotice>();
   transient var financeNoticeBusy = false;
+  func financeNoticeTitle(kind : Text, s : Sale) : Text {
+    let device = switch (assets.get(s.assetId)) { case (?a) deviceName(a); case null "device #" # s.assetId.toText() };
+    if (kind == "invoice") "Invoice ready for payment review: " # s.invoiceNo
+    else if (kind == "accepted") s.buyer.name # " accepted the offer — issue the invoice: " # device
+    else if (kind == "declined") s.buyer.name # " declined the offer: " # device
+    else "Paid — prepare hardware hand-over: " # s.invoiceNo;
+  };
   func queueFinanceNotice(s : Sale, kind : Text) {
     let key = s.id.toText() # ":" # kind;
     if (not financeNotices.containsKey(key)) financeNotices.add(key, { saleId = s.id; kind; attempts = 0; nextAt = 0; detail = "Waiting for Hub delivery"; delivered = []; complete = false });
@@ -2744,7 +2802,7 @@ persistent actor Assets {
           for (email in recipients.values()) if (not delivered.any(func e = e == email) and attempted < 10) {
             attempted += 1;
             if (Hub.isActive(people, email) and (roleOf(email) == "admin" or (n.kind == "invoice" and roleOf(email) == "finance"))) {
-              let result = await notifyPerson(email, (if (n.kind == "invoice") "Invoice ready for payment review: " else "Paid — prepare hardware hand-over: ") # s.invoiceNo, appLink("sale/" # s.id.toText()), "assets.finance", "finance-" # key # "-" # email);
+              let result = await notifyPerson(email, financeNoticeTitle(n.kind, s), appLink("sale/" # s.id.toText()), "assets.finance", "finance-" # key # "-" # email);
               if (result == "") delivered := delivered.concat([email]) else detail := result;
             } else detail := "Waiting for current Hub permissions";
           };

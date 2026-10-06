@@ -11,6 +11,25 @@ type ConnectorUser__173861307 =
     source : Text
   };
 type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Delivery__637626759 =
+  {
+    attempts : Nat;
+    detail : Text;
+    nextAt : Int;
+    payload : Text;
+    secret : Text;
+    state : Text;
+    target : DeskTarget__697322377;
+    ticketId : Nat
+  };
+type DeskTarget__697322377 =
+  {
+    canister : Principal;
+    enabled : Bool;
+    name : Text;
+    sourceId : Nat;
+    url : Text
+  };
 type FormStatus__74681354 = {#closed; #draft; #open};
 type Form__895203313 =
   {
@@ -36,6 +55,16 @@ type Nat__920180692 = Nat;
 type Node__430031793<K, V> =
   {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
 type Note__185454894 = {at : Int; author : Text; text : Text};
+type Policy__1019119797 =
+  {
+    contextKeys : [Text];
+    graceUntil : Int;
+    origins : [Text];
+    privacyUrl : Text;
+    retentionDays : Nat;
+    revision : Nat
+  };
+type Receipt__807742844 = {fingerprint : Text; num : Nat; until : Int};
 type Review__85665861 = {at : Int; rating : Nat; reviewer : Text};
 type Session__739831475 =
   {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
@@ -69,6 +98,16 @@ actor {
   stable var answerBytesTotal : Nat;
   stable var appUrl : Text;
   stable var demoSeeded : Bool;
+  stable deskDeliveries :
+    {
+      var root : Node__430031793<Nat, Delivery__637626759>;
+      var size : Nat__58649523
+    };
+  stable deskTargets :
+    {
+      var root : Node__430031793<Nat, DeskTarget__697322377>;
+      var size : Nat__58649523
+    };
   stable formDeadlines :
     {var root : Node__430031793<Nat, Int>; var size : Nat__58649523};
   stable formShares :
@@ -94,6 +133,24 @@ actor {
   stable var idMigration : Text;
   stable ids :
     {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var intakeBytesTotal : Nat;
+  stable intakeContexts :
+    {
+      var root : Node__430031793<Nat, [(Text, Text)]>;
+      var size : Nat__58649523
+    };
+  stable intakeCosts :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable intakePolicies :
+    {
+      var root : Node__430031793<Nat, Policy__1019119797>;
+      var size : Nat__58649523
+    };
+  stable intakeReceipts :
+    {
+      var root : Node__430031793<Text, Receipt__807742844>;
+      var size : Nat__58649523
+    };
   stable var lastDirectoryPull : Int;
   stable var nextFormId : Nat;
   stable var nextLogId : Nat;

@@ -1789,6 +1789,7 @@ service : {
        displayName: text;
        email: text;
        expiresAt: int;
+       hubRole: opt text;
        id: text;
        provider: text;
        unread: nat;

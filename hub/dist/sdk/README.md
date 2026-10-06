@@ -14,7 +14,7 @@ Two files, no framework.
 
 ## Backend contract
 
-Start from [the compiled example](https://github.com/kebabstack/kebabstack-source/blob/main/sdk/example/backend/main.mo); it contains the full
+Start from [the compiled example](https://github.com/kebabstack/kebabstack/blob/main/sdk/example/backend/main.mo); it contains the full
 sign-in, controller-only configuration and directory-lease flow. The code is a
 minimal session example; add the shared topbar/suite-token pass-through below for
 a complete product UI.
@@ -205,3 +205,13 @@ not redefine the palette in individual apps. See `design/README.md` for all rule
 ## Workboard projection (SDK 0.14.0)
 
 `Workboard.mo` defines bounded source pages with ready/denied/unavailable state and a source-owned workflow column. Desk calls its Hub bridge; Hub and Assets independently verify the current viewer. This is a read-only projection, not an authorization grant or transition API. See [the Workboard contract and limits](../docs/WORKBOARD.md). Existing directory, Support, Finance and Lunch contracts are unchanged.
+
+### Hub console navigation
+
+SDK 0.14.1 reads optional `suiteState.hubRole` from Hub 0.37.1. The shared topbar
+shows **Hub** only for a fresh active global Owner/Admin/Helpdesk state; an app's
+`person.role` is never used to decide this. Keep the canonical topbar instead of
+adding per-app links. Older Hubs omit the optional field and keep the link hidden.
+Console entry still requires the linked passkey; the role hint and suite token
+never authorize administrative API calls. The Hub's own console sets the Hub-only
+`hideConsole` option to avoid a redundant link to the current screen.
