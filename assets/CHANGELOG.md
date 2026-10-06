@@ -1,5 +1,11 @@
 # Changelog — kebab-stack assets
 
+## [0.19.0] — 2026-10-06
+
+- A colleague's acceptance issues the invoice at once, as the private dealroom does: gapless number, invoice data, the exact PDF and its archive commit together in the canister. The buyer downloads the invoice immediately; IT no longer clicks *Issue the invoice* and no PDF is rendered in a browser. Long terms paginate and names with non-Latin characters are refused instead of printed as "?".
+- When billing settings are incomplete or the layout refuses, the acceptance still counts; IT is told and issues the invoice from the sale page, which now also renders in the canister. Credit notes keep the existing path.
+- No stable-state changes; existing sales, invoices and archived PDFs are unchanged.
+
 ## [0.18.0] — 2026-10-05
 
 - Buyers no longer see the company's purchase price, pricing rule or internal price note on their own sale: `getSale` and `myOffers` return a buyer view without the proposal. Administrators and Finance see it as before.

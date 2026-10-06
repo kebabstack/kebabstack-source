@@ -253,12 +253,10 @@ if (role === "admin") {
   check(/this sale differs/.test($("sProposal").textContent), "deviation from the rule price is flagged");
   check($("ckWiped").checked && $("ckMdm").checked && /accepted/.test($("sTermsLine").textContent) && /Accepted online by Ana Ruiz/.test($("sTermsLine").textContent), "checks + acceptance shown");
   check(!!document.querySelector('#sActions [data-act="issue"]'), "issue button for an accepted sale");
-  // issue → invoice number → PDF rendered in the browser → archived → offered as download
+  // issue → invoice number; the canister renders and archives the PDF
   document.querySelector('#sActions [data-act="issue"]').click(); for (let i = 0; i < 40; i++) await tick();
-  check(calls.includes("issueInvoice") && attached && attached.kind === "invoice" && attached.id === 7n, "issued and the PDF was archived");
-  check(attached && attached.bytes instanceof Uint8Array && attached.bytes.length > 8000 && String.fromCharCode(...attached.bytes.slice(0, 5)) === "%PDF-", "archived bytes are a PDF: " + (attached && attached.bytes.length));
+  check(calls.includes("issueInvoice") && !attached, "issued; the canister archives the PDF, the browser renders nothing");
   check(/IT-2026-0001/.test($("sKv").textContent) && /invoiced/.test($("sPills").textContent) && /RF94 IT20 2600 01/.test($("sKv").textContent), "sale page after issue: " + $("sTitle").textContent);
-  check(/archived as IT-2026-0001\.pdf/.test($("sDocStatus").textContent), "doc status: " + $("sDocStatus").textContent);
   check(!!document.querySelector("[data-payment]") && !!document.querySelector('#sActions [data-act="cancel"]'), "payment ledger + cancel actions after issue");
   document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true})); await tick(); check(!!document.querySelector("[data-payment-save]"), "payment review opens");
   document.querySelector("[data-payment-save]").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("recordSalePayment"), "payment recorded through ledger");

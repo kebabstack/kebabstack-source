@@ -1372,7 +1372,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.37.1"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.38.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1430,7 +1430,7 @@ const idlFactory = ({ IDL }) => {
   const Grant = IDL.Record({ email: IDL.Text, endedAt: IDL.Int, endedBy: IDL.Text, expiresAt: IDL.Int, grantedAt: IDL.Int, grantedBy: IDL.Text, id: IDL.Nat, reason: IDL.Text, state: IDL.Text, target: IDL.Text, targetName: IDL.Text });
   const FinanceBinding = IDL.Record({ canisterId: IDL.Principal, cid: IDL.Nat });
   const FinanceTeam = IDL.Record({ apps: IDL.Vec(FinanceBinding), groups: IDL.Vec(IDL.Nat), mode: IDL.Text, people: IDL.Vec(IDL.Text), revision: IDL.Nat });
-  const Event = IDL.Record({ at: IDL.Int, effectiveActive: IDL.Bool, email: IDL.Text, kind: IDL.Variant({ deactivated: IDL.Null, reactivated: IDL.Null }), name: IDL.Text, personId: IDL.Text, seq: IDL.Nat, source: IDL.Text });
+  const Event = IDL.Record({ at: IDL.Int, effectiveActive: IDL.Bool, email: IDL.Text, kind: IDL.Variant({ created: IDL.Null, deactivated: IDL.Null, reactivated: IDL.Null }), name: IDL.Text, personId: IDL.Text, seq: IDL.Nat, source: IDL.Text });
   const DeskReportingAccess = IDL.Record({ capabilities: IDL.Vec(Role), detail: IDL.Text, grants: IDL.Vec(ReportingGrant), ok: IDL.Bool, revision: IDL.Nat, scopes: IDL.Vec(ReportingScope) });
   const Context = IDL.Record({ checkedAt: IDL.Int, items: IDL.Vec(Item), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   const ConnectorUser = IDL.Record({ active: IDL.Bool, attributes: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), displayName: IDL.Text, email: IDL.Text, externalId: IDL.Text, firstName: IDL.Text, id: IDL.Opt(IDL.Text), lastName: IDL.Text, source: IDL.Text });

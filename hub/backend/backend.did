@@ -454,6 +454,7 @@ type Event =
    effectiveActive: bool;
    email: text;
    kind: variant {
+           created;
            deactivated;
            reactivated;
          };

@@ -61,7 +61,7 @@ persistent actor Assets {
   var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
   var photoBytes : Nat = 0; // total photo bytes held
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.18.0";
+  transient let BUILD_VERSION : Text = "0.19.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -2303,6 +2303,26 @@ persistent actor Assets {
   };
   /// The buyer accepts the hand-over terms (the version they were shown) with their own hub sign-in — this is the signature on page 2 of the invoice.
   /// The buyer also gives (or confirms) the postal address for the invoice; it lives on this sale only, never in the directory.
+  /// Issue the invoice for an accepted sale in one step, exactly like the dealroom: gapless number, invoice data, the exact PDF and
+  /// its archive commit together, or nothing changes. Null when the layout refuses (over-long address, unsupported characters) or the
+  /// PDF would exceed the document limits.
+  func issueNow(s : Sale, by : Text) : ?Text {
+    let a = assets.get(s.assetId) ?? (return null);
+    if (saleDocBytes + MAX_SALE_DOC > MAX_SALE_DOC_TOTAL) return null;
+    let (numberKey, numberIndex, number) = invoiceSlot(); let today = todayDays(); let at = now();
+    let issued : Sale = { s with status = "issued"; invoiceNo = number; issuedAt = at; issuedOn = isoFromDays(today); dueOn = isoFromDays(today + billing.paymentDays); reference = scorOf(number) };
+    let data = invoiceData(issued, "invoice");
+    let pdf = InvoicePdf.render(data, deviceName(a), a.serial) ?? (return null);
+    if (pdf.size() > MAX_SALE_DOC) return null;
+    invoiceCounters.add(numberKey, numberIndex);
+    let hash = hex(Sha256.fromBlob(#sha256, pdf)); let docId = nextSaleDocId; nextSaleDocId += 1;
+    invoiceSnapshots.add(s.id, data);
+    saleDocs.add(docId, { id = docId; saleId = s.id; kind = "invoice"; name = number # ".pdf"; bytes = pdf; hash; at; by });
+    saleDocBytes += pdf.size();
+    putSale({ issued with pdfId = docId; pdfHash = hash });
+    queueFinanceNotice(sales.get(s.id) ?? issued, "invoice");
+    ?number;
+  };
   public shared func acceptOffer(tok : Text, id : Nat, waiverVersion : Nat, address : ?{ street : Text; houseNo : Text; postalCode : Text; town : Text; country : Text }) : async { ok : Bool; detail : Text } {
     let m = switch (me(tok)) { case (?m) m; case null return { ok = false; detail = "no session" } };
     let s = switch (Map.get(sales, Nat.compare, id)) { case (?s) s; case null return { ok = false; detail = "no such offer" } };
@@ -2311,11 +2331,23 @@ persistent actor Assets {
     if (waiverVersion != billing.waiverVersion) return { ok = false; detail = "the terms changed since you opened this — reload and read them again" };
     let b = switch (address) { case (?a) cleanBuyer({ s.buyer with street = a.street; houseNo = a.houseNo; postalCode = a.postalCode; town = a.town; country = a.country }); case null s.buyer };
     if (not addressComplete(b.name, b.street, b.postalCode, b.town, b.country)) return { ok = false; detail = "your postal address is needed on the invoice: street, postal code, town and country" };
-    putSale({ s with buyer = b; status = "accepted"; acceptedBy = m.id; acceptedAt = now(); acceptedHow = "online"; waiverVersion = billing.waiverVersion });
-    saleEvent(s, m.id, "hand-over terms accepted online by " # m.displayName);
-    queueFinanceNotice(sales.get(id) ?? s, "accepted"); // IT learns about it through the Hub instead of by checking the list
-    log(m.email, "sale #" # Nat.toText(id) # ": terms v" # Nat.toText(billing.waiverVersion) # " accepted online");
-    { ok = true; detail = "" };
+    let accepted : Sale = { s with buyer = b; status = "accepted"; acceptedBy = m.id; acceptedAt = now(); acceptedHow = "online"; waiverVersion = billing.waiverVersion };
+    // The invoice is issued right here, as the dealroom does it. If the billing settings or the layout do not allow it yet,
+    // the acceptance still counts and IT issues the invoice from the sale page.
+    switch (if (billingReady() == null) issueNow(accepted, m.id) else null) {
+      case (?number) {
+        saleEvent(accepted, m.id, "hand-over terms accepted online by " # m.displayName # " — invoice " # number # " issued and archived");
+        log(m.email, "sale #" # Nat.toText(id) # ": terms v" # Nat.toText(billing.waiverVersion) # " accepted online, invoice " # number);
+        { ok = true; detail = "Accepted. Your invoice " # number # " is ready below." };
+      };
+      case null {
+        putSale(accepted);
+        saleEvent(s, m.id, "hand-over terms accepted online by " # m.displayName);
+        queueFinanceNotice(sales.get(id) ?? accepted, "accepted"); // IT issues the invoice once settings or layout allow it
+        log(m.email, "sale #" # Nat.toText(id) # ": terms v" # Nat.toText(billing.waiverVersion) # " accepted online; invoice pending IT");
+        { ok = true; detail = "Accepted. IT issues your invoice; you will be notified." };
+      };
+    };
   };
   /// The buyer declines the offer (with a word why).
   public shared func declineOffer(tok : Text, id : Nat, note : Text) : async { ok : Bool; detail : Text } {
@@ -2357,12 +2389,11 @@ persistent actor Assets {
     if (not addressComplete(s.buyer.name, s.buyer.street, s.buyer.postalCode, s.buyer.town, s.buyer.country)) return { ok = false; detail = "the buyer's postal address is incomplete (street, postal code, town, country) — a VAT invoice and the payment part need it"; invoiceNo = "" };
     if (s.waiverVersion != billing.waiverVersion) return { ok = false; detail = "the hand-over terms changed after the buyer accepted — offer again"; invoiceNo = "" };
     let a = switch (Map.get(assets, Nat.compare, s.assetId)) { case (?a) a; case null return { ok = false; detail = "the device is gone"; invoiceNo = "" } };
-    let no = nextInvoiceNo();
     let today = todayDays();
-    putSale({ s with status = "issued"; invoiceNo = no; issuedAt = now(); issuedOn = isoFromDays(today); dueOn = isoFromDays(today + billing.paymentDays); reference = scorOf(no) });
-    queueFinanceNotice(sales.get(id) ?? s, "invoice");
+    // Number, invoice data, exact PDF and archive commit together in the canister; the browser renders nothing.
+    let no = issueNow(s, m.id) ?? (return { ok = false; detail = "The invoice could not be generated, so nothing was issued. Check the buyer's address lengths, unsupported characters in names or terms, and the document limit."; invoiceNo = "" });
     // Payment and physical hand-over follow the invoice; the device stays reserved.
-    saleEvent(s, m.id, "invoice " # no # " issued — " # moneyPretty(s.grossMinor) # " " # s.currency # ", due " # isoFromDays(today + billing.paymentDays));
+    saleEvent(s, m.id, "invoice " # no # " issued and archived — " # moneyPretty(s.grossMinor) # " " # s.currency # ", due " # isoFromDays(today + billing.paymentDays));
     log(m.email, "invoice " # no # " issued for " # deviceName(a) # " → " # s.buyer.name);
     var notified = "";
     if (s.buyer.pid != "" and hubId != "") {

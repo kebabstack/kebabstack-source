@@ -56,7 +56,7 @@ export const idlFactory = ({ IDL }) => {
   const SlackIntake = IDL.Record({ channel: IDL.Text, channelName: IDL.Text, createdAt: IDL.Int, enabled: IDL.Bool, hubBotId: IDL.Nat, id: IDL.Nat, lastEventAt: IDL.Int, lastResult: IDL.Text, name: IDL.Text, typeId: IDL.Nat });
   const SlackStatus = IDL.Record({ appUrlSet: IDL.Bool, bots: IDL.Vec(SlackBotView), credsAt: IDL.Int, credsError: IDL.Text, eventsUrl: IDL.Text, gateway: IDL.Text, intakes: IDL.Vec(SlackIntake), outbox: IDL.Nat });
   const Shift = IDL.Record({ endAt: IDL.Int, layer: IDL.Nat, personId: IDL.Text, startAt: IDL.Int });
-  const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, agentCount: IDL.Nat, agentGroup: IDL.Text, aiHubModel: IDL.Text, aiKeySet: IDL.Bool, aiModel: IDL.Text, aiProvider: IDL.Text, aiSource: IDL.Text, aiTriage: IDL.Bool, aiUrl: IDL.Text, appUrl: IDL.Text, autoCloseDays: IDL.Nat, demoSeeded: IDL.Bool, fileBytes: IDL.Nat, hubId: IDL.Text, keyPrefix: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat });
+  const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, agentCount: IDL.Nat, agentGroup: IDL.Text, aiHubModel: IDL.Text, aiKeySet: IDL.Bool, aiModel: IDL.Text, aiProvider: IDL.Text, aiSource: IDL.Text, aiTriage: IDL.Bool, aiUrl: IDL.Text, appUrl: IDL.Text, autoCloseDays: IDL.Nat, demoSeeded: IDL.Bool, fileBytes: IDL.Nat, hubId: IDL.Text, keyPrefix: IDL.Text, lastDirectoryPull: IDL.Int, onboardingFromDirectory: IDL.Bool, orgName: IDL.Text, peopleCount: IDL.Nat });
   const Service = IDL.Record({ checkedAt: IDL.Int, name: IDL.Text, state: IDL.Text, validUntil: IDL.Int });
   const Segment = IDL.Record({ endAt: IDL.Int, key: IDL.Text, layer: IDL.Nat, personId: IDL.Text, shift: IDL.Nat, startAt: IDL.Int });
   const SecretResult = IDL.Variant({ err: IDL.Text, ok: IDL.Record({ id: IDL.Nat, revision: IDL.Nat, secret: IDL.Text }) });
@@ -301,6 +301,7 @@ export const idlFactory = ({ IDL }) => {
     setDue: IDL.Func([IDL.Text, IDL.Nat, IDL.Opt(IDL.Int)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setFields: IDL.Func([IDL.Text, IDL.Nat, IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setHub: IDL.Func([IDL.Text], [IDL.Bool], []),
+    setOnboardingFromDirectory: IDL.Func([IDL.Text, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setOncallAbsence: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Int, IDL.Int], [Result], []),
     setOncallAlertSource: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Variant({ enable: IDL.Null, pause: IDL.Null, revoke: IDL.Null })], [Result], []),
     setOncallReminders: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, PolicyInput__2], [Result], []),

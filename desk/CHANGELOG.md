@@ -1,5 +1,11 @@
 # Changelog — kebab-stack desk
 
+## [0.30.0] — 2026-10-06
+
+- Onboarding from the directory: with **Settings → General → Create an Onboarding request when a new person appears in the directory** switched on, a person the Hub reports as new (SCIM, Okta, OpenTeam, local, invitation) becomes an internal Onboarding request with name and date filled in; hardware, manager and the checklist stay with IT. One request per person; an import of more than ten people in one batch creates none and leaves a line in the admin log. Off by default.
+- Requires SDK 0.15 and works with Hub 0.37.1 (no join events) and Hub 0.38 (join events). Install this Desk before Hub 0.38.
+- Slack, replies after resolve: a thread reply on a resolved or closed request is kept but no longer reopens it by itself (a "thanks" must not reopen). The owners are told ("replied after resolution — reopen?"), the ticket page points at the late reply, and ↩️ on the first message reopens explicitly (it works whoever set the ✅; nobody can remove another person's reaction). With an AI key and auto-triage on, the assistant assesses the late reply: a follow-up reopens the request with a visible AI note and a Slack notice; thanks or confirmation leave it as it is.
+
 ## [0.29.2] — 2026-10-06
 
 - Slack: a thread reply on a resolved or closed request is no longer discarded; it lands on the request. When the requester writes again, the request reopens and the thread says so. Replies by staff are recorded without changing the status.

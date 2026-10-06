@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.15.0] — 2026-10-06
+
+- Lifecycle events gain the kind `#created`: the Hub reports a person who appears in the directory after the Hub already knew its people. Apps that read `hub_lifecycleEvents` must build with this SDK before a Hub that sends it is installed; a Desk on the previous SDK would fail to decode the batch.
+
 ## [0.14.1] — 2026-09-29
 
 - Show a common Hub console link from the verified global Hub role, not local app roles. Hide it on missing/expired state or failed checks; reject stale heartbeat replies after token changes. Keep 44 px navigation controls at narrow widths. Hub 0.37.1 supplies the optional role hint; older Hubs keep the link hidden. Suite tokens remain read-only.

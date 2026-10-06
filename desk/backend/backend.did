@@ -400,6 +400,7 @@ type Settings =
    hubId: text;
    keyPrefix: text;
    lastDirectoryPull: int;
+   onboardingFromDirectory: bool;
    orgName: text;
    peopleCount: nat;
  };
@@ -2120,6 +2121,12 @@ service : {
       ok: bool;
     });
   setHub: (id: text) -> (bool);
+  /// Settings → General: turn directory joins into Onboarding requests (admins).
+  setOnboardingFromDirectory: (tok: text, on: bool) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   setOncallAbsence: (tok: text, projectId: nat, personId: text, startAt:
    int, endAt: int) -> (Result);
   setOncallAlertSource: (tok: text, id: nat, revision: nat, action:

@@ -657,8 +657,6 @@ service : {
             detail: text;
             ok: bool;
           });
-  /// The buyer accepts the hand-over terms (the version they were shown) with their own hub sign-in — this is the signature on page 2 of the invoice.
-  /// The buyer also gives (or confirms) the postal address for the invoice; it lives on this sale only, never in the directory.
   acceptOffer: (tok: text, id: nat, waiverVersion: nat, address:
    opt
     record {

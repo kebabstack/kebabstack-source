@@ -129,3 +129,30 @@ test('other active accounts are reported; source deletion and service accounts d
   const user=(await h.hub.listUsers({offset:0n,limit:10n,conn:[],search:'hr@lifecycle.test',activeOnly:false})).items[0];assert.ok(user);assert.equal(await h.hub.setUserKinds([user.key],'service'),1n);await h.hub.setLocalUserActive('hr@lifecycle.test',false);await desk.app.syncLifecycle(owner);assert.equal((await list(desk,owner)).length,1);
  }finally{await pic.tearDown();}
 });
+
+test('a directory join becomes an onboarding request only when Desk is told to, once per person, never for an import',async()=>{
+ const pic=await PocketIc.create(server.getUrl());try{
+  const h=await setup(pic),desk=await connect(pic,h,'desk'),owner=await desk.login('owner');
+  const sync=async()=>{assert.equal(await desk.app.syncLifecycle(owner),true);};
+  await sync();assert.equal((await list(desk,owner)).length,0,'people present before the Hub observed its directory are not joins');
+  await pic.advanceTime(16*60*1000); // a source's joins count once it has been observed for 15 minutes; before that an import is a bootstrap
+  h.hub.setPrincipal(principal.owner);assert.equal(await h.hub.addLocalUser('new1@lifecycle.test','New One','',''),true);
+  await sync();assert.equal((await list(desk,owner)).length,0,'off by default: a join creates nothing');
+  assert.equal((await desk.app.setOnboardingFromDirectory(await desk.login('hr'),true)).ok,false,'admins only');
+  assert.equal((await desk.app.setOnboardingFromDirectory(owner,true)).ok,true);
+  assert.equal((await desk.app.getSettings(owner))[0].onboardingFromDirectory,true);
+  h.hub.setPrincipal(principal.owner);assert.equal(await h.hub.addLocalUser('new2@lifecycle.test','New Two','',''),true);
+  await sync();
+  let rows=await list(desk,owner);assert.equal(rows.length,1,'one onboarding request for the newcomer');
+  assert.equal(rows[0].subject,'Onboarding · New Two');assert.equal(rows[0].channel,'directory');assert.equal(rows[0].typeName,'Onboarding');
+  const full=(await desk.app.getTicket(owner,rows[0].id))[0];
+  const f=Object.fromEntries(full.ticket.fields);assert.equal(f.firstName,'New');assert.equal(f.lastName,'Two');assert.match(f.startDate,/^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(full.tasks.length>=5,'the Onboarding checklist is attached');
+  await sync();await sync();assert.equal((await list(desk,owner)).length,1,'repeated polls do not duplicate');
+  h.hub.setPrincipal(principal.owner);for(let i=0;i<12;i++)assert.equal(await h.hub.addLocalUser(`import${i}@lifecycle.test`,`Import ${i}`,'',''),true);
+  await sync();assert.equal((await list(desk,owner)).length,1,'an import of twelve people creates no requests');
+  assert.ok((await desk.app.adminLogRows(owner)).some(r=>/directory import of 12 people/.test(r.what)),'the import is noted in the admin log');
+  h.hub.setPrincipal(principal.owner);assert.equal(await h.hub.addLocalUser('new3@lifecycle.test','New Three','',''),true);
+  await sync();assert.equal((await list(desk,owner)).length,2,'a single join after the import is a hire again');
+ }finally{await pic.tearDown();}
+});

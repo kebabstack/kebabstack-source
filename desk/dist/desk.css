@@ -84,3 +84,7 @@
 .assignment-rules{display:grid;gap:var(--ks-space-4);max-width:440px}
 .assignment-settings [data-assignment-warnings]:not(:empty){padding:var(--ks-space-3) var(--ks-space-4);border-left:3px solid var(--ks-warning);background:var(--ks-bg-sunk)}
 .assignment-settings [data-assignment-status]{font-size:var(--ks-fz-body-sm)}
+/* 0.30: a setting that is a single checkbox with an explanation underneath */
+.ck{display:flex;gap:10px;align-items:flex-start;margin:16px 0 6px;font:400 13px/1.55 var(--ks-ui);color:var(--ks-fg);text-transform:none;letter-spacing:0;cursor:pointer}
+.ck input{width:18px;height:18px;min-height:0;margin:2px 0 0;flex-shrink:0;accent-color:var(--ks-accent)}
+.ck small{display:block;color:var(--ks-fg-secondary);font-size:12px;margin-top:3px}

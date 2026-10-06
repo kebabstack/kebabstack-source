@@ -420,11 +420,12 @@ async function loadGeneral() {
   const s = opt(await backend.getSettings(session.load())); if (!s) return;
   settingsCache = s; loadGroupsDatalist();
   $("sgInfo").innerHTML = `<div>Hub backend</div><div class="mono">${esc(s.hubId) || "<i>not set</i>"}</div><div>Directory</div><div>${s.peopleCount} people${Number(s.lastDirectoryPull) ? ` · pulled ${ago(s.lastDirectoryPull)}` : " · never pulled"}</div><div>Attachments</div><div>${Math.round(Number(s.fileBytes) / 1048576)} MB of 953 MB used</div>`;
-  $("sgOrg").value = s.orgName; $("sgUrl").value = s.appUrl; $("sgPrefix").value = s.keyPrefix; $("sgAutoClose").value = Number(s.autoCloseDays);
+  $("sgOrg").value = s.orgName; $("sgUrl").value = s.appUrl; $("sgPrefix").value = s.keyPrefix; $("sgAutoClose").value = Number(s.autoCloseDays); $("sgOnboarding").checked = !!s.onboardingFromDirectory;
 
   $("sgRoleCounts").innerHTML = `Right now: <b>${s.adminCount}</b> admin(s), <b>${s.agentCount}</b> agent(s). You are <b>${esc(me.role)}</b> via ${esc(me.roleSource || "directory")}.${Number(s.agentCount) + Number(s.adminCount) === 0 ? ' <span class="pill off">nobody is staff yet</span>' : ""}`;
 }
 $("sgSave").onclick = async () => { const r = await backend.updateSettings(session.load(), { appUrl: $("sgUrl").value.trim(), orgName: $("sgOrg").value.trim(), agentGroup: "", adminGroup: "", keyPrefix: $("sgPrefix").value.trim(), autoCloseDays: bigint($("sgAutoClose").value) }); setStatus("sgStatus", r.ok ? "ok" : "err", r.ok ? "saved" : r.detail); if (r.ok) { await refreshMe(); loadGeneral(); } };
+$("sgOnboarding").onchange = async () => { const r = await backend.setOnboardingFromDirectory(session.load(), $("sgOnboarding").checked); setStatus("sgStatus", r.ok ? "ok" : "err", r.ok ? ($("sgOnboarding").checked ? "onboarding requests from directory joins: on" : "onboarding requests from directory joins: off") : r.detail); };
 $("sgSync").onclick = async () => { setStatus("sgStatus", "", "syncing…"); const r = await backend.syncNow(session.load()); setStatus("sgStatus", r.ok ? "ok" : "err", r.detail); loadGeneral(); };
 
 // catalog admin

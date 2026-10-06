@@ -36,40 +36,44 @@ test('colleague sale: the buyer never sees the pricing rule, IT is told on accep
   const offers=await a.myOffers(alpha);
   assert.equal(offers.length,1);assert.deepEqual(offers[0].proposal,[]);assert.equal(offers[0].sale.priceNote,'');
   assert.equal((await a.getSale(beta,sale.id)).length,0,'another colleague cannot open the sale');
-  // 2 · accepting notifies IT through the Hub (recorded on the sale), without the buyer doing anything else
-  unwrap(await a.acceptOffer(alpha,sale.id,offers[0].waiverVersion,[address]));
+  // 2 · accepting issues the invoice at once in the canister; Finance/IT are told through the Hub
+  const acceptedReply=unwrap(await a.acceptOffer(alpha,sale.id,offers[0].waiverVersion,[address]));
+  assert.match(acceptedReply.detail,/invoice TEST-/,'the buyer is told the invoice number');
+  let view=(await a.getSale(alpha,sale.id))[0];
+  assert.equal(view.sale.status,'issued');assert.ok(view.sale.pdfId>0n,'PDF archived by the canister');assert.match(view.sale.invoiceNo,/^TEST-/);
+  const doc=(await a.saleDocument(alpha,view.sale.pdfId))[0];
+  assert.ok(doc&&doc.bytes.length>1000&&Buffer.from(doc.bytes.slice(0,5)).toString()==='%PDF-','the buyer can download a real PDF');
+  assert.deepEqual(view.proposal,[],'still no pricing rule for the buyer after the invoice');
   let notices=await a.saleFinanceNotification(admin,sale.id);
-  assert.ok(notices.some(n=>n.kind==='accepted'),'an acceptance notice is queued for IT');
+  assert.ok(notices.some(n=>n.kind==='invoice'),'an invoice notice is queued');
   await settle(x.pic);
-  notices=await a.saleFinanceNotification(admin,sale.id);
-  const accepted=notices.find(n=>n.kind==='accepted');
-  assert.equal(accepted.complete,true,JSON.stringify(accepted));
-  // 3 · the terms change after acceptance: the invoice is refused, but the sale can be offered again and accepted under the new version
-  const [billing]=await a.getBilling(admin);
-  unwrap(await a.setBilling(admin,{...billing,waiverText:billing.waiverText+' Updated clause.',waiverVersion:billing.waiverVersion+1n}));
-  const stale=await a.issueInvoice(admin,sale.id);
-  assert.equal(stale.ok,false);assert.match(stale.detail,/offer again/);
-  const again=await a.offerSale(admin,sale.id);
-  assert.equal(again.ok,true,again.detail);
-  let view=(await a.getSale(admin,sale.id))[0];
-  assert.equal(view.sale.status,'offered');assert.equal(view.sale.acceptedHow,'');assert.equal(view.sale.acceptedAt,0n);
-  const [fresh]=await a.myOffers(alpha);
-  assert.equal(fresh.waiverVersion,billing.waiverVersion+1n);
-  const old=await a.acceptOffer(alpha,sale.id,billing.waiverVersion,[address]);
-  assert.equal(old.ok,false,'accepting the old version is refused');
-  unwrap(await a.acceptOffer(alpha,sale.id,fresh.waiverVersion,[address]));
-  const issued=await a.issueInvoice(admin,sale.id);
-  assert.equal(issued.ok,true,issued.detail);assert.match(issued.invoiceNo,/^TEST-/);
-  view=(await a.getSale(alpha,sale.id))[0];
-  assert.equal(view.sale.status,'issued');assert.deepEqual(view.proposal,[],'still no pricing rule for the buyer after the invoice');
-  // 4 · editing an accepted colleague sale sends it back to the buyer and says so
+  assert.equal((await a.saleFinanceNotification(admin,sale.id)).find(n=>n.kind==='invoice').complete,true);
+  assert.match((await a.issueInvoice(admin,sale.id)).detail,/status issued/,'nothing to issue twice');
+  // 3 · the terms change before acceptance: the old version is refused, the new one is accepted and invoiced
   const second=unwrap(await a.createSale(admin,await device(x),colleague(x,'employee'),40000n,''));
   unwrap(await a.offerSale(admin,second.id));
-  const [offer2]=(await a.myOffers(alpha)).filter(v=>v.sale.id===second.id);
-  unwrap(await a.acceptOffer(alpha,second.id,offer2.waiverVersion,[address]));
-  const edited=await a.updateSale(admin,second.id,{...offer2.sale.buyer},38000n,'price lowered','');
-  assert.equal(edited.ok,true,edited.detail);assert.match(edited.detail,/told to accept the changed offer again/);
-  assert.equal((await a.getSale(admin,second.id))[0].sale.status,'offered');
+  const [billing]=await a.getBilling(admin);
+  unwrap(await a.setBilling(admin,{...billing,waiverText:billing.waiverText+' Updated clause.',waiverVersion:billing.waiverVersion+1n}));
+  const old=await a.acceptOffer(alpha,second.id,billing.waiverVersion,[address]);
+  assert.equal(old.ok,false,'accepting the old version is refused');
+  const [fresh]=(await a.myOffers(alpha)).filter(v=>v.sale.id===second.id);
+  assert.equal(fresh.waiverVersion,billing.waiverVersion+1n);
+  unwrap(await a.acceptOffer(alpha,second.id,fresh.waiverVersion,[address]));
+  view=(await a.getSale(admin,second.id))[0];
+  assert.equal(view.sale.status,'issued');assert.equal(view.sale.waiverVersion,billing.waiverVersion+1n);
+  // 4 · without complete billing settings the acceptance still counts; IT is told and issues later
+  unwrap(await a.setBilling(admin,{...billing,waiverVersion:billing.waiverVersion+1n,waiverText:billing.waiverText+' Updated clause.',iban:''}));
+  const third0=unwrap(await a.createSale(admin,await device(x),colleague(x,'employee'),35000n,''));
+  unwrap(await a.offerSale(admin,third0.id));
+  const [pend]=(await a.myOffers(alpha)).filter(v=>v.sale.id===third0.id);
+  const pendingReply=unwrap(await a.acceptOffer(alpha,third0.id,pend.waiverVersion,[address]));
+  assert.match(pendingReply.detail,/IT issues your invoice/);
+  view=(await a.getSale(admin,third0.id))[0];assert.equal(view.sale.status,'accepted');assert.equal(view.sale.pdfId,0n);
+  assert.ok((await a.saleFinanceNotification(admin,third0.id)).some(n=>n.kind==='accepted'),'IT is told to issue');
+  unwrap(await a.setBilling(admin,{...billing,waiverVersion:billing.waiverVersion+1n,waiverText:billing.waiverText+' Updated clause.'}));
+  const issued=await a.issueInvoice(admin,third0.id);
+  assert.equal(issued.ok,true,issued.detail);
+  view=(await a.getSale(admin,third0.id))[0];assert.equal(view.sale.status,'issued');assert.ok(view.sale.pdfId>0n,'issuing later also archives in the canister');
   // 5 · a decline carries the buyer's reason to IT
   const third=unwrap(await a.createSale(admin,await device(x),colleague(x,'beta'),30000n,''));
   unwrap(await a.offerSale(admin,third.id));

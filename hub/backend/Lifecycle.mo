@@ -3,7 +3,12 @@ import Array "mo:core/Array";
 module {
   public type Account = { key : Text; active : Bool; source : Text };
   public type Observation = { accounts : [Account]; active : Bool; name : Text; email : Text };
-  public type Change = { kind : { #deactivated; #reactivated }; source : Text };
+  public type Change = { kind : { #deactivated; #reactivated; #created }; source : Text };
+  /// A person seen for the first time with a usable account. Only meaningful once the directory has been observed before (imports are not joins).
+  public func created(after : Observation) : ?Change {
+    if (not after.active) return null;
+    switch (after.accounts.find(func a = a.active)) { case (?a) ?{ kind = #created; source = a.source }; case null null };
+  };
   public func change(before : Observation, after : Observation) : ?Change {
     if (after.accounts.size() == 0) return null;
     let disabled = after.accounts.filter(func a = not a.active and before.accounts.any(func b = b.key == a.key and b.active));

@@ -119,7 +119,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.37.1";
+  transient let BUILD_VERSION : Text = "0.38.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -7141,26 +7141,46 @@ persistent actor UserHub {
     result;
   };
   let lifecycleObserved = lifecycleSnapshot();
-  let lifecycleEvents = Map.empty<Nat, Support.Event>();
+  // Stored with the pre-0.38 event shape: the map is mutable stable state, so its value type cannot widen in place.
+  // Joins live in their own map; hub_lifecycleEvents merges both streams into one sequence.
+  type StoredLifecycleEvent = { seq : Nat; personId : Text; name : Text; email : Text; at : Int; kind : { #deactivated; #reactivated }; source : Text; effectiveActive : Bool };
+  let lifecycleEvents = Map.empty<Nat, StoredLifecycleEvent>();
+  let lifecycleJoins = Map.empty<Nat, Support.Event>();
   var lifecycleSequence : Nat = 0;
+  var lifecycleSeeded : Bool = false; // the first observation after this release only records what exists; later newcomers become #created events
+  let lifecycleSources = Map.empty<Text, Int>(); // source label → first seen; a source's initial import (which can span several observations) is a bootstrap, not joins
+  transient let LIFECYCLE_SOURCE_SETTLE : Int = 15 * 60 * 1_000_000_000; // joins count once the source has been observed for 15 minutes
   func observeLifecycle() {
     let current = lifecycleSnapshot();
+    let seenSources = List.empty<Text>();
     for ((pid, value) in current.entries()) {
+      for (a in value.accounts.vals()) seenSources.add(a.source);
       switch (lifecycleObserved.get(pid)) {
         case (?previous) {
           switch (Lifecycle.change(previous, value)) {
             case (?change) {
               lifecycleSequence += 1;
-              lifecycleEvents.add(lifecycleSequence, { seq = lifecycleSequence; personId = pid; name = value.name; email = value.email; at = Time.now(); kind = change.kind; source = change.source; effectiveActive = value.active });
-              if (lifecycleSequence > 20_000) lifecycleEvents.remove(lifecycleSequence - 20_000);
+              lifecycleEvents.add(lifecycleSequence, { seq = lifecycleSequence; personId = pid; name = value.name; email = value.email; at = Time.now(); kind = (switch (change.kind) { case (#reactivated) #reactivated; case (_) #deactivated }); source = change.source; effectiveActive = value.active });
+              if (lifecycleSequence > 20_000) { lifecycleEvents.remove(lifecycleSequence - 20_000); lifecycleJoins.remove(lifecycleSequence - 20_000) };
             };
             case null {};
           };
         };
-        case null {};
+        case null {
+          if (lifecycleSeeded) switch (Lifecycle.created(value)) {
+            case (?change) { if (switch (lifecycleSources.get(change.source)) { case (?since) Time.now() - since > LIFECYCLE_SOURCE_SETTLE; case null false }) {
+              lifecycleSequence += 1;
+              lifecycleJoins.add(lifecycleSequence, { seq = lifecycleSequence; personId = pid; name = value.name; email = value.email; at = Time.now(); kind = change.kind; source = change.source; effectiveActive = value.active });
+              if (lifecycleSequence > 20_000) { lifecycleEvents.remove(lifecycleSequence - 20_000); lifecycleJoins.remove(lifecycleSequence - 20_000) };
+            } };
+            case null {};
+          };
+        };
       };
       lifecycleObserved.add(pid, value);
     };
+    lifecycleSeeded := true;
+    for (source in seenSources.values()) if (not lifecycleSources.containsKey(source)) lifecycleSources.add(source, Time.now());
     // Source deletion is administrative; remembering absence avoids a false
     // transition if that same source/account is later imported again.
     for ((pid, _) in lifecycleObserved.entries().toArray().vals()) if (not current.containsKey(pid)) lifecycleObserved.remove(pid);
@@ -7183,7 +7203,12 @@ persistent actor UserHub {
     assert deskConnector(caller) != null;
     let out = List.empty<Support.Event>();
     var cursor = after;
-    for ((seq, event) in lifecycleEvents.entries()) if (seq > after and out.size() < 50) { out.add(event); cursor := seq };
+    // Both streams share one sequence; merge them in order and hand out at most 50.
+    let merged = List.empty<Support.Event>();
+    for ((seq, e) in lifecycleEvents.entries()) if (seq > after) merged.add({ seq = e.seq; personId = e.personId; name = e.name; email = e.email; at = e.at; kind = (switch (e.kind) { case (#reactivated) #reactivated; case (#deactivated) #deactivated }); source = e.source; effectiveActive = e.effectiveActive });
+    for ((seq, e) in lifecycleJoins.entries()) if (seq > after) merged.add(e);
+    let ordered = merged.toArray().sort(func(a, b) = Nat.compare(a.seq, b.seq));
+    for (event in ordered.vals()) if (out.size() < 50) { out.add(event); cursor := event.seq };
     let earliest = if (lifecycleSequence > 20_000) lifecycleSequence - 20_000 else 0;
     { events = out.toArray(); cursor; gap = after < earliest };
   };

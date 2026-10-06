@@ -34,7 +34,8 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
   };
   const setControl = (id, value) => { if (!dirty.has(id) && document.activeElement !== $(id)) $(id).value = value; };
   const sync = (text, stale = false) => { $('tSync').textContent = text; $('tSync').dataset.stale = String(stale); $('tSync').title = 'Checks for new replies every 7 seconds while this page is visible.'; };
-  function nextStep(t, staff) {
+  function nextStep(t, staff, late = 0) {
+    if ((t.status === 'resolved' || t.status === 'closed') && late) return ['A reply arrived after this request was ' + t.status + '.', staff ? 'Read it in the conversation and reopen the request if the team is needed again.' : 'Your message is with the team; they reopen the request if more help is needed.', '↩'];
     if (t.status === 'resolved' || t.status === 'closed') return ['All sorted.', 'This request has been resolved. If you need more help, you can reopen the conversation.', '✓'];
     if (t.waitingOn === 'approval' && t.status === 'waiting') return ['A decision is needed.', staff ? 'Review the approval below before continuing with this request.' : 'Your request is waiting for approval. We’ll keep you updated here.', '◷'];
     if (t.waitingOn === 'requester' && t.status === 'waiting') return [staff ? 'Waiting for the requester.' : 'Your team needs a little more information.', staff ? 'The next step is with the requester. Their reply will appear in the conversation.' : 'Reply below so your IT team can keep things moving.', '↩'];
@@ -97,7 +98,9 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     const workflow=opt(full.customerWorkflow);
     toggle('tNextStep', !paused && !workflow);
     paintCustomerWorkflow({el:$('tWorkflow'),value:workflow,act:(button,kind,revision,...args)=>{if(kind==='check')delete $('tWorkflow').dataset.signature;return action(button,'workflowStatus',id=>kind==='check'?api().checkCustomerStep(session.load(),id,revision,...args):api().moveCustomerStep(session.load(),id,revision,kind,...args));}});
-    const [title, text, icon] = nextStep(t, staff);
+    const doneAt = opt(t.resolvedAt) || opt(t.closedAt);
+    const late = doneAt ? full.events.filter(e => e.kind === 'comment' && e.actorKind === 'requester' && e.at > doneAt).length : 0;
+    const [title, text, icon] = nextStep(t, staff, late);
     $('tStepTitle').textContent = title; $('tStepText').textContent = text; $('tStepIcon').textContent = icon; $('tNextStep').dataset.state = t.status;
     const active = !['resolved','closed'].includes(t.status);
     html('tStatusBtns', mayWrite && !paused && !workflow ? `<button data-s="${active ? 'resolved' : 'open'}" data-w="">${active ? (staff ? 'Resolve request' : 'Mark as solved') : 'Reopen request'}</button>` : '');

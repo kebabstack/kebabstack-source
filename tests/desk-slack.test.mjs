@@ -120,16 +120,21 @@ test('slack: a channel message becomes a request for the Slack user, the bot ans
   await quiet(pic);
   full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.equal(full.ticket.status,'resolved');
   await flushOne(pic,c.desk,'chat.postMessage');await noOutcall(pic);
-  // 8b · the requester writes again in the thread after the resolve: the reply is kept and the request reopens
+  // 8b · the requester writes again after the resolve: the reply is kept, nothing reopens by itself, the owners are asked
   assert.equal((await post(pic,c.desk,message('Ev6b','UALPHA','1700000000.000250','Nope, still broken.',anchor))).body,'ok');
   await quiet(pic);
   full=(await c.desk.getTicket(c.tokens.alpha,row.id))[0];
-  assert.equal(full.ticket.status,'open','a requester reply on a resolved request reopens it');
+  assert.equal(full.ticket.status,'resolved','a reply alone never changes a finished request');
   assert.ok(full.events.some(e=>e.kind==='comment'&&e.body==='Nope, still broken.'),'the reply is on the request');
+  await noOutcall(pic);
+  assert.ok((await c.desk.notifyHealth(c.tokens.owner))[0].recent.some(r=>/replied after resolution .* reopen\?/.test(r.title)),'the owners are asked whether to reopen');
+  // 8b2 · ↩️ on the first message is the explicit "not done": it reopens whoever had set the ✅
+  assert.equal((await post(pic,c.desk,{type:'event_callback',event_id:'Ev6r',event:{type:'reaction_added',user:'UALPHA',reaction:'leftwards_arrow_with_hook',item:{type:'message',channel:CHANNEL,ts:anchor}}})).body,'ok');
+  await quiet(pic);
+  full=(await c.desk.getTicket(c.tokens.alpha,row.id))[0];assert.equal(full.ticket.status,'open','↩️ reopens');
   await pic.advanceTime(11000);
   const afterReply=[];for(let i=0;i<3;i++){const r=await outcall(pic);afterReply.push(r.url.split('/').at(-1)+' '+text(r.body));await pic.mockPendingHttpsOutcall({requestId:r.requestId,subnetId:r.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from('{"ok":true}')}});}
-  assert.ok(afterReply.some(x=>x.startsWith('reactions.remove')&&/white_check_mark/.test(x)),'✅ is taken off the first message');
-  assert.ok(afterReply.some(x=>x.startsWith('reactions.remove')&&/"name":"lock"/.test(x)),'a stale 🔒 would be taken off too');
+  assert.ok(afterReply.some(x=>x.startsWith('reactions.remove')&&/white_check_mark/.test(x)),'the bot takes its ✅ off the first message');
   assert.ok(afterReply.some(x=>x.startsWith('chat.postMessage')&&/reopened/.test(x)),'the thread is told');
   await noOutcall(pic);
   // 8c · closing from Desk marks the first message with 🔒; a staff reply in the thread is kept without reopening
@@ -144,17 +149,30 @@ test('slack: a channel message becomes a request for the Slack user, the bot ans
   full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];
   assert.equal(full.ticket.status,'closed','a staff reply does not reopen');
   assert.ok(full.events.some(e=>e.kind==='comment'&&e.body==='For the record: replaced the AP.'),'the staff reply on a closed request is kept');
-  // 8d · the requester replies on the closed request: kept and reopened, 🔒 comes off
-  assert.equal((await post(pic,c.desk,message('Ev6d','UALPHA','1700000000.000270','It is broken again.',anchor))).body,'ok');
+  // 8d · with an AI key the late reply is assessed: a follow-up reopens with a visible note, thanks leave the request alone
+  unwrap(await c.desk.setAi(c.tokens.owner,{provider:'openai',url:'https://ai.example.test/v1/chat/completions',key:'fixture-key',model:'fixture-model'}));
+  assert.equal((await post(pic,c.desk,message('Ev6d','UALPHA','1700000000.000270','It is broken again, same error.',anchor))).body,'ok');
+  const ask=await outcall(pic,'ai.example.test');
+  assert.match(text(ask.body),/Late reply: It is broken again/);assert.doesNotMatch(text(ask.body),/For the record/,'only the late reply and the subject go to the model');
+  await pic.mockPendingHttpsOutcall({requestId:ask.requestId,subnetId:ask.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from(JSON.stringify({choices:[{message:{content:'{"kind":"followup","reason":"The problem persists."}'}}]}))}});
   await quiet(pic);
   full=(await c.desk.getTicket(c.tokens.alpha,row.id))[0];
-  assert.equal(full.ticket.status,'open','a requester reply on a closed request reopens it');
+  assert.equal(full.ticket.status,'open','the assistant reopened a genuine follow-up');
+  assert.ok(full.events.some(e=>e.kind==='ai'&&/Reopened: the late reply reads as a follow-up. The problem persists./.test(e.body)),'the decision is a visible AI note');
   await pic.advanceTime(11000);
-  const afterReopen=[];for(let i=0;i<3;i++){const r=await outcall(pic);afterReopen.push(r.url.split('/').at(-1)+' '+text(r.body));await pic.mockPendingHttpsOutcall({requestId:r.requestId,subnetId:r.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from('{"ok":true}')}});}
-  assert.ok(afterReopen.some(x=>x.startsWith('reactions.remove')&&/"name":"lock"/.test(x)),'🔒 is taken off');
-  assert.ok(afterReopen.some(x=>x.startsWith('chat.postMessage')&&/reopened/.test(x)));
+  const afterAi=[];for(let i=0;i<3;i++){const r=await outcall(pic);afterAi.push(r.url.split('/').at(-1)+' '+text(r.body));await pic.mockPendingHttpsOutcall({requestId:r.requestId,subnetId:r.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from('{"ok":true}')}});}
+  assert.ok(afterAi.some(x=>x.startsWith('reactions.remove')&&/"name":"lock"/.test(x)),'🔒 is taken off');
+  assert.ok(afterAi.some(x=>x.startsWith('chat.postMessage')&&/reopened by the AI assistant/.test(x)));
   await noOutcall(pic);
   unwrap(await c.desk.setStatus(c.tokens.beta,row.id,'resolved',''));await pic.advanceTime(11000);await answer(pic,'reactions.add',{ok:true});await answer(pic,'chat.postMessage',{ok:true});await noOutcall(pic);
+  assert.equal((await post(pic,c.desk,message('Ev6e','UALPHA','1700000000.000280','Thanks, works now!',anchor))).body,'ok');
+  const ask2=await outcall(pic,'ai.example.test');
+  await pic.mockPendingHttpsOutcall({requestId:ask2.requestId,subnetId:ask2.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from(JSON.stringify({choices:[{message:{content:'{"kind":"closing","reason":"Confirms it works."}'}}]}))}});
+  await quiet(pic);
+  full=(await c.desk.getTicket(c.tokens.alpha,row.id))[0];
+  assert.equal(full.ticket.status,'resolved','thanks leave the request resolved');
+  assert.ok(full.events.some(e=>e.kind==='ai'&&/reads as thanks or confirmation; left resolved/.test(e.body)));
+  await noOutcall(pic);
   // 9 · every Hub notification attempt is on record for the administrator
   const health=(await c.desk.notifyHealth(c.tokens.owner))[0];
   assert.ok(health.total>0n,'deliveries recorded');assert.equal(health.failed,0n,JSON.stringify(health.recent,(_,v)=>typeof v==='bigint'?String(v):v));

@@ -8,7 +8,7 @@ module {
   public type Item = { id : Text; kind : Text; title : Text; detail : Text; status : Text; path : Text; historical : Bool };
   public type Context = { state : { #ready; #denied; #unavailable }; items : [Item]; total : Nat; checkedAt : Int };
   public type Source = { cid : Nat; app : Text; name : Text; url : Text };
-  public type Event = { seq : Nat; personId : Text; name : Text; email : Text; at : Int; kind : { #deactivated; #reactivated }; source : Text; effectiveActive : Bool };
+  public type Event = { seq : Nat; personId : Text; name : Text; email : Text; at : Int; kind : { #deactivated; #reactivated; #created }; source : Text; effectiveActive : Bool };
   public type Batch = { events : [Event]; cursor : Nat; gap : Bool };
   public func denied() : Context { { state = #denied; items = []; total = 0; checkedAt = Time.now() } };
   public func unavailable() : Context { { state = #unavailable; items = []; total = 0; checkedAt = Time.now() } };

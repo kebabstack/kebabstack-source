@@ -33,7 +33,8 @@ Status: alpha. **Slack intake** since 0.5.0: a support channel becomes a queue
 (message → request, bot answers in the thread, replies both ways, ✅ by the requester or
 Desk staff resolves, removing it reopens; a bystander's ✅ is ignored since 0.28.0);
 agent replies appear under the agent's name when the Slack app has `chat:write.customize` (0.29.1);
-replies on finished requests are kept and a requester's reply reopens the request; 🔒 marks closed (0.29.2);
+replies on finished requests are kept, owners are asked whether to reopen, ↩️ on the first message
+reopens, and the AI assistant reopens genuine follow-ups when a key is configured; 🔒 marks closed (0.30.0);
 the Slack app is configured once in the hub and assigned to desk there. Teams
 intake is not shipped.
 
@@ -160,6 +161,13 @@ Subtasks share the parent's audience, owner and archive lifecycle. They do not
 create separate tickets, notification streams or nested task trees.
 
 Hub 0.37 Operations shows shared Workboard project totals and subtask progress; paired TV screens require explicit Workboard inclusion. See [the Operations scope](../docs/HUB-OPERATIONS.md).
+
+## Onboarding from the directory (0.30.0)
+
+Switch on **Settings → General → Create an Onboarding request when a new person appears in
+the directory** and every person the Hub reports as new becomes an internal Onboarding request
+with name and date filled in; the Onboarding checklist, hardware and manager stay with IT. One
+request per person; an import of more than ten people in one batch creates none. Needs Hub 0.38.
 
 ## Notification deliveries (0.28.0)
 

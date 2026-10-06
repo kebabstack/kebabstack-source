@@ -1,5 +1,10 @@
 # Changelog — kebab-stack hub
 
+## [0.38.0] — 2026-10-06
+
+- Lifecycle events now include `created`: a person who appears in the directory (SCIM, Okta, OpenTeam, local, invitation) after the Hub already knew its people. The first observation after this release only records what exists, and a source's joins count only once that source has been observed for 15 minutes, so an upgrade or an initial import (even one that arrives in several chunks) never produces join events. Desk 0.30 turns these into onboarding requests when told to.
+- Install Desk 0.30 (SDK 0.15) before this Hub: an older Desk cannot decode the new event kind and would stop following directory changes until updated.
+
 ## [0.37.1] — 2026-09-29
 
 - Expose the current global Hub role in the read-only topbar heartbeat. Show the Hub console link in the employee workspace and official apps independently of how the menu was opened; never derive it from an app-local role.

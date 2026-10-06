@@ -132,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.29.2"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.30.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -877,6 +877,9 @@ persistent actor Desk {
   let lifecycleCases = Map.empty<Nat, LifecycleCase>();
   let internalTickets = Map.empty<Nat, Bool>();
   var lifecycleCursor : Nat = 0;
+  var onboardingFromDirectory : Bool = false; // Settings → General: a directory join becomes an Onboarding request
+  let onboardingCases : Map.Map<Text, Nat> = Map.empty(); // person id → onboarding request, one per person
+  transient var joinFlood : Bool = false; // more than ten joins in one batch: an import, not hires
   var lifecycleCheckedAt : Int = 0;
   var lifecycleError : Text = "";
   var lifecycleGap : Bool = false;
@@ -907,7 +910,36 @@ persistent actor Desk {
     let rt : RequestType = { id; name = "Account review"; icon = "◉"; description = "Internal follow-up for a directory change"; fields = []; checklist = []; queue = switch (offboardingType()) { case (?t) t.queue; case null "" }; approval = "none"; defaultPriority = "high"; respondH = 0; resolveH = 0; dueField = ""; visibility = "agents"; enabled = false; sortOrder = 999 };
     types.add(id, rt); rt;
   };
+  /// A person appeared in the directory. With the setting on, this becomes an Onboarding request with the name and date filled in;
+  /// the rest (hardware, accounts, manager) is for IT. One request per person; an import of many people at once creates none.
+  func receiveJoin<system>(event : Support.Event) {
+    if (not onboardingFromDirectory) return;
+    if (onboardingCases.containsKey(event.personId)) return;
+    if (joinFlood) return;
+    let rt = switch (types.values().find(func t = t.enabled and lower(norm(t.name)) == "onboarding")) {
+      case (?t) t;
+      case null { log("system", "directory join of " # event.name # " not turned into a request: no enabled Onboarding request type"); return };
+    };
+    let name = norm(event.name);
+    let (first, last) = switch (Text.split(name, #char ' ').next()) { case (?f) (f, norm(Text.stripStart(name, #text f) ?? "")); case null (name, "") };
+    let fields = [("firstName", first), ("lastName", last), ("startDate", isoDateOf(event.at))];
+    let id = createInternal<system>(rt, "system", "Onboarding · " # name, "A new person appeared in the company directory (" # event.source # "). Prepare accounts, hardware, licences and the first day; the request follows the Onboarding checklist.", fields, rt.defaultPriority, "directory", "system", "system", false);
+    internalTickets.add(id, true);
+    onboardingCases.add(event.personId, id);
+    ignore addEvent(id, "system", "system", "lifecycle", "Directory join received from " # event.source # ".", []);
+  };
+  func isoDateOf(ns : Int) : Text {
+    let days = ns / 86_400_000_000_000;
+    // civil-from-days (Howard Hinnant), valid for 1970 onwards
+    let z = days + 719_468; let era = z / 146_097; let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400; let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1; let m = if (mp < 10) mp + 3 else mp - 9; let yy = if (m <= 2) y + 1 else y;
+    let pad = func(n : Int) : Text = (if (n < 10) "0" else "") # Int.toText(n);
+    Int.toText(yy) # "-" # pad(m) # "-" # pad(d);
+  };
   func receiveLifecycle<system>(event : Support.Event) {
+    if (event.kind == #created) { receiveJoin<system>(event); return };
     let existing = lifecycleTicket(event.personId, event.kind == #reactivated);
     if (event.kind == #reactivated and existing == null) return;
     let id = switch (existing) {
@@ -946,6 +978,9 @@ persistent actor Desk {
       let batch = await (with timeout = 15) hub.hub_lifecycleEvents(lifecycleCursor);
       if (hubId != expectedHub) return;
       if (batch.gap) lifecycleGap := true;
+      var joins = 0; for (event in batch.events.vals()) if (event.seq > lifecycleCursor and event.kind == #created) joins += 1;
+      joinFlood := joins > 10;
+      if (joinFlood and onboardingFromDirectory) log("system", "directory import of " # Nat.toText(joins) # " people detected; no onboarding requests were created for this batch");
       for (event in batch.events.vals()) if (event.seq > lifecycleCursor) {
         receiveLifecycle<system>(event);
         lifecycleCursor := event.seq;
@@ -1382,13 +1417,20 @@ persistent actor Desk {
 
   public type Settings = {
     hubId : Text; appUrl : Text; orgName : Text; agentGroup : Text; adminGroup : Text; adminEmails : [Text];
-    keyPrefix : Text; autoCloseDays : Nat; aiProvider : Text; aiUrl : Text; aiModel : Text; aiKeySet : Bool; aiTriage : Bool; aiSource : Text; aiHubModel : Text;
+    keyPrefix : Text; autoCloseDays : Nat; onboardingFromDirectory : Bool; aiProvider : Text; aiUrl : Text; aiModel : Text; aiKeySet : Bool; aiTriage : Bool; aiSource : Text; aiHubModel : Text;
     demoSeeded : Bool; peopleCount : Nat; lastDirectoryPull : Int; agentCount : Nat; adminCount : Nat; fileBytes : Nat;
   };
   func settingsView() : Settings = {
-    hubId; appUrl; orgName; agentGroup = ""; adminGroup = ""; adminEmails = []; keyPrefix; autoCloseDays; aiProvider; aiUrl; aiModel;
+    hubId; appUrl; orgName; agentGroup = ""; adminGroup = ""; adminEmails = []; keyPrefix; autoCloseDays; onboardingFromDirectory; aiProvider; aiUrl; aiModel;
     aiKeySet = aiKey != ""; aiTriage; aiSource = aiSource(); aiHubModel = (switch (hubAi) { case (?c) c.provider # " · " # c.model; case null "" }); demoSeeded; peopleCount = Map.size(people); lastDirectoryPull; fileBytes;
     agentCount = Array.filter<Text>(staffEmails(), func(e) = roleOf(e) == "agent").size(); adminCount = Array.filter<Text>(staffEmails(), func(e) = roleOf(e) == "admin").size();
+  };
+  /// Settings → General: turn directory joins into Onboarding requests (admins).
+  public shared func setOnboardingFromDirectory(tok : Text, on : Bool) : async { ok : Bool; detail : Text } {
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+    onboardingFromDirectory := on;
+    log(m.email, if (on) "onboarding requests from directory joins: on" else "onboarding requests from directory joins: off");
+    { ok = true; detail = "" };
   };
   public shared query func getSettings(tok : Text) : async ?Settings {
     switch (admin(tok)) { case (?_) ?settingsView(); case null null };
@@ -2190,7 +2232,8 @@ persistent actor Desk {
         ignore addEvent(t.id, "system", "system", "status", "open (requester replied)", [("status", "open")]);
       };
       put(t);
-      notifyOwners<system>(t, personName(who) # " commented · " # t.key, t.key # ":comment:" # Nat.toText(nextEventId));
+      let finished = t.status == "resolved" or t.status == "closed";
+      notifyOwners<system>(t, personName(who) # (if (finished) " replied after resolution · " # t.key # " — reopen?" else " commented · " # t.key), t.key # (if (finished) ":late:" else ":comment:") # Nat.toText(nextEventId));
     };
     if (not fromSlack) slackMirrorSay(t.id, personName(who), slackEsc(capText(b, 2_800)));
   };
@@ -2848,7 +2891,7 @@ persistent actor Desk {
     let view = if (link == "") "" else " <" # link # "|Open request>";
     if (t.status == "resolved" and oldStatus != "resolved") {
       if (not fromSlack) slackMirrorReact(t.id, "white_check_mark", true);
-      slackMirrorPost(t.id, ":white_check_mark: *" # t.key # "* resolved" # (if (who == "") "" else " by " # slackEsc(who)) # ". Not fixed after all? Remove the :white_check_mark: from the first message (or reopen it in desk) and the team takes another look." # view);
+      slackMirrorPost(t.id, ":white_check_mark: *" # t.key # "* resolved" # (if (who == "") "" else " by " # slackEsc(who)) # ". Not fixed after all? React with :leftwards_arrow_with_hook: on the first message or reply in this thread, and the team takes another look." # view);
     } else if ((t.status == "open" or t.status == "new") and (oldStatus == "resolved" or oldStatus == "closed")) {
       if (not fromSlack) slackMirrorReact(t.id, "white_check_mark", false);
       slackMirrorReact(t.id, "lock", false);
@@ -2970,14 +3013,15 @@ persistent actor Desk {
     let ev = switch (Json.get(j, "event")) { case (?x) x; case null return plainRes(200, "no event") };
     let evType = jStr(ev, "type");
     if (evType == "reaction_added" or evType == "reaction_removed") {
-      if (jStr(ev, "reaction") != "white_check_mark") return plainRes(200, "ignored");
+      let reaction = jStr(ev, "reaction");
+      if (reaction != "white_check_mark" and reaction != "leftwards_arrow_with_hook") return plainRes(200, "ignored");
       let channel = jStr(ev, "item.channel");
       let ic = switch (intakeByChannel(channel)) { case (?ic) ic; case null return plainRes(200, "ignored") };
       let cred = switch (credOf(ic.hubBotId)) { case (?c) c; case null return plainRes(200, "ignored") };
       if (not ic.enabled or not verifiedFor(ic.hubBotId) or jStr(ev, "user") == cred.botUserId) return plainRes(200, "ignored");
       let tid = switch (Map.get(slackByTs, Text.compare, channel # "#" # jStr(ev, "item.ts"))) { case (?n) n; case null return plainRes(200, "ignored") };
       if (tid == 0) return plainRes(200, "ignored");
-      ignore slackReaction<system>(ic, cred, tid, jStr(ev, "user"), evType == "reaction_added"); // detached: Slack wants its 200 within 3 s, the work needs outcalls
+      ignore slackReaction<system>(ic, cred, tid, jStr(ev, "user"), reaction, evType == "reaction_added"); // detached: Slack wants its 200 within 3 s, the work needs outcalls
       return plainRes(200, "ok");
     };
     if (evType != "message") return plainRes(200, "ignored");
@@ -3049,30 +3093,58 @@ persistent actor Desk {
     let who = if (email == "") "slack:" # user else pidOf(email);
     let asStaff = email != "" and isStaff(roleOf(email)) and t.requester != who;
     let finished = t.status == "resolved" or t.status == "closed";
-    // A thread reply always lands on the request, finished or not; nothing said in the thread is lost.
+    // A thread reply always lands on the request, finished or not; nothing said in the thread is lost. It never changes the
+    // status by itself (a "thanks" must not reopen): the owners are asked, and the AI assistant, when configured, assesses it.
     addCommentInternal<system>(t, who, capText(text, 20_000), asStaff, true);
     if (finished and not asStaff) {
-      // The person who asked writes again after resolve/close: the request is not done. Reopen it and say so in the thread.
-      switch (Map.get(tickets, Nat.compare, tid)) {
-        case (?cur) {
-          let r = applyStatus(cur, "open", "", who, "requester");
-          if (r.ok) { put(r.t); slackMirrorStatus(r.t, cur.status, personName(who), false); touchIntake(ic.id, "reply on " # t.key # " reopened it") }
-          else touchIntake(ic.id, "reply on " # t.key # " recorded; not reopened: " # r.detail);
-        };
-        case null {};
-      };
+      touchIntake(ic.id, "reply on finished " # t.key # " recorded; owners asked whether to reopen");
+      let body = capText(text, 20_000);
+      ignore Timer.setTimer<system>(#seconds 0, func() : async () { await assessLateReply(tid, body) });
     } else touchIntake(ic.id, "reply on " # t.key # (if (finished) " (finished request, comment recorded)" else ""));
+  };
+  /// A requester wrote after the request was finished. With an AI key, the assistant decides whether the team is needed again:
+  /// a follow-up reopens the request (visible as an AI note and in Slack); thanks or confirmation leave it as it is.
+  func assessLateReply(id : Nat, body : Text) : async () {
+    if (not aiTriage or projectOf(id) != 0) return;
+    let t = switch (Map.get(tickets, Nat.compare, id)) { case (?t) t; case null return };
+    if (t.status != "resolved" and t.status != "closed") return;
+    let sys = "A support request was already resolved. The person who asked wrote again. Decide whether the support team is needed again. Reply with ONLY a JSON object, no prose, keys exactly: kind (followup|closing), reason (one short sentence). followup = the problem persists, a new question or request, more help needed. closing = thanks, acknowledgement, confirmation that it works, nothing to do. When unsure, answer closing.";
+    let out = await aiComplete(sys, "Request: " # t.subject # "\nLate reply: " # capText(body, 2_000), 120);
+    if (out == "") return;
+    let obj = switch (Json.parse(stripFences(out))) { case (#ok(j)) j; case (#err(_)) return };
+    let kind = jStr(obj, "kind"); let reason = capText(norm(jStr(obj, "reason")), 200);
+    let cur = switch (Map.get(tickets, Nat.compare, id)) { case (?c) c; case null return };
+    if (cur.status != "resolved" and cur.status != "closed") return; // a person acted meanwhile
+    if (kind == "followup") {
+      let r = applyStatus(cur, "open", "", "ai", "ai");
+      if (not r.ok) { ignore addEvent(id, "ai", "ai", "ai", "The late reply reads as a follow-up, but the request could not be reopened: " # r.detail, [("decision", "blocked")]); return };
+      put(r.t);
+      ignore addEvent(id, "ai", "ai", "ai", "Reopened: the late reply reads as a follow-up." # (if (reason == "") "" else " " # reason), [("decision", "reopen")]);
+      notifyOwners<system>(r.t, "Reopened by the AI assistant · " # cur.key # " " # cur.subject, cur.key # ":ai-reopen:" # Nat.toText(nextEventId));
+      slackMirrorStatus(r.t, cur.status, "the AI assistant", false);
+    } else ignore addEvent(id, "ai", "ai", "ai", "The late reply reads as thanks or confirmation; left " # cur.status # "." # (if (reason == "") "" else " " # reason), [("decision", "keep")]);
   };
 
   /// ✅ added on the first message → resolved; ✅ removed → reopened.
-  func slackReaction<system>(ic : SlackIntake, cred : SlackCred, tid : Nat, user : Text, added : Bool) : async () {
+  func slackReaction<system>(ic : SlackIntake, cred : SlackCred, tid : Nat, user : Text, reaction : Text, added : Bool) : async () {
     let email = await slackEmail(cred, user);
     let t = switch (Map.get(tickets, Nat.compare, tid)) { case (?t) t; case null return };
     if (projectOf(tid) != 0) return;
     let who = if (email == "") "slack:" # user else pidOf(email);
     let kind = if (email != "" and isStaff(roleOf(email))) "agent" else "requester";
     // Only the person who asked, or desk staff, may close or reopen a request from Slack. A bystander's ✅ is a reaction, not a decision.
-    if (kind != "agent" and who != t.requester) { touchIntake(ic.id, "✅ on " # t.key # " by someone other than the requester ignored"); return };
+    if (kind != "agent" and who != t.requester) { touchIntake(ic.id, "reaction on " # t.key # " by someone other than the requester ignored"); return };
+    if (reaction == "leftwards_arrow_with_hook") {
+      // ↩️ is the explicit "not done after all": it works whoever set the ✅, because nobody can remove another person's reaction.
+      if (not added or (t.status != "resolved" and t.status != "closed")) return;
+      let r = applyStatus(t, "open", "", who, kind);
+      if (not r.ok) { touchIntake(ic.id, "↩️ on " # t.key # " refused: " # r.detail); return };
+      put(r.t);
+      notifyOwners<system>(r.t, personName(who) # " reopened · " # t.key, t.key # ":reopen:" # Nat.toText(nextEventId));
+      slackMirrorStatus(r.t, t.status, personName(who), false);
+      touchIntake(ic.id, t.key # " reopened with ↩️");
+      return;
+    };
     if (added) {
       if (t.status == "resolved" or t.status == "closed") return;
       let r = applyStatus(t, "resolved", "", who, kind);

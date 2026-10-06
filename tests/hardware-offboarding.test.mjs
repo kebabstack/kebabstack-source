@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, before, after } from 'node:test';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { PocketIc, PocketIcServer, createIdentity } from '@dfinity/pic';
 const principal=Object.fromEntries(['controller','owner','agent','alice','hr'].map(n=>[n,createIdentity('hardware-'+n).getPrincipal()]));
@@ -115,8 +116,8 @@ test('hardware upgrade: preserves Lunch, central roles, held devices and issued 
   const f=await fixture(pic,true),{h,desk,assets,owner,admin,ids}=f;
   const sale=ok(await assets.app.createSale(admin,ids[0],buyer,30000n,''));
   const alice=await assets.login('alice');ok(await assets.app.offerSale(admin,sale.id));const [offer]=await assets.app.getSale(admin,sale.id);ok(await assets.app.acceptOffer(alice,sale.id,offer.waiverVersion,[buyer]));
-  ok(await assets.app.setSaleChecks(admin,sale.id,true,true));ok(await assets.app.issueInvoice(admin,sale.id));
-  const bytes=Buffer.from('%PDF-1.4\n'+'Existing invoice document '.repeat(20));ok(await assets.app.attachSaleDocument(admin,sale.id,'invoice',bytes));
+  ok(await assets.app.setSaleChecks(admin,sale.id,true,true));
+  { const s0=(await assets.app.getSale(admin,sale.id))[0]; if(s0.sale.status==='accepted')ok(await assets.app.issueInvoice(admin,sale.id)); if((await assets.app.getSale(admin,sale.id))[0].sale.pdfId===0n)ok(await assets.app.attachSaleDocument(admin,sale.id,'invoice',Buffer.from('%PDF-1.4\n'+'Existing invoice document '.repeat(20)))); } // 0.19 archives at acceptance; the 0.17 baseline needs issue + upload
   const before=(await assets.app.getSale(admin,sale.id))[0];
   const offered=ok(await assets.app.createSale(admin,ids[1],buyer,20000n,''));ok(await assets.app.offerSale(admin,offered.id));const [pending]=await assets.app.getSale(admin,offered.id);ok(await assets.app.acceptOffer(alice,offered.id,pending.waiverVersion,[buyer]));
   const lunch=createIdentity('hardware-lunch').getPrincipal();h.hub.setPrincipal(principal.owner);await h.hub.connectApp({name:'Lunch',canisterId:lunch.toText(),note:'',lanes:['identity'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[]});h.hub.setPrincipal(lunch);const lunchBefore=await h.hub.team_members();
@@ -130,11 +131,11 @@ test('hardware upgrade: preserves Lunch, central roles, held devices and issued 
   ok(await assets.app.continueFormerBuyerSale(admin,sale.id,'alice@private.test'));
   const link=ok(await assets.app.createDealLink(admin,sale.id)),key=link.url.split('.').at(-1);
   const view=(await assets.app.getSale(admin,sale.id))[0];assert.deepEqual(view.sale.buyer,before.sale.buyer);assert.equal(view.sale.invoiceNo,before.sale.invoiceNo);assert.equal(view.sale.acceptedHow,before.sale.acceptedHow);assert.equal(view.sale.pdfHash,before.sale.pdfHash);
-  assert.deepEqual(Buffer.from((await assets.app.dealDocument(sale.id,key))[0].bytes),bytes,'existing invoice bytes unchanged');
+  assert.equal(createHash('sha256').update(Buffer.from((await assets.app.dealDocument(sale.id,key))[0].bytes)).digest('hex'),before.sale.pdfHash,'existing invoice bytes unchanged');
   assert.deepEqual(await assets.app.getDeal(sale.id,key.replace(/^./,key[0]==='a'?'b':'a')),[]);
   await upgrade(pic,assets,'assets');await upgrade(pic,desk,'desk');
   assert.equal((await assets.app.pendingHandovers(admin)).length,5);assert.equal((await assets.app.getDeal(sale.id,key)).length,1,'scoped access and plans survive a populated upgrade');
-  await pic.advanceTime(14*86400000+1000);await pic.tick(25);const freshAdmin=await assets.login('owner');await pic.tick(5);assert.equal((await assets.app.formerBuyerStatus(freshAdmin,sale.id))[0].privateEmail,'','additional private contact expires with its access window');assert.deepEqual(await assets.app.getDeal(sale.id,key),[]);assert.deepEqual(Buffer.from((await assets.app.saleDocument(freshAdmin,before.sale.pdfId))[0].bytes),bytes,'financial archive survives contact cleanup');
+  await pic.advanceTime(14*86400000+1000);await pic.tick(25);const freshAdmin=await assets.login('owner');await pic.tick(5);assert.equal((await assets.app.formerBuyerStatus(freshAdmin,sale.id))[0].privateEmail,'','additional private contact expires with its access window');assert.deepEqual(await assets.app.getDeal(sale.id,key),[]);assert.equal(createHash('sha256').update(Buffer.from((await assets.app.saleDocument(freshAdmin,before.sale.pdfId))[0].bytes)).digest('hex'),before.sale.pdfHash,'financial archive survives contact cleanup');
  }finally{await pic.tearDown();}
 });
 
@@ -152,7 +153,7 @@ test('an incorrect planned departure can be cancelled without fake returns or lo
   await desk.app.offboardingHardware(owner,request.id);assert.equal((await assets.app.pendingHandovers(admin)).length,0);
   for(const id of ids){const [v]=await assets.app.getAsset(admin,id);assert.equal(v.asset.assignee,h.ids.alice);assert.equal(v.asset.status,'assigned');}
   assert.equal((await desk.app.setStatus(owner,request.id,'open','')).ok,false,'cancelled decisions are not silently reused');
-  const sale=ok(await assets.app.createSale(admin,ids[0],{...buyer,pid:'',name:'Outside Buyer',email:'outside@example.test'},20000n,''));ok(await assets.app.offerSale(admin,sale.id));ok(await assets.app.recordWaiver(admin,sale.id,'Signed paper retained'));ok(await assets.app.setSaleChecks(admin,sale.id,true,true));ok(await assets.app.issueInvoice(admin,sale.id));ok(await assets.app.attachSaleDocument(admin,sale.id,'invoice',Buffer.from('%PDF-1.4\n'+'Test document '.repeat(30))));ok(await assets.app.markPaid(admin,sale.id,'Confirmed'));ok(await assets.app.completeSaleHandover(admin,sale.id,true,'Ordinary sale after the incorrect departure was cancelled'));
+  const sale=ok(await assets.app.createSale(admin,ids[0],{...buyer,pid:'',name:'Outside Buyer',email:'outside@example.test'},20000n,''));ok(await assets.app.offerSale(admin,sale.id));ok(await assets.app.recordWaiver(admin,sale.id,'Signed paper retained'));ok(await assets.app.setSaleChecks(admin,sale.id,true,true));ok(await assets.app.issueInvoice(admin,sale.id));ok(await assets.app.markPaid(admin,sale.id,'Confirmed'));ok(await assets.app.completeSaleHandover(admin,sale.id,true,'Ordinary sale after the incorrect departure was cancelled'));
   const next=ok(await desk.app.agentCreate(owner,{typeId:rt.id,subject:'Later confirmed departure',body:'A new decision',fields:[['person','alice@lifecycle.test'],['lastDay','2026-10-31'],['manager','owner@lifecycle.test']],requester:'hr@lifecycle.test',priority:'normal',channel:'agent'}));await desk.app.offboardingHardware(owner,next.id);const newPlan=(await assets.app.handoverOf(admin,ids[1]))[0].plan;assert.ok(newPlan.revision>oldPlan.revision);assert.equal((await assets.app.updateHandover(admin,ids[1],oldPlan.revision,'receive',planInput(oldPlan),'SERIAL-phone')).ok,false,'a stale browser from a previous case cannot operate the new handover');
  }finally{await pic.tearDown();}
 });

@@ -185,6 +185,7 @@
             <div><label for="sgPrefix">Ticket key prefix</label><input type="text" id="sgPrefix" maxlength="6"></div>
             <div><label for="sgAutoClose">Auto-close resolved after (days, 0 = never)</label><input type="number" id="sgAutoClose" min="0" max="365"></div>
           </div>
+          <label class="ck" for="sgOnboarding"><input type="checkbox" id="sgOnboarding"><span>Create an <b>Onboarding</b> request when a new person appears in the directory<small>Uses the Onboarding request type; name and date are filled in, hardware, manager and checklist stay with IT. One request per person; an import of more than ten people at once creates none.</small></span></label>
           <div class="btnrow"><button id="sgSave" class="primary">Save</button><button id="sgSync">Sync directory now</button><span id="sgStatus" class="status" role="status"></span></div>
         </div>
         <div class="card"><h3>Permissions</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p><p id="sgRoleCounts" class="kv"></p></div>

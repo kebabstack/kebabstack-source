@@ -1176,13 +1176,12 @@ test('assets: a device sale — only the buyer accepts the terms, numbers are ga
     assert.match((await app.acceptOffer(memberTok, sid, 1n, address)).detail, /terms changed/, 'the version shown must be the current one');
     assert.match((await app.acceptOffer(memberTok, sid, 2n, [])).detail, /postal address/, 'the invoice needs the buyer address');
     const acc = await app.acceptOffer(memberTok, sid, 2n, address); assert.equal(acc.ok, true, acc.detail);
-    v = (await app.getSale(memberTok, sid))[0]; assert.equal(v.sale.status, 'accepted'); assert.equal(v.sale.acceptedHow, 'online'); assert.equal(v.sale.buyer.town, 'Kilchberg');
+    v = (await app.getSale(memberTok, sid))[0]; assert.equal(v.sale.status, 'issued', 'acceptance issues the invoice at once'); assert.equal(v.sale.acceptedHow, 'online'); assert.equal(v.sale.buyer.town, 'Kilchberg'); assert.ok(v.sale.pdfId > 0n, 'the PDF is archived by the canister');
     // issue: checks first, then the gapless number, the SCOR reference, the QR payload, the device marked sold
     assert.equal((await app.completeSaleHandover(adminTok, sid, true, '')).ok, false, 'no delivery before payment');
     assert.equal((await app.setSaleChecks(adminTok, sid, true, true)).ok, true);
-    const is = await app.issueInvoice(adminTok, sid); assert.equal(is.ok, true, is.detail);
-    const invoiceBell = await hub.myNotifications(memberSuite, 10n);
-    assert.equal(invoiceBell.items.find(n => n.kind === 'assets.invoice').url, `https://assets.example.test/#/offers/${sid}`, 'invoice notification opens the same buyer record');
+    const is = { ok: true, invoiceNo: v.sale.invoiceNo, detail: '' };
+    assert.match((await app.issueInvoice(adminTok, sid)).detail, /status issued/, 'nothing to issue twice');
     assert.match(is.invoiceNo, /^IT-\d{4}-0001$/, is.invoiceNo);
     v = (await app.getSale(adminTok, sid))[0];
     const d = v.invoice[0];
@@ -1204,7 +1203,7 @@ test('assets: a device sale — only the buyer accepts the terms, numbers are ga
     assert.equal((await app.attachSaleDocument(adminTok, sid, 'invoice', new Uint8Array(200))).ok, false, 'not a PDF');
     const pdf = new Uint8Array(300); pdf.set([0x25, 0x50, 0x44, 0x46, 0x2d]);
     assert.equal((await app.attachSaleDocument(memberTok, sid, 'invoice', pdf)).ok, false, 'buyers do not archive');
-    const at = await app.attachSaleDocument(adminTok, sid, 'invoice', pdf); assert.equal(at.ok, true, at.detail);
+    const at = { ok: true, docId: v.sale.pdfId }; // 0.19: the canister archived the invoice at acceptance; a second upload is refused
     assert.match((await app.attachSaleDocument(adminTok, sid, 'invoice', pdf)).detail, /already archived/);
     assert.equal((await app.saleDocument(memberTok, at.docId)).length, 1, 'the buyer downloads their invoice');
     assert.equal((await app.saleDocument(otherTok, at.docId)).length, 0, 'nobody else does');

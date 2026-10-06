@@ -865,10 +865,7 @@ async function loadSale(id) {
       if (act === "issue") {
         const r = await backend.issueInvoice(tok(), s.id);
         if (!r.ok) { setStatus("sActStatus", "err", r.detail); return; }
-        setStatus("sActStatus", "ok", `invoice ${r.invoiceNo} issued — rendering the PDF…`);
-        const fresh = opt(await backend.getSale(tok(), BigInt(id)));
-        if (fresh) await renderAndArchive(fresh, "invoice");
-        if (r.detail && /NOT be notified/.test(r.detail)) setStatus("sActStatus", "err", r.detail);
+        setStatus("sActStatus", r.detail && /NOT be notified/.test(r.detail) ? "err" : "ok", r.detail && /NOT be notified/.test(r.detail) ? r.detail : `invoice ${r.invoiceNo} issued and archived`);
         loadSale(id);
       }
     } finally { b.disabled = false; }
@@ -963,7 +960,7 @@ async function loadOffers(id) {
         <div class="offer-fields">${field(sid, "street", "Street", s.buyer.street, 70, { wide: true, auto: "address-line1" })}${field(sid, "houseNo", "Building no. (optional)", s.buyer.houseNo, 16, { optional: true })}${field(sid, "postalCode", "Postal code", s.buyer.postalCode, 16, { auto: "postal-code" })}${field(sid, "town", "Town / city", s.buyer.town, 35, { auto: "address-level2" })}${field(sid, "country", "Country code (CH, DE, …)", s.buyer.country || "CH", 2, { auto: "country" })}</div>
         <div class="kv">The address goes on this invoice only — not into the company directory.</div>
         <label class="check"><input type="checkbox" data-f="agree"><span>I accept this offer for <b>${esc(price)}</b> and the hand-over terms above. Accepting with my company sign-in is my signature.</span></label>
-        <div class="btnrow"><button class="primary" data-accept="${sid}" data-v="${Number(v.waiverVersion)}">Accept — IT issues the invoice</button><span class="status" data-status role="status"></span></div>
+        <div class="btnrow"><button class="primary" data-accept="${sid}" data-v="${Number(v.waiverVersion)}">Accept &amp; get invoice</button><span class="status" data-status role="status"></span></div>
         <details class="offer-decline"><summary>Not taking this device? Decline the offer</summary><p class="kv">Declining cancels this sale and tells IT.</p><label for="of-${sid}-reason">Reason (optional)<textarea id="of-${sid}-reason" data-f="reason" rows="2" maxlength="300"></textarea></label><div class="btnrow"><button class="sm" data-decline="${sid}">Decline & cancel sale</button></div></details>` : ""}
       ${s.acceptedHow === "online" && !open ? `<div class="kv">You accepted the terms (version ${Number(s.waiverVersion)}) on ${esc(fmt(s.acceptedAt))}.</div>` : ""}
       ${s.pdfId && Number(s.pdfId) ? `<div class="btnrow"><button class="sm" data-dl="${Number(s.pdfId)}">Download invoice ${esc(s.invoiceNo)}</button>${s.creditPdfId && Number(s.creditPdfId) ? `<button class="sm" data-dl="${Number(s.creditPdfId)}">Credit note ${esc(s.creditNoteNo)}</button>` : ""}</div>` : s.status === "issued" || s.status === "paid" ? `<div class="kv">Invoice ${esc(s.invoiceNo)} — the PDF is being prepared by IT.</div>` : ""}
@@ -978,7 +975,7 @@ async function loadOffers(id) {
     st.className = "status"; st.textContent = "saving…"; b.disabled = true;
     try {
       const r = await backend.acceptOffer(tok(), BigInt(b.dataset.accept), BigInt(b.dataset.v), [address]);
-      st.className = "status " + (r.ok ? "ok" : "err"); st.textContent = r.ok ? "Accepted. IT issues the invoice and you will be notified." : r.detail;
+      st.className = "status " + (r.ok ? "ok" : "err"); st.textContent = r.ok ? (r.detail || "Accepted.") : r.detail;
       if (r.ok) loadOffers(id);
     } finally { b.disabled = false; }
   }));

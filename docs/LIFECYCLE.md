@@ -96,3 +96,7 @@ and isolated identities, never production accounts.
   the new lifecycle suite supplies its own preceding-release upgrade fixture.
 - Desktop and 390 px mobile previews were inspected with synthetic data. Production
   rollout and live IdP delivery have not been exercised by these local checks.
+
+## Joins (Hub 0.38, Desk 0.30)
+
+The Hub also reports a person who appears in the directory after it already knew its people (`created`). The first observation after the Hub upgrade records what exists without events, and a source's joins count only once that source has been observed for 15 minutes, so an initial import stays quiet. Desk turns joins into Onboarding requests only when the administrator switches it on under Settings → General; a batch of more than ten joins is treated as an import and creates nothing. Install Desk 0.30 before Hub 0.38, because an older Desk cannot decode the new event kind.
