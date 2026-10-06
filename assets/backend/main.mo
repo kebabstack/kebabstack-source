@@ -61,7 +61,7 @@ persistent actor Assets {
   var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
   var photoBytes : Nat = 0; // total photo bytes held
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.19.0";
+  transient let BUILD_VERSION : Text = "0.19.1";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;

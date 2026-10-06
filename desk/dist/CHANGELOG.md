@@ -1,5 +1,9 @@
 # Changelog — kebab-stack desk
 
+## [0.31.0] — 2026-10-06
+
+- Offboarding, licenses & seats: with Hub 0.39 and Contracts 0.12 connected, the checklist item "Revoke licenses & seats" follows Contracts the same way "Reclaim devices" follows Assets. Desk asks the Hub how many contracts still list the departing person as a seat holder; the item stays open until every seat is released in Contracts, turns "done" automatically, and cannot be ticked by hand while a Contracts app is connected. The person panel shows "Licenses & seats · n of m released". Contracts tells each contract's responsible person once per case. Unlike hardware, an unreachable Contracts app does not block completion: the item keeps its last known state. Without a connected Contracts app the item stays a manual checkbox.
+
 ## [0.30.0] — 2026-10-06
 
 - Onboarding from the directory: with **Settings → General → Create an Onboarding request when a new person appears in the directory** switched on, a person the Hub reports as new (SCIM, Okta, OpenTeam, local, invitation) becomes an internal Onboarding request with name and date filled in; hardware, manager and the checklist stay with IT. One request per person; an import of more than ten people in one batch creates none and leaves a line in the admin log. Off by default.

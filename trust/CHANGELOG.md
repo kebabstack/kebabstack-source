@@ -1,5 +1,9 @@
 # Changelog — kebab-stack trust
 
+## [0.10.0] — 2026-10-06
+
+- Offboarding context: in the person panel that Desk shows beside an offboarding, a device whose owner is no longer active in the directory but has reported within the last seven days is marked "still reporting after departure". Nothing is unenrolled or changed; the mark tells IT which device is still in use and needs to come back. Owners still come from Assets (or the manual list).
+
 ## [0.9.2] — 2026-09-29
 
 - Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.

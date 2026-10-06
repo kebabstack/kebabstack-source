@@ -52,7 +52,7 @@ persistent actor Trust {
   var adminClaimed : Bool = false; // claimAdmin is one-shot
   var assetsId : Text = ""; // assets BACKEND canister id — where device owners come from
   var gatewayDomain : Text = "icp.net"; // the HTTP gateway agents connect through: <backend-id>.<domain>
-  transient let BUILD_VERSION : Text = "0.9.2";
+  transient let BUILD_VERSION : Text = "0.10.0";
   transient let H : Int = 3_600_000_000_000;
   transient let DAY : Int = 86_400_000_000_000;
 
@@ -298,9 +298,12 @@ persistent actor Trust {
     if (not Hub.directoryFresh(lastDirectoryPull) or not Hub.isActive(people, email) or roleOf(email) == "none" or Hub.appRole(people, email, "trust") != viewerRole) return Support.denied();
     if (roleOf(email) == "member" and viewer != subject) return Support.denied();
     let out = List.empty<Support.Item>();
+    // A device that keeps reporting after its owner left is still in use somewhere: say so first.
+    let subjectGone = not Hub.isActive(people, emailOfPid(subject));
     for ((_, n) in nodes.entries()) if (ownerOfSerial(n.hardwareSerial) == subject) {
       let v = toView(n);
-      out.add({ id = n.hardwareSerial; kind = "device posture"; title = n.hostname; detail = n.hardwareSerial # " · " # v.assessment.passed.toText() # " of " # v.assessment.expected.toText() # " verified passing"; status = switch (v.assessment.state) { case ("passing") "checks passing"; case ("attention") "needs attention"; case ("stale") "stale checks"; case ("error") "check unavailable"; case (_) "not fully assessed" }; path = "#/d/" # v.nodeKey; historical = false });
+      let lately = now() - n.lastSeen < 7 * DAY;
+      out.add({ id = n.hardwareSerial; kind = "device posture"; title = n.hostname; detail = n.hardwareSerial # " · " # v.assessment.passed.toText() # " of " # v.assessment.expected.toText() # " verified passing"; status = (if (subjectGone and lately) "still reporting after departure · " else "") # (switch (v.assessment.state) { case ("passing") "checks passing"; case ("attention") "needs attention"; case ("stale") "stale checks"; case ("error") "check unavailable"; case (_) "not fully assessed" }); path = "#/d/" # v.nodeKey; historical = false });
     };
     Support.ready(out.toArray());
   };

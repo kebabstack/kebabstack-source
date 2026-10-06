@@ -239,6 +239,7 @@ export const idlFactory = ({ IDL }) => {
     notifyHealth: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ failed: IDL.Nat, recent: IDL.Vec(NotifyRecord), total: IDL.Nat }))], ["query"]),
     offboardingEntry: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Record({ person: PersonCard, ticketId: IDL.Opt(IDL.Nat), typeId: IDL.Opt(IDL.Nat) }))], ["query"]),
     offboardingHardware: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ context: Case, progress: Progress }))], []),
+    offboardingSeats: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ context: Case, progress: Progress }))], []),
     oncallAlertSources: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Vec(SourceView))], ["query"]),
     oncallCalendar: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ absences: IDL.Vec(Absence), settings: ProjectSettings }))], ["query"]),
     oncallEffectivePlan: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ cancellation: IDL.Opt(Cancellation), covers: IDL.Vec(Cover), segments: IDL.Vec(Segment) }))], ["query"]),

@@ -24,6 +24,7 @@ import Operations "mo:kebab-hub/Operations";
 
 import Hub "mo:kebab-hub";
 import Support "mo:kebab-hub/Support";
+import Hardware "mo:kebab-hub/Hardware";
 import AiDiagnostics "AiDiagnostics";
 import AiWire "AiWire";
 import DocumentVision "DocumentVision";
@@ -66,7 +67,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // trusted relay identities (the mail worker) — intake lane only
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.11.2";
+  transient let BUILD_VERSION : Text = "0.12.0";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -601,6 +602,39 @@ persistent actor Contracts {
   public shared ({ caller }) func hub_upsert(rows : [Hub.DirectoryRow]) : async Nat {
     assert Hub.isHub(caller, hubId); directoryEpoch += 1;
     Hub.upsertRows(people, ids, former, sessions, rows);
+  };
+  /// Offboarding (Desk via Hub): the seats a departing person still holds. Desk binds its
+  /// "Revoke licenses & seats" item to this count. The responsible person of each contract is
+  /// told once per case; the seat itself is released here, in Contracts, never by Desk.
+  type SeatCase = { person : Text; seen : [Nat]; notified : [Nat] };
+  let seatCases : Map.Map<Text, SeatCase> = Map.empty<Text, SeatCase>();
+  func seatHeld(c : Contract, pid : Text, subjectActive : Bool) : Bool {
+    if (c.status == "ended" or c.status == "archived" or c.status == "trash") return false;
+    has(c.holders, pid) or (subjectActive and has(effectiveHolders(c), pid));
+  };
+  public shared ({ caller }) func hub_syncSeats(c : Hardware.Case) : async Hardware.Progress {
+    assert Hub.isHub(caller, hubId);
+    if (c.person == "" or c.desk == "" or not has(["active", "paused", "review", "cancelled", "closed"], c.state)) return Hardware.unavailable();
+    let key = c.desk # ":" # Nat.toText(c.ticket);
+    let previous = switch (Map.get(seatCases, Text.compare, key)) { case (?p) p; case null ({ person = c.person; seen = []; notified = [] }) };
+    if (previous.person != c.person) return Hardware.unavailable();
+    let subjectActive = activePid(c.person);
+    let seen = List.fromArray<Nat>(previous.seen);
+    let notified = List.fromArray<Nat>(previous.notified);
+    var open = 0;
+    for ((id, k) in Map.entries(contracts)) if (seatHeld(k, c.person, subjectActive)) {
+      open += 1;
+      if (not List.toArray(seen).any(func x = x == id)) List.add(seen, id);
+      if (c.state == "active" and not List.toArray(notified).any(func x = x == id) and activePid(k.responsible) and k.responsible != c.person) {
+        // Stored as the route; the outbox resolves it against the app URL at delivery time and checks the recipient may see the contract.
+        queueNotify(k.responsible, capText(nameOf(c.person) # " is leaving (" # c.key # ") · release the seat in " # k.title, 120), "#/c/" # Nat.toText(id), "contracts.seat", "seat-" # key # "-" # Nat.toText(id));
+        List.add(notified, id);
+      };
+    };
+    var total = 0;
+    for (id in List.toArray(seen).vals()) if (Map.containsKey(contracts, Nat.compare, id)) total += 1;
+    Map.add(seatCases, Text.compare, key, { person = c.person; seen = List.toArray(seen); notified = List.toArray(notified) });
+    { state = "ready"; sources = 1; bindings = []; total; open; checkedAt = now() };
   };
   /// Hub contract: lock these people out at once (their sessions end; their contracts stay until an admin reassigns them).
   public shared ({ caller }) func hub_deactivate(emails : [Text]) : async Nat {

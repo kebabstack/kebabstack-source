@@ -1,5 +1,9 @@
 # Changelog — kebab-stack hub
 
+## [0.39.0] — 2026-10-06
+
+- Offboarding seats: a new `hub_syncSeats` broker lets the registered Desk ask every connected Contracts app how many seats a departing person still holds, with the same case shape, caller checks and 15-second bound as the hardware follow-up. No directory or Lunch change; apps that do not implement the call are simply not seat sources. Desk 0.31 and Contracts 0.12 use it.
+
 ## [0.38.1] — 2026-10-06
 
 - Team-room screen (`#/tv`): the layout is redrawn only where a number changed, so cards no longer fade in again every minute; a changed number glides to its new value. A quiet backdrop of slowly falling glyphs and soft sparks (canvas, about 24 frames per second, nothing while the tab is hidden), a live pulse beside the status line and an amber beacon on every flagged count make the wall screen feel alive without competing with the numbers. **Where to focus** now sizes to its signals instead of leaving an empty panel, and shows **All clear** when no approved source flags anything. Full screen and Disconnect fade out after six seconds and return on any touch, pointer or key. Trust with no enrolled devices says so instead of "0 of 0". Reduced-motion settings switch all motion off. No change to what the display API shares or to any backend behaviour.

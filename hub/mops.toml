@@ -1,6 +1,6 @@
 [package]
 name = "kebab-stack-hub"
-version = "0.38.1"
+version = "0.39.0"
 description = "kebab-stack hub — people, sign-in, apps and backups on a cloud engine"
 
 [toolchain]

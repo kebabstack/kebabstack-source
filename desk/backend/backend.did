@@ -1901,6 +1901,11 @@ service : {
           context: Case;
           progress: Progress;
         });
+  offboardingSeats: (tok: text, id: nat) ->
+   (opt record {
+          context: Case;
+          progress: Progress;
+        });
   oncallAlertSources: (tok: text, projectId: nat) ->
    (opt vec SourceView) query;
   oncallCalendar: (tok: text, id: nat) ->

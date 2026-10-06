@@ -24,6 +24,7 @@ export const idlFactory = ({ IDL }) => {
   const ContractRow = IDL.Record({ amount: IDL.Text, complete: IDL.Bool, daysToDecide: IDL.Opt(IDL.Int), decideBy: IDL.Text, end: IDL.Text, holders: IDL.Nat, id: IDL.Nat, interval: IDL.Text, noticeDate: IDL.Text, openProposals: IDL.Nat, openTasks: IDL.Nat, product: IDL.Text, renewalDate: IDL.Text, responsible: IDL.Text, responsibleName: IDL.Text, seats: IDL.Opt(IDL.Nat), status: IDL.Text, title: IDL.Text, unusedSeats: IDL.Opt(IDL.Int), updatedAt: IDL.Int, vendor: IDL.Text });
   const Record = IDL.Record({ audit: IDL.Vec(AuditRow), canEdit: IDL.Bool, commercialDetails: IDL.Vec(CommercialField), contract: Contract, deputyName: IDL.Text, documents: IDL.Vec(DocumentRow), holderNames: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Bool)), proposals: IDL.Vec(ProposalView), responsibleName: IDL.Text, row: ContractRow, rules: IDL.Vec(Rule), sources: IDL.Vec(SourceRow), tasks: IDL.Vec(TaskRow), viewerNames: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)) });
   const Proposal = IDL.Record({ assignee: IDL.Text, baseRevision: IDL.Nat, candidates: IDL.Vec(IDL.Nat), changes: IDL.Vec(Change), contractId: IDL.Opt(IDL.Nat), createdAt: IDL.Int, decidedAt: IDL.Int, decidedBy: IDL.Text, id: IDL.Nat, kind: IDL.Text, note: IDL.Text, observationId: IDL.Nat, snoozedUntil: IDL.Int, sourceId: IDL.Nat, status: IDL.Text, summary: IDL.Text, uncertainties: IDL.Vec(IDL.Text) });
+  const Progress = IDL.Record({ bindings: IDL.Vec(IDL.Text), checkedAt: IDL.Int, open: IDL.Nat, sources: IDL.Nat, state: IDL.Text, total: IDL.Nat });
   const CostRevision = IDL.Record({ at: IDL.Int, terms: Terms });
   const PortfolioRow = IDL.Record({ assigned: IDL.Nat, canEdit: IDL.Bool, commercial: IDL.Vec(CommercialField), contract: Contract, groups: IDL.Vec(IDL.Text), hasKey: IDL.Bool, history: IDL.Vec(CostRevision), ownerName: IDL.Text });
   const Policy = IDL.Record({ days: IDL.Vec(IDL.Nat), enabled: IDL.Bool, groups: IDL.Vec(IDL.Text), hubAdmins: IDL.Bool, owner: IDL.Bool, spaceOwners: IDL.Bool });
@@ -42,6 +43,7 @@ export const idlFactory = ({ IDL }) => {
   const DirectoryRow = IDL.Record({ active: IDL.Bool, attributes: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), displayName: IDL.Text, email: IDL.Text, externalId: IDL.Text, firstName: IDL.Text, id: IDL.Opt(IDL.Text), lastName: IDL.Text, source: IDL.Text });
   const ContractInput = IDL.Record({ customerRef: IDL.Text, deputy: IDL.Text, holders: IDL.Vec(IDL.Text), product: IDL.Text, responsible: IDL.Text, seats: IDL.Opt(IDL.Nat), tags: IDL.Vec(IDL.Text), title: IDL.Text, vendor: IDL.Text, viewers: IDL.Vec(IDL.Text), visibility: IDL.Text });
   const Context = IDL.Record({ checkedAt: IDL.Int, items: IDL.Vec(Item), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
+  const Case = IDL.Record({ desk: IDL.Text, dueAt: IDL.Opt(IDL.Int), key: IDL.Text, person: IDL.Text, revision: IDL.Int, state: IDL.Text, ticket: IDL.Nat, url: IDL.Text });
   const AiTestResult = IDL.Record({ at: IDL.Int, detail: IDL.Text, model: IDL.Text, ok: IDL.Bool });
   const AiStatus = IDL.Record({ callsToday: IDL.Nat, canTest: IDL.Bool, checked: IDL.Bool, checkedAt: IDL.Int, credentialsReady: IDL.Bool, dailyBudget: IDL.Nat, detail: IDL.Text, hubSet: IDL.Bool, keySet: IDL.Bool, laneGranted: IDL.Bool, lastTest: IDL.Opt(AiTestResult), model: IDL.Text, provider: IDL.Text, registered: IDL.Bool, testRunning: IDL.Bool });
   return IDL.Service({
@@ -80,6 +82,7 @@ export const idlFactory = ({ IDL }) => {
     hub_personContext: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [Context], ["query"]),
     hub_ping: IDL.Func([], [IDL.Text], ["query"]),
     hub_reassign: IDL.Func([IDL.Vec(IDL.Text), IDL.Text, IDL.Text], [IDL.Nat], []),
+    hub_syncSeats: IDL.Func([Case], [Progress], []),
     hub_upsert: IDL.Func([IDL.Vec(DirectoryRow)], [IDL.Nat], []),
     hub_usesGroup: IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], ["query"]),
     importCommit: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), IDL.Text], [IDL.Record({ created: IDL.Nat, detail: IDL.Text, ok: IDL.Bool, problems: IDL.Nat, skipped: IDL.Nat })], []),

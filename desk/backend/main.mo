@@ -132,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.30.0"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.31.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -1153,6 +1153,52 @@ persistent actor Desk {
 
     verified;
   };
+  // Seats: same case, same shape, Contracts is the authority. The shipped "Revoke licenses & seats"
+  // item follows the count; an outage keeps the last known state instead of blocking the offboarding.
+  let seatProgress = Map.empty<Nat, { context : Hardware.Case; progress : Hardware.Progress }>();
+  type SeatHub = actor { hub_syncSeats : shared Hardware.Case -> async Hardware.Progress };
+  func syncSeats(id : Nat) : async Hardware.Progress {
+    let t = tickets.get(id) ?? (return Hardware.unavailable());
+    let c = hardwareCaseOf(t) ?? (return Hardware.unavailable());
+    let expectedHub = hubId;
+    if (expectedHub == "") return Hardware.unavailable();
+    let h : SeatHub = actor (expectedHub);
+    let progress = try { await (with timeout = 30) h.hub_syncSeats(c) } catch (_) { Hardware.unavailable() };
+    let current = tickets.get(id) ?? (return Hardware.unavailable());
+    if (hubId != expectedHub or hardwareCaseOf(current) != ?c) return Hardware.unavailable();
+    let previousSources = switch (seatProgress.get(id)) { case (?p) p.progress.sources; case null 0 };
+    let bindings = switch (seatProgress.get(id)) { case (?p) p.progress.bindings; case null [] };
+    let verified = if (progress.state == "ready" and progress.sources >= previousSources and bindings.all(func key = progress.bindings.any(func current = current == key))) progress else ({ state = "unavailable"; sources = previousSources; bindings; total = 0; open = 0; checkedAt = 0 });
+    seatProgress.add(id, { context = c; progress = verified });
+    // An outage keeps the last known state; only a verified answer or a cancelled case moves the item.
+    if (verified.sources > 0 and (verified.state == "ready" or c.state == "cancelled")) switch (ticketTasks.get(id)) {
+      case (?tasks) {
+        var changed = false;
+        let updated = tasks.map(func task {
+          if (task.title != "Revoke licenses & seats") return task;
+          let state = if (c.state == "cancelled") "na" else if (verified.state == "ready" and verified.open == 0 and (c.state == "active" or c.state == "closed")) "done" else "open";
+          if (task.state == state and task.by == "system:contracts") return task;
+          changed := true; { task with state; by = "system:contracts"; at = now() };
+        });
+        if (changed) {
+          ticketTasks.add(id, updated);
+          ignore addEvent(id, "system", "system", "task", "Seat checklist synchronized from Contracts; each seat is released on its contract.", []);
+        };
+      };
+      case null {};
+    };
+    verified;
+  };
+  public shared func offboardingSeats(tok : Text, id : Nat) : async ?{ context : Hardware.Case; progress : Hardware.Progress } {
+    let m = staff(tok) ?? (return null);
+    let t = tickets.get(id) ?? (return null);
+    if (not canSee(m, t) or hardwareCaseOf(t) == null) return null;
+    let result = await syncSeats(id);
+    let current = tickets.get(id) ?? (return null);
+    let viewer = staff(tok) ?? (return null);
+    if (viewer.id != m.id or not canSee(viewer, current) or ticketSubject(current) != ticketSubject(t)) return null;
+    ?{ context = hardwareCaseOf(current) ?? (return null); progress = result };
+  };
   func hardwareBlock(t : Ticket) : Text {
     let c = hardwareCaseOf(t) ?? (return "");
     if (c.state == "cancelled") return "";
@@ -1189,6 +1235,7 @@ persistent actor Desk {
     ignore addEvent(id, m.id, "agent", "lifecycle", "Offboarding cancelled: " # norm(note) # ". Recorded physical handovers remain unchanged.", []);
     // Persist the decision before attempting delivery; the timer retries outages.
     ignore syncHardware(id);
+    ignore syncSeats(id);
     { ok = true; detail = "Offboarding cancelled. Existing physical handovers are preserved." };
   };
 
@@ -1199,7 +1246,7 @@ persistent actor Desk {
       let selected = List.empty<Nat>();
       for ((id, t) in tickets.entries()) if (id > hardwareSweepAfter and hardwareCaseOf(t) != null and ((t.status != "closed" and t.status != "resolved") or (switch (hardwareProgress.get(id)) { case (?p) (p.context.state != "closed" and p.context.state != "cancelled") or p.progress.state != "ready"; case null false })) and selected.size() < 10) selected.add(id);
       if (selected.size() == 0) hardwareSweepAfter := 0;
-      for (id in selected.values()) { hardwareSweepAfter := id; ignore await syncHardware(id) };
+      for (id in selected.values()) { hardwareSweepAfter := id; ignore await syncHardware(id); ignore await syncSeats(id) };
     } finally { hardwareRunning := false };
   };
 
@@ -2510,6 +2557,7 @@ persistent actor Desk {
     let ts = switch (Map.get(ticketTasks, Nat.compare, id)) { case (?ts) ts; case null return { ok = false; detail = "no checklist" } };
     if (idx >= ts.size()) return { ok = false; detail = "no such item" };
     if (ts[idx].by == "system:assets") return { ok = false; detail = "Hardware progress is managed in Assets. Use the person panel to refresh it." };
+    if (ts[idx].by == "system:contracts") return { ok = false; detail = "Seat assignments are released in Contracts. Use the person panel to refresh them." };
     let upd = Array.tabulate<Task>(ts.size(), func(i) = if (i == idx) ({ title = ts[i].title; state; by = m.id; at = now() }) else ts[i]);
     Map.add(ticketTasks, Nat.compare, id, upd);
     put(t);

@@ -1,5 +1,9 @@
 # Changelog — kebab-stack assets
 
+## [0.19.1] — 2026-10-06
+
+- Payments, one step: Finance records a payment with amount and date and a single **Record payment** click. The review dialog and the bank-reference field are gone. The payment history sits directly under the form; every entry has **Edit** (amount or date) and **Remove**. Both are written as correction entries that reverse the original, so the ledger still shows what was recorded, what changed, by whom and when. No change to the ledger rules: no future dates, no overpayment, no recording your own purchase.
+
 ## [0.19.0] — 2026-10-06
 
 - A colleague's acceptance issues the invoice at once, as the private dealroom does: gapless number, invoice data, the exact PDF and its archive commit together in the canister. The buyer downloads the invoice immediately; IT no longer clicks *Issue the invoice* and no PDF is rendered in a browser. Long terms paginate and names with non-Latin characters are refused instead of printed as "?".

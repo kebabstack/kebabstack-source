@@ -1072,6 +1072,7 @@ service : {
   hub_supportContext: (viewer: text, subject: text, cid: nat) -> (Context);
   hub_supportSources: (viewer: text) -> (vec Source) query;
   hub_syncHardware: (input: Case) -> (Progress);
+  hub_syncSeats: (input: Case) -> (Progress);
   hub_workboardSales: (viewer: text, cid: nat, filter: SalesFilter) -> (Page);
   hub_workboardSources: (viewer: text) -> (vec Source) query;
   icpChart: () -> (record {

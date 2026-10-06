@@ -1,5 +1,9 @@
 # Changelog — kebab-stack contracts
 
+## [0.12.0] — 2026-10-06
+
+- Offboarding follow-up for seats: when Desk runs an offboarding, Contracts reports (through the Hub) how many contracts still list the departing person as a seat holder, explicitly or through a Hub group while the account is active. Desk binds its "Revoke licenses & seats" checklist item to that count. The responsible person of each affected contract receives one notification per case ("… is leaving · release the seat in …") with a link to the contract; the seat is released here under License assignments, Desk never edits contract data. Requires Hub 0.39 and Desk 0.31; older Desks keep the manual checklist item.
+
 ## [0.11.2] — 2026-09-29
 
 - Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.

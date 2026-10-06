@@ -100,3 +100,31 @@ and isolated identities, never production accounts.
 ## Joins (Hub 0.38, Desk 0.30)
 
 The Hub also reports a person who appears in the directory after it already knew its people (`created`). The first observation after the Hub upgrade records what exists without events, and a source's joins count only once that source has been observed for 15 minutes, so an initial import stays quiet. Desk turns joins into Onboarding requests only when the administrator switches it on under Settings → General; a batch of more than ten joins is treated as an import and creates nothing. Install Desk 0.30 before Hub 0.38, because an older Desk cannot decode the new event kind.
+
+## Seats (Contracts 0.12, Hub 0.39, Desk 0.31)
+
+The offboarding checklist item **Revoke licenses & seats** follows Contracts the
+way **Reclaim devices** follows Assets. Desk sends the same case
+(`Hardware.Case`: Desk id, ticket, key, person, state, revision) to the Hub's
+`hub_syncSeats`; the Hub fans it out to every connected Contracts app and adds
+up `total` (contracts that listed the person as a seat holder during this case)
+and `open` (contracts that still do). A seat counts while the person is an
+explicit holder, or a holder through a Hub group as long as the account is
+active; deactivation releases group seats by itself, explicit holders are
+released under **License assignments** in Contracts. Ended, archived and
+trashed contracts never count.
+
+Contracts tells the responsible person of each affected contract once per
+case ("… is leaving (KEY) · release the seat in …", kind `contracts.seat`) with
+a link to the contract when an app URL is configured. Desk never edits contract
+data and the TV/Operations views do not show this.
+
+Desk marks the item `system:contracts`: it cannot be ticked by hand while a
+Contracts app is connected, turns done when `open` reaches zero, and becomes
+"not needed" when the departure is cancelled. An unreachable Contracts app
+keeps the last known state rather than blocking the offboarding; the person
+panel says so. Without a connected Contracts app the item stays a manual
+checkbox. Trust 0.10 adds "still reporting after departure" to a device whose
+owner is inactive but which reported within seven days.
+
+Regression: `node --test tests/seat-offboarding.test.mjs`.

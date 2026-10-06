@@ -119,7 +119,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.38.1";
+  transient let BUILD_VERSION : Text = "0.39.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -7312,6 +7312,23 @@ persistent actor UserHub {
     };
     // Include late additions/removals rather than claiming an incomplete sweep is complete.
     if (connectors.entries().toArray().filter(func (cid, _) = hardwareSource(cid)) != sources) return Hardware.unavailable();
+    { state = "ready"; sources = sources.size(); bindings = sources.map(func (cid, c) = cid.toText() # ":" # c.canisterId.toText()); total; open; checkedAt = Time.now() };
+  };
+  func seatSource(cid : Nat) : Bool = switch (appPermissionPolicies.get(cid)) { case (?p) p.policy.app == "contracts"; case null false };
+  // Desk is the authority for the case; Contracts is the authority for seat assignments.
+  // Same shape and rules as hub_syncHardware; only registered Desk can synchronize cases.
+  public shared ({ caller }) func hub_syncSeats(input : Hardware.Case) : async Hardware.Progress {
+    let c = hardwareCase(caller, input) ?? (return Hardware.unavailable());
+    let desk = deskConnector(caller);
+    let sources = connectors.entries().toArray().filter(func (cid, _) = seatSource(cid));
+    var total = 0; var open = 0;
+    for ((cid, source) in sources.vals()) {
+      let app : actor { hub_syncSeats : shared Hardware.Case -> async Hardware.Progress } = actor (source.canisterId.toText());
+      let result = try { await (with timeout = 15) app.hub_syncSeats(c) } catch (_) { return Hardware.unavailable() };
+      if (deskConnector(caller) != desk or connectors.get(cid) != ?source or not seatSource(cid) or result.state != "ready") return Hardware.unavailable();
+      total += result.total; open += result.open;
+    };
+    if (connectors.entries().toArray().filter(func (cid, _) = seatSource(cid)) != sources) return Hardware.unavailable();
     { state = "ready"; sources = sources.size(); bindings = sources.map(func (cid, c) = cid.toText() # ":" # c.canisterId.toText()); total; open; checkedAt = Time.now() };
   };
   public shared ({ caller }) func hub_hardwareCheck(deskId : Text, ticket : Nat, viewer : Text) : async ?Hardware.Case {

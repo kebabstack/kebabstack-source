@@ -176,7 +176,7 @@ if (flow === "admin-deal") {
   $("dealRefresh").click();for(let i=0;i<5;i++)await tick();
   check(!$("ckWiped").disabled&&$("sChecksTitle").textContent==="Prepare for hand-over","preparation remains editable after automatic invoice");
   $("pinRead").click(); for(let i=0;i<4;i++)await tick(); check($("pinValue").textContent==="001234","PIN keeps leading zeros"); $("pinHide").click(); check($("pinValue").textContent==="","hide clears PIN from DOM");
-  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true}));await tick();document.querySelector("[data-payment-save]").click();for(let i=0;i<5;i++)await tick();
+  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true}));for(let i=0;i<6;i++)await tick();
   check(!$("sChecksCard").classList.contains("hidden")&&!$("handoverCard").classList.contains("hidden"),"paid deal still requires hand-over");
   check(!$("handoverGo").disabled && /does not block/.test($("handoverHelp").textContent),"unconfirmed invoice receipt does not block a prepared paid hand-over");
   $("handoverAbm").checked=true;$("handoverGo").click();for(let i=0;i<5;i++)await tick();
@@ -258,8 +258,8 @@ if (role === "admin") {
   check(calls.includes("issueInvoice") && !attached, "issued; the canister archives the PDF, the browser renders nothing");
   check(/IT-2026-0001/.test($("sKv").textContent) && /invoiced/.test($("sPills").textContent) && /RF94 IT20 2600 01/.test($("sKv").textContent), "sale page after issue: " + $("sTitle").textContent);
   check(!!document.querySelector("[data-payment]") && !!document.querySelector('#sActions [data-act="cancel"]'), "payment ledger + cancel actions after issue");
-  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true})); await tick(); check(!!document.querySelector("[data-payment-save]"), "payment review opens");
-  document.querySelector("[data-payment-save]").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("recordSalePayment"), "payment recorded through ledger");
+  check(!document.querySelector("[data-payment] [name=reference]"), "no bank reference field");
+  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true})); for (let i = 0; i < 5; i++) await tick(); check(calls.includes("recordSalePayment"), "payment recorded in one step through the ledger");
   check(/still in ABM/.test($("sPills").textContent) && /released the device in Apple Business Manager/.test($("handoverAbmRow").textContent), "paid sale reminds to release the device in ABM: " + $("sPills").textContent.slice(0, 120));
   // sales list + export
   await go("#/d/1"); for (let i = 0; i < 3; i++) await tick(); check(!$("dAbm").classList.contains("hidden") && /Apple Business Manager · Group/.test($("dAbm").textContent) && /Iru · Group/.test($("dAbm").textContent) && /2024-03-12/.test($("dAbm").textContent), "device card shows the Apple Business Manager box");

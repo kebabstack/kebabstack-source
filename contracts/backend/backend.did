@@ -261,6 +261,15 @@ type Proposal =
    summary: text;
    uncertainties: vec text;
  };
+type Progress =
+ record {
+   bindings: vec text;
+   checkedAt: int;
+   open: nat;
+   sources: nat;
+   state: text;
+   total: nat;
+ };
 type PortfolioRow =
  record {
    assigned: nat;
@@ -530,6 +539,17 @@ type Change =
    newValue: text;
    oldValue: text;
  };
+type Case =
+ record {
+   desk: text;
+   dueAt: opt int;
+   key: text;
+   person: text;
+   revision: int;
+   state: text;
+   ticket: nat;
+   url: text;
+ };
 type AuditRow =
  record {
    after: text;
@@ -791,6 +811,7 @@ service : {
   hub_ping: () -> (text) query;
   /// Hub contract (offboarding): hand the listed contracts from one person to another; deadlines follow the new responsible person.
   hub_reassign: (idsIn: vec text, from: text, to: text) -> (nat);
+  hub_syncSeats: (c: Case) -> (Progress);
   /// Hub contract (lane identity): a partial directory push — new or changed people; a re-issued address parks the previous holder.
   hub_upsert: (rows: vec DirectoryRow) -> (nat);
   /// Hub contract: where a hub group is used here (editors/admins group, a contract's group deputy) — shown before a group is deleted.

@@ -1372,7 +1372,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.38.1"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.39.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1518,6 +1518,7 @@ const idlFactory = ({ IDL }) => {
     hub_supportContext: IDL.Func([IDL.Text, IDL.Text, IDL.Nat], [Context], []),
     hub_supportSources: IDL.Func([IDL.Text], [IDL.Vec(Source)], ["query"]),
     hub_syncHardware: IDL.Func([Case], [Progress], []),
+    hub_syncSeats: IDL.Func([Case], [Progress], []),
     hub_workboardSales: IDL.Func([IDL.Text, IDL.Nat, SalesFilter], [Page], []),
     hub_workboardSources: IDL.Func([IDL.Text], [IDL.Vec(Source)], ["query"]),
     icpChart: IDL.Func([], [IDL.Record({ body: IDL.Text, src: IDL.Text })], []),

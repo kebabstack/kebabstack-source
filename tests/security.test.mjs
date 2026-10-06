@@ -2333,9 +2333,10 @@ test('assets: external dealroom — scoped links, atomic invoice, receipt, IT ha
     assert.ok((await app.recordWaiver(adminTok,legacy.sid,'Signed paper held by IT')).ok);
     assert.ok((await app.setSaleChecks(adminTok,legacy.sid,true,true)).ok);
     const oldInvoice=await app.issueInvoice(adminTok,legacy.sid);assert.ok(oldInvoice.ok,oldInvoice.detail);
-    const oldBytes=Buffer.from('%PDF-1.4\n'+ 'legacy archive '.repeat(15));
-    assert.ok((await app.attachSaleDocument(adminTok,legacy.sid,'invoice',oldBytes)).ok);
+    const legacyBytes=Buffer.from('%PDF-1.4\n'+ 'legacy archive '.repeat(15));
+    if((await app.getSale(adminTok,legacy.sid))[0].sale.pdfId===0n) assert.ok((await app.attachSaleDocument(adminTok,legacy.sid,'invoice',legacyBytes)).ok); // 0.19 archives the invoice at issue; the 0.17 baseline needs the browser PDF
     const oldView=(await app.getSale(adminTok,legacy.sid))[0];
+    const oldBytes=Buffer.from((await app.saleDocument(adminTok,oldView.sale.pdfId))[0].bytes);
     const priorLink=await app.createDealLink(adminTok,legacy.sid);assert.ok(priorLink.ok,priorLink.detail);
     const priorKey=priorLink.url.split('.').at(-1);
     await app.dealDocument(legacy.sid,priorKey);
