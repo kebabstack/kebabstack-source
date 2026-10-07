@@ -102,3 +102,7 @@ provider's billing or usage limit. The app displays sanitized guidance and the
 HTTP status, not provider response bodies. No automatic vendor/model switch is
 made. The one transient retry can make a second provider request; ordinary
 employees remain unable to invoke photo recognition.
+
+## Device labels
+
+Open a device and choose **Label**, or **Print labels** on a filtered device list. Pick the label size (Brother DK-11209 62 × 29 mm, DK-11201 90 × 29 mm, DK-11221 23 × 23 mm or DK-22205 62 mm continuous) and the fields to show; the QR code always links to the device page. Printing uses the browser's print dialog: select the label printer and the matching media size once, then every label prints 1:1. Any printer the operating system knows works; nothing is sent to a cloud print service. An admin can save the current layout as the default for the register.

@@ -3,6 +3,7 @@ import { createHandoverPanel, renderFormerBuyer } from "./handover.js";
 import { PHASES, phaseOf, nextStep } from "./workflow.js";
 import { idlFactory } from "./idl.js";
 import { canonicalDestination } from "./canonical-url.js";
+import { createLabels } from "./labels.js";
 import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory } from "./hub-client.js";
 
 // deploy-time constants (INSTALL.md: sed the placeholders; the kitchen patches them on install)
@@ -38,7 +39,7 @@ const hubSettingsAi = () => (HUB_URL.startsWith("https://") ? `${HUB_URL}/#/sett
 const deviceName = (a) => (`${a.vendor} ${a.model}`.trim() || a.tag || a.serial || `device #${a.id}`);
 
 let financeWorkspace;
-let backend, hubActor = null, topbar = null, me = null, curId = 0, curAsset = null, curAssigneeEmail = "";
+let backend, hubActor = null, topbar = null, me = null, curId = 0, curAsset = null, curAssigneeEmail = "", appInfo = {}, lastRows = [];
 
 // ---------- the shared topbar (brand · app · menu · bell · theme · person) — one component for the whole suite ----------
 function mountBar() {
@@ -68,7 +69,7 @@ function route() {
   document.querySelectorAll("#nav .tab").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "d" && el.dataset.view === "devices") || (v === "sale" && el.dataset.view === (financial ? "sales" : "offers"))));
   if (v === "finance") { financeWorkspace ||= createFinance($("v-finance"), {api:()=>backend,token:tok,hubUrl:HUB_URL}); financeWorkspace.load(arg); }
   if (v === "intake") loadRecent();
-  if (v === "devices") loadDevices();
+  if (v === "devices") loadDevices(); else listLabels.close();
   if (v === "d") loadDevice(Number(arg));
   if (v === "apple") loadApple();
   if (v === "import") {}
@@ -127,6 +128,7 @@ async function boot() {
       location.replace(canonicalDestination(info.appUrl, location.href));
       return;
     }
+    appInfo = info;
     if (info.hubId) hubActor = Actor.createActor(topbarIdlFactory, { agent, canisterId: info.hubId });
     if (info.orgName) $("loginSub").textContent = `${info.orgName} · assets`;
     if (!info.hubSet) { $("loginWarn").classList.remove("hidden"); $("loginWarn").textContent = "This app is not connected to your company Hub yet. Contact your IT team."; }
@@ -359,7 +361,9 @@ async function loadDevices() {
   $("stats").querySelectorAll(".stat").forEach((el) => (el.onclick = () => { $("devStatus").value = el.dataset.st; loadDevices(); }));
   $("devRows").innerHTML = rows.length ? rows.map((r) => { const a = r.asset; return `<a class="dev" href="#/d/${a.id}" data-id="${a.id}"><div class="ic">${KIND_ICON[a.kind] || "📦"}</div><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div><div class="r"><span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span><span class="kv">${esc(r.assigneeName || a.holder || "")}${r.lastEvent ? (r.assigneeName || a.holder ? " · " : "") + esc(ago(r.lastAt)) : ""}${r.mdmMismatch ? ` · <span class="pill warn" title="The register and MDM disagree. Open the device to compare.">Review MDM</span>` : ""}</span></div></a>`; }).join("") : '<div class="empty">no devices match</div>';
   $("devRows").querySelectorAll(".dev").forEach((el) => (el.onclick = () => { location.hash = "#/d/" + el.dataset.id; }));
+  lastRows = rows; $("devLabels").classList.toggle("hidden", me.role !== "admin" || !rows.length); $("devLabels").textContent = `Print labels (${rows.length})`;
 }
+$("devLabels").onclick = () => { if (lastRows.length) listLabels.open(lastRows.map((r) => r.asset)); };
 let devTimer = 0;
 $("devQ").oninput = () => { clearTimeout(devTimer); devTimer = setTimeout(loadDevices, 220); };
 $("devStatus").onchange = loadDevices;
@@ -373,6 +377,9 @@ const hardwarePanel = createHandoverPanel({root:$("dHardware"), api:()=>backend,
   buyerKindSel="external";
   $("bPersonRow").classList.add('hidden');$("bExtRow").classList.remove('hidden');$("bName").value=v.personName;$("bEmail").value='';$("bEmail").focus();
 }});
+const labelOptions = { printRoot: $("labelPrint"), api: () => backend, token: () => session.load(), hub: () => hubActor, settings: () => ({ orgName: me?.orgName || appInfo.orgName || "", appUrl: appInfo.appUrl || "" }), loadQr: () => loadScript("./vendor/qrcode.js", "qrcode") };
+const listLabels = createLabels({ root: $("devLabelCard"), ...labelOptions });
+const labels = createLabels({ root: $("dLabelCard"), printRoot: $("labelPrint"), api: () => backend, token: () => session.load(), hub: () => hubActor, settings: () => ({ orgName: me?.orgName || appInfo.orgName || "", appUrl: appInfo.appUrl || "" }), loadQr: () => loadScript("./vendor/qrcode.js", "qrcode") });
 // ---------- one device ----------
 async function loadDevice(id) {
   curId = id; hardwarePanel.reset();
@@ -388,7 +395,9 @@ async function loadDevice(id) {
   const ab = opt(d.abm);
   $("dAbm").classList.toggle("hidden", !ab);
   if (ab) $("dAbm").innerHTML = `<details ${!ab.mdmServer || ["sold", "scrapped", "lost"].includes(a.status) ? "open" : ""}><summary><b>${esc(ab.connName)}</b>${ab.mdmServer ? "" : ' <span class="pill warn">no device management</span>'}${["sold", "scrapped", "lost"].includes(a.status) ? ` <span class="pill warn">still in ABM — release it there</span>` : ""}</summary><div class="kvl">${[["Managed by", ab.mdmServer || "no device-management service holds it"], ["Model", [ab.model, ab.capacity, ab.color].filter(Boolean).join(" · ")], ["Ordered", [ab.orderDate, ab.orderNo ? "order " + ab.orderNo : "", ab.source ? "via " + ab.source.toLowerCase().replace("_", " ") : ""].filter(Boolean).join(" · ")], ["In Apple's register since", ab.addedAt], ["Synced", ago(ab.syncedAt)]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${esc(v)}</div>`).join("")}</div></details>`;
-  $("dActions").innerHTML = admin ? `<button id="dDoAct" class="primary sm">What happened?</button>` : "";
+  $("dActions").innerHTML = admin ? `<button id="dLabel" class="sm">Label</button><button id="dDoAct" class="primary sm">What happened?</button>` : "";
+  if (admin) $("dLabel").onclick = () => labels.open([a]);
+  labels.close();
   if (admin) $("dDoAct").onclick = () => { $("dActCard").classList.remove("hidden"); const def = a.status === "assigned" || a.status === "loaned" ? "returned" : "handed_out"; dAct = def; $("dActChips").querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.act === def)); toRowFor(def, "dToRow", "dToLabel"); $("dActCard").scrollIntoView({ behavior: "smooth" }); };
   $("dAdminRow").classList.toggle("hidden", !admin);
   $("dSaleCard").classList.toggle("hidden", !admin);

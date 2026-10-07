@@ -1,5 +1,9 @@
 # Changelog — kebab-stack assets
 
+## [0.20.0] — 2026-10-07
+
+- Device labels: **Label** on a device and **Print labels** on the device list render QR labels for Brother DK media (62 × 29, 90 × 29, 23 × 23 mm and 62 mm continuous) and print them through the browser’s print dialog, one label per page. The QR code opens the device page in Assets, so a phone camera identifies a device without an app. Fields are chosen per print (asset tag, serial, vendor and model, company name, company logo from the Hub, an “if found, return to” line); **Save as default** stores the layout for every admin. No device data changes; labels are not stored.
+
 ## [0.19.1] — 2026-10-06
 
 - Payments, one step: Finance records a payment with amount and date and a single **Record payment** click. The review dialog and the bank-reference field are gone. The payment history sits directly under the form; every entry has **Edit** (amount or date) and **Remove**. Both are written as correction entries that reverse the original, so the ledger still shows what was recorded, what changed, by whom and when. No change to the ledger rules: no future dates, no overpayment, no recording your own purchase.

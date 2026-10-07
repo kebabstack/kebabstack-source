@@ -292,6 +292,11 @@ type LegacyGrant =
    role: text;
    source: text;
  };
+type LabelLayout =
+ record {
+   fields: vec text;
+   size: text;
+ };
 type Item =
  record {
    detail: text;
@@ -876,6 +881,7 @@ service : {
   /// Admins: the billing settings (the company as creditor, VAT, number range, payment terms, pricing rule, hand-over terms).
   getBilling: (tok: text) -> (opt Billing) query;
   getDeal: (id: nat, key: text) -> (opt DealView) query;
+  getLabelLayout: (tok: text) -> (opt LabelLayout) query;
   /// One sale with everything the pages need — admins, or the buyer for their own.
   getSale: (tok: text, id: nat) -> (opt SaleView) query;
   getSettings: (tok: text) -> (opt Settings) query;
@@ -1097,6 +1103,11 @@ service : {
                                             ok: bool;
                                           });
   setHub: (id: text) -> (bool);
+  setLabelLayout: (tok: text, layout: LabelLayout) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// Admins: what the company paid for a device (basis of the price proposal); null price clears it.
   setPurchase: (tok: text, assetId: nat, priceMinor: opt nat, currency:
    text, date: text, note: text) -> (record {

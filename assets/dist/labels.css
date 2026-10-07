@@ -1,0 +1,25 @@
+/* Device labels: millimetre-true markup, previewed scaled on screen and printed 1:1 on label media. */
+.label{box-sizing:border-box;display:flex;gap:2mm;align-items:center;padding:1.5mm 2mm;background:#fff;color:#000;font-family:var(--ks-ui);overflow:hidden;break-after:page;page-break-after:always}
+.label.size-62x29{width:62mm;height:29mm}.label.size-90x29{width:90mm;height:29mm}.label.size-62xauto{width:62mm;height:40mm}
+.label.size-23x23{width:23mm;height:23mm;flex-direction:column;gap:.4mm;padding:1mm;justify-content:center}
+.label .qr{flex:0 0 auto;width:24mm;height:24mm}.label.size-90x29 .qr{width:24mm;height:24mm}.label.size-62xauto .qr{width:30mm;height:30mm}.label.size-23x23 .qr{width:16.5mm;height:16.5mm}
+.label .qr svg{width:100%;height:100%;display:block}.label .qr-missing{font-size:2mm;color:#900}
+.label .txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.6mm;line-height:1.15}
+.label .tag{font-weight:700;font-size:4.4mm;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label.size-23x23 .txt{align-items:center}.label.size-23x23 .tag{font-size:2.4mm}
+.label .serial{font-family:var(--ks-mono);font-size:2.7mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label .model{font-size:2.7mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label .org{display:flex;align-items:center;gap:1.5mm;font-size:2.5mm;font-weight:600;margin-top:.5mm;white-space:nowrap;overflow:hidden}.label .org img{height:4.2mm;max-width:18mm;object-fit:contain}
+.label .found{font-size:2.1mm;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label-stage{margin:12px 0 16px;overflow:auto}
+.label-sizer{position:relative;border:1px dashed var(--ks-rule);border-radius:4px;background:#fff;overflow:hidden}
+.label-preview{position:absolute;left:0;top:0;transform-origin:top left}
+.label-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 16px;margin:8px 0 14px}
+#labelPrint{display:none}
+@media print{
+  body.printing-labels>*:not(#labelPrint){display:none!important}
+  body.printing-labels{margin:0;padding:0;background:#fff}
+  body.printing-labels #labelPrint{display:block}
+  body.printing-labels .label{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.printing-labels .label:last-child{break-after:auto;page-break-after:auto}
+}

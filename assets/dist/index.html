@@ -155,7 +155,7 @@
   .stepline { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
   input[type=number], input[type=date], input[type=password] { padding: 10px 12px; border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-input); font: 400 15px var(--ks-ui); background: var(--ks-bg-card); color: var(--ks-fg); width: 100%; }
 </style>
-<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./finance.css"><link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./finance.css"><link rel="stylesheet" href="./labels.css"><link rel="stylesheet" href="./signin.css">
 <link rel="stylesheet" href="./components.css">
 </head>
 <body class="ks-workspace">
@@ -248,11 +248,12 @@
     </section>
 
     <!-- ===== devices ===== -->
-    <section class="view" id="v-devices"><div class="page-heading"><div><p class="eyebrow">YOUR INVENTORY</p><h2 id="devTitle">Devices</h2><p class="lead" id="devLead">Find a device, see who has it, and keep its next move clear.</p></div><a id="devScan" class="hidden" href="#/intake">Scan a device ↗</a></div>
+    <section class="view" id="v-devices"><div class="page-heading"><div><p class="eyebrow">YOUR INVENTORY</p><h2 id="devTitle">Devices</h2><p class="lead" id="devLead">Find a device, see who has it, and keep its next move clear.</p></div><div class="btnrow" style="margin:0;align-items:center"><button id="devLabels" class="sm hidden" type="button">Print labels</button><a id="devScan" class="hidden" href="#/intake">Scan a device ↗</a></div></div>
 
 
       <div class="stats" id="stats" aria-label="Inventory status"></div>
       <div class="filters"><input type="search" id="devQ" placeholder="search tag, serial, model, person…" aria-label="Search devices"><select id="devStatus" aria-label="Device status"><option value="">all statuses</option><option value="offboarding" hidden>offboarding · outstanding hardware</option><option value="preparing">with IT · preparing</option><option value="in_stock">in stock</option><option value="assigned">assigned</option><option value="loaned">loaned</option><option value="sold">sold</option><option value="scrapped">scrapped</option><option value="lost">lost</option><option value="unknown">unknown</option></select><button id="devAdd" class="sm primary">Add device</button></div>
+      <div class="card flat hidden" id="devLabelCard"></div>
       <div class="card flat"><div id="devRows"><div class="empty">loading…</div></div></div>
     </section>
 
@@ -274,6 +275,7 @@
         <div class="photos" id="dPhotos"></div>
         <div class="btnrow" id="dAdminRow"><button id="dEdit" class="sm">Edit details</button><button id="dPhotoBtn" class="sm">Add photo</button><input type="file" id="dPhotoFile" accept="image/*" class="hidden"><button id="dArchive" class="sm">Archive</button><span id="dStatus" class="status" role="status"></span></div>
       </div>
+      <div class="card flat hidden" id="dLabelCard"></div>
       <div class="card flat hidden" id="dEditCard">
         <h3>Edit</h3>
         <div class="row"><div><label for="eTag">Tag</label><input type="text" id="eTag"></div><div><label for="eSerial">Serial</label><input type="text" id="eSerial"></div></div>
@@ -484,4 +486,5 @@
 <script type="module" src="./app.js"></script>
 
 
+<div id="labelPrint" aria-hidden="true"></div>
 </body></html>

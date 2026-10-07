@@ -116,3 +116,17 @@ test('outside buyer: a private link survives payment-term, prefix and footer cha
   assert.equal(dueDays,30,'the invoice uses the payment days in force when it was issued');
  }finally{await x.pic.tearDown();}
 });
+
+test('device labels: the default layout is an admin setting with a fixed vocabulary; members cannot read or change it',async()=>{
+ const x=await setup(server.getUrl());
+ try{
+  const a=x.apps.assets.app,admin=x.assetToken,employee=await x.login('assets','employee');
+  assert.deepEqual(await a.getLabelLayout(employee),[],'members have no label settings');
+  const [initial]=await a.getLabelLayout(admin);assert.equal(initial.size,'62x29');assert.ok(initial.fields.includes('qr'));
+  assert.equal((await a.setLabelLayout(employee,{size:'62x29',fields:['qr','tag']})).ok,false);
+  assert.equal((await a.setLabelLayout(admin,{size:'a4',fields:['qr','tag']})).ok,false,'unknown media is refused');
+  assert.equal((await a.setLabelLayout(admin,{size:'62x29',fields:['qr','secret']})).ok,false,'unknown field is refused');
+  unwrap(await a.setLabelLayout(admin,{size:'23x23',fields:['qr','tag','logo']}));
+  assert.deepEqual((await a.getLabelLayout(admin))[0],{size:'23x23',fields:['qr','tag','logo']});
+ }finally{await x.pic.tearDown();}
+});

@@ -60,8 +60,11 @@ persistent actor Assets {
   var adminClaimed : Bool = false; // claimAdmin is one-shot
   var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
   var photoBytes : Nat = 0; // total photo bytes held
+  /// Printable device labels (QR to the device page): the admin-chosen default layout for the whole register.
+  public type LabelLayout = { size : Text; fields : [Text] };
+  var labelLayout : LabelLayout = { size = "62x29"; fields = ["qr", "tag", "serial", "model", "org"] };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.19.1";
+  transient let BUILD_VERSION : Text = "0.20.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -337,6 +340,19 @@ persistent actor Assets {
     if (args.appUrl != "" and not Text.startsWith(args.appUrl, #text "https://")) return { ok = false; detail = "app url must start with https://" };
     appUrl := norm(args.appUrl); tagPrefix := norm(args.tagPrefix); orgName := norm(args.orgName);
     log(m.email, "settings updated");
+    { ok = true; detail = "" };
+  };
+  public shared query func getLabelLayout(tok : Text) : async ?LabelLayout {
+    switch (admin(tok)) { case (?_) ?labelLayout; case null null };
+  };
+  public shared func setLabelLayout(tok : Text, layout : LabelLayout) : async { ok : Bool; detail : Text } {
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+    let sizes = ["62x29", "90x29", "23x23", "62xauto"];
+    let known = ["qr", "tag", "serial", "model", "org", "logo", "found"];
+    if (not has(sizes, layout.size)) return { ok = false; detail = "Choose one of the supported label sizes" };
+    if (layout.fields.size() > known.size() or layout.fields.any(func f = not has(known, f))) return { ok = false; detail = "Unknown label field" };
+    labelLayout := { size = layout.size; fields = layout.fields };
+    log(m.email, "label layout updated (" # layout.size # ")");
     { ok = true; detail = "" };
   };
   public shared func setAdminEmails(tok : Text, emails : [Text]) : async { ok : Bool; detail : Text } {
