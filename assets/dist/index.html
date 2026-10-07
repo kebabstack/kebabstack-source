@@ -155,7 +155,7 @@
   .stepline { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
   input[type=number], input[type=date], input[type=password] { padding: 10px 12px; border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-input); font: 400 15px var(--ks-ui); background: var(--ks-bg-card); color: var(--ks-fg); width: 100%; }
 </style>
-<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./finance.css"><link rel="stylesheet" href="./labels.css"><link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./finance.css"><link rel="stylesheet" href="./labels.css"><link rel="stylesheet" href="./bulk.css"><link rel="stylesheet" href="./signin.css">
 <link rel="stylesheet" href="./components.css">
 </head>
 <body class="ks-workspace">
@@ -197,7 +197,7 @@
         <button class="bigcam" id="camBtn"><span class="ic"><svg width="44" height="44" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="4" y="8" width="24" height="19" rx="4"></rect><path d="m10 8 2-4h8l2 4"></path><circle cx="16" cy="17" r="5"></circle></svg></span><span>Take a photo</span><span class="sub">Capture the serial or inventory sticker</span></button>
         <input type="file" id="camFile" accept="image/*" capture="environment" class="hidden">
         <input type="file" id="galFile" accept="image/*" class="hidden">
-        <div class="altrow"><button id="galBtn" class="sm">Choose from photos</button><button id="handBtn" class="sm">Find or add manually</button></div>
+        <div class="altrow"><button id="galBtn" class="sm">Choose from photos</button><button id="handBtn" class="sm">Find or add manually</button><a class="sm" id="bulkLink" href="#/bulk">Register many from photos ↗</a></div>
       </div>
       <div id="ik1" class="hidden">
         <div class="steps"><span class="step on" id="st1">1 · photo</span><span class="step" id="st2">2 · which device</span><span class="step" id="st3">3 · what happened</span></div>
@@ -250,6 +250,8 @@
         <div id="recentRows"><div class="empty">nothing yet</div></div>
       </div>
     </section>
+
+    <section class="view" id="v-bulk"><p class="eyebrow">CAPTURE &amp; UPDATE</p><h2>Register many devices</h2><p class="lead">Photograph every label, let the reading fill the table, correct what needs it, import, print the labels.</p><div id="bulkRoot"></div></section>
 
     <!-- ===== devices ===== -->
     <section class="view" id="v-devices"><div class="page-heading"><div><p class="eyebrow">YOUR INVENTORY</p><h2 id="devTitle">Devices</h2><p class="lead" id="devLead">Find a device, see who has it, and keep its next move clear.</p></div><div class="btnrow" style="margin:0;align-items:center"><button id="devLabels" class="sm hidden" type="button">Print labels</button><a id="devScan" class="hidden" href="#/intake">Scan a device ↗</a></div></div>

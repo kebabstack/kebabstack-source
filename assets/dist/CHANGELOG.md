@@ -1,5 +1,10 @@
 # Changelog — kebab-stack assets
 
+## [0.22.0] — 2026-10-07
+
+- Register many devices from photos (Scan a device → **Register many from photos**): drop up to 60 label photos, the reading fills one table (vendor, model, kind, serial or Service Tag, note), devices already in the register are flagged and unticked, defaults for kind, location and recipient apply to every row, each cell stays editable, then one click registers everything with automatic tags and the photo as evidence, and the labels print in one batch.
+- Dell: the 7-character Service Tag is read as its own code and stored as the serial, the long serial goes into the note.
+
 ## [0.21.0] — 2026-10-07
 
 - Registering a device is one step: take the photo (serial, vendor and model are read and can be corrected), the asset tag is generated automatically unless typed, optionally hand the device to a person from the directory or place it at a location, then **Register device & show label**. The label appears at once and prints from there. Automatic tags continue from the highest numeric tag already in the register; an optional prefix and the number of digits are set under Settings → Register devices.

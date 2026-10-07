@@ -110,3 +110,7 @@ Open a device and choose **Label**, or **Print labels** on a filtered device lis
 ## Registering a new device
 
 Scan a device → photo of the factory label (or **Find or add manually**) → **Not in the list — add a new device**. Serial, vendor and model are prefilled from the photo and can be corrected. Leave the tag empty to get the next automatic tag (prefix and digits under Settings → Register devices; the number continues from the highest numeric tag in the register). Optionally pick the person who receives the device or one of the admin-defined locations. **Register device & show label** creates the device, records the hand-out, keeps the photo as evidence and opens the label ready to print.
+
+## Registering many devices from photos
+
+Scan a device → **Register many from photos**. Add up to 60 photos (one label per device), start the reading, review the table: correct serials with low confidence (marked), set kind, location and recipient for all rows at once or per row, untick what should not be imported. Devices already in the register are recognised by serial or tag and unticked. **Register n devices** creates them with automatic tags and the photo as evidence; **Print n labels** follows. Dell Service Tags are stored as the serial.

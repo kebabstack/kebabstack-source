@@ -70,7 +70,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.21.0";
+  transient let BUILD_VERSION : Text = "0.22.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -716,7 +716,7 @@ persistent actor Assets {
   };
   transient let icHttp : actor { http_request : HttpRequestArgs -> async HttpResponsePayload } = actor ("aaaaa-aa");
 
-  transient let VISION_PROMPT : Text = "You read photos of IT devices — usually the back of a laptop, phone or tablet, or an inventory sticker. Return ONLY a JSON object, no prose: {\"reads\":[{\"kind\":\"serial|asset_tag|imei|model|other\",\"value\":\"exact printed text\",\"confidence\":0.0-1.0}],\"vendor\":\"Apple|Dell|Lenovo|...|\",\"model\":\"as printed or recognisable, else empty\",\"kind\":\"laptop|phone|tablet|monitor|accessory|other\",\"sticker\":\"current|old|none|unsure\",\"notes\":\"one short sentence\"}. Transcribe characters exactly as printed — never guess a missing character; when 0/O, 1/I/L, 5/S or 8/B are ambiguous, keep the printed shape and lower the confidence below 0.6. An inventory sticker usually shows a short code like INV-0042 or a barcode with digits; serial numbers are longer (Apple 10-12 characters, Dell 7, Lenovo 8). Include every distinct code you can read.";
+  transient let VISION_PROMPT : Text = "You read photos of IT devices — usually the back of a laptop, phone or tablet, or an inventory sticker. Return ONLY a JSON object, no prose: {\"reads\":[{\"kind\":\"serial|service_tag|asset_tag|imei|model|other\",\"value\":\"exact printed text\",\"confidence\":0.0-1.0}],\"vendor\":\"Apple|Dell|Lenovo|...|\",\"model\":\"as printed or recognisable, else empty\",\"kind\":\"laptop|phone|tablet|monitor|accessory|other\",\"sticker\":\"current|old|none|unsure\",\"notes\":\"one short sentence\"}. Transcribe characters exactly as printed — never guess a missing character; when 0/O, 1/I/L, 5/S or 8/B are ambiguous, keep the printed shape and lower the confidence below 0.6. An inventory sticker usually shows a short code like INV-0042 or a barcode with digits; serial numbers are longer (Apple 10-12 characters, Lenovo 8). Dell devices and monitors carry a 7-character Service Tag (letters and digits, often next to a barcode or labelled ST) in addition to a long serial starting with CN- or similar: return the Service Tag with kind service_tag and the long one with kind serial. Include every distinct code you can read.";
 
   public type Read = { kind : Text; value : Text; confidence : Float };
   public type ReadResult = { retryable : ?Bool; ok : Bool; detail : Text; reads : [Read]; vendor : Text; model : Text; kind : Text; sticker : Text; notes : Text };

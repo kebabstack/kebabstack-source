@@ -4,6 +4,7 @@ import { PHASES, phaseOf, nextStep } from "./workflow.js";
 import { idlFactory } from "./idl.js";
 import { canonicalDestination } from "./canonical-url.js";
 import { createLabels } from "./labels.js";
+import { createBulk } from "./bulk.js";
 import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory } from "./hub-client.js";
 
 // deploy-time constants (INSTALL.md: sed the placeholders; the kitchen patches them on install)
@@ -63,12 +64,13 @@ function route() {
   const admin = me.role === "admin";
   const financial = admin || me.role === "finance";
   let v = view || (me.role === "finance" ? "finance" : "devices");
-  const known = admin ? ["finance", "intake", "devices", "d", "apple", "sales", "sale", "offers", "import", "settings", "docs"] : financial ? ["finance", "sales", "devices", "d", "offers", "sale", "docs"] : ["devices", "d", "offers", "sale", "docs"];
+  const known = admin ? ["finance", "intake", "bulk", "devices", "d", "apple", "sales", "sale", "offers", "import", "settings", "docs"] : financial ? ["finance", "sales", "devices", "d", "offers", "sale", "docs"] : ["devices", "d", "offers", "sale", "docs"];
   if (!known.includes(v)) v = "devices";
   document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === "v-" + (v === "d" ? "device" : v)));
-  document.querySelectorAll("#nav .tab").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "d" && el.dataset.view === "devices") || (v === "sale" && el.dataset.view === (financial ? "sales" : "offers"))));
+  document.querySelectorAll("#nav .tab").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "d" && el.dataset.view === "devices") || (v === "bulk" && el.dataset.view === "intake") || (v === "sale" && el.dataset.view === (financial ? "sales" : "offers"))));
   if (v === "finance") { financeWorkspace ||= createFinance($("v-finance"), {api:()=>backend,token:tok,hubUrl:HUB_URL}); financeWorkspace.load(arg); }
   if (v === "intake") loadRecent();
+  if (v === "bulk") bulk.show();
   if (v === "devices") loadDevices(); else listLabels.close();
   if (v === "d") loadDevice(Number(arg));
   if (v === "apple") loadApple();
@@ -404,6 +406,7 @@ const hardwarePanel = createHandoverPanel({root:$("dHardware"), api:()=>backend,
 const labelOptions = { printRoot: $("labelPrint"), api: () => backend, token: () => session.load(), hub: () => hubActor, settings: () => ({ orgName: me?.orgName || appInfo.orgName || "", appUrl: appInfo.appUrl || "" }), loadQr: () => loadScript("./vendor/qrcode.js", "qrcode") };
 const listLabels = createLabels({ root: $("devLabelCard"), ...labelOptions });
 const intakeLabels = createLabels({ root: $("ikLabelCard"), ...labelOptions });
+const bulk = createBulk({ root: $("bulkRoot"), api: () => backend, token: () => session.load(), shrink, attachPicker, labels: (card) => createLabels({ root: card, ...labelOptions }) });
 const labels = createLabels({ root: $("dLabelCard"), printRoot: $("labelPrint"), api: () => backend, token: () => session.load(), hub: () => hubActor, settings: () => ({ orgName: me?.orgName || appInfo.orgName || "", appUrl: appInfo.appUrl || "" }), loadQr: () => loadScript("./vendor/qrcode.js", "qrcode") });
 // ---------- one device ----------
 async function loadDevice(id) {
