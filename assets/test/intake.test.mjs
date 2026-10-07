@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
 const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
-const intake=app.slice(app.indexOf('// ---------- intake ----------'),app.indexOf('$("ikUseNew").onclick'));
+const intake=app.slice(app.indexOf('// ---------- intake ----------'),app.indexOf('let registerOptions = null;'));
 const result={ok:true,retryable:[false],detail:'',reads:[{kind:'serial',value:'TEST-123',confidence:1}],vendor:'Example',model:'Laptop',kind:'laptop',sticker:'current',notes:''};
 const tick=()=>new Promise(r=>setTimeout(r,10));
 function fixture(read){
@@ -13,7 +13,7 @@ function fixture(read){
  w.setTimeout=(fn,ms)=>setTimeout(fn,ms===1200?0:ms);w.clearTimeout=clearTimeout;
  w.eval(`var $=id=>document.getElementById(id),me={aiOn:true},session={load:()=>"fixture-token"},STATUS_WORD={};
  var backend,shrink=async()=>({bytes:new Uint8Array([1,2,3]),mime:"image/jpeg",url:"blob:fixture"});
- function setStatus(id,cls,text){$(id).textContent=text}function esc(s){return String(s)}function toRowFor(){}function ikStep2(){}function deviceName(){return "Device"}
+ function setStatus(id,cls,text){$(id).textContent=text}function esc(s){return String(s)}function toRowFor(){}function ikStep2(){}function deviceName(){return "Device"}function loadRegisterOptions(){}var intakeLabels={close(){}};
  `+intake+";window.draftPhoto=()=>ik.photo;");
  const calls=[];w.backend={intakeRead:async(...args)=>{calls.push(args);return read(calls.length)},intakeMatch:async()=>[]};
  w.eval('ikReset()');return{w,dom,calls,el:id=>w.document.getElementById(id)};

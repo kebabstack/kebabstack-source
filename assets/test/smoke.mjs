@@ -74,6 +74,12 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "intakeMatch": return a[1].some((v) => /C02XG2/i.test(v)) ? [{ row: row(1), score: 90n, why: "serial matches (0/O, 1/I, 5/S read alike) (C02XG2JHJGH1)" }] : [];
     case "intakeRead": return { ok: true, detail: "", reads: [{ kind: "serial", value: "CO2XG2JHJGH1", confidence: 0.55 }, { kind: "asset_tag", value: "INV-0001", confidence: 0.95 }], vendor: "Apple", model: "MacBook Pro 14\"", kind: "laptop", sticker: "current", notes: "sticker slightly worn" };
     case "intakeCommit": return { ok: true, detail: "handed out to Ana Ruiz", assetId: 1n, eventId: 10n };
+    case "getLabelLayout": return [{ size: "62x29", fields: ["qr", "tag", "serial", "model", "org"], note: "" }];
+    case "setLabelLayout": return { ok: true, detail: "" };
+    case "registerDevice": return { ok: true, assetId: 7n, tag: "000434", detail: "registered as 000434" };
+    case "registerOptions": return [{ locations: ["Zürich office · 3rd floor", "Storage room"], nextTag: "000434", prefix: "", digits: 6n }];
+    case "getLocations": return ["Zürich office · 3rd floor", "Storage room"];
+    case "setLocations": case "setTagScheme": case "setAssetLocation": return { ok: true, detail: "" };
     case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "", orgName: "Acme", adminGroup: "assets-admins", adminEmails: ["me@example.com"], peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, photoBytes: 120000n, aiSource: aiOn ? "hub" : "", aiModel: aiOn ? "openai · gpt-4.1-mini" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: "" } }];
     case "adminLogRows": return [{ at: now, who: "me@example.com", what: "x" }];
     case "importCsv": return { ok: true, created: 2n, updated: 1n, skipped: 0n, detail: "" };
@@ -223,9 +229,10 @@ if (role === "admin") {
   // new-device path: no match → add
   $("handBtn").click(); await tick(); $("ikQuery").value = "ZZZ99999"; $("ikQuery").dispatchEvent(new window.Event("input")); for (let i = 0; i < 12; i++) await tick();
   check(/no device matches/.test($("cands").textContent), "no-match text");
-  $("ikNew").click(); await tick(); $("nModel").value = "ThinkPad"; $("ikUseNew").click(); await tick();
-  check(/ThinkPad \(new\)/.test($("ikDevName").textContent), "new device in step 2");
-  check(document.querySelector('#actChips .chip.on').dataset.act === "handed_out", "new device defaults to handed_out");
+  $("ikNew").click(); await tick(); $("nModel").value = "ThinkPad"; $("ikRegister").click(); for (let i = 0; i < 6; i++) await tick();
+  check(calls.includes("registerDevice") && !$("ik3").classList.contains("hidden") && /000434/.test($("doneTitle").textContent), "new device registered in one step with an automatic tag: " + $("doneTitle").textContent);
+  check(!$("ikLabelCard").classList.contains("hidden"), "label offered right after registering");
+  check(calls.includes("registerOptions") && $("nLocation").options.length === 3, "locations offered from settings");
   // devices
   await go("#/devices"); check(document.querySelectorAll("#devRows .dev").length === 3, "device rows: " + document.querySelectorAll("#devRows .dev").length);
   check(/Review MDM/.test(document.querySelector('#devRows .dev[data-id="1"]').textContent), "mismatch pill on row");

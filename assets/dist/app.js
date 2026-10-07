@@ -227,8 +227,8 @@ function ikReset() {
   $("ik0").classList.remove("hidden"); $("recentCard").classList.remove("hidden");
   $("shotImg").classList.add("hidden"); $("reads").innerHTML = ""; $("readNotes").textContent = ""; $("ikQuery").value = "";
   $("cands").innerHTML = '<div class="empty">nothing searched yet</div>'; setStatus("candStatus", "", ""); setStatus("saveStatus", "", "");
-  for (const id of ["nTag", "nSerial", "nVendor", "nModel", "nNote", "ikTo", "ikNote"]) $(id).value = "";
-  $("ikTo").dataset.email = "";
+  for (const id of ["nTag", "nSerial", "nVendor", "nModel", "nNote", "ikTo", "ikNote", "nTo"]) $(id).value = "";
+  $("ikTo").dataset.email = ""; $("nTo").dataset.email = ""; $("nLocation").value = ""; intakeLabels.close();
   $("actChips").querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.act === "handed_out")); toRowFor("handed_out", "toRow", "toLabel");
 }
 $("camBtn").onclick = () => $("camFile").click();
@@ -305,12 +305,36 @@ async function ikSearch(values) {
 }
 $("ikRetryRead").onclick = () => ikReadPhoto();
 $("ikManual").onclick = () => $("ikNew").click();
-$("ikNew").onclick = () => { ikStopReading(); ++ikSearchSequence; $("readStatus").textContent = ik?.photo ? "Photo kept in this draft. Enter the device details below." : "Enter the device details below."; $("readRecovery").classList.add("hidden"); $("ikNewCard").classList.remove("hidden"); $("nSerial").focus(); $("ikNewCard").scrollIntoView({ behavior: "smooth", block: "start" }); };
+$("ikNew").onclick = () => { ikStopReading(); ++ikSearchSequence; loadRegisterOptions(); $("readStatus").textContent = ik?.photo ? "Photo kept in this draft. Enter the device details below." : "Enter the device details below."; $("readRecovery").classList.add("hidden"); $("ikNewCard").classList.remove("hidden"); $("nSerial").focus(); $("ikNewCard").scrollIntoView({ behavior: "smooth", block: "start" }); };
 $("ikRestart").onclick = () => ikReset();
-$("ikUseNew").onclick = () => {
-  const x = { tag: $("nTag").value.trim(), serial: $("nSerial").value.trim(), vendor: $("nVendor").value.trim(), model: $("nModel").value.trim(), kind: $("nKind").value, note: $("nNote").value.trim() };
-  if (!x.tag && !x.serial && !x.model) return setStatus("newStatus", "err", "at least a tag, a serial or a model");
-  ik.create = x; ik.chosen = null; ikStep2();
+let registerOptions = null;
+async function loadRegisterOptions() {
+  try { registerOptions = opt(await backend.registerOptions(session.load())); } catch (_) { registerOptions = null; }
+  const sel = $("nLocation"), current = sel.value;
+  sel.innerHTML = '<option value="">—</option>' + (registerOptions?.locations || []).map((l) => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
+  sel.value = current;
+  $("nLocationHint").innerHTML = registerOptions?.locations?.length ? "" : 'No locations yet — define them under <a href="#/settings/general">Settings → Register devices</a>.';
+  $("nTag").placeholder = registerOptions?.nextTag ? `automatic · next ${registerOptions.nextTag}` : "automatic";
+}
+attachPicker("nTo", "nToList");
+$("ikRegister").onclick = async () => {
+  const create = { tag: $("nTag").value.trim(), serial: $("nSerial").value.trim(), vendor: $("nVendor").value.trim(), model: $("nModel").value.trim(), kind: $("nKind").value, note: $("nNote").value.trim() };
+  if (!create.serial && !create.model && !create.tag) return setStatus("newStatus", "err", "at least a serial number or a model");
+  if ($("nTo").value.trim() && !$("nTo").dataset.email) return setStatus("newStatus", "err", "pick the person from the directory, or clear the field");
+  setStatus("newStatus", "", "registering…"); $("ikRegister").disabled = true;
+  try {
+    const r = await backend.registerDevice(session.load(), { create, assignee: $("nTo").dataset.email || "", location: $("nLocation").value, photo: ik?.photo ? [[...ik.photo.bytes]] : [], mime: ik?.photo ? ik.photo.mime : "" });
+    if (!r.ok) { setStatus("newStatus", "err", r.detail); return; }
+    const asset = { ...create, tag: r.tag, id: r.assetId };
+    $("ik1").classList.add("hidden"); $("ik3").classList.remove("hidden");
+    $("doneTitle").textContent = `${deviceName(asset)} — ${r.detail}`;
+    $("doneSub").textContent = ik?.photo ? "photo kept as evidence on this device" : "no photo attached";
+    $("doneNext").textContent = "Next device";
+    $("doneOpen").onclick = () => { location.hash = "#/d/" + Number(r.assetId); };
+    intakeLabels.open([asset]);
+    loadRecent();
+  } catch (e) { setStatus("newStatus", "err", String(e.message || e).slice(0, 140)); }
+  finally { $("ikRegister").disabled = false; }
 };
 function ikStep2() {
   ikStopReading(); ++ikSearchSequence;
@@ -342,7 +366,7 @@ $("ikSave").onclick = async () => {
   } catch (e) { setStatus("saveStatus", "err", String(e.message || e).slice(0, 140)); }
   finally { $("ikSave").disabled = false; }
 };
-$("doneNext").onclick = () => { ikReset(); loadRecent(); $("camBtn").focus(); };
+$("doneNext").onclick = () => { ikReset(); loadRecent(); $("doneNext").textContent = "Next photo"; $("camBtn").focus(); };
 async function loadRecent() {
   let s; try { s = await backend.stats(session.load()); } catch (e) { return; }
   $("recentRows").innerHTML = s.recent.length ? s.recent.map((x) => `<div class="ev ${["handed_out", "returned", "loaned", "sold", "scrapped", "lost"].includes(x.event.kind) ? "act" : ""}"><span class="dot"></span><div><div class="what"><a href="#/d/${Number(x.event.assetId)}" style="color:inherit;text-decoration:none"><b>${esc(x.name)}</b></a> — ${esc(x.event.detail)}</div><div class="meta">${esc(ago(x.event.at))} · ${esc(x.event.by)}${Number(x.event.photoId) ? " · 📷" : ""}</div></div></div>`).join("") : '<div class="empty">nothing yet — the first photo starts the history</div>';
@@ -359,7 +383,7 @@ async function loadDevices() {
   if ((typeof pending === "bigint" || typeof pending === "number") && Number(pending) > 0) $("stats").insertAdjacentHTML("beforeend", `<button class="stat ${st === "offboarding" ? "active" : ""}" aria-pressed="${st === "offboarding"}" data-st="offboarding"><div class="n">${pending}</div><div class="l">Offboarding</div></button>`);
   $("stats").style.gridTemplateColumns = `repeat(${$("stats").children.length}, minmax(0, 1fr))`;
   $("stats").querySelectorAll(".stat").forEach((el) => (el.onclick = () => { $("devStatus").value = el.dataset.st; loadDevices(); }));
-  $("devRows").innerHTML = rows.length ? rows.map((r) => { const a = r.asset; return `<a class="dev" href="#/d/${a.id}" data-id="${a.id}"><div class="ic">${KIND_ICON[a.kind] || "📦"}</div><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div><div class="r"><span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span><span class="kv">${esc(r.assigneeName || a.holder || "")}${r.lastEvent ? (r.assigneeName || a.holder ? " · " : "") + esc(ago(r.lastAt)) : ""}${r.mdmMismatch ? ` · <span class="pill warn" title="The register and MDM disagree. Open the device to compare.">Review MDM</span>` : ""}</span></div></a>`; }).join("") : '<div class="empty">no devices match</div>';
+  $("devRows").innerHTML = rows.length ? rows.map((r) => { const a = r.asset; return `<a class="dev" href="#/d/${a.id}" data-id="${a.id}"><div class="ic">${KIND_ICON[a.kind] || "📦"}</div><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div><div class="r"><span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span><span class="kv">${esc([r.assigneeName || a.holder || "", r.location || ""].filter(Boolean).join(" · "))}${r.lastEvent ? (r.assigneeName || a.holder || r.location ? " · " : "") + esc(ago(r.lastAt)) : ""}${r.mdmMismatch ? ` · <span class="pill warn" title="The register and MDM disagree. Open the device to compare.">Review MDM</span>` : ""}</span></div></a>`; }).join("") : '<div class="empty">no devices match</div>';
   $("devRows").querySelectorAll(".dev").forEach((el) => (el.onclick = () => { location.hash = "#/d/" + el.dataset.id; }));
   lastRows = rows; $("devLabels").classList.toggle("hidden", me.role !== "admin" || !rows.length); $("devLabels").textContent = `Print labels (${rows.length})`;
 }
@@ -379,6 +403,7 @@ const hardwarePanel = createHandoverPanel({root:$("dHardware"), api:()=>backend,
 }});
 const labelOptions = { printRoot: $("labelPrint"), api: () => backend, token: () => session.load(), hub: () => hubActor, settings: () => ({ orgName: me?.orgName || appInfo.orgName || "", appUrl: appInfo.appUrl || "" }), loadQr: () => loadScript("./vendor/qrcode.js", "qrcode") };
 const listLabels = createLabels({ root: $("devLabelCard"), ...labelOptions });
+const intakeLabels = createLabels({ root: $("ikLabelCard"), ...labelOptions });
 const labels = createLabels({ root: $("dLabelCard"), printRoot: $("labelPrint"), api: () => backend, token: () => session.load(), hub: () => hubActor, settings: () => ({ orgName: me?.orgName || appInfo.orgName || "", appUrl: appInfo.appUrl || "" }), loadQr: () => loadScript("./vendor/qrcode.js", "qrcode") });
 // ---------- one device ----------
 async function loadDevice(id) {
@@ -388,7 +413,7 @@ async function loadDevice(id) {
   curAsset = d.asset; curAssigneeEmail = d.assigneeEmail || ""; const a = d.asset; const admin = me.role === "admin";
   $("dName").textContent = deviceName(a);
   $("dPills").innerHTML = `<span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span> ${a.archived ? '<span class="pill off">archived</span>' : ""} <span class="pill">${esc(a.kind)}</span>`;
-  $("dKv").innerHTML = [["Tag", a.tag], ["Serial", a.serial], ["Who has it", d.assigneeName ? `${esc(d.assigneeName)} <span class="kv mono">${esc(d.assigneeEmail || "")}</span>` : (a.holder ? esc(a.holder) + ' <span class="kv">(external)</span>' : "nobody")], ["Note", a.note], ["Registered", fmt(a.createdAt) + (d.createdByName ? ` · ${esc(d.createdByName)}` : "")]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Who has it" ? v : esc(v)}</div>`).join("");
+  $("dKv").innerHTML = [["Tag", a.tag], ["Serial", a.serial], ["Who has it", d.assigneeName ? `${esc(d.assigneeName)} <span class="kv mono">${esc(d.assigneeEmail || "")}</span>` : (a.holder ? esc(a.holder) + ' <span class="kv">(external)</span>' : "nobody")], ["Location", d.location], ["Note", a.note], ["Registered", fmt(a.createdAt) + (d.createdByName ? ` · ${esc(d.createdByName)}` : "")]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Who has it" ? v : esc(v)}</div>`).join("");
   const md = opt(d.mdm);
   $("dMdm").classList.toggle("hidden", !md);
   if (md) $("dMdm").innerHTML = `<details ${d.mdmMismatch ? "open" : ""}><summary><b>${esc(md.connName)}</b> · Device management${d.mdmMismatch ? ' <span class="pill warn">mismatch</span>' : ""}</summary><div class="kvl">${[["Device name", md.deviceName], ["OS", md.osVersion], ["Last seen", md.lastSeen], ["Logged-in user", md.userEmail ? `${md.userName ? esc(md.userName) + " · " : ""}<span class="mono">${esc(md.userEmail)}</span>` : (md.userName || "")], ["Compliance", md.compliance], ["Synced", ago(md.syncedAt)]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Logged-in user" ? v : esc(v)}</div>`).join("")}</div>${d.mdmMismatch ? `<div class="kv" style="margin-top:6px">${a.status === "sold" || a.status === "scrapped" || a.status === "lost" ? `The register says <b>${esc(STATUS_WORD[a.status])}</b>, but the MDM still sees this device. Verify the device and its MDM enrolment, then resolve the mismatch.` : `The register says <b>${esc(d.assigneeName || "nobody")}</b>, the MDM sees <b>${esc(md.userName || md.userEmail)}</b>. Record the hand-over here if the MDM is right.`}</div>` : ""}</details>`;
@@ -400,6 +425,7 @@ async function loadDevice(id) {
   labels.close();
   if (admin) $("dDoAct").onclick = () => { $("dActCard").classList.remove("hidden"); const def = a.status === "assigned" || a.status === "loaned" ? "returned" : "handed_out"; dAct = def; $("dActChips").querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.act === def)); toRowFor(def, "dToRow", "dToLabel"); $("dActCard").scrollIntoView({ behavior: "smooth" }); };
   $("dAdminRow").classList.toggle("hidden", !admin);
+  if (admin) fillLocationSelect($("dLocationSel"), d.location);
   $("dSaleCard").classList.toggle("hidden", !admin);
   if (admin) { loadDeviceSale(a); hardwarePanel.load(a); }
   $("dArchive").textContent = a.archived ? "Restore" : "Archive";
@@ -409,6 +435,10 @@ async function loadDevice(id) {
   $("dEvents").innerHTML = d.events.length ? d.events.map((e) => `<div class="ev ${["handed_out", "returned", "loaned", "sold", "scrapped", "lost"].includes(e.kind) ? "act" : ""}"><span class="dot"></span><div><div class="what">${esc(e.detail)}</div><div class="meta">${esc(fmt(e.at))} · ${esc(e.by)}</div>${Number(e.photoId) ? `<img data-photo="${Number(e.photoId)}" alt="">` : ""}</div></div>`).join("") : '<div class="empty">no history yet</div>';
   for (const img of $("dEvents").querySelectorAll("img")) { photoUrl(img.dataset.photo).then((u) => { if (u) img.src = u; else img.remove(); }); img.onclick = () => photoUrl(img.dataset.photo).then(zoom); }
 }
+async function fillLocationSelect(sel, current) {
+  try { const list = await backend.getLocations(session.load()); sel.innerHTML = '<option value="">—</option>' + list.map((l) => `<option value="${esc(l)}">${esc(l)}</option>`).join(""); if (current && !list.includes(current)) sel.insertAdjacentHTML("beforeend", `<option value="${esc(current)}">${esc(current)}</option>`); sel.value = current || ""; } catch (_) {}
+}
+$("dLocationSel").onchange = async () => { const r = await backend.setAssetLocation(session.load(), BigInt(curId), $("dLocationSel").value); setStatus("dStatus", r.ok ? "ok" : "err", r.ok ? "location saved" : r.detail); if (r.ok) loadDevice(curId); };
 $("dEdit").onclick = () => { const a = curAsset; if (!a) return; $("eTag").value = a.tag; $("eSerial").value = a.serial; $("eVendor").value = a.vendor; $("eModel").value = a.model; $("eKind").value = a.kind; $("eNote").value = a.note; $("dEditCard").classList.remove("hidden"); };
 $("eCancel").onclick = () => $("dEditCard").classList.add("hidden");
 $("eSave").onclick = async () => {
@@ -514,6 +544,7 @@ function renderSaleWorkflow(v, deal) {
 async function loadSettings() {
   const s = opt(await backend.getSettings(session.load())); if (!s) return;
   $("sAppUrl").value = s.appUrl; $("sOrg").value = s.orgName;
+  loadRegisterSettings();
   $("sMeta").textContent = `${Number(s.peopleCount)} people from the hub${Number(s.lastDirectoryPull) ? " · synced " + ago(s.lastDirectoryPull) : ""} · ${Number(s.adminCount)} admin${Number(s.adminCount) === 1 ? "" : "s"} · photos ${Math.round(Number(s.photoBytes) / 1048576)} MB`;
   $("sTrust").value = s.trustId || "";
   $("sAppUrlHint").textContent = s.appUrl ? "Slack and Hub notifications open the matching device, offer or invoice." : "App address is missing: Slack and Hub notifications have no link. Enter this Assets app's HTTPS address above and save.";
@@ -679,6 +710,19 @@ async function apAdopt(serials) {
 $("apRows").addEventListener("click", (e) => { const b = e.target.closest("button[data-ap-add]"); if (b) apAdopt([b.dataset.apAdd]); });
 $("apAddAll").onclick = () => { const ss = apRows.filter((r) => !opt(r.assetId)).map((r) => r.device.serial); if (ss.length && confirm(`Take ${ss.length} devices into the register as "unknown"? You can archive any of them later.`)) apAdopt(ss); };
 
+async function loadRegisterSettings() {
+  const o = opt(await backend.registerOptions(session.load()).catch(() => null)); if (!o) return;
+  $("sLocations").value = o.locations.join("\n"); $("sTagPrefix").value = o.prefix; $("sTagDigits").value = Number(o.digits);
+  $("sTagNext").textContent = `Next automatic tag: ${o.nextTag}. The number continues from the highest numeric tag already in the register.`;
+}
+$("sRegSave").onclick = async () => {
+  setStatus("sRegStatus", "", "saving…");
+  const list = $("sLocations").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  const a = await backend.setLocations(session.load(), list);
+  const b = a.ok ? await backend.setTagScheme(session.load(), { prefix: $("sTagPrefix").value.trim(), digits: BigInt(Math.max(3, Math.min(10, Number($("sTagDigits").value) || 6))) }) : a;
+  setStatus("sRegStatus", b.ok ? "ok" : "err", b.ok ? "saved" : b.detail);
+  loadRegisterSettings();
+};
 $("sSave").onclick = async () => {
   setStatus("sStatus", "", "saving…");
   const r = await backend.setSettings(session.load(), { adminGroup: "", appUrl: $("sAppUrl").value.trim(), orgName: $("sOrg").value.trim() });

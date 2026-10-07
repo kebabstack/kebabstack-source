@@ -106,3 +106,7 @@ employees remain unable to invoke photo recognition.
 ## Device labels
 
 Open a device and choose **Label**, or **Print labels** on a filtered device list. Pick the label size (Brother DK-11209 62 × 29 mm, DK-11201 90 × 29 mm, DK-11221 23 × 23 mm or DK-22205 62 mm continuous) and the fields to show; the QR code always links to the device page. Printing uses the browser's print dialog: select the label printer and the matching media size once, then every label prints 1:1. Any printer the operating system knows works; nothing is sent to a cloud print service. An admin can save the current layout as the default for the register.
+
+## Registering a new device
+
+Scan a device → photo of the factory label (or **Find or add manually**) → **Not in the list — add a new device**. Serial, vendor and model are prefilled from the photo and can be corrected. Leave the tag empty to get the next automatic tag (prefix and digits under Settings → Register devices; the number continues from the highest numeric tag in the register). Optionally pick the person who receives the device or one of the admin-defined locations. **Register device & show label** creates the device, records the hand-out, keeps the photo as evidence and opens the label ready to print.

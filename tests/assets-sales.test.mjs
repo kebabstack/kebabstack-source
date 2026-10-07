@@ -131,3 +131,31 @@ test('device labels: the default layout is an admin setting with a fixed vocabul
   assert.deepEqual((await a.getLabelLayout(admin))[0],{size:'23x23',fields:['qr','tag','logo','note'],note:'If found, please contact it@example.test'});
  }finally{await x.pic.tearDown();}
 });
+
+test('registering a device: automatic tags continue the register, locations are admin-defined, a person is handed the device in the same step',async()=>{
+ const x=await setup(server.getUrl());
+ try{
+  const a=x.apps.assets.app,admin=x.assetToken,employee=await x.login('assets','employee');
+  assert.deepEqual(await a.registerOptions(employee),[]);
+  let [o]=await a.registerOptions(admin);const initial=o.nextTag;assert.match(initial,/^\d{6}$/,'six padded digits, continuing from the fixture devices');assert.deepEqual(o.locations,[]);
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'',vendor:'',model:'',kind:'laptop',note:''},assignee:'',location:'',photo:[],mime:''})).ok,false,'needs a serial or a model');
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'S-1',vendor:'Apple',model:'MacBook Air',kind:'laptop',note:''},assignee:'',location:'Nowhere',photo:[],mime:''})).ok,false,'unknown location is refused');
+  assert.equal((await a.setLocations(employee,['Desk 1'])).ok,false);
+  unwrap(await a.setLocations(admin,[' Zürich office · 3rd floor ','Storage room','Storage room','']));
+  [o]=await a.registerOptions(admin);assert.deepEqual(o.locations,['Zürich office · 3rd floor','Storage room']);
+  const first=unwrap(await a.registerDevice(admin,{create:{tag:'',serial:'S-1',vendor:'Apple',model:'MacBook Air',kind:'laptop',note:''},assignee:'',location:'Storage room',photo:[],mime:''}));
+  assert.equal(first.tag,initial);const [v1]=await a.getAsset(admin,first.assetId);assert.equal(v1.location,'Storage room');assert.equal(v1.asset.status,'in_stock');
+  unwrap(await a.createAsset(admin,{tag:'DFN-000433',serial:'S-433',vendor:'Apple',model:'MacBook Pro',kind:'laptop',note:''}));
+  [o]=await a.registerOptions(admin);assert.equal(o.nextTag,'000434','the number continues from the highest numeric tail, whatever the prefix');
+  unwrap(await a.setTagScheme(admin,{prefix:'DFN-',digits:6n}));
+  assert.equal((await a.setTagScheme(admin,{prefix:'TOO-LONG-PREFIX',digits:6n})).ok,false);
+  const second=unwrap(await a.registerDevice(admin,{create:{tag:'',serial:'S-2',vendor:'Samsung',model:'Galaxy S24',kind:'phone',note:''},assignee:'employee@workboard.test',location:'',photo:[],mime:''}));
+  assert.equal(second.tag,'DFN-000434');const [v2]=await a.getAsset(admin,second.assetId);assert.equal(v2.asset.status,'assigned');assert.equal(v2.asset.assignee,x.ids.employee);assert.equal(v2.location,'');
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'S-2',vendor:'',model:'',kind:'phone',note:''},assignee:'',location:'',photo:[],mime:''})).ok,false,'duplicate serial is refused');
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'S-3',vendor:'',model:'Dock',kind:'accessory',note:''},assignee:'nobody@workboard.test',location:'',photo:[],mime:''})).ok,false,'unknown person is refused');
+  unwrap(await a.setAssetLocation(admin,first.assetId,'Zürich office · 3rd floor'));assert.equal((await a.getAsset(admin,first.assetId))[0].location,'Zürich office · 3rd floor');
+  assert.equal((await a.setAssetLocation(admin,first.assetId,'Mars')).ok,false);
+  assert.ok((await a.listAssets(admin,'3rd floor','',false)).some(r=>r.asset.id===first.assetId),'search finds a device by its location');
+  assert.equal((await a.setAssetLocation(employee,first.assetId,'')).ok,false);
+ }finally{await x.pic.tearDown();}
+});

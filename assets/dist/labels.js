@@ -35,6 +35,8 @@ export function labelHtml(asset, layout, { orgName = "", logoUrl = "", appUrl = 
 
 // Shrink each line until it fits its width (down to a floor), then the whole text block until it fits the height.
 export function fitLabel(label) {
+  const view = label?.ownerDocument?.defaultView; if (!view || typeof view.getComputedStyle !== "function") return;
+  const getComputedStyle = (el) => view.getComputedStyle(el);
   const px = (mm) => (mm * 96) / 25.4;
   for (const line of label.querySelectorAll("[data-fit]")) {
     if (line.dataset.fit === "wrap") continue; // these wrap to two lines; the height pass below shrinks them if needed
@@ -56,7 +58,11 @@ export function createLabels({ root, printRoot, api, token, hub, settings, loadQ
   let layout = null, logoUrl = "", qrLib = null, assets = [], busy = false;
   const $ = (q) => root.querySelector(q);
   async function prepare() {
-    if (!layout) { try { layout = opt(await api().getLabelLayout(token())) || { ...DEFAULT }; } catch { layout = { ...DEFAULT }; } layout = { size: layout.size, fields: [...layout.fields], note: layout.note || "" }; }
+    if (!layout) {
+      let stored = null; try { stored = opt(await api().getLabelLayout(token())); } catch {}
+      if (!stored || !Array.isArray(stored.fields) || !SIZES[stored.size]) stored = DEFAULT;
+      layout = { size: stored.size, fields: [...stored.fields], note: stored.note || "" };
+    }
     if (!qrLib) { try { await loadQr(); qrLib = window.qrcode; } catch { qrLib = null; } }
     if (!logoUrl && layout.fields.includes("logo")) await loadLogo();
   }

@@ -59,6 +59,10 @@ persistent actor Assets {
   var adminEmails : [Text] = []; // bootstrap admins (claimAdmin / addAdminEmail)
   var adminClaimed : Bool = false; // claimAdmin is one-shot
   var tagPrefix : Text = "INV-"; // retired in 0.20.2 (never applied anywhere); kept so the stable layout stays unchanged without a migration
+  // Registering devices (0.21.0): admin-defined locations, a location per device, automatic tags.
+  var locations : [Text] = [];
+  let assetLocation : Map.Map<Nat, Text> = Map.empty<Nat, Text>();
+  var tagScheme : { prefix : Text; digits : Nat } = { prefix = ""; digits = 6 };
   var photoBytes : Nat = 0; // total photo bytes held
   /// Printable device labels (QR to the device page): the admin-chosen default layout for the whole register.
   public type LabelLayout = { size : Text; fields : [Text] };
@@ -66,7 +70,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.20.2";
+  transient let BUILD_VERSION : Text = "0.21.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -809,6 +813,89 @@ persistent actor Assets {
     a;
   };
 
+  func locationOf(id : Nat) : Text = Map.get(assetLocation, Nat.compare, id) ?? "";
+  /// The digits at the end of a tag ("DFN-000433" → 433); none when the tag does not end in digits.
+  func numericTail(t : Text) : ?Nat {
+    var n = 0; var scale = 1; var seen = false;
+    for (c in Text.toIter(Text.fromIter(Iter.fromArray(Array.reverse(Iter.toArray(t.chars())))))) {
+      if (c >= '0' and c <= '9') { n += (Nat32.toNat(Char.toNat32(c)) - 48) * scale; scale *= 10; seen := true; if (scale > 1_000_000_000_000) return ?n } else return (if (seen) ?n else null);
+    };
+    if (seen) ?n else null;
+  };
+  func padded(n : Nat, digits : Nat) : Text { var t = Nat.toText(n); while (t.size() < digits) t := "0" # t; t };
+  /// Next free automatic tag: prefix + (highest numeric tail across all devices + 1), zero-padded.
+  func nextTag() : Text {
+    var max = 0;
+    for ((_, a) in Map.entries(assets)) switch (numericTail(a.tag)) { case (?n) { if (n > max) max := n }; case null {} };
+    var candidate = tagScheme.prefix # padded(max + 1, tagScheme.digits);
+    var bump = max + 1;
+    label find loop {
+      switch (duplicateOf({ tag = candidate; serial = ""; vendor = ""; model = ""; kind = ""; note = "" }, 0)) { case null break find; case (?_) { bump += 1; candidate := tagScheme.prefix # padded(bump, tagScheme.digits) } };
+    };
+    candidate;
+  };
+  public type RegisterOptions = { locations : [Text]; nextTag : Text; prefix : Text; digits : Nat };
+  public shared query func registerOptions(tok : Text) : async ?RegisterOptions {
+    switch (admin(tok)) { case (?_) ?{ locations; nextTag = nextTag(); prefix = tagScheme.prefix; digits = tagScheme.digits }; case null null };
+  };
+  public shared query func getLocations(tok : Text) : async [Text] { switch (me(tok)) { case (?_) locations; case null [] } };
+  public shared func setLocations(tok : Text, list : [Text]) : async { ok : Bool; detail : Text } {
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+    if (list.size() > 200) return { ok = false; detail = "At most 200 locations" };
+    let out = List.empty<Text>();
+    for (x in list.vals()) { let v = capText(norm(x), 80); if (v != "" and not has(List.toArray(out), v)) List.add(out, v) };
+    locations := List.toArray(out);
+    log(m.email, "locations updated (" # Nat.toText(locations.size()) # ")");
+    { ok = true; detail = "" };
+  };
+  public shared func setTagScheme(tok : Text, scheme : { prefix : Text; digits : Nat }) : async { ok : Bool; detail : Text } {
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+    let prefix = norm(scheme.prefix);
+    if (prefix.size() > 10 or scheme.digits < 3 or scheme.digits > 10) return { ok = false; detail = "Prefix up to 10 characters, 3 to 10 digits" };
+    tagScheme := { prefix; digits = scheme.digits };
+    log(m.email, "automatic tag scheme updated (" # prefix # ", " # Nat.toText(scheme.digits) # " digits)");
+    { ok = true; detail = "" };
+  };
+  public shared func setAssetLocation(tok : Text, id : Nat, location : Text) : async { ok : Bool; detail : Text } {
+    if (migrating()) return { ok = false; detail = MIGRATING };
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+    let a = switch (Map.get(assets, Nat.compare, id)) { case (?a) a; case null return { ok = false; detail = "no such device" } };
+    let v = norm(location);
+    if (v != "" and not has(locations, v)) return { ok = false; detail = "Choose a location from Settings → Register devices" };
+    if (v == locationOf(id)) return { ok = true; detail = "" };
+    if (v == "") ignore Map.delete(assetLocation, Nat.compare, id) else Map.add(assetLocation, Nat.compare, id, v);
+    Map.add(assets, Nat.compare, id, { a with updatedAt = now() });
+    ignore addEvent(id, m.id, "edited", (if (v == "") "location cleared" else "location: " # v), "", 0);
+    { ok = true; detail = "" };
+  };
+  /// One step for a new device: details (serial, vendor, model from the photo or typed), an automatic tag
+  /// unless one is given, optionally the person who gets it or the place it sits, and the photo as evidence.
+  public shared func registerDevice(tok : Text, args : { create : AssetInput; assignee : Text; location : Text; photo : ?Blob; mime : Text }) : async { ok : Bool; assetId : Nat; tag : Text; detail : Text } {
+    if (migrating()) return { ok = false; assetId = 0; tag = ""; detail = MIGRATING };
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; assetId = 0; tag = ""; detail = "admins only" } };
+    var c = cleanInput(args.create);
+    if (c.serial == "" and c.model == "" and c.tag == "") return { ok = false; assetId = 0; tag = ""; detail = "At least a serial number or a model is needed" };
+    let loc = norm(args.location);
+    if (loc != "" and not has(locations, loc)) return { ok = false; assetId = 0; tag = ""; detail = "Choose a location from Settings → Register devices" };
+    let to = norm(args.assignee);
+    if (to != "" and (not knownPerson(to) or not Hub.isActive(people, lower(to)))) return { ok = false; assetId = 0; tag = ""; detail = "Pick the person from the directory" };
+    switch (duplicateOf(c, 0)) { case (?d) return { ok = false; assetId = d.id; tag = d.tag; detail = "Already in the register as " # deviceName(d) # " (#" # Nat.toText(d.id) # ")" }; case null {} };
+    if (c.tag == "") c := { c with tag = nextTag() };
+    let a = createInternal(m.id, c, "in_stock", "", "", (switch (args.photo) { case (?_) "photo intake"; case null "" }));
+    var photoId = 0;
+    switch (args.photo) { case (?img) { let p = storePhoto(a.id, m.id, img, args.mime); if (p.ok) photoId := p.id }; case null {} };
+    if (loc != "") { Map.add(assetLocation, Nat.compare, a.id, loc); ignore addEvent(a.id, m.id, "edited", "location: " # loc, "", 0) };
+    var detail = "registered as " # c.tag;
+    if (to != "") {
+      let r = applyAction(m, a, "handed_out", to, "", photoId);
+      if (not r.ok) return { ok = false; assetId = a.id; tag = c.tag; detail = r.detail };
+      detail #= " · " # r.detail;
+    } else if (photoId != 0) { switch (Map.get(photos, Nat.compare, photoId)) { case (?p) { let eid = addEvent(a.id, m.id, "photo", "photo added", "", photoId); Map.add(photos, Nat.compare, photoId, { p with eventId = eid }) }; case null {} } };
+    log(m.email, deviceName(a) # " #" # Nat.toText(a.id) # ": " # detail);
+    if (to != "") await notifyHandover(a.id, "handed_out", to);
+    { ok = true; assetId = a.id; tag = c.tag; detail };
+  };
+
   public shared func createAsset(tok : Text, x : AssetInput) : async { ok : Bool; id : Nat; detail : Text } {
     if (migrating()) return { ok = false; id = 0; detail = MIGRATING };
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; id = 0; detail = "admins only" } };
@@ -947,13 +1034,13 @@ persistent actor Assets {
     };
   };
 
-  public type AssetRow = { asset : Asset; assigneeName : Text; photoCount : Nat; lastEvent : Text; lastAt : Int; mdm : Text; mdmUser : Text; mdmMismatch : Bool; assigneeEmail : Text; createdByName : Text }; // asset.assignee/createdBy are person ids (0.6.0)
+  public type AssetRow = { asset : Asset; assigneeName : Text; photoCount : Nat; lastEvent : Text; lastAt : Int; mdm : Text; mdmUser : Text; mdmMismatch : Bool; assigneeEmail : Text; createdByName : Text; location : Text }; // asset.assignee/createdBy are person ids (0.6.0)
   func row(a : Asset) : AssetRow {
     var lastEvent = ""; var lastAt = a.updatedAt; var pc = 0;
     for ((_, e) in Map.entries(events)) if (e.assetId == a.id and e.at >= lastAt) { lastEvent := e.detail; lastAt := e.at };
     for ((_, p) in Map.entries(photos)) if (p.assetId == a.id) pc += 1;
     let (mdm, mdmUser, mm) = switch (Map.get(mdmMeta, Nat.compare, a.id)) { case (?x) (x.connName, x.userEmail, mdmMismatch(a, x)); case null ("", "", false) };
-    { asset = a; assigneeName = (if (a.assignee == "") "" else nameOf(a.assignee)); photoCount = pc; lastEvent; lastAt; mdm; mdmUser; mdmMismatch = mm; assigneeEmail = emailOfPid(a.assignee); createdByName = nameOf(a.createdBy) };
+    { asset = a; assigneeName = (if (a.assignee == "") "" else nameOf(a.assignee)); photoCount = pc; lastEvent; lastAt; mdm; mdmUser; mdmMismatch = mm; assigneeEmail = emailOfPid(a.assignee); createdByName = nameOf(a.createdBy); location = locationOf(a.id) };
   };
   /// Admins see everything; members see their own devices. q matches tag, serial, vendor, model, assignee.
   func hardwarePending(id : Nat) : Bool {
@@ -973,7 +1060,7 @@ persistent actor Assets {
     let out = List.empty<AssetRow>();
     for ((_, a) in Map.entries(assets)) {
       if (canSee(m, a) and ((status == "offboarding" and m.role == "admin" and hardwarePending(a.id)) or (status != "offboarding" and a.archived == archived and (status == "" or a.status == status)))) {
-        let hay = lower(a.tag # " " # a.serial # " " # a.vendor # " " # a.model # " " # emailOfPid(a.assignee) # " " # nameOf(a.assignee) # " " # a.holder # " " # a.note);
+        let hay = lower(a.tag # " " # a.serial # " " # a.vendor # " " # a.model # " " # emailOfPid(a.assignee) # " " # nameOf(a.assignee) # " " # a.holder # " " # a.note # " " # locationOf(a.id));
         if (needle == "" or Text.contains(hay, #text needle) or (nid != "" and (Text.contains(normId(a.tag), #text nid) or Text.contains(normId(a.serial), #text nid)))) List.add(out, row(a));
       };
     };
@@ -981,10 +1068,10 @@ persistent actor Assets {
     Array.tabulate<AssetRow>(Nat.min(arr.size(), 500), func i = arr[i]);
   };
   /// events come display-resolved (by/to as names); asset.assignee is the person id, assigneeEmail its current address
-  public shared query func getAsset(tok : Text, id : Nat) : async ?{ asset : Asset; assigneeName : Text; assigneeEmail : Text; createdByName : Text; events : [Event]; photos : [PhotoMeta]; mdm : ?MdmMeta; mdmMismatch : Bool; abm : ?AbmDevice } {
+  public shared query func getAsset(tok : Text, id : Nat) : async ?{ asset : Asset; assigneeName : Text; assigneeEmail : Text; createdByName : Text; events : [Event]; photos : [PhotoMeta]; mdm : ?MdmMeta; mdmMismatch : Bool; abm : ?AbmDevice; location : Text } {
     let m = switch (me(tok)) { case (?m) m; case null return null };
     switch (Map.get(assets, Nat.compare, id)) {
-      case (?a) { if (not canSee(m, a)) return null; let md = Map.get(mdmMeta, Nat.compare, id); ?{ asset = a; assigneeName = (if (a.assignee == "") "" else nameOf(a.assignee)); assigneeEmail = emailOfPid(a.assignee); createdByName = nameOf(a.createdBy); events = Array.map<Event, Event>(eventsOf(id).filter(func e = m.role == "admin" or e.kind != "offboarding"), showEvent); photos = Array.map<PhotoMeta, PhotoMeta>(photosOf(id), func(ph) = { ph with by = nameOf(ph.by) }); mdm = md; mdmMismatch = (switch (md) { case (?x) mdmMismatch(a, x); case null false }); abm = Map.get(abmDevices, Text.compare, normId(a.serial)) } };
+      case (?a) { if (not canSee(m, a)) return null; let md = Map.get(mdmMeta, Nat.compare, id); ?{ location = locationOf(a.id); asset = a; assigneeName = (if (a.assignee == "") "" else nameOf(a.assignee)); assigneeEmail = emailOfPid(a.assignee); createdByName = nameOf(a.createdBy); events = Array.map<Event, Event>(eventsOf(id).filter(func e = m.role == "admin" or e.kind != "offboarding"), showEvent); photos = Array.map<PhotoMeta, PhotoMeta>(photosOf(id), func(ph) = { ph with by = nameOf(ph.by) }); mdm = md; mdmMismatch = (switch (md) { case (?x) mdmMismatch(a, x); case null false }); abm = Map.get(abmDevices, Text.compare, normId(a.serial)) } };
       case null null;
     };
   };

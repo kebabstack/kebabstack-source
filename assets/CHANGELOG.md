@@ -1,5 +1,11 @@
 # Changelog — kebab-stack assets
 
+## [0.21.0] — 2026-10-07
+
+- Registering a device is one step: take the photo (serial, vendor and model are read and can be corrected), the asset tag is generated automatically unless typed, optionally hand the device to a person from the directory or place it at a location, then **Register device & show label**. The label appears at once and prints from there. Automatic tags continue from the highest numeric tag already in the register; an optional prefix and the number of digits are set under Settings → Register devices.
+- Locations: admins define a list (offices, floors, desks, rooms, departments) under Settings → Register devices. A device carries at most one location, shown on its page and in the list, changeable on the device page, searchable. Never required.
+- Finding an existing device and recording what happened to it works as before; the previous "Use this new device → what happened" detour is gone.
+
 ## [0.20.2] — 2026-10-07
 
 - Settings: the "Tag prefix" field is removed. It was stored but never applied anywhere (not on manual entry, scan or import), so it only suggested a behaviour that did not exist. Device tags are printed and searched exactly as recorded. Existing data is untouched.

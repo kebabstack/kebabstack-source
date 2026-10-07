@@ -217,10 +217,13 @@
         </div>
         <div class="card flat hidden" id="ikNewCard">
           <h3>New device</h3>
-          <div class="row"><div><label for="nTag">Tag (sticker)</label><input type="text" id="nTag" placeholder="INV-0042"></div><div><label for="nSerial">Serial</label><input type="text" id="nSerial" placeholder="as printed"></div></div>
+          <p class="kv">Serial, vendor and model come from the photo when it could be read; correct anything here. The tag is generated automatically unless you type one.</p>
+          <div class="row"><div><label for="nSerial">Serial</label><input type="text" id="nSerial" placeholder="as printed"></div><div><label for="nTag">Tag <span class="kv">(optional)</span></label><input type="text" id="nTag" placeholder="automatic"></div></div>
           <div class="row"><div><label for="nVendor">Vendor</label><input type="text" id="nVendor" placeholder="Apple"></div><div><label for="nModel">Model</label><input type="text" id="nModel" placeholder="MacBook Pro 14&quot;"></div><div><label for="nKind">Kind</label><select id="nKind"><option value="laptop">laptop</option><option value="phone">phone</option><option value="tablet">tablet</option><option value="monitor">monitor</option><option value="accessory">accessory</option><option value="other">other</option></select></div></div>
           <div><label for="nNote">Note</label><input type="text" id="nNote" placeholder="optional"></div>
-          <div class="btnrow"><button id="ikUseNew" class="primary sm">Use this new device</button><span id="newStatus" class="status" role="status"></span></div>
+          <h3 style="margin-top:16px">Who or where? <span class="kv">(optional)</span></h3>
+          <div class="row"><div class="pick" style="margin:0"><label for="nTo">Hand out to</label><input type="text" id="nTo" placeholder="start typing a name…" autocomplete="off"><div class="list hidden" id="nToList"></div></div><div><label for="nLocation">Location</label><select id="nLocation"><option value="">—</option></select><p class="kv" id="nLocationHint"></p></div></div>
+          <div class="btnrow"><button id="ikRegister" class="primary">Register device &amp; show label</button><span id="newStatus" class="status" role="status"></span></div>
         </div>
       </div>
       <div id="ik2" class="hidden">
@@ -240,6 +243,7 @@
       </div>
       <div id="ik3" class="hidden">
         <div class="card done"><div class="big">🍢</div><h3 id="doneTitle">Saved</h3><div class="kv" id="doneSub"></div><div class="btnrow" style="justify-content:center"><button id="doneNext" class="primary">Next photo</button><button id="doneOpen" class="sm">Open the device</button></div></div>
+        <div class="card flat hidden" id="ikLabelCard"></div>
       </div>
       <div class="card flat" id="recentCard">
         <h3>Recent activity</h3>
@@ -273,7 +277,7 @@
         <div id="dMdm" class="hidden" style="margin-top:10px;padding:10px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)"></div>
         <div id="dAbm" class="hidden" style="margin-top:10px;padding:10px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)"></div>
         <div class="photos" id="dPhotos"></div>
-        <div class="btnrow" id="dAdminRow"><button id="dEdit" class="sm">Edit details</button><button id="dPhotoBtn" class="sm">Add photo</button><input type="file" id="dPhotoFile" accept="image/*" class="hidden"><button id="dArchive" class="sm">Archive</button><span id="dStatus" class="status" role="status"></span></div>
+        <div class="btnrow" id="dAdminRow"><label class="kv" for="dLocationSel" style="display:flex;align-items:center;gap:6px">Location <select id="dLocationSel" class="sm"><option value="">—</option></select></label><button id="dEdit" class="sm">Edit details</button><button id="dPhotoBtn" class="sm">Add photo</button><input type="file" id="dPhotoFile" accept="image/*" class="hidden"><button id="dArchive" class="sm">Archive</button><span id="dStatus" class="status" role="status"></span></div>
       </div>
       <div class="card flat hidden" id="dLabelCard"></div>
       <div class="card flat hidden" id="dEditCard">
@@ -402,6 +406,13 @@
 
         <div class="btnrow"><button id="sSave" class="primary sm">Save</button><span id="sStatus" class="status" role="status"></span></div>
         <div class="kv" id="sMeta" style="margin-top:10px"></div>
+      </div><div class="card flat">
+        <h3>Register devices</h3>
+        <p class="kv">Locations are offered when a device is registered or edited: offices, floors, desks, rooms, departments, whatever helps you find it. One per line.</p>
+        <div><label for="sLocations">Locations</label><textarea id="sLocations" rows="5" placeholder="Zürich office · 3rd floor&#10;Storage room&#10;Desk 12"></textarea></div>
+        <div class="row"><div><label for="sTagPrefix">Automatic tag prefix <span class="kv">(optional)</span></label><input type="text" id="sTagPrefix" placeholder="DFN-" maxlength="10"></div><div><label for="sTagDigits">Digits</label><input type="number" id="sTagDigits" min="3" max="10" value="6"></div></div>
+        <p class="kv" id="sTagNext"></p>
+        <div class="btnrow"><button id="sRegSave" class="primary sm">Save</button><span id="sRegStatus" class="status" role="status"></span></div>
       </div></div><div class="settings-group hidden" id="settings-connections"><div class="card">
         <h3>Reading photos <span class="pill" id="sAiPill">…</span></h3>
         <div class="kv" id="sAiLine"></div>

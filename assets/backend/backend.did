@@ -135,6 +135,13 @@ type Sale =
    waiverVersion: nat;
    wiped: bool;
  };
+type RegisterOptions =
+ record {
+   digits: nat;
+   locations: vec text;
+   nextTag: text;
+   prefix: text;
+ };
 type ReadResult =
  record {
    detail: text;
@@ -560,6 +567,7 @@ type AssetRow =
    createdByName: text;
    lastAt: int;
    lastEvent: text;
+   location: text;
    mdm: text;
    mdmMismatch: bool;
    mdmUser: text;
@@ -874,6 +882,7 @@ service : {
        assigneeName: text;
        createdByName: text;
        events: vec Event;
+       location: text;
        mdm: opt MdmMeta;
        mdmMismatch: bool;
        photos: vec PhotoMeta;
@@ -882,6 +891,7 @@ service : {
   getBilling: (tok: text) -> (opt Billing) query;
   getDeal: (id: nat, key: text) -> (opt DealView) query;
   getLabelLayout: (tok: text) -> (opt LabelLayoutView) query;
+  getLocations: (tok: text) -> (vec text) query;
   /// One sale with everything the pages need — admins, or the buyer for their own.
   getSale: (tok: text, id: nat) -> (opt SaleView) query;
   getSettings: (tok: text) -> (opt Settings) query;
@@ -1015,6 +1025,22 @@ service : {
                                ok: bool;
                                state: AiState;
                              });
+  /// One step for a new device: details (serial, vendor, model from the photo or typed), an automatic tag
+  /// unless one is given, optionally the person who gets it or the place it sits, and the photo as evidence.
+  registerDevice: (tok: text, args:
+   record {
+     assignee: text;
+     create: AssetInput;
+     location: text;
+     mime: text;
+     photo: opt blob;
+   }) -> (record {
+            assetId: nat;
+            detail: text;
+            ok: bool;
+            tag: text;
+          });
+  registerOptions: (tok: text) -> (opt RegisterOptions) query;
   /// Admins: remove the connection and what it reported; devices already in the register stay.
   removeAbm: (tok: text, id: nat) -> (record {
                                         detail: text;
@@ -1097,6 +1123,11 @@ service : {
       detail: text;
       ok: bool;
     });
+  setAssetLocation: (tok: text, id: nat, location: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// Admins: save the billing settings. The IBAN must pass the mod-97 check; a changed hand-over text bumps its version (open offers are re-offered on that text).
   setBilling: (tok: text, b: Billing) -> (record {
                                             detail: text;
@@ -1104,6 +1135,11 @@ service : {
                                           });
   setHub: (id: text) -> (bool);
   setLabelLayout: (tok: text, layout: LabelLayoutView) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setLocations: (tok: text, list: vec text) ->
    (record {
       detail: text;
       ok: bool;
@@ -1129,6 +1165,13 @@ service : {
             detail: text;
             ok: bool;
           });
+  setTagScheme: (tok: text, scheme: record {
+                                      digits: nat;
+                                      prefix: text;
+                                    }) -> (record {
+                                             detail: text;
+                                             ok: bool;
+                                           });
   /// Which trust app may ask "who has which serial?" — its backend canister id (Trust → Settings shows it). "" switches the export off.
   setTrustCanister: (tok: text, id: text) ->
    (record {
