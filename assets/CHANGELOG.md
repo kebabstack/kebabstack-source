@@ -1,5 +1,9 @@
 # Changelog — kebab-stack assets
 
+## [0.20.1] — 2026-10-07
+
+- Labels: lines shrink to fit the label instead of being cut off; the company logo sits in the centre of the QR code (error correction H keeps the code readable) instead of beside the name; the fixed "if found" line is replaced by a free footer text (up to 160 characters, for example "If found, please contact it@example.com") that is saved with the default layout. The format list names the DK-22212 film alongside DK-22205.
+
 ## [0.20.0] — 2026-10-07
 
 - Device labels: **Label** on a device and **Print labels** on the device list render QR labels for Brother DK media (62 × 29, 90 × 29, 23 × 23 mm and 62 mm continuous) and print them through the browser’s print dialog, one label per page. The QR code opens the device page in Assets, so a phone camera identifies a device without an app. Fields are chosen per print (asset tag, serial, vendor and model, company name, company logo from the Hub, an “if found, return to” line); **Save as default** stores the layout for every admin. No device data changes; labels are not stored.

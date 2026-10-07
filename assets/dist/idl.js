@@ -30,7 +30,7 @@ export const idlFactory = ({ IDL }) => {
   const MdmMeta = IDL.Record({ compliance: IDL.Text, connId: IDL.Nat, connName: IDL.Text, deviceName: IDL.Text, externalId: IDL.Text, kind: IDL.Text, lastSeen: IDL.Text, osVersion: IDL.Text, syncedAt: IDL.Int, userEmail: IDL.Text, userName: IDL.Text });
   const Manifest = IDL.Record({ description: IDL.Text, name: IDL.Text, needs: IDL.Vec(IDL.Text), version: IDL.Text, wants: IDL.Vec(IDL.Text) });
   const LogRow = IDL.Record({ at: IDL.Int, what: IDL.Text, who: IDL.Text });
-  const LabelLayout = IDL.Record({ fields: IDL.Vec(IDL.Text), size: IDL.Text });
+  const LabelLayoutView = IDL.Record({ fields: IDL.Vec(IDL.Text), note: IDL.Text, size: IDL.Text });
   const Item = IDL.Record({ detail: IDL.Text, historical: IDL.Bool, id: IDL.Text, kind: IDL.Text, path: IDL.Text, status: IDL.Text, title: IDL.Text });
   const Case = IDL.Record({ desk: IDL.Text, dueAt: IDL.Opt(IDL.Int), key: IDL.Text, person: IDL.Text, revision: IDL.Int, state: IDL.Text, ticket: IDL.Nat, url: IDL.Text });
   const Handover = IDL.Record({ assetId: IDL.Nat, caseKey: IDL.Text, choice: IDL.Text, dueOn: IDL.Text, note: IDL.Text, owner: IDL.Text, person: IDL.Text, recipient: IDL.Text, revision: IDL.Nat, saleId: IDL.Nat, stage: IDL.Text, updatedAt: IDL.Int });
@@ -88,7 +88,7 @@ export const idlFactory = ({ IDL }) => {
     getAsset: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ abm: IDL.Opt(AbmDevice), asset: Asset, assigneeEmail: IDL.Text, assigneeName: IDL.Text, createdByName: IDL.Text, events: IDL.Vec(Event), mdm: IDL.Opt(MdmMeta), mdmMismatch: IDL.Bool, photos: IDL.Vec(PhotoMeta) }))], ["query"]),
     getBilling: IDL.Func([IDL.Text], [IDL.Opt(Billing)], ["query"]),
     getDeal: IDL.Func([IDL.Nat, IDL.Text], [IDL.Opt(DealView)], ["query"]),
-    getLabelLayout: IDL.Func([IDL.Text], [IDL.Opt(LabelLayout)], ["query"]),
+    getLabelLayout: IDL.Func([IDL.Text], [IDL.Opt(LabelLayoutView)], ["query"]),
     getSale: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(SaleView)], ["query"]),
     getSettings: IDL.Func([IDL.Text], [IDL.Opt(Settings)], ["query"]),
     handoverOf: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(HandoverView)], ["query"]),
@@ -145,7 +145,7 @@ export const idlFactory = ({ IDL }) => {
     setAdminEmails: IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setBilling: IDL.Func([IDL.Text, Billing], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setHub: IDL.Func([IDL.Text], [IDL.Bool], []),
-    setLabelLayout: IDL.Func([IDL.Text, LabelLayout], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setLabelLayout: IDL.Func([IDL.Text, LabelLayoutView], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setPurchase: IDL.Func([IDL.Text, IDL.Nat, IDL.Opt(IDL.Nat), IDL.Text, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSaleChecks: IDL.Func([IDL.Text, IDL.Nat, IDL.Bool, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSettings: IDL.Func([IDL.Text, IDL.Record({ adminGroup: IDL.Text, appUrl: IDL.Text, orgName: IDL.Text, tagPrefix: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),

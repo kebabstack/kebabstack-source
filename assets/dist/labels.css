@@ -1,16 +1,21 @@
 /* Device labels: millimetre-true markup, previewed scaled on screen and printed 1:1 on label media. */
-.label{box-sizing:border-box;display:flex;gap:2mm;align-items:center;padding:1.5mm 2mm;background:#fff;color:#000;font-family:var(--ks-ui);overflow:hidden;break-after:page;page-break-after:always}
+.label{box-sizing:border-box;display:flex;flex-direction:column;gap:.8mm;padding:1.5mm 2mm;background:#fff;color:#000;font-family:var(--ks-ui);overflow:hidden;break-after:page;page-break-after:always}
 .label.size-62x29{width:62mm;height:29mm}.label.size-90x29{width:90mm;height:29mm}.label.size-62xauto{width:62mm;height:40mm}
-.label.size-23x23{width:23mm;height:23mm;flex-direction:column;gap:.4mm;padding:1mm;justify-content:center}
-.label .qr{flex:0 0 auto;width:24mm;height:24mm}.label.size-90x29 .qr{width:24mm;height:24mm}.label.size-62xauto .qr{width:30mm;height:30mm}.label.size-23x23 .qr{width:16.5mm;height:16.5mm}
+.label.size-23x23{width:23mm;height:23mm;padding:1mm;justify-content:center}
+.label .body{flex:1;min-height:0;display:flex;gap:2mm;align-items:center}
+.label.size-23x23 .body{flex-direction:column;gap:.4mm}
+.label .qr{position:relative;flex:0 0 auto;width:22mm;height:22mm}.label.size-62xauto .qr{width:28mm;height:28mm}.label.size-23x23 .qr{width:16mm;height:16mm}
+.label:not(:has(.note)) .qr{width:24mm;height:24mm}.label.size-62xauto:not(:has(.note)) .qr{width:32mm;height:32mm}.label.size-23x23:not(:has(.note)) .qr{width:16.5mm;height:16.5mm}
 .label .qr svg{width:100%;height:100%;display:block}.label .qr-missing{font-size:2mm;color:#900}
+.label .qr-logo{position:absolute;left:50%;top:50%;width:24%;height:24%;transform:translate(-50%,-50%);object-fit:contain;background:#fff;padding:3%;box-sizing:border-box;border-radius:8%}
 .label .txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.6mm;line-height:1.15}
-.label .tag{font-weight:700;font-size:4.4mm;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label .txt>div{white-space:nowrap;overflow:hidden}.label .txt>div.clip{text-overflow:ellipsis}
+.label .tag{font-weight:700;font-size:4.6mm;letter-spacing:.01em}
 .label.size-23x23 .txt{align-items:center}.label.size-23x23 .tag{font-size:2.4mm}
-.label .serial{font-family:var(--ks-mono);font-size:2.7mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.label .model{font-size:2.7mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.label .org{display:flex;align-items:center;gap:1.5mm;font-size:2.5mm;font-weight:600;margin-top:.5mm;white-space:nowrap;overflow:hidden}.label .org img{height:4.2mm;max-width:18mm;object-fit:contain}
-.label .found{font-size:2.1mm;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label .serial{font-family:var(--ks-mono);font-size:2.8mm}
+.label .txt>div.model{font-size:2.8mm;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.1;flex-shrink:0}
+.label .org{font-size:2.6mm;font-weight:600;margin-top:.4mm}
+.label .note{flex:0 0 auto;max-height:6mm;font-size:2.3mm;color:#222;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.1;border-top:.2mm solid #000;padding-top:.6mm}
 .label-stage{margin:12px 0 16px;overflow:auto}
 .label-sizer{position:relative;border:1px dashed var(--ks-rule);border-radius:4px;background:#fff;overflow:hidden}
 .label-preview{position:absolute;left:0;top:0;transform-origin:top left}

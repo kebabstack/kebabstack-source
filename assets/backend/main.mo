@@ -63,8 +63,10 @@ persistent actor Assets {
   /// Printable device labels (QR to the device page): the admin-chosen default layout for the whole register.
   public type LabelLayout = { size : Text; fields : [Text] };
   var labelLayout : LabelLayout = { size = "62x29"; fields = ["qr", "tag", "serial", "model", "org"] };
+  var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
+  public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.20.0";
+  transient let BUILD_VERSION : Text = "0.20.1";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -342,16 +344,18 @@ persistent actor Assets {
     log(m.email, "settings updated");
     { ok = true; detail = "" };
   };
-  public shared query func getLabelLayout(tok : Text) : async ?LabelLayout {
-    switch (admin(tok)) { case (?_) ?labelLayout; case null null };
+  public shared query func getLabelLayout(tok : Text) : async ?LabelLayoutView {
+    switch (admin(tok)) { case (?_) ?{ size = labelLayout.size; fields = labelLayout.fields; note = labelNote }; case null null };
   };
-  public shared func setLabelLayout(tok : Text, layout : LabelLayout) : async { ok : Bool; detail : Text } {
+  public shared func setLabelLayout(tok : Text, layout : LabelLayoutView) : async { ok : Bool; detail : Text } {
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
     let sizes = ["62x29", "90x29", "23x23", "62xauto"];
-    let known = ["qr", "tag", "serial", "model", "org", "logo", "found"];
+    let known = ["qr", "tag", "serial", "model", "org", "logo", "note", "found"];
     if (not has(sizes, layout.size)) return { ok = false; detail = "Choose one of the supported label sizes" };
     if (layout.fields.size() > known.size() or layout.fields.any(func f = not has(known, f))) return { ok = false; detail = "Unknown label field" };
+    if (layout.note.size() > 160) return { ok = false; detail = "Keep the footer text under 160 characters" };
     labelLayout := { size = layout.size; fields = layout.fields };
+    labelNote := norm(layout.note);
     log(m.email, "label layout updated (" # layout.size # ")");
     { ok = true; detail = "" };
   };
