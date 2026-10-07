@@ -58,7 +58,7 @@ persistent actor Assets {
   var adminGroup : Text = "assets-admins"; // hub group → admins of the register
   var adminEmails : [Text] = []; // bootstrap admins (claimAdmin / addAdminEmail)
   var adminClaimed : Bool = false; // claimAdmin is one-shot
-  var tagPrefix : Text = "INV-"; // suggested tag prefix for new devices
+  var tagPrefix : Text = "INV-"; // retired in 0.20.2 (never applied anywhere); kept so the stable layout stays unchanged without a migration
   var photoBytes : Nat = 0; // total photo bytes held
   /// Printable device labels (QR to the device page): the admin-chosen default layout for the whole register.
   public type LabelLayout = { size : Text; fields : [Text] };
@@ -66,7 +66,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.20.1";
+  transient let BUILD_VERSION : Text = "0.20.2";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -307,11 +307,11 @@ persistent actor Assets {
   func adminCount() : Nat { var n = 0; for ((e, u) in Map.entries(people)) if (u.active and roleOf(e) == "admin") n += 1; n };
   func needsClaim() : Bool = false;
 
-  public type Settings = { hubId : Text; appUrl : Text; orgName : Text; adminGroup : Text; adminEmails : [Text]; tagPrefix : Text; peopleCount : Nat; lastDirectoryPull : Int; adminCount : Nat; photoBytes : Nat; aiSource : Text; aiModel : Text; ai : AiState; trustId : Text; trustLastPull : Int };
+  public type Settings = { hubId : Text; appUrl : Text; orgName : Text; adminGroup : Text; adminEmails : [Text]; peopleCount : Nat; lastDirectoryPull : Int; adminCount : Nat; photoBytes : Nat; aiSource : Text; aiModel : Text; ai : AiState; trustId : Text; trustLastPull : Int };
   public shared query func getSettings(tok : Text) : async ?Settings {
     switch (admin(tok)) {
       case null null;
-      case (?_) ?{ hubId; appUrl; orgName; adminGroup = ""; adminEmails = []; tagPrefix; peopleCount = Map.size(people); lastDirectoryPull; adminCount = adminCount(); photoBytes; aiSource = aiSource(); aiModel = (switch (hubAi) { case (?c) c.provider # " · " # c.visionModel; case null "" }); ai = aiState(); trustId; trustLastPull };
+      case (?_) ?{ hubId; appUrl; orgName; adminGroup = ""; adminEmails = []; peopleCount = Map.size(people); lastDirectoryPull; adminCount = adminCount(); photoBytes; aiSource = aiSource(); aiModel = (switch (hubAi) { case (?c) c.provider # " · " # c.visionModel; case null "" }); ai = aiState(); trustId; trustLastPull };
     };
   };
   /// Which trust app may ask "who has which serial?" — its backend canister id (Trust → Settings shows it). "" switches the export off.
@@ -336,11 +336,11 @@ persistent actor Assets {
     for ((_, a) in Map.entries(assets)) if (not a.archived and a.serial != "" and a.assignee != "") List.add(out, (a.serial, a.assignee));
     List.toArray(out);
   };
-  public shared func setSettings(tok : Text, args : { adminGroup : Text; appUrl : Text; tagPrefix : Text; orgName : Text }) : async { ok : Bool; detail : Text } {
+  public shared func setSettings(tok : Text, args : { adminGroup : Text; appUrl : Text; orgName : Text }) : async { ok : Bool; detail : Text } {
     if (norm(args.adminGroup) != "") return { ok = false; detail = "Role settings have moved to Hub Permissions" };
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
     if (args.appUrl != "" and not Text.startsWith(args.appUrl, #text "https://")) return { ok = false; detail = "app url must start with https://" };
-    appUrl := norm(args.appUrl); tagPrefix := norm(args.tagPrefix); orgName := norm(args.orgName);
+    appUrl := norm(args.appUrl); orgName := norm(args.orgName);
     log(m.email, "settings updated");
     { ok = true; detail = "" };
   };

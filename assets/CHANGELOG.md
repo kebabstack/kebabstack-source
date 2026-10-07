@@ -1,5 +1,9 @@
 # Changelog — kebab-stack assets
 
+## [0.20.2] — 2026-10-07
+
+- Settings: the "Tag prefix" field is removed. It was stored but never applied anywhere (not on manual entry, scan or import), so it only suggested a behaviour that did not exist. Device tags are printed and searched exactly as recorded. Existing data is untouched.
+
 ## [0.20.1] — 2026-10-07
 
 - Labels: lines shrink to fit the label instead of being cut off; the company logo sits in the centre of the QR code (error correction H keeps the code readable) instead of beside the name; the fixed "if found" line is replaced by a free footer text (up to 160 characters, for example "If found, please contact it@example.com") that is saved with the default layout. The format list names the DK-22212 film alongside DK-22205.

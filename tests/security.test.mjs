@@ -1121,7 +1121,7 @@ test('assets: a device sale — only the buyer accepts the terms, numbers are ga
     assert.equal(c.ok, true, c.detail);
     const login = async (p) => { hub.setPrincipal(p); const t = await hub.mintAppTicket('', c.tileId); assert.equal(t.ok, true, t.detail); const s = (await app.loginWithTicket(t.ticket))[0]; assert.ok(s); return s.token; };
     const adminTok = await login(owner), memberTok = await login(member), otherTok = await login(stranger);
-    const linkSettings = { adminGroup: '', appUrl: 'https://assets.example.test/', tagPrefix: 'INV-', orgName: 'Test company' };
+    const linkSettings = { adminGroup: '', appUrl: 'https://assets.example.test/', orgName: 'Test company' };
     assert.equal((await app.setSettings(memberTok, linkSettings)).ok, false, 'members cannot redirect notifications');
     assert.equal((await app.setSettings(adminTok, linkSettings)).ok, true);
     await settled(pic); await pic.advanceTime(2000); await pic.tick(3); // the id migration timer of a fresh install
@@ -2318,7 +2318,7 @@ test('assets: external dealroom — scoped links, atomic invoice, receipt, IT ha
     assert.ok(c.ok,c.detail);
     const login = async p => { hub.setPrincipal(p); const t = await hub.mintAppTicket('',c.tileId); assert.ok(t.ok,t.detail); return (await app.loginWithTicket(t.ticket))[0]; };
     let adminSession = await login(owner), adminTok = adminSession.token, memberTok = (await login(member)).token;
-    const settings = {adminGroup:'',appUrl:'https://assets.example.test/',tagPrefix:'INV-',orgName:'Test company'};
+    const settings = {adminGroup:'',appUrl:'https://assets.example.test/',orgName:'Test company'};
     assert.ok((await app.setSettings(adminTok,settings)).ok);
     await settled(pic); await pic.advanceTime(2000); await pic.tick(3);
     const terms = 'Used equipment. Before hand-over the device must be wiped and removed from company management.\n' + 'The buyer has reviewed the equipment and the agreed price. '.repeat(65) + '\nEND OF COMPLETE TERMS';

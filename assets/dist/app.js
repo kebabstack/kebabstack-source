@@ -513,7 +513,7 @@ function renderSaleWorkflow(v, deal) {
 // ---------- settings ----------
 async function loadSettings() {
   const s = opt(await backend.getSettings(session.load())); if (!s) return;
-  $("sAppUrl").value = s.appUrl; $("sPrefix").value = s.tagPrefix; $("sOrg").value = s.orgName;
+  $("sAppUrl").value = s.appUrl; $("sOrg").value = s.orgName;
   $("sMeta").textContent = `${Number(s.peopleCount)} people from the hub${Number(s.lastDirectoryPull) ? " · synced " + ago(s.lastDirectoryPull) : ""} · ${Number(s.adminCount)} admin${Number(s.adminCount) === 1 ? "" : "s"} · photos ${Math.round(Number(s.photoBytes) / 1048576)} MB`;
   $("sTrust").value = s.trustId || "";
   $("sAppUrlHint").textContent = s.appUrl ? "Slack and Hub notifications open the matching device, offer or invoice." : "App address is missing: Slack and Hub notifications have no link. Enter this Assets app's HTTPS address above and save.";
@@ -681,7 +681,7 @@ $("apAddAll").onclick = () => { const ss = apRows.filter((r) => !opt(r.assetId))
 
 $("sSave").onclick = async () => {
   setStatus("sStatus", "", "saving…");
-  const r = await backend.setSettings(session.load(), { adminGroup: "", appUrl: $("sAppUrl").value.trim(), tagPrefix: $("sPrefix").value.trim(), orgName: $("sOrg").value.trim() });
+  const r = await backend.setSettings(session.load(), { adminGroup: "", appUrl: $("sAppUrl").value.trim(), orgName: $("sOrg").value.trim() });
   setStatus("sStatus", r.ok ? "ok" : "err", r.ok ? "saved" : r.detail);
   await refreshMe(); loadSettings();
 };

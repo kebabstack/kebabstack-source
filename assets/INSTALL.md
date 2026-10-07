@@ -62,7 +62,7 @@ Open Hub → **Permissions**, select this app and review the effective roles. Ac
 ## 5 · Finish
 
 - assets → Settings → General → **Who runs the register**: company name, **App address**
-  (this Assets frontend's HTTPS URL for notification links), tag prefix.
+  (this Assets frontend's HTTPS URL for notification links).
 - Optional: Hub Settings → AI — any OpenAI-compatible chat endpoint or Anthropic.
 - Evaluation instance: Settings → Maintenance → **Seed demo data**.
 

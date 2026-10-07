@@ -43,7 +43,6 @@ type Settings =
    orgName: text;
    peopleCount: nat;
    photoBytes: nat;
-   tagPrefix: text;
    trustId: text;
    trustLastPull: int;
  };
@@ -1126,7 +1125,6 @@ service : {
      adminGroup: text;
      appUrl: text;
      orgName: text;
-     tagPrefix: text;
    }) -> (record {
             detail: text;
             ok: bool;

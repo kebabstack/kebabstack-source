@@ -74,7 +74,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "intakeMatch": return a[1].some((v) => /C02XG2/i.test(v)) ? [{ row: row(1), score: 90n, why: "serial matches (0/O, 1/I, 5/S read alike) (C02XG2JHJGH1)" }] : [];
     case "intakeRead": return { ok: true, detail: "", reads: [{ kind: "serial", value: "CO2XG2JHJGH1", confidence: 0.55 }, { kind: "asset_tag", value: "INV-0001", confidence: 0.95 }], vendor: "Apple", model: "MacBook Pro 14\"", kind: "laptop", sticker: "current", notes: "sticker slightly worn" };
     case "intakeCommit": return { ok: true, detail: "handed out to Ana Ruiz", assetId: 1n, eventId: 10n };
-    case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "", orgName: "Acme", adminGroup: "assets-admins", adminEmails: ["me@example.com"], tagPrefix: "INV-", peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, photoBytes: 120000n, aiSource: aiOn ? "hub" : "", aiModel: aiOn ? "openai · gpt-4.1-mini" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: "" } }];
+    case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "", orgName: "Acme", adminGroup: "assets-admins", adminEmails: ["me@example.com"], peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, photoBytes: 120000n, aiSource: aiOn ? "hub" : "", aiModel: aiOn ? "openai · gpt-4.1-mini" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: "" } }];
     case "adminLogRows": return [{ at: now, who: "me@example.com", what: "x" }];
     case "importCsv": return { ok: true, created: 2n, updated: 1n, skipped: 0n, detail: "" };
     case "exportCsv": return "id,tag\n1,INV-0001\n";

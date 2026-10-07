@@ -4,7 +4,7 @@ export const idlFactory = ({ IDL }) => {
   const Valuation = IDL.Record({ at: IDL.Int, by: IDL.Text, input: ValuationInput, revision: IDL.Nat });
   const Snapshot = IDL.Record({ checkedAt: IDL.Int, metrics: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)), schema: IDL.Nat, state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }) });
   const AiState = IDL.Record({ connectorId: IDL.Nat, keySet: IDL.Bool, laneGranted: IDL.Bool, model: IDL.Text, source: IDL.Text });
-  const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, ai: AiState, aiModel: IDL.Text, aiSource: IDL.Text, appUrl: IDL.Text, hubId: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat, photoBytes: IDL.Nat, tagPrefix: IDL.Text, trustId: IDL.Text, trustLastPull: IDL.Int });
+  const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, ai: AiState, aiModel: IDL.Text, aiSource: IDL.Text, appUrl: IDL.Text, hubId: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat, photoBytes: IDL.Nat, trustId: IDL.Text, trustLastPull: IDL.Int });
   const Selection = IDL.Variant({ all: IDL.Null, ids: IDL.Vec(IDL.Nat) });
   const SalesFilter = IDL.Record({ completed: IDL.Bool, mine: IDL.Bool, offset: IDL.Nat, selection: Selection });
   const Buyer = IDL.Record({ country: IDL.Text, email: IDL.Text, houseNo: IDL.Text, name: IDL.Text, pid: IDL.Text, postalCode: IDL.Text, street: IDL.Text, town: IDL.Text });
@@ -148,7 +148,7 @@ export const idlFactory = ({ IDL }) => {
     setLabelLayout: IDL.Func([IDL.Text, LabelLayoutView], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setPurchase: IDL.Func([IDL.Text, IDL.Nat, IDL.Opt(IDL.Nat), IDL.Text, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSaleChecks: IDL.Func([IDL.Text, IDL.Nat, IDL.Bool, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
-    setSettings: IDL.Func([IDL.Text, IDL.Record({ adminGroup: IDL.Text, appUrl: IDL.Text, orgName: IDL.Text, tagPrefix: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setSettings: IDL.Func([IDL.Text, IDL.Record({ adminGroup: IDL.Text, appUrl: IDL.Text, orgName: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setTrustCanister: IDL.Func([IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setValuationDefaults: IDL.Func([IDL.Text, IDL.Nat, IDL.Vec(IDL.Record({ kind: IDL.Text, months: IDL.Nat }))], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     signOut: IDL.Func([IDL.Text], [], []),

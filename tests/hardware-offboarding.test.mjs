@@ -31,7 +31,7 @@ async function fixture(pic, baseline=false) {
   const a=ok(await assets.app.createAsset(admin,{tag:'HW-'+kind,serial:'SERIAL-'+kind,vendor:'Example',model:kind,kind,note:''}));
   ok(await assets.app.addEventTo(admin,a.id,'handed_out','alice@lifecycle.test','Received by Alice'));ids.push(a.id);
  }
- ok(await assets.app.setSettings(admin,{adminGroup:'',appUrl:'https://assets.lifecycle.test',tagPrefix:'HW-',orgName:'Test company'}));ok(await assets.app.setBilling(admin,billing));
+ ok(await assets.app.setSettings(admin,{adminGroup:'',appUrl:'https://assets.lifecycle.test',orgName:'Test company'}));ok(await assets.app.setBilling(admin,billing));
  return {h,desk,assets,owner,hr,admin,member,ids};
 }
 async function departure(f) {
