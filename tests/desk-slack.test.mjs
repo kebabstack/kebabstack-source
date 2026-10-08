@@ -121,11 +121,13 @@ test('slack: a channel message becomes a request for the Slack user, the bot ans
   full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.equal(full.ticket.status,'resolved');
   await flushOne(pic,c.desk,'chat.postMessage');await noOutcall(pic);
   // 8b · the requester writes again after the resolve: the reply is kept, nothing reopens by itself, the owners are asked
-  assert.equal((await post(pic,c.desk,message('Ev6b','UALPHA','1700000000.000250','Nope, still broken.',anchor))).body,'ok');
+  assert.equal((await post(pic,c.desk,message('Ev6b','UALPHA','1700000000.000250','Nope, still broken. <@UBETA> please check.',anchor))).body,'ok');
+  // the mentioned member is looked up once (e-mail was cached at step 8, the name was not) so the request shows a name, not an id
+  await answer(pic,'users.info',{ok:true,user:{real_name:'Beta Tester',profile:{email:'beta@customer.test',display_name:''}}});
   await quiet(pic);
   full=(await c.desk.getTicket(c.tokens.alpha,row.id))[0];
   assert.equal(full.ticket.status,'resolved','a reply alone never changes a finished request');
-  assert.ok(full.events.some(e=>e.kind==='comment'&&e.body==='Nope, still broken.'),'the reply is on the request');
+  assert.ok(full.events.some(e=>e.kind==='comment'&&e.body==='Nope, still broken. <@UBETA|Beta Tester> please check.'),'the reply is on the request with the mention resolved: '+JSON.stringify(full.events.filter(e=>e.kind==='comment').map(e=>e.body)));
   await noOutcall(pic);
   assert.ok((await c.desk.notifyHealth(c.tokens.owner))[0].recent.some(r=>/replied after resolution .* reopen\?/.test(r.title)),'the owners are asked whether to reopen');
   // 8b2 · ↩️ on the first message is the explicit "not done": it reopens whoever had set the ✅

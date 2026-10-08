@@ -30,7 +30,7 @@ const ago = (ns) => {
 const setStatus = (id, cls, text) => { if (id === "loginStatus") signIn.status(cls, text); const el = $(id); if (!el) return; el.className = "status " + (cls || ""); el.textContent = text || ""; };
 const bigint = (x) => BigInt(Number(x) || 0);
 const KIND_ICON = { laptop: "💻", phone: "📱", tablet: "📱", monitor: "🖥", accessory: "🎧", other: "📦" };
-const STATUS_WORD = { in_stock: "in stock", preparing: "with IT · preparing", assigned: "assigned", loaned: "loaned", sold: "sold", scrapped: "scrapped", lost: "lost", unknown: "unknown" };
+const STATUS_WORD = { in_stock: "in stock", preparing: "with IT · preparing", deployed: "deployed", assigned: "assigned", loaned: "loaned", sold: "sold", scrapped: "scrapped", lost: "lost", unknown: "unknown" };
 const ACT_WORD = { handed_out: "handed out", returned: "returned", loaned: "loaned", sold: "sold", scrapped: "scrapped", lost: "lost", note: "note", photo: "photo", created: "created", edited: "edited", imported: "imported", reassigned: "reassigned", sale: "sale" };
 const SALE_WORD = { draft: "draft", offered: "offered", accepted: "accepted", issued: "invoiced", paid: "paid", cancelled: "cancelled" };
 const fmtMoney = (minor, cur) => { const n = Number(minor); return Math.floor(n / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + "." + String(n % 100).padStart(2, "0") + (cur ? " " + cur : ""); };
@@ -325,7 +325,7 @@ $("ikRegister").onclick = async () => {
   if ($("nTo").value.trim() && !$("nTo").dataset.email) return setStatus("newStatus", "err", "pick the person from the directory, or clear the field");
   setStatus("newStatus", "", "registering…"); $("ikRegister").disabled = true;
   try {
-    const r = await backend.registerDevice(session.load(), { create, assignee: $("nTo").dataset.email || "", location: $("nLocation").value, photo: ik?.photo ? [[...ik.photo.bytes]] : [], mime: ik?.photo ? ik.photo.mime : "" });
+    const r = await backend.registerDevice(session.load(), { create, assignee: $("nTo").dataset.email || "", location: $("nLocation").value, status: $("nDeployed").checked && !$("nTo").dataset.email ? "deployed" : "", photo: ik?.photo ? [[...ik.photo.bytes]] : [], mime: ik?.photo ? ik.photo.mime : "" });
     if (!r.ok) { setStatus("newStatus", "err", r.detail); return; }
     const asset = { ...create, tag: r.tag, id: r.assetId };
     $("ik1").classList.add("hidden"); $("ik3").classList.remove("hidden");
@@ -381,14 +381,40 @@ async function loadDevices() {
   let rows = [], s = null, pending = null;
   $("devStatus").querySelector('[value="offboarding"]').hidden = me.role !== "admin";
   try { [rows, s, pending] = await Promise.all([backend.listAssets(session.load(), q, st, false), backend.stats(session.load()), me.role === "admin" ? backend.pendingHandoverCount(session.load()).catch(()=>null) : null]); } catch (e) { $("devRows").innerHTML = `<div class="empty">${esc(String(e.message || e).slice(0, 120))}</div>`; return; }
-  $("stats").innerHTML = `<button class="stat ${!st ? "active" : ""}" aria-pressed="${!st}" data-st=""><div class="n">${Number(s.total)}</div><div class="l">All devices</div></button>` + s.byStatus.filter(([k]) => ["assigned", "in_stock", "loaned", "unknown"].includes(k)).map(([k, n]) => `<button class="stat ${st === k ? "active" : ""}" aria-pressed="${st === k}" data-st="${esc(k)}"><div class="n">${Number(n)}</div><div class="l">${esc(STATUS_WORD[k] || k)}</div></button>`).join("");
+  $("stats").innerHTML = `<button class="stat ${!st ? "active" : ""}" aria-pressed="${!st}" data-st=""><div class="n">${Number(s.total)}</div><div class="l">All devices</div></button>` + s.byStatus.filter(([k]) => ["assigned", "deployed", "in_stock", "loaned", "unknown"].includes(k)).map(([k, n]) => `<button class="stat ${st === k ? "active" : ""}" aria-pressed="${st === k}" data-st="${esc(k)}"><div class="n">${Number(n)}</div><div class="l">${esc(STATUS_WORD[k] || k)}</div></button>`).join("");
   if ((typeof pending === "bigint" || typeof pending === "number") && Number(pending) > 0) $("stats").insertAdjacentHTML("beforeend", `<button class="stat ${st === "offboarding" ? "active" : ""}" aria-pressed="${st === "offboarding"}" data-st="offboarding"><div class="n">${pending}</div><div class="l">Offboarding</div></button>`);
   $("stats").style.gridTemplateColumns = `repeat(${$("stats").children.length}, minmax(0, 1fr))`;
   $("stats").querySelectorAll(".stat").forEach((el) => (el.onclick = () => { $("devStatus").value = el.dataset.st; loadDevices(); }));
-  $("devRows").innerHTML = rows.length ? rows.map((r) => { const a = r.asset; return `<a class="dev" href="#/d/${a.id}" data-id="${a.id}"><div class="ic">${KIND_ICON[a.kind] || "📦"}</div><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div><div class="r"><span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span><span class="kv">${esc([r.assigneeName || a.holder || "", r.location || ""].filter(Boolean).join(" · "))}${r.lastEvent ? (r.assigneeName || a.holder || r.location ? " · " : "") + esc(ago(r.lastAt)) : ""}${r.mdmMismatch ? ` · <span class="pill warn" title="The register and MDM disagree. Open the device to compare.">Review MDM</span>` : ""}</span></div></a>`; }).join("") : '<div class="empty">no devices match</div>';
+  $("devRows").innerHTML = rows.length ? rows.map((r) => { const a = r.asset; return `<div class="dev-row"><label class="dev-pick"><input type="checkbox" data-pick-id="${a.id}" aria-label="Select ${esc(deviceName(a))}"></label><a class="dev" href="#/d/${a.id}" data-id="${a.id}"><div class="ic">${KIND_ICON[a.kind] || "📦"}</div><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div><div class="r"><span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span><span class="kv">${esc([r.assigneeName || a.holder || "", r.location || ""].filter(Boolean).join(" · "))}${r.lastEvent ? (r.assigneeName || a.holder || r.location ? " · " : "") + esc(ago(r.lastAt)) : ""}${r.mdmMismatch ? ` · <span class="pill warn" title="The register and MDM disagree. Open the device to compare.">Review MDM</span>` : ""}</span></div></a></div>`; }).join("") : '<div class="empty">no devices match</div>';
   $("devRows").querySelectorAll(".dev").forEach((el) => (el.onclick = () => { location.hash = "#/d/" + el.dataset.id; }));
   lastRows = rows; $("devLabels").classList.toggle("hidden", me.role !== "admin" || !rows.length); $("devLabels").textContent = `Print labels (${rows.length})`;
+  $("devRows").classList.toggle("selectable", me.role === "admin");
+  $("devRows").querySelectorAll("[data-pick-id]").forEach((box) => (box.onchange = paintBulkBar));
+  paintBulkBar();
 }
+const pickedIds = () => [...$("devRows").querySelectorAll("[data-pick-id]:checked")].map((b) => BigInt(b.dataset.pickId));
+async function paintBulkBar() {
+  const n = pickedIds().length, bar = $("devBulk");
+  bar.classList.toggle("hidden", n === 0);
+  if (n === 0) return;
+  $("devBulkCount").textContent = `${n} selected`;
+  if (!$("devBulkLocation").dataset.loaded) { await fillLocationSelect($("devBulkLocation"), ""); $("devBulkLocation").dataset.loaded = "1"; }
+}
+$("devPickAll").onclick = () => { const boxes = [...$("devRows").querySelectorAll("[data-pick-id]")]; const all = boxes.every((b) => b.checked); boxes.forEach((b) => (b.checked = !all)); paintBulkBar(); };
+$("devBulkClear").onclick = () => { $("devRows").querySelectorAll("[data-pick-id]").forEach((b) => (b.checked = false)); paintBulkBar(); };
+async function bulkApply(status) {
+  const ids = pickedIds(); if (!ids.length) return;
+  const loc = $("devBulkLocation").value;
+  if (!loc && !status) return setStatus("devBulkStatus", "err", "choose a location");
+  setStatus("devBulkStatus", "", "updating…");
+  const r = await backend.bulkPlace(session.load(), ids, loc, status);
+  setStatus("devBulkStatus", r.ok ? "ok" : "err", r.detail);
+  if (r.ok) { $("devBulkLabels").classList.remove("hidden"); loadDevices(); }
+}
+$("devBulkDeploy").onclick = () => bulkApply("deployed");
+$("devBulkStock").onclick = () => bulkApply("in_stock");
+$("devBulkMove").onclick = () => bulkApply("");
+$("devBulkLabels").onclick = () => { const ids = new Set(pickedIds().map(String)); const picked = lastRows.filter((r) => ids.has(String(r.asset.id))).map((r) => r.asset); if (picked.length) listLabels.open(picked); };
 $("devLabels").onclick = () => { if (lastRows.length) listLabels.open(lastRows.map((r) => r.asset)); };
 let devTimer = 0;
 $("devQ").oninput = () => { clearTimeout(devTimer); devTimer = setTimeout(loadDevices, 220); };
@@ -416,7 +442,7 @@ async function loadDevice(id) {
   curAsset = d.asset; curAssigneeEmail = d.assigneeEmail || ""; const a = d.asset; const admin = me.role === "admin";
   $("dName").textContent = deviceName(a);
   $("dPills").innerHTML = `<span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span> ${a.archived ? '<span class="pill off">archived</span>' : ""} <span class="pill">${esc(a.kind)}</span>`;
-  $("dKv").innerHTML = [["Tag", a.tag], ["Serial", a.serial], ["Who has it", d.assigneeName ? `${esc(d.assigneeName)} <span class="kv mono">${esc(d.assigneeEmail || "")}</span>` : (a.holder ? esc(a.holder) + ' <span class="kv">(external)</span>' : "nobody")], ["Location", d.location], ["Note", a.note], ["Registered", fmt(a.createdAt) + (d.createdByName ? ` · ${esc(d.createdByName)}` : "")]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Who has it" ? v : esc(v)}</div>`).join("");
+  $("dKv").innerHTML = [["Tag", a.tag], ["Serial", a.serial], ["Who has it", d.assigneeName ? `${esc(d.assigneeName)} <span class="kv mono">${esc(d.assigneeEmail || "")}</span>` : (a.holder ? esc(a.holder) + ' <span class="kv">(external)</span>' : a.status === "deployed" ? `deployed${d.location ? " at " + esc(d.location) : ""} <span class="kv">(no personal owner)</span>` : "nobody")], ["Location", d.location], ["Note", a.note], ["Registered", fmt(a.createdAt) + (d.createdByName ? ` · ${esc(d.createdByName)}` : "")]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Who has it" ? v : esc(v)}</div>`).join("");
   const md = opt(d.mdm);
   $("dMdm").classList.toggle("hidden", !md);
   if (md) $("dMdm").innerHTML = `<details ${d.mdmMismatch ? "open" : ""}><summary><b>${esc(md.connName)}</b> · Device management${d.mdmMismatch ? ' <span class="pill warn">mismatch</span>' : ""}</summary><div class="kvl">${[["Device name", md.deviceName], ["OS", md.osVersion], ["Last seen", md.lastSeen], ["Logged-in user", md.userEmail ? `${md.userName ? esc(md.userName) + " · " : ""}<span class="mono">${esc(md.userEmail)}</span>` : (md.userName || "")], ["Compliance", md.compliance], ["Synced", ago(md.syncedAt)]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Logged-in user" ? v : esc(v)}</div>`).join("")}</div>${d.mdmMismatch ? `<div class="kv" style="margin-top:6px">${a.status === "sold" || a.status === "scrapped" || a.status === "lost" ? `The register says <b>${esc(STATUS_WORD[a.status])}</b>, but the MDM still sees this device. Verify the device and its MDM enrolment, then resolve the mismatch.` : `The register says <b>${esc(d.assigneeName || "nobody")}</b>, the MDM sees <b>${esc(md.userName || md.userEmail)}</b>. Record the hand-over here if the MDM is right.`}</div>` : ""}</details>`;
@@ -428,7 +454,7 @@ async function loadDevice(id) {
   labels.close();
   if (admin) $("dDoAct").onclick = () => { $("dActCard").classList.remove("hidden"); const def = a.status === "assigned" || a.status === "loaned" ? "returned" : "handed_out"; dAct = def; $("dActChips").querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.act === def)); toRowFor(def, "dToRow", "dToLabel"); $("dActCard").scrollIntoView({ behavior: "smooth" }); };
   $("dAdminRow").classList.toggle("hidden", !admin);
-  if (admin) fillLocationSelect($("dLocationSel"), d.location);
+  if (admin) { fillLocationSelect($("dLocationSel"), d.location); const placeable = !a.assignee && !a.holder && ["in_stock", "deployed", "preparing", "unknown"].includes(a.status); $("dPlace").classList.toggle("hidden", !placeable); $("dPlace").textContent = a.status === "deployed" ? "Back to stock" : "Mark deployed here"; }
   $("dSaleCard").classList.toggle("hidden", !admin);
   if (admin) { loadDeviceSale(a); hardwarePanel.load(a); }
   $("dArchive").textContent = a.archived ? "Restore" : "Archive";
@@ -441,6 +467,7 @@ async function loadDevice(id) {
 async function fillLocationSelect(sel, current) {
   try { const list = await backend.getLocations(session.load()); sel.innerHTML = '<option value="">—</option>' + list.map((l) => `<option value="${esc(l)}">${esc(l)}</option>`).join(""); if (current && !list.includes(current)) sel.insertAdjacentHTML("beforeend", `<option value="${esc(current)}">${esc(current)}</option>`); sel.value = current || ""; } catch (_) {}
 }
+$("dPlace").onclick = async () => { const a = curAsset; if (!a) return; const next = a.status === "deployed" ? "in_stock" : "deployed"; const r = await backend.bulkPlace(session.load(), [BigInt(curId)], $("dLocationSel").value, next); setStatus("dStatus", r.ok && r.changed > 0n ? "ok" : "err", r.ok ? r.detail : r.detail); if (r.ok) loadDevice(curId); };
 $("dLocationSel").onchange = async () => { const r = await backend.setAssetLocation(session.load(), BigInt(curId), $("dLocationSel").value); setStatus("dStatus", r.ok ? "ok" : "err", r.ok ? "location saved" : r.detail); if (r.ok) loadDevice(curId); };
 $("dEdit").onclick = () => { const a = curAsset; if (!a) return; $("eTag").value = a.tag; $("eSerial").value = a.serial; $("eVendor").value = a.vendor; $("eModel").value = a.model; $("eKind").value = a.kind; $("eNote").value = a.note; $("dEditCard").classList.remove("hidden"); };
 $("eCancel").onclick = () => $("dEditCard").classList.add("hidden");

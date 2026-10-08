@@ -132,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.31.0"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.31.1"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -2839,6 +2839,7 @@ persistent actor Desk {
   let slackByTs : Map.Map<Text, Nat> = Map.empty<Text, Nat>(); // "<channel>#<ts>" -> ticket id (0 = being created)
   let slackSeen : Map.Map<Text, Int> = Map.empty<Text, Int>(); // event id -> at (Slack retries while we work)
   let slackUserEmail : Map.Map<Text, Text> = Map.empty<Text, Text>(); // slack user id -> e-mail
+  let slackUserName : Map.Map<Text, Text> = Map.empty<Text, Text>(); // slack user id -> display name (0.31.1: mentions show the person, not the id)
   type SlackOut = { ticketId : Nat; kind : Text; text : Text; emoji : Text; add : Bool }; // kind: post | react
   let slackOutbox = List.empty<SlackOut>();
   transient var slackFlushing : Bool = false;
@@ -2910,11 +2911,50 @@ persistent actor Desk {
   func slackEmail(cred : SlackCred, userId : Text) : async Text {
     if (userId == "") return "";
     switch (Map.get(slackUserEmail, Text.compare, userId)) { case (?e) return e; case null {} };
+    ignore await slackUserInfo(cred, userId);
+    Map.get(slackUserEmail, Text.compare, userId) ?? "";
+  };
+  /// One users.info call fills both caches: the e-mail (needs users:read.email) and the name shown for mentions.
+  func slackUserInfo(cred : SlackCred, userId : Text) : async Bool {
     let p = parseSlack(await slackApi(cred.token, "users.info?user=" # userId, null));
-    if (not p.ok) return "";
+    if (not p.ok) return false;
     let email = lower(norm(jStr(p.json, "user.profile.email")));
     if (email != "" and Text.contains(email, #char '@')) Map.add(slackUserEmail, Text.compare, userId, email);
-    email;
+    var name = norm(jStr(p.json, "user.profile.display_name"));
+    if (name == "") name := norm(jStr(p.json, "user.real_name"));
+    if (name == "") name := norm(jStr(p.json, "user.profile.real_name"));
+    if (name == "") name := norm(jStr(p.json, "user.name"));
+    if (name != "") Map.add(slackUserName, Text.compare, userId, capText(name, 80));
+    true;
+  };
+  func slackName(cred : SlackCred, userId : Text) : async Text {
+    switch (Map.get(slackUserName, Text.compare, userId)) { case (?n) return n; case null {} };
+    ignore await slackUserInfo(cred, userId);
+    Map.get(slackUserName, Text.compare, userId) ?? "";
+  };
+  /// `<@U…>` in a message becomes `<@U…|Name>` so the request shows the person, not the id (at most 8 lookups per message).
+  func resolveMentions(cred : SlackCred, text : Text) : async Text {
+    if (not Text.contains(text, #text "<@")) return text;
+    let ids = List.empty<Text>();
+    var rest = text;
+    label scan loop {
+      let parts = Iter.toArray(Text.split(rest, #text "<@"));
+      if (parts.size() < 2) break scan;
+      var i = 1;
+      while (i < parts.size()) {
+        var id = "";
+        label chars for (c in parts[i].chars()) { if (c == '>' or c == '|') break chars; if (c == ' ' or id.size() > 20) { id := ""; break chars }; id #= Char.toText(c) };
+        if (id != "" and Text.startsWith(parts[i], #text (id # ">")) and not List.toArray(ids).any(func x = x == id) and List.size(ids) < 8) List.add(ids, id);
+        i += 1;
+      };
+      break scan;
+    };
+    var out = text;
+    for (id in List.toArray(ids).vals()) {
+      let name = await slackName(cred, id);
+      if (name != "") out := Text.replace(out, #text ("<@" # id # ">"), "<@" # id # "|" # name # ">");
+    };
+    out;
   };
 
   // ---- outbox: what desk says back into Slack, flushed by a timer (never blocks a button) ----
@@ -3098,11 +3138,12 @@ persistent actor Desk {
   };
 
   /// A person's top-level message → a request of the intake's type; the bot answers in the thread.
-  func slackNewRequest<system>(ic : SlackIntake, cred : SlackCred, user : Text, text : Text, channel : Text, ts : Text) : async () {
+  func slackNewRequest<system>(ic : SlackIntake, cred : SlackCred, user : Text, rawText : Text, channel : Text, ts : Text) : async () {
     let key = channel # "#" # ts;
     if (Map.containsKey(slackByTs, Text.compare, key)) return; // one request per message, whatever Slack retries
     Map.add(slackByTs, Text.compare, key, 0); // claim before the awaits
     let email = await slackEmail(cred, user);
+    let text = await resolveMentions(cred, rawText);
     switch (Map.get(slackByTs, Text.compare, key)) { case (?n) { if (n != 0) return }; case null {} };
     let rt = switch (typeOf(ic.typeId)) {
       case (?t) t;
@@ -3134,8 +3175,9 @@ persistent actor Desk {
   func slackEsc(t : Text) : Text = Text.replace(Text.replace(Text.replace(t, #char '&', "&amp;"), #char '<', "&lt;"), #char '>', "&gt;");
 
   /// A reply in a request's thread → a public comment (agent when the person is staff here).
-  func slackThreadReply<system>(ic : SlackIntake, cred : SlackCred, tid : Nat, user : Text, text : Text) : async () {
+  func slackThreadReply<system>(ic : SlackIntake, cred : SlackCred, tid : Nat, user : Text, rawText : Text) : async () {
     let email = await slackEmail(cred, user);
+    let text = await resolveMentions(cred, rawText);
     let t = switch (Map.get(tickets, Nat.compare, tid)) { case (?t) t; case null return };
     if (projectOf(tid) != 0) return;
     let who = if (email == "") "slack:" # user else pidOf(email);

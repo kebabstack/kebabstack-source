@@ -222,7 +222,7 @@
           <div class="row"><div><label for="nVendor">Vendor</label><input type="text" id="nVendor" placeholder="Apple"></div><div><label for="nModel">Model</label><input type="text" id="nModel" placeholder="MacBook Pro 14&quot;"></div><div><label for="nKind">Kind</label><select id="nKind"><option value="laptop">laptop</option><option value="phone">phone</option><option value="tablet">tablet</option><option value="monitor">monitor</option><option value="accessory">accessory</option><option value="other">other</option></select></div></div>
           <div><label for="nNote">Note</label><input type="text" id="nNote" placeholder="optional"></div>
           <h3 style="margin-top:16px">Who or where? <span class="kv">(optional)</span></h3>
-          <div class="row"><div class="pick" style="margin:0"><label for="nTo">Hand out to</label><input type="text" id="nTo" placeholder="start typing a name…" autocomplete="off"><div class="list hidden" id="nToList"></div></div><div><label for="nLocation">Location</label><select id="nLocation"><option value="">—</option></select><p class="kv" id="nLocationHint"></p></div></div>
+          <div class="row"><div class="pick" style="margin:0"><label for="nTo">Hand out to</label><input type="text" id="nTo" placeholder="start typing a name…" autocomplete="off"><div class="list hidden" id="nToList"></div></div><div><label for="nLocation">Location</label><select id="nLocation"><option value="">—</option></select><p class="kv" id="nLocationHint"></p><label class="check" style="margin-top:6px"><input type="checkbox" id="nDeployed"><span>Deployed there (in use, no personal owner)</span></label></div></div>
           <div class="btnrow"><button id="ikRegister" class="primary">Register device &amp; show label</button><span id="newStatus" class="status" role="status"></span></div>
         </div>
       </div>
@@ -258,9 +258,10 @@
 
 
       <div class="stats" id="stats" aria-label="Inventory status"></div>
-      <div class="filters"><input type="search" id="devQ" placeholder="search tag, serial, model, person…" aria-label="Search devices"><select id="devStatus" aria-label="Device status"><option value="">all statuses</option><option value="offboarding" hidden>offboarding · outstanding hardware</option><option value="preparing">with IT · preparing</option><option value="in_stock">in stock</option><option value="assigned">assigned</option><option value="loaned">loaned</option><option value="sold">sold</option><option value="scrapped">scrapped</option><option value="lost">lost</option><option value="unknown">unknown</option></select><button id="devAdd" class="sm primary">Add device</button></div>
+      <div class="filters"><input type="search" id="devQ" placeholder="search tag, serial, model, person…" aria-label="Search devices"><select id="devStatus" aria-label="Device status"><option value="">all statuses</option><option value="offboarding" hidden>offboarding · outstanding hardware</option><option value="preparing">with IT · preparing</option><option value="in_stock">in stock</option><option value="deployed">deployed</option><option value="assigned">assigned</option><option value="loaned">loaned</option><option value="sold">sold</option><option value="scrapped">scrapped</option><option value="lost">lost</option><option value="unknown">unknown</option></select><button id="devAdd" class="sm primary">Add device</button></div>
       <div class="card flat hidden" id="devLabelCard"></div>
-      <div class="card flat"><div id="devRows"><div class="empty">loading…</div></div></div>
+      <div class="bulkbar hidden" id="devBulk"><strong id="devBulkCount">0 selected</strong><select id="devBulkLocation" aria-label="Location"><option value="">—</option></select><button id="devBulkDeploy" class="primary sm" type="button">Deploy at location</button><button id="devBulkMove" class="sm" type="button">Set location only</button><button id="devBulkStock" class="sm" type="button">Back to stock</button><button id="devBulkLabels" class="sm hidden" type="button">Print labels</button><button id="devBulkClear" class="sm" type="button">Clear</button><span class="status" id="devBulkStatus" role="status"></span></div>
+      <div class="card flat"><div class="dev-tools"><button id="devPickAll" class="sm" type="button">Select all</button></div><div id="devRows"><div class="empty">loading…</div></div></div>
     </section>
 
     <!-- ===== one device ===== -->
@@ -279,7 +280,7 @@
         <div id="dMdm" class="hidden" style="margin-top:10px;padding:10px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)"></div>
         <div id="dAbm" class="hidden" style="margin-top:10px;padding:10px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)"></div>
         <div class="photos" id="dPhotos"></div>
-        <div class="btnrow" id="dAdminRow"><label class="kv" for="dLocationSel" style="display:flex;align-items:center;gap:6px">Location <select id="dLocationSel" class="sm"><option value="">—</option></select></label><button id="dEdit" class="sm">Edit details</button><button id="dPhotoBtn" class="sm">Add photo</button><input type="file" id="dPhotoFile" accept="image/*" class="hidden"><button id="dArchive" class="sm">Archive</button><span id="dStatus" class="status" role="status"></span></div>
+        <div class="btnrow" id="dAdminRow"><label class="kv" for="dLocationSel" style="display:flex;align-items:center;gap:6px">Location <select id="dLocationSel" class="sm"><option value="">—</option></select></label><button id="dPlace" class="sm hidden" type="button">Mark deployed here</button><button id="dEdit" class="sm">Edit details</button><button id="dPhotoBtn" class="sm">Add photo</button><input type="file" id="dPhotoFile" accept="image/*" class="hidden"><button id="dArchive" class="sm">Archive</button><span id="dStatus" class="status" role="status"></span></div>
       </div>
       <div class="card flat hidden" id="dLabelCard"></div>
       <div class="card flat hidden" id="dEditCard">

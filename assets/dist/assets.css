@@ -113,3 +113,9 @@ table { font-size:12px; }th { font-size:10px; }td { padding:14px 10px; }#v-apple
 .offer-decline { margin-top:14px; }
 .offer-decline textarea { display:block; width:100%; margin-top:6px; }
 @media (max-width:640px) { .offer-fields { grid-template-columns:1fr; } .offer .sale-progress li { font-size:10px; } }
+
+/* device list selection and bulk actions (0.23.0) */
+.dev-row{display:flex;align-items:stretch}.dev-row>.dev{flex:1;min-width:0}.dev-pick{display:none;align-items:center;padding:0 6px 0 2px}.selectable .dev-pick{display:flex}.dev-pick input{width:18px;height:18px;accent-color:var(--ks-accent)}
+.dev-tools{display:flex;justify-content:flex-end;padding:4px 0 8px}
+.bulkbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;margin-bottom:10px;border:1px solid var(--ks-rule);border-radius:12px;background:var(--ks-accent-dim)}.bulkbar select{min-width:180px}
+.pill.s-deployed{background:var(--ks-accent-dim);color:var(--ks-fg)}

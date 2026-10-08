@@ -1,5 +1,11 @@
 # Changelog — kebab-stack assets
 
+## [0.23.0] — 2026-10-08
+
+- New status **deployed**: a device in use at a location without a personal owner (monitors, docks, meeting-room gear). Set it when registering (single or from photos: status per row and for all rows), on the device page (**Mark deployed here** / **Back to stock** next to the location), or for many devices at once.
+- Device list: select devices (checkboxes, **Select all** on the current filter) and apply **Deploy at location**, **Set location only** or **Back to stock** to all of them; devices held by a person, in a hand-over, sold, scrapped or lost are skipped and counted. Labels for the selection print from the same bar.
+- The list filter and the status counters know the new status; hand-outs from a deployed device work as before.
+
 ## [0.22.0] — 2026-10-07
 
 - Register many devices from photos (Scan a device → **Register many from photos**): drop up to 60 label photos, the reading fills one table (vendor, model, kind, serial or Service Tag, note), devices already in the register are flagged and unticked, defaults for kind, location and recipient apply to every row, each cell stays editable, then one click registers everything with automatic tags and the photo as evidence, and the labels print in one batch.

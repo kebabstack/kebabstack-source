@@ -80,6 +80,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "registerOptions": return [{ locations: ["Zürich office · 3rd floor", "Storage room"], nextTag: "000434", prefix: "", digits: 6n }];
     case "getLocations": return ["Zürich office · 3rd floor", "Storage room"];
     case "setLocations": case "setTagScheme": case "setAssetLocation": return { ok: true, detail: "" };
+    case "bulkPlace": return { ok: true, changed: 2n, skipped: 0n, detail: "2 updated" };
     case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "", orgName: "Acme", adminGroup: "assets-admins", adminEmails: ["me@example.com"], peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, photoBytes: 120000n, aiSource: aiOn ? "hub" : "", aiModel: aiOn ? "openai · gpt-4.1-mini" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: "" } }];
     case "adminLogRows": return [{ at: now, who: "me@example.com", what: "x" }];
     case "importCsv": return { ok: true, created: 2n, updated: 1n, skipped: 0n, detail: "" };

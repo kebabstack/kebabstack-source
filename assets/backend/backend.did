@@ -732,6 +732,15 @@ service : {
       docId: nat;
       ok: bool;
     });
+  /// Several devices at once: put them at a location and mark them deployed (in use there, nobody's personal device)
+  /// or back in stock. Devices held by a person, sold, scrapped or lost are skipped and counted.
+  bulkPlace: (tok: text, ids: vec nat, location: text, status: text) ->
+   (record {
+      changed: nat;
+      detail: text;
+      ok: bool;
+      skipped: nat;
+    });
   /// Admins: cancel. Before the invoice: the sale just ends. After: a numbered credit note is created (the invoice number stays used — ranges are gapless) and the device goes back to stock unless it was already paid.
   cancelSale: (tok: text, id: nat, reason: text) ->
    (record {
@@ -1034,6 +1043,7 @@ service : {
      location: text;
      mime: text;
      photo: opt blob;
+     status: text;
    }) -> (record {
             assetId: nat;
             detail: text;

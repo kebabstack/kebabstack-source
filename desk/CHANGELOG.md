@@ -1,5 +1,9 @@
 # Changelog — kebab-stack desk
 
+## [0.31.1] — 2026-10-08
+
+- Slack: a mention in a message from Slack (`<@U…>`) now shows the person's name in the request instead of the raw member id. Desk resolves it through the same users.info lookup that already identifies the author, caches the name, and stores the message as `<@U…|Name>`; earlier messages keep what Slack sent.
+
 ## [0.31.0] — 2026-10-06
 
 - Offboarding, licenses & seats: with Hub 0.39 and Contracts 0.12 connected, the checklist item "Revoke licenses & seats" follows Contracts the same way "Reclaim devices" follows Assets. Desk asks the Hub how many contracts still list the departing person as a seat holder; the item stays open until every seat is released in Contracts, turns "done" automatically, and cannot be ticked by hand while a Contracts app is connected. The person panel shows "Licenses & seats · n of m released". Contracts tells each contract's responsible person once per case. Unlike hardware, an unreachable Contracts app does not block completion: the item keeps its last known state. Without a connected Contracts app the item stays a manual checkbox.

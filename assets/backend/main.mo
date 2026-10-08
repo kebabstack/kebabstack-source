@@ -70,7 +70,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.22.0";
+  transient let BUILD_VERSION : Text = "0.23.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -128,7 +128,7 @@ persistent actor Assets {
   let adminLog : Map.Map<Nat, LogRow> = Map.empty<Nat, LogRow>();
   var nextLogId : Nat = 1;
 
-  transient let STATUSES : [Text] = ["in_stock", "preparing", "assigned", "loaned", "sold", "scrapped", "lost", "unknown"];
+  transient let STATUSES : [Text] = ["in_stock", "preparing", "deployed", "assigned", "loaned", "sold", "scrapped", "lost", "unknown"]; // deployed (0.23.0): in use at a location, nobody's personal device
   transient let KINDS : [Text] = ["laptop", "phone", "tablet", "monitor", "accessory", "other"];
   transient let ACTIONS : [Text] = ["handed_out", "returned", "loaned", "sold", "scrapped", "lost", "note", "photo"];
 
@@ -868,9 +868,39 @@ persistent actor Assets {
     ignore addEvent(id, m.id, "edited", (if (v == "") "location cleared" else "location: " # v), "", 0);
     { ok = true; detail = "" };
   };
+  /// Several devices at once: put them at a location and mark them deployed (in use there, nobody's personal device)
+  /// or back in stock. Devices held by a person, sold, scrapped or lost are skipped and counted.
+  public shared func bulkPlace(tok : Text, ids : [Nat], location : Text, status : Text) : async { ok : Bool; changed : Nat; skipped : Nat; detail : Text } {
+    if (migrating()) return { ok = false; changed = 0; skipped = 0; detail = MIGRATING };
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; changed = 0; skipped = 0; detail = "admins only" } };
+    if (ids.size() == 0 or ids.size() > 500) return { ok = false; changed = 0; skipped = 0; detail = "Select 1 to 500 devices" };
+    if (status != "deployed" and status != "in_stock" and status != "") return { ok = false; changed = 0; skipped = 0; detail = "Status can be deployed or in stock" };
+    let loc = norm(location);
+    if (loc != "" and not has(locations, loc)) return { ok = false; changed = 0; skipped = 0; detail = "Choose a location from Settings → Register devices" };
+    if (loc == "" and status == "") return { ok = false; changed = 0; skipped = 0; detail = "Choose a location, a status or both" };
+    var changed = 0; var skipped = 0;
+    for (id in ids.vals()) {
+      switch (Map.get(assets, Nat.compare, id)) {
+        case (?a) {
+          let movable = a.assignee == "" and a.holder == "" and not a.archived and (a.status == "in_stock" or a.status == "deployed" or a.status == "preparing" or a.status == "unknown") and not handovers.containsKey(id);
+          if (not movable) { skipped += 1 } else {
+            if (loc != "") Map.add(assetLocation, Nat.compare, id, loc);
+            let next = if (status == "") a.status else status;
+            Map.add(assets, Nat.compare, id, { a with status = next; updatedAt = now() });
+            let where = if (loc != "") loc else locationOf(id);
+            ignore addEvent(id, m.id, "edited", (if (status == "deployed") "deployed" # (if (where != "") " at " # where else "") else if (status == "in_stock") "back in stock" # (if (loc != "") " · location: " # loc else "") else "location: " # loc), "", 0);
+            changed += 1;
+          };
+        };
+        case null { skipped += 1 };
+      };
+    };
+    log(m.email, "bulk " # (if (status != "") status else "location") # ": " # Nat.toText(changed) # " device(s)" # (if (loc != "") " at " # loc else ""));
+    { ok = true; changed; skipped; detail = Nat.toText(changed) # " updated" # (if (skipped > 0) " · " # Nat.toText(skipped) # " skipped (held by a person, in a hand-over, or not in stock)" else "") };
+  };
   /// One step for a new device: details (serial, vendor, model from the photo or typed), an automatic tag
   /// unless one is given, optionally the person who gets it or the place it sits, and the photo as evidence.
-  public shared func registerDevice(tok : Text, args : { create : AssetInput; assignee : Text; location : Text; photo : ?Blob; mime : Text }) : async { ok : Bool; assetId : Nat; tag : Text; detail : Text } {
+  public shared func registerDevice(tok : Text, args : { create : AssetInput; assignee : Text; location : Text; status : Text; photo : ?Blob; mime : Text }) : async { ok : Bool; assetId : Nat; tag : Text; detail : Text } {
     if (migrating()) return { ok = false; assetId = 0; tag = ""; detail = MIGRATING };
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; assetId = 0; tag = ""; detail = "admins only" } };
     var c = cleanInput(args.create);
@@ -880,12 +910,14 @@ persistent actor Assets {
     let to = norm(args.assignee);
     if (to != "" and (not knownPerson(to) or not Hub.isActive(people, lower(to)))) return { ok = false; assetId = 0; tag = ""; detail = "Pick the person from the directory" };
     switch (duplicateOf(c, 0)) { case (?d) return { ok = false; assetId = d.id; tag = d.tag; detail = "Already in the register as " # deviceName(d) # " (#" # Nat.toText(d.id) # ")" }; case null {} };
+    if (args.status != "" and args.status != "in_stock" and args.status != "deployed") return { ok = false; assetId = 0; tag = ""; detail = "Status can be in stock or deployed" };
+    if (args.status == "deployed" and to != "") return { ok = false; assetId = 0; tag = ""; detail = "A device handed to a person is assigned, not deployed" };
     if (c.tag == "") c := { c with tag = nextTag() };
-    let a = createInternal(m.id, c, "in_stock", "", "", (switch (args.photo) { case (?_) "photo intake"; case null "" }));
+    let a = createInternal(m.id, c, (if (args.status == "deployed") "deployed" else "in_stock"), "", "", (switch (args.photo) { case (?_) "photo intake"; case null "" }));
     var photoId = 0;
     switch (args.photo) { case (?img) { let p = storePhoto(a.id, m.id, img, args.mime); if (p.ok) photoId := p.id }; case null {} };
-    if (loc != "") { Map.add(assetLocation, Nat.compare, a.id, loc); ignore addEvent(a.id, m.id, "edited", "location: " # loc, "", 0) };
-    var detail = "registered as " # c.tag;
+    if (loc != "") { Map.add(assetLocation, Nat.compare, a.id, loc); ignore addEvent(a.id, m.id, "edited", (if (args.status == "deployed") "deployed at " else "location: ") # loc, "", 0) };
+    var detail = "registered as " # c.tag # (if (args.status == "deployed") " · deployed" # (if (loc != "") " at " # loc else "") else "");
     if (to != "") {
       let r = applyAction(m, a, "handed_out", to, "", photoId);
       if (not r.ok) return { ok = false; assetId = a.id; tag = c.tag; detail = r.detail };
