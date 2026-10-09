@@ -2370,6 +2370,33 @@ test('contracts: AI classifies into a contract type, proposes a new type when no
  }finally{await pic.tearDown();}
 });
 
+test('contracts: a document filed to an existing record attaches the source, applies checked fields atomically and closes its suggestions',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const {app,adminTok,memberTok,helpdeskTok}=await contractsFixture(pic,{ai:false});
+  const c=await app.createContract(adminTok,cinput({title:'NTS colocation',vendor:'NTS Workspace AG',product:'Racks'}));assert.equal(c.ok,true);
+  assert.equal((await app.setTerms(adminTok,c.id,1n,TERMS,'Signed')).ok,true);
+  const b=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'amendment-1',text:'Amendment: price rises to CHF 1800 per year from 2027-01-01, 2 racks at Zurich West'}));const src=await app.intakeCommit(adminTok,b.id);assert.equal(src.ok,true);
+  const pr=await app.proposeChange(adminTok,c.id,[src.sourceId],[{field:'amountMinor',value:'170000'}],'manual suggestion');assert.equal(pr.ok,true,pr.detail);
+  const types=await app.listContractTypes(adminTok);const dc=types.find(t=>t.name.startsWith('Datacenter'));
+  assert.equal((await app.fileToContract(helpdeskTok,src.sourceId,c.id,2n,[],'')).ok,false,'outsiders cannot file');
+  assert.equal((await app.fileToContract(adminTok,src.sourceId,c.id,1n,[],'')).ok,false,'stale revision refused');
+  assert.equal((await app.fileToContract(adminTok,src.sourceId,c.id,2n,[{field:'nope',value:'x'}],'')).ok,false,'unknown field refused');
+  const bad=await app.fileToContract(adminTok,src.sourceId,c.id,2n,[{field:'contractType',value:dc.name},{field:'type:rackUnits',value:'two'}],'');assert.equal(bad.ok,false,'typed value validated before writing');
+  assert.equal((await app.getContract(adminTok,c.id))[0].contract.revision,2n,'nothing written on refusal');
+  const ok=await app.fileToContract(adminTok,src.sourceId,c.id,2n,[{field:'amountMinor',value:'180000'},{field:'currency',value:'CHF'},{field:'vendor',value:'NTS Workspace AG'},{field:'contractType',value:dc.name},{field:'type:site',value:'Zurich West'},{field:'type:rackUnits',value:'2'},{field:'ownerId',value:'ignored'},{field:'trackStatus',value:'draft'}],'from the amendment');
+  assert.equal(ok.ok,true,ok.detail);assert.equal(ok.revision,3n);
+  const r=(await app.getContract(adminTok,c.id))[0];
+  assert.equal(r.contract.terms.amountMinor[0],180000n);assert.equal(r.contract.terms.currency,'CHF');assert.equal(r.contract.status,'draft'===r.contract.status?'draft':r.contract.status);
+  assert.equal(r.contractType.name,dc.name);assert.equal(Object.fromEntries(r.typeValues).site,'Zurich West');
+  assert.ok(r.sources.some(x=>x.id===src.sourceId),'document attached to the record');assert.ok(r.documents.length>=0);
+  const sv=(await app.getSource(adminTok,src.sourceId))[0];assert.equal(sv.source.status,'filed');assert.deepEqual(sv.source.contractId,[c.id]);
+  assert.ok(sv.proposals.every(p=>p.status==='superseded'),'open suggestions of the source are closed: '+JSON.stringify(sv.proposals.map(p=>p.status)));
+  assert.ok(r.audit.some(a=>/document filed to the record/.test(a.what)&&/amountMinor/.test(a.after)));
+  assert.equal((await app.fileToContract(memberTok,src.sourceId,c.id,3n,[],'')).ok,true,'an editor may attach again without changes');
+ }finally{await pic.tearDown();}
+});
+
 test('contracts: vendor terms read a public page as supplementary evidence without changing contract fields',async()=>{
  const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
  try{

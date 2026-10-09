@@ -55,6 +55,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "listSpaces": return [{id:"team:1",name:"People & Operations",description:"Team agreements",kind:"team",role:{[staff ? 'owner' : 'viewer']:null},archived:false,revision:1n,email:"",items:3n,member:true},{id:"personal:"+ME,name:"Personal",description:"Your personal workspace",kind:"personal",role:{owner:null},archived:false,revision:0n,email:"me@example.com",items:0n,member:true},...(role === "admin" ? [{id:"intake",name:"Contract intake",description:"Shared incoming documents",kind:"intake",role:{owner:null},archived:false,revision:0n,email:"",items:2n,member:true},{id:"personal:"+ANA,name:"Personal · Ana Ruiz",description:"Visible to this person and app admins",kind:"personal",role:{owner:null},archived:false,revision:0n,email:"ana@example.com",items:2n,member:false},{id:"team:7",name:"Finance",description:"",kind:"team",role:{owner:null},archived:false,revision:2n,email:"",items:0n,member:false}] : [])];
     case "deleteSpace": return {ok:true,detail:""};
     case "reprocessSourceAs": return {ok:true,detail:""};
+    case "fileToContract": return {ok:true,contractId:1n,revision:5n,detail:"2 field(s) updated"};
     case "openSpace": fixtureSpace=a[1];return {ok:true,token:"scoped-token",detail:""};
     case "getSpace": return [{space:{id:"team:1",name:"People & Operations",description:"Team agreements",revision:1n,archived:false,members:[{pid:ME,role:{owner:null}}]},members:[{pid:ME,name:"Me Myself",active:true,role:{owner:null}}]}];
     case "whoami": return [{ id: ME, email: "me@example.com", displayName: "Me Myself", role, space:fixtureSpace, spaceRole:[{[staff ? "owner" : "viewer"]:null}], roleSource: role === "admin" ? "hub owner" : role === "editor" ? "group contracts-editors" : "directory member", orgName: "Acme", hubId: "aaaaa-aa", needsClaim: false, aiOn: mode !== "editor" }];
@@ -290,6 +291,22 @@ if (role === "admin") {
   await click(document.querySelector("[data-create-type]"));
   const st = last("saveContractType"); check(st && st[1][1].name === "Moving services" && st[1][1].fields[0].key === "moveDate" && st[1][1].id.length === 0, "create uses the proposed definition");
   delete overrides.getSource;
+  // attach the document to an existing contract instead of creating a new one
+  await go("#/intake/12");
+  const modeSel = document.querySelector("[data-target-mode]"); check(!!modeSel && modeSel.value === "new" && document.querySelector("[data-target-pick]").hidden, "review defaults to a new contract with the existing-contract option available");
+  modeSel.value = "existing"; modeSel.dispatchEvent(new window.Event("change")); await settle();
+  type(document.querySelector("[data-target-search]"), "Sunrise"); await settle(); await settle();
+  check(!!document.querySelector('[data-pick-contract="1"]'), "existing contracts are searchable from the review");
+  await click(document.querySelector('[data-pick-contract="1"]'));
+  check(/Updating “Sunrise Cloud — Team plan”/.test($("intakeBody").textContent) && /Update Sunrise/.test(document.querySelector(".intake-form [type=submit]").textContent) && $("review-amountMinor").placeholder === "today: 1500.00", "chosen contract shows today's values as placeholders");
+  $("review-amountMinor").value = "1650";
+  document.querySelector(".intake-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })); await settle();
+  const ft = last("fileToContract"); check(ft && ft[1][1] === 12n && ft[1][2] === 1n && ft[1][3] === 3n && ft[1][4].some(f => f.field === "amountMinor" && f.value === "165000") && !ft[1][4].some(f => f.field === "trackStatus"), "update goes to fileToContract with the record revision and checked fields");
+  check(window.location.hash === "#/c/1", "updating opens the record");
+  await go("#/c/1/documents"); check(!!document.querySelector('#rDocuments a[href="#/c/1/add"]'), "record offers adding another document");
+  await go("#/c/1/add"); check(on("viewIntake") && /Add a document to Sunrise Cloud — Team plan/.test($("intakeTitle").textContent), "adding a document to a record names the record");
+  await go("#/add/manual"); check(on("editDrawer") && /New contract/.test($("edTitle").textContent), "add by hand opens the manual record form");
+  $("editDrawer").classList.remove("on");
 }
 }
 // ---- the record

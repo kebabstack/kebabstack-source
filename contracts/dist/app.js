@@ -149,6 +149,8 @@ async function routeView() {
   if(h === "#/reports") {setNav("today");return enterSaas("reports");}
   if((m=h.match(/^#\/keys(?:\/(new|\d+))?$/))){setNav("keys");return enterSaas("keys",m[1]||null);}
   if (h === "#/add") { setNav("contracts"); return enterIntake(); }
+  if (h === "#/add/manual") { setNav("contracts"); await enterIntake(); if (isStaff()) openEdit(null); return; }
+  if ((m = h.match(/^#\/c\/(\d+)\/add$/))) { setNav("contracts"); return enterIntake(null, null, { target: Number(m[1]) }); }
   if ((m = h.match(/^#\/intake\/(\d+)$/))) { setNav("inbox"); return enterIntake(Number(m[1])); }
   if (h.startsWith("#/space")) { setNav(""); return enterSpace(); }
   if ((m = h.match(/^#\/inbox\/(\d+)(?:\/(\w+))?/))) { setNav("inbox"); return enterSource(Number(m[1]), m[2] || "proposals"); }
@@ -471,6 +473,8 @@ async function uploadEml(files) {
   if(!stale()) loadInbox();
 }
 let uploadingDocument = false;
+const intakeTargets = new Map(); // source id -> contract id when the upload started from a record
+let pendingUploadTarget = null;
 async function beginDocumentUpload(file) {
   if (!file || uploadingDocument || !isStaff()) return;
   uploadingDocument = true;
@@ -478,18 +482,21 @@ async function beginDocumentUpload(file) {
   body.innerHTML = '<div class="intake-progress" role="status"><span class="reading-orbit" aria-hidden="true">▤</span><h3>Reading your document…</h3><p>The original will stay attached to the contract.</p></div>';
   try {
     const r = await uploadDocument(file, backend, token, text => { if(!stale()) body.querySelector("h3").textContent=text; }, stale);
+    if (pendingUploadTarget) { intakeTargets.set(String(r.sourceId), pendingUploadTarget); pendingUploadTarget = null; }
     if(!stale()) location.hash = "#/intake/" + r.sourceId;
   } catch(e) { if(!stale()) { body.innerHTML=`<div class="empty"><strong>Upload not completed</strong>${esc(e.message)}<div class="btnrow"><button id="uploadRetry" class="pill primary">Choose a file</button></div></div>`; $("uploadRetry").onclick=()=>$("intakeFile").click(); } }
   finally { uploadingDocument = false; }
 }
 $("intakeFile").onchange = () => { const file = $("intakeFile").files[0]; $("intakeFile").value=""; beginDocumentUpload(file); };
-async function enterIntake(id, analysis = null) {
+async function enterIntake(id, analysis = null, opts = {}) {
   const token = hubTok, stale = viewGuard("intakeView"), body = $("intakeBody");
-  show("viewIntake"); $("intakeTitle").textContent = id ? "Review your document" : "Add a document";
+  pendingUploadTarget = opts.target || null;
+  show("viewIntake"); $("intakeTitle").textContent = id ? "Review your document" : opts.target ? "Add a document to " + (cur && N(cur.contract.id) === opts.target ? cur.contract.title : "contract #" + opts.target) : "Add a document";
   $("intakeSubtitle").textContent = id ? "Your original and its details, together. Check, complete and save." : "Start with the document. AI helps you fill in the details.";
   if(!id) {
-    body.innerHTML=`<div class="upload-landing"><span class="upload-mark" aria-hidden="true">▤</span><h3>From document to useful details.</h3><p>Drop a contract, receipt, invoice or purchase screenshot here. AI reads the original pages and prepares the details for you.</p><button id="chooseContract" class="pill primary" ${isStaff()?"":"disabled"}>Choose a document</button><p class="kv">PDF, text, saved email (.eml), PNG, JPEG, GIF or WebP · below 1.4 MB for AI · 1.5 MB storage limit<br>Scanned PDFs and screenshots are read with AI vision. Nothing is filed until you confirm.</p><div class="intake-steps"><span>01 · Upload original</span><span>02 · Review AI details</span><span>03 · Save to your space</span></div></div>`;
+    body.innerHTML=`<div class="upload-landing"><span class="upload-mark" aria-hidden="true">▤</span><h3>From document to useful details.</h3><p>Drop a contract, receipt, invoice or purchase screenshot here. AI reads the original pages and prepares the details for you.</p><button id="chooseContract" class="pill primary" ${isStaff()?"":"disabled"}>Choose a document</button>${opts.target||!isStaff()?"":`<p class="kv" style="margin-top:14px"><button type="button" class="linkbtn" id="manualContract">No document at hand? Enter the details by hand</button></p>`}<p class="kv">PDF, text, saved email (.eml), PNG, JPEG, GIF or WebP · below 1.4 MB for AI · 1.5 MB storage limit<br>Scanned PDFs and screenshots are read with AI vision. Nothing is filed until you confirm.</p><div class="intake-steps"><span>01 · Upload original</span><span>02 · Review AI details</span><span>03 · Save to your space</span></div></div>`;
     $("chooseContract").onclick=()=>$("intakeFile").click();
+    const manual=$("manualContract");if(manual)manual.onclick=()=>openEdit(null);
     const drop=body.firstElementChild; drop.ondragover=e=>{e.preventDefault();drop.classList.add("dragover");};drop.ondragleave=()=>drop.classList.remove("dragover");drop.ondrop=e=>{e.preventDefault();drop.classList.remove("dragover"); if(e.dataTransfer.files.length!==1){toast("Add one document or saved email at a time.");return;}beginDocumentUpload(e.dataTransfer.files[0]);};
     return;
   }
@@ -498,7 +505,7 @@ async function enterIntake(id, analysis = null) {
   let monitor;
   const render = (view, outcome = null) => {
     monitor?.stop();
-    const ui = renderIntakeReview(body, {view, spaces, currentSpace, types:typesForReview, canEdit:isStaff(), canTransfer:spaceRoleName()==="owner", stale, api:backend, token, me,
+    const ui = renderIntakeReview(body, {view, spaces, currentSpace, types:typesForReview, presetTarget:intakeTargets.get(String(id))||null, saveTo:async d=>{const r=await backend.fileToContract(token,BigInt(id),d.contractId,d.revision,d.fields,d.note||"");if(stale())return r;if(r.ok){curSrc=null;intakeTargets.delete(String(id));toast("Document attached and record updated");location.hash="#/c/"+r.contractId;}return r;}, canEdit:isStaff(), canTransfer:spaceRoleName()==="owner", stale, api:backend, token, me,
       remove:()=>trashItem("source",BigInt(id),view.source.subject),
       retry:async()=>{const r=await backend.reprocessSource(token,BigInt(id));if(stale())return r;if(r.ok)startWatch({...view,source:{...view.source,status:"received",note:""}},{requested:true,baseline:proposalIds(monitor?.latest()||view)});return r;},
       retryAs:async(typeId)=>{const r=await backend.reprocessSourceAs(token,BigInt(id),typeId);if(stale())return r;if(r.ok)startWatch({...view,source:{...view.source,status:"received",note:""}},{requested:true,baseline:proposalIds(monitor?.latest()||view)});return r;},
@@ -559,7 +566,7 @@ async function enterSource(id, tabName, analysis = null) {
   if (!v) { $("srcTitle").textContent = "No such message — or not yours to see"; return; }
   curSrc = v; const s = v.source;
   // A new document (no contract, no suggestion aimed at an existing one) is reviewed and saved in one step.
-  if (!s.contractId.length && isStaff() && s.status !== "ignored" && !v.proposals.some((p) => p.status === "open" && (p.contractId.length || p.candidates.length))) { location.hash = "#/intake/" + id; return; }
+  if (!s.contractId.length && isStaff() && s.status !== "ignored") { location.hash = "#/intake/" + id; return; }
   $("srcTitle").textContent = s.subject || "(no subject)"; $("srcDelete").classList.toggle("hidden",!isStaff()); $("srcDelete").onclick=()=>trashItem("source",s.id,s.subject);
   $("srcStatus").innerHTML = tag(s.status, SSTATUS_LBL[s.status] || s.status);
   $("srcMeta").innerHTML = `From <b>${esc(s.fromName || s.fromAddr)}</b>${s.fromName ? ` &lt;${esc(s.fromAddr)}&gt;` : ""}${v.to.length ? " · to " + esc(v.to.join(", ")) : ""}${v.cc.length ? " · cc " + esc(v.cc.join(", ")) : ""}${s.sentAt ? " · sent " + esc(s.sentAt.slice(0, 16).replace("T", " ")) : ""} · received ${fmtD(s.receivedAt)} · ${esc(s.kind)}${s.handedInByName ? " by " + esc(s.handedInByName) : ""}${s.contractId.length ? ` · saved as <a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : ""}${s.note ? `<div>${esc(s.note)}</div>` : ""}`;
@@ -812,7 +819,7 @@ async function enterRecord(id, tabName) {
   $("rMessages").querySelectorAll("[data-rmrule]").forEach((b) => { b.onclick = async () => { const x = await backend.removeRule(hubTok, BigInt(b.dataset.rmrule)); toast(x.ok ? "Rule removed" : x.detail); if (x.ok) enterRecord(id, tabName); }; });
   const ra = $("rRuleAdd"); if (ra) ra.onclick = async () => { const v = $("rRuleVal").value.trim(); if (!v) return; const x = await backend.addRule(hubTok, $("rRuleKind").value, v, c.id); toast(x.ok ? "Rule added" : x.detail); if (x.ok) enterRecord(id, tabName); };
   // documents
-  $("rDocuments").innerHTML = r.documents.length ? docTable(r.documents) : `<div class="empty">No files yet — attachments of filed messages appear here.</div>`;
+  $("rDocuments").innerHTML = (r.canEdit ? `<div class="btnrow" style="margin-bottom:12px"><a class="pill primary sm" href="#/c/${c.id}/add">+ Add document</a><span class="kv">Attach another original (amendment, renewal letter, invoice). The AI reads it and you confirm what changes.</span></div>` : "") + (r.documents.length ? docTable(r.documents) : `<div class="empty">No files yet. Add the signed contract, amendments or invoices here.</div>`);
   wireDocs($("rDocuments"));
   // seats
   const active = N(r.row.holders), seats = c.seats.length ? N(c.seats[0]) : null;

@@ -72,6 +72,7 @@ export const idlFactory = ({ IDL }) => {
     documentText: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Text)], ["query"]),
     exportAll: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ audit: IDL.Vec(AuditRow), commercialDetails: IDL.Vec(IDL.Record({ contractId: IDL.Nat, fields: IDL.Vec(CommercialField) })), contracts: IDL.Vec(Contract), documents: IDL.Vec(Document), exportedAt: IDL.Int, observations: IDL.Vec(Observation), proposals: IDL.Vec(Proposal), rules: IDL.Vec(Rule), schemaVersion: IDL.Nat, settings: Settings, sources: IDL.Vec(Source), spaceId: IDL.Text, tasks: IDL.Vec(Task) }))], ["query"]),
     exportCsv: IDL.Func([IDL.Text], [IDL.Text], ["query"]),
+    fileToContract: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Record({ field: IDL.Text, value: IDL.Text })), IDL.Text], [IDL.Record({ contractId: IDL.Nat, detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
     getAiStatus: IDL.Func([IDL.Text], [IDL.Opt(AiStatus)], ["query"]),
     getContract: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(Record)], ["query"]),
     getProposal: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(ProposalView)], ["query"]),

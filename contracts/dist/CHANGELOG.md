@@ -1,5 +1,11 @@
 # Changelog — kebab-stack contracts
 
+## [0.16.0] — 2026-10-09
+
+- **One review for new and existing contracts.** The review asks "Save as: a new contract / an update to an existing contract". For an update you pick the record (search by name or vendor; preselected when the document is already linked, when the AI names it, or when the upload started from a record), today's values appear as placeholders, filled fields replace them, empty ones leave the record alone, and the document is attached. The separate "suggested changes" page is no longer where uploads land; it stays as history and for the record's own suggestions. New `fileToContract(sourceId, contractId, revision, fields, note)` applies this atomically and closes open suggestions of that document.
+- **Several documents per contract.** The record's Documents tab offers **+ Add document**: the upload opens the review with that record preselected, so amendments, renewal letters and invoices land on the contract they belong to (tester feedback).
+- **Contracts without a document.** "Add by hand" on the Contracts list and on the upload page opens the record form directly for old agreements whose paperwork is not at hand (tester feedback).
+
 ## [0.15.0] — 2026-10-09
 
 - **One way for documents: upload → check → record.** A new document opens its review directly (also from the inbox list, the Today page and after pasting text); the record is saved with one click and opened. A document that is saved shows "Saved as <contract>" and its inbox page becomes history. The separate proposal/decision/filing vocabulary is gone from the upload path.

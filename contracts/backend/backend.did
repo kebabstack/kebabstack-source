@@ -814,6 +814,19 @@ service : {
      }) query;
   /// CSV of the contracts the person may see (confirmed values only).
   exportCsv: (tok: text) -> (text) query;
+  /// A document filed to an existing record (0.16.0): the source is attached and the checked fields are applied atomically with the
+  /// same rules as a decision; open suggestions of that source count as handled. Empty or unchanged fields leave the record alone.
+  fileToContract: (tok: text, sid: nat, cid: nat, expectedRevision: nat,
+   fields: vec record {
+                 field: text;
+                 value: text;
+               }, note: text) ->
+   (record {
+      contractId: nat;
+      detail: text;
+      ok: bool;
+      revision: nat;
+    });
   /// Safe connection metadata only; no credentials or other workspaces' jobs or documents.
   getAiStatus: (tok: text) -> (opt AiStatus) query;
   /// Everything about one contract: confirmed terms, future terms, open proposals, sources, documents, tasks, history, rules.

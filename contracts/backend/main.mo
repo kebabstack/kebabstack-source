@@ -67,7 +67,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // retired 0.14.0 (mail relay removed); kept for the stable state contract, never consulted
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.15.0";
+  transient let BUILD_VERSION : Text = "0.16.0";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -2177,6 +2177,54 @@ persistent actor Contracts {
     };
     if (not accepted) audit(c.id, m.id, "proposal #" # Nat.toText(id) # " rejected" # (if (norm(d.note) == "") "" else " — " # norm(d.note)), "", "", ?p.sourceId);
     { ok = true; contractId = c.id; revision = c.revision; detail = (if (accepted) Nat.toText(List.size(applied)) # " field(s) confirmed" else "rejected") };
+  };
+  /// A document filed to an existing record (0.16.0): the source is attached and the checked fields are applied atomically with the
+  /// same rules as a decision; open suggestions of that source count as handled. Empty or unchanged fields leave the record alone.
+  public shared func fileToContract(tok : Text, sid : Nat, cid : Nat, expectedRevision : Nat, fields : [{ field : Text; value : Text }], note : Text) : async { ok : Bool; contractId : Nat; revision : Nat; detail : Text } {
+    let m = switch (me(tok)) { case (?m) m; case null return { ok = false; contractId = 0; revision = 0; detail = "No session" } };
+    let src = switch (sources.get(sid)) { case (?s) s; case null return { ok = false; contractId = 0; revision = 0; detail = "Source not available" } };
+    if (not canEditSource(m, src)) return { ok = false; contractId = 0; revision = 0; detail = "Source not available for editing" };
+    if (not spaceWrites(m)) return { ok = false; contractId = 0; revision = 0; detail = "Space is read-only" };
+    var c = switch (editable(m, cid)) { case (?c) c; case null return { ok = false; contractId = 0; revision = 0; detail = "no such contract, or not yours to edit" } };
+    if (c.revision != expectedRevision) return { ok = false; contractId = c.id; revision = c.revision; detail = "the contract changed since you opened this — reload and compare" };
+    if (contractSpace(cid) != sourceSpace(sid)) return { ok = false; contractId = c.id; revision = c.revision; detail = "The document and the contract are in different workspaces; move the document first" };
+    if (fields.size() > FIELDS.size() + 34) return { ok = false; contractId = c.id; revision = c.revision; detail = "Too many fields" };
+    let seen = List.empty<Text>(); let typeFields = List.empty<(Text, Text)>(); let plain = List.empty<(Text, Text)>();
+    for (f in fields.vals()) {
+      if (f.field == "ownerId" or f.field == "trackStatus" or f.field == "recordType") continue;
+      if ((not has(FIELDS, f.field) and not isTypeField(f.field)) or has(seen.toArray(), f.field)) return { ok = false; contractId = c.id; revision = c.revision; detail = "Unknown or repeated field " # f.field };
+      seen.add(f.field);
+      if (f.value.size() > 4000) return { ok = false; contractId = c.id; revision = c.revision; detail = "A field is too long" };
+      if (isTypeField(f.field)) typeFields.add((f.field, f.value)) else plain.add((f.field, f.value));
+    };
+    let typed = List.toArray(typeFields);
+    let chosenType : ContractType = switch (Array.find<(Text, Text)>(typed, func (k, _) = k == "contractType")) {
+      case (?(_, v)) { switch (findTypeByName(norm(v))) { case (?t) { if (not t.enabled) return { ok = false; contractId = c.id; revision = c.revision; detail = "Contract type `" # t.name # "` is disabled" }; t }; case null return { ok = false; contractId = c.id; revision = c.revision; detail = "Unknown contract type: " # v } } };
+      case null typeOfContract(c.id);
+    };
+    for ((k, v) in typed.vals()) if (k != "contractType") {
+      let key = Text.stripStart(k, #text "type:") ?? k;
+      let fdef = switch (fieldDef(chosenType, key)) { case (?f) f; case null return { ok = false; contractId = c.id; revision = c.revision; detail = "`" # key # "` is not a field of " # chosenType.name } };
+      switch (typeValueError(fdef, resolveTypeValue(fdef, norm(v)))) { case (?e) return { ok = false; contractId = c.id; revision = c.revision; detail = e }; case null {} };
+    };
+    let applied = List.empty<Text>();
+    for ((k, v) in List.toArray(plain).vals()) {
+      let before = currentValue(c, k);
+      if (norm(v) == "" or squash(before) == squash(norm(v))) continue;
+      switch (applyField(c, k, v)) { case (#ok(n)) { c := n; List.add(applied, k # ": " # before # " → " # norm(v)) }; case (#err(e)) return { ok = false; contractId = c.id; revision = c.revision; detail = e } };
+    };
+    c := { c with terms = recompute(c.terms); revision = c.revision + 1; updatedAt = now() };
+    switch (validTerms(c.terms)) { case (?e) return { ok = false; contractId = c.id; revision = c.revision - 1; detail = e }; case null {} };
+    putContract(c); saveCommercial(c.id, fields);
+    Map.add(contractTypeOf, Nat.compare, c.id, chosenType.id);
+    for ((k, v) in typed.vals()) if (k != "contractType") ignore applyTypeField(c.id, k, v);
+    let handled = List.empty<Nat>();
+    for ((pid, pr) in Map.entries(proposals)) if (pr.sourceId == sid and pr.status == "open") List.add(handled, pid);
+    for (pid in List.values(handled)) { switch (Map.get(proposals, Nat.compare, pid)) { case (?pr) Map.add(proposals, Nat.compare, pid, { pr with status = "superseded"; contractId = ?c.id; decidedBy = m.id; decidedAt = now(); note = "handled in the document review" }); case null {} } };
+    Map.add(sources, Nat.compare, sid, { src with contractId = ?c.id; status = "filed" });
+    audit(c.id, m.id, "document filed to the record" # (if (norm(note) == "") "" else " — " # capText(norm(note), 300)), "", (if (List.size(applied) == 0) "#" # Nat.toText(sid) # " " # capText(src.subject, 80) else Text.join(List.values(applied), "; ")), ?sid);
+    rebuildTasks(c.id);
+    { ok = true; contractId = c.id; revision = c.revision; detail = Nat.toText(List.size(applied)) # " field(s) updated" };
   };
   /// Document-first filing: facts, evidence and destination are committed together. No hidden draft on validation failure.
   public shared func createContractFromSource(tok : Text, sid : Nat, d : { proposalId : ?Nat; destination : Text; fields : [{ field : Text; value : Text }] }) : async { ok : Bool; contractId : Nat; detail : Text } {

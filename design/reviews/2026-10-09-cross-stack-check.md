@@ -108,3 +108,10 @@ contract, the consumer, and what was done or deliberately left.
   redirect); saved documents show "Saved as <contract>", their inbox page is history. "Proposals" became
   "Suggested changes" (for mails about existing contracts); plain-language statuses.
 - Cross-stack: none; Hub notifications unchanged. Backend only bumps the served version.
+
+## Contracts 0.16.0 — tester feedback (same day)
+
+- Radoslaw: contracts without a document (old agreements) and several documents per contract. Owner: the
+  leftover "suggested changes" path contradicts "no e-mail in Contracts".
+- Now: one review for new and existing records (`fileToContract`), "+ Add document" on the record,
+  "Add by hand" for paperless contracts. Cross-stack: none.
