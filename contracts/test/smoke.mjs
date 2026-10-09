@@ -271,7 +271,16 @@ const reviewForm=document.querySelector(".intake-form");reviewForm.dispatchEvent
 const saved=last("createContractFromSource");
 check(saved[1][2].fields[0].field==="contractType"&&saved[1][2].fields[0].value==="1"&&saved[1][2].fields.some(f=>f.field==="type:pricingModel"&&f.value==="flat"),"review sends the contract type first and its typed fields");
 check(saved && saved[1][1]===12n && saved[1][2].fields.some(f=>f.field==="product"&&f.value==="Completed product") && saved[1][2].fields.some(f=>f.field==="amountMinor"&&f.value==="120000"),"one save includes completed missing fields and whole major amounts as minor units");
-check(window.location.hash==="#/contracts","saved review opens the SaaS table");
+check(window.location.hash==="#/c/9","saved review opens the saved record");
+{ // a saved invoice can be turned into a tracked subscription from its record
+  const base2 = (await globalThis.__fakeBackend.getContract("t", 2n))[0];
+  overrides.getContract = async (_t, id) => id === 2n ? [{...base2, contract: {...base2.contract, tags: ["document-type:invoice"]}}] : globalThis.__fakeBackend.getContract.call(null, _t, id);
+  delete overrides.getContract; overrides.getContract = async (_t, id) => id === 2n ? [{...base2, contract: {...base2.contract, tags: ["document-type:invoice"]}}] : [base2];
+  await go("#/c/2");
+  check(/Document details/.test($("rTerms").textContent) && !!$("rTrackAsContract") === staff, "billing record offers tracking as a subscription to editors");
+  if (staff) { await click($("rTrackAsContract")); const up = last("updateContract"); check(up && up[1][1] === 2n && up[1][3].tags.includes("document-type:subscription") && !up[1][3].tags.includes("document-type:invoice"), "track-as-subscription rewrites the document type tag"); }
+  delete overrides.getContract;
+}
 if (role === "admin") {
   // the AI proposes a new type: an admin creates it from the review and the values already read are kept
   const base12 = (await globalThis.__fakeBackend.getSource("t", 12n))[0];

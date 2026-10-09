@@ -1,5 +1,12 @@
 # Changelog — kebab-stack contracts
 
+## [0.14.2] — 2026-10-09
+
+- **Saving opens the record.** Filing from the review now lands on the saved record instead of the list, so what was saved is visible at once (owner report: a saved upload seemed to vanish).
+- **Document type up front.** The review shows "Document type" in the first section; an AI reading that classified an order as an invoice or receipt is visible before saving instead of sitting in the collapsed details.
+- **Invoices are not hidden any more.** The Contracts list shows billing documents like every other record, tagged "invoice only, not tracked"; the filter "Invoices & receipts" narrows to them. Before, a document the AI read as an invoice was saved but never listed.
+- **An invoice for a subscription becomes the subscription.** When the reading of an invoice or receipt carries a period, seats, interval or renewal, the review defaults the document type to "Subscription (tracked)" with the invoice attached; a bare receipt stays a payment record. The options say what is tracked. A saved billing document offers **Track as subscription** on its record. Titles default to "vendor — product" instead of the file name.
+
 ## [0.14.1] — 2026-10-09
 
 - **The AI picks the contract type.** Every reading now classifies the document into one of the listed types (software → SaaS, hosting → Datacenter, lines → Telecom, equipment → Hardware, people/time/moves/cleaning → Services, premises → Rent); the classification needs no quote and is shown as "From document". Before, `contractType` was not part of the answer schema, so every upload landed on SaaS. An unclassified reading now lands on **Other** with a hint instead of SaaS.
