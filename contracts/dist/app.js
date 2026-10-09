@@ -493,13 +493,16 @@ async function enterIntake(id, analysis = null) {
     return;
   }
   body.innerHTML='<div class="intake-progress" role="status"><span class="reading-orbit" aria-hidden="true">▤</span><h3>Opening the original…</h3></div>';
-  const typesForReview=await loadTypes();
+  let typesForReview=await loadTypes();
   let monitor;
   const render = (view, outcome = null) => {
     monitor?.stop();
     const ui = renderIntakeReview(body, {view, spaces, currentSpace, types:typesForReview, canEdit:isStaff(), canTransfer:spaceRoleName()==="owner", stale, api:backend, token, me,
       remove:()=>trashItem("source",BigInt(id),view.source.subject),
       retry:async()=>{const r=await backend.reprocessSource(token,BigInt(id));if(stale())return r;if(r.ok)startWatch({...view,source:{...view.source,status:"received",note:""}},{requested:true,baseline:proposalIds(monitor?.latest()||view)});return r;},
+      retryAs:async(typeId)=>{const r=await backend.reprocessSourceAs(token,BigInt(id),typeId);if(stale())return r;if(r.ok)startWatch({...view,source:{...view.source,status:"received",note:""}},{requested:true,baseline:proposalIds(monitor?.latest()||view)});return r;},
+      createType:isAdmin()?async(input)=>{const r=await backend.saveContractType(hubTok,input);if(r.ok&&!stale())typesForReview=await loadTypes(true);return r;}:null,
+      rerender:()=>{if(!stale())render(monitor?.latest()||view);},
       download:async did=>{const d=opt(await backend.documentData(token,did));if(!stale()&&d) download(d.name,d.bytes instanceof Uint8Array?d.bytes:new Uint8Array(d.bytes),d.mime);},
       move:async destination=>{const r=await backend.moveIncomingSource(token,BigInt(id),destination);if(stale())return r;if(r.ok){curSrc=null;toast("Document moved for review");if(await chooseSpace(destination,false)){location.hash="#/intake/"+id;await enterIntake(id);}else toast("Open the destination inbox to continue reviewing.");}return r;},
       save:async input=>{const r=await backend.createContractFromSource(token,BigInt(id),input);if(stale())return r;if(r.ok){curSrc=null;toast("Contract and original saved"); if(input.destination!==currentSpace.id){const opened=await chooseSpace(input.destination,false);if(!opened){toast("Saved in the destination workspace. Open it to view your contract.");return r;}}location.hash="#/contracts";}return r;}

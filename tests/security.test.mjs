@@ -2332,6 +2332,43 @@ test('contracts: workspaces — the selector lists memberships only, admins see 
  }finally{await pic.tearDown();}
 });
 
+test('contracts: AI classifies into a contract type, proposes a new type when none fits, and a forced re-read pins the type',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const {app,adminTok,adminRoot}=await contractsFixture(pic);
+  const types=await app.listContractTypes(adminTok);const services=types.find(t=>t.name.startsWith('Services'));
+  const b=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'move-order',text:'RM Swiss Umzuege Auftragsbestaetigung Nr. 2026-0610/01: Umzug am 2026-11-26, Reinigung bis 2026-11-30, Preisgarantie CHF 3590.00, Tagessatz CHF 120'}));assert.equal(b.ok,true,b.detail);
+  const src=await app.intakeCommit(adminTok,b.id);assert.equal(src.ok,true,src.detail);const sid=src.sourceId;
+  const event=(fields,extra={})=>({kind:'order_confirmation',contractCandidates:[],effectiveDate:'',proposedFields:fields,uncertainties:[],summary:'Order confirmation for a move.',...extra});
+  const body=(key,value,quote,basis='explicit')=>({field:key,value,basis,evidence:[{partId:'body',quote}]});
+  let req=await pendingContractsAi(pic);
+  await respondContractsAi(pic,req,aiAnswer([event([body('vendor','RM Swiss Umzuege','RM Swiss Umzuege'),{field:'contractType',value:'Services / Consulting',basis:'derived',evidence:[]},body('type:dayRate','120.00','Tagessatz CHF 120'),body('type:nope','x','Umzug')])]));await settled(pic);
+  let view=(await app.getSource(adminTok,sid))[0];let pr=view.proposals.find(p=>p.status==='open');assert.ok(pr,'proposal created');
+  assert.ok(pr.changes.some(c=>c.field==='contractType'&&c.newValue==='Services / Consulting'),'type classification kept without evidence: '+JSON.stringify(pr.changes.map(c=>c.field)));
+  assert.ok(pr.changes.some(c=>c.field==='type:dayRate'&&c.newValue==='120.00'),'typed field kept');
+  assert.ok(!pr.changes.some(c=>c.field==='type:nope'),'unknown type field dropped');assert.ok(pr.uncertainties.some(u=>/unknown type field/.test(u)));
+  assert.deepEqual(pr.typeProposal,[],'no proposal when a listed type fits');
+  // second reading: nothing fits, the model proposes a type
+  assert.equal((await app.reprocessSource(adminTok,sid)).ok,true);await pic.advanceTime(16_000);req=await pendingContractsAi(pic);
+  const payload=JSON.parse(Buffer.from(req.body).toString());assert.match(JSON.stringify(payload),/typeProposal/);assert.match(JSON.stringify(payload),/Never default to SaaS/);
+  await respondContractsAi(pic,req,aiAnswer([event([body('vendor','RM Swiss Umzuege','RM Swiss Umzuege'),{field:'contractType',value:'Moving services',basis:'derived',evidence:[]},body('type:moveDate','2026-11-26','Umzug am 2026-11-26')],{typeProposal:{name:'Moving services',icon:'🚚',description:'Moves and end-of-tenancy cleaning.',fields:[{key:'moveDate',title:'Move date',kind:'date',options:[],required:true,inList:true,remind:true},{key:'cleaningBy',title:'Cleaning by',kind:'date',options:[],required:false,inList:false,remind:false},{key:'bad key',title:'x',kind:'text',options:[],required:false,inList:false,remind:false},{key:'tier',title:'Tier',kind:'select',options:[],required:false,inList:false,remind:false}]}})]));await settled(pic);
+  view=(await app.getSource(adminTok,sid))[0];pr=view.proposals.find(p=>p.status==='open');assert.ok(pr);
+  const tp=pr.typeProposal[0];assert.ok(tp,'type proposal surfaced');assert.equal(tp.name,'Moving services');assert.deepEqual(tp.fields.map(f=>f.key),['moveDate','cleaningBy'],'invalid proposed fields filtered');assert.equal(tp.fields[0].remind,true);
+  assert.ok(!pr.changes.some(c=>c.field==='contractType'),'unknown type name is not a change');assert.ok(pr.changes.some(c=>c.field==='type:moveDate'),'values for proposed fields kept for after creation');
+  const created=await app.saveContractType(adminTok,tp);assert.equal(created.ok,true,created.detail);
+  const filed=await app.createContractFromSource(adminTok,sid,{proposalId:[pr.id],destination:'',fields:[{field:'contractType',value:'Moving services'},{field:'type:moveDate',value:'2026-11-26'},{field:'title',value:'Move 2026-11'},{field:'trackStatus',value:'active'}]});assert.equal(filed.ok,true,filed.detail);
+  const rec=(await app.getContract(adminTok,filed.contractId))[0];assert.equal(rec.contractType.name,'Moving services');assert.equal(Object.fromEntries(rec.typeValues).moveDate,'2026-11-26');
+  // forced re-read on another upload: the request names the type and proposals are ignored
+  const b2=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'move-order-2',messageId:'<move-2@test>',text:'Consulting agreement, day rate CHF 1500'}));const src2=await app.intakeCommit(adminTok,b2.id);
+  req=await pendingContractsAi(pic);await respondContractsAi(pic,req,aiAnswer([event([body('vendor','Acme Consulting','Consulting')])]));await settled(pic);
+  assert.equal((await app.reprocessSourceAs(adminTok,src2.sourceId,999n)).ok,false,'unknown type refused');
+  assert.equal((await app.reprocessSourceAs(adminTok,src2.sourceId,services.id)).ok,true);await pic.advanceTime(16_000);req=await pendingContractsAi(pic);
+  assert.match(JSON.parse(Buffer.from(req.body).toString()).messages.map(m=>m.content).join(' '),/contract type is \[Services \/ Consulting\]/);
+  await respondContractsAi(pic,req,aiAnswer([event([body('vendor','Acme Consulting','Consulting'),{field:'contractType',value:'Services / Consulting',basis:'derived',evidence:[]}],{typeProposal:{name:'Ignored',icon:'',description:'',fields:[{key:'x',title:'X',kind:'text',options:[],required:false,inList:false,remind:false}]}})]));await settled(pic);
+  const pr2=(await app.getSource(adminTok,src2.sourceId))[0].proposals.find(p=>p.status==='open');assert.ok(pr2.changes.some(c=>c.field==='contractType'));assert.deepEqual(pr2.typeProposal,[],'a forced type ignores proposals');
+ }finally{await pic.tearDown();}
+});
+
 test('contracts: vendor terms read a public page as supplementary evidence without changing contract fields',async()=>{
  const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
  try{

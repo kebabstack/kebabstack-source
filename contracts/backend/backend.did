@@ -244,6 +244,7 @@ type ProposalView =
    sourceSubject: text;
    status: text;
    summary: text;
+   typeProposal: opt ContractTypeInput;
    uncertainties: vec text;
  };
 type Proposal = 
@@ -1046,11 +1047,15 @@ service : {
                                          detail: text;
                                          ok: bool;
                                        });
-  /// Staff: re-run the extraction for a source (after a failure, or with a new prompt version). Creates proposals, never silent corrections.
   reprocessSource: (tok: text, id: nat) -> (record {
                                               detail: text;
                                               ok: bool;
                                             });
+  reprocessSourceAs: (tok: text, id: nat, typeId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// Staff: retry a failed notification now.
   retryNotification: (tok: text, id: nat) ->
    (record {

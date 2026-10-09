@@ -88,3 +88,12 @@ contract, the consumer, and what was done or deliberately left.
 - Cross-stack: Hub `hub_notify` unchanged (e-mail → Slack DM; no channel target exists in the Hub, so a
   per-workspace Slack channel would need a Hub lane change — noted as a follow-up). Desk/Assets untouched.
 - Docs: README, INSTALL, OPERATIONS, agent guide, CONTRACTS design note, GAPS.
+
+## Contracts 0.14.1 — AI type classification (owner test upload, same day)
+
+- A moving-company order confirmation landed on SaaS: `contractType` was missing from the answer schema and a
+  classification carries no quote, so it was dropped; the review then defaulted to SaaS.
+- Now: schema and prompt require a type by subject matter; a classification needs no evidence; unknown type
+  names become a `typeProposal` (validated fields) the review can create in one click; unknown `type:` keys are
+  dropped with a note; "Read again as the selected type" pins a type (`reprocessSourceAs`). Default is Other.
+- Cross-stack: none (Contracts-internal AI contract). Tests: PocketIC classification case, smoke proposal card.

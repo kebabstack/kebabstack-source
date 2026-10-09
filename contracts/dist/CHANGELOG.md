@@ -1,5 +1,11 @@
 # Changelog — kebab-stack contracts
 
+## [0.14.1] — 2026-10-09
+
+- **The AI picks the contract type.** Every reading now classifies the document into one of the listed types (software → SaaS, hosting → Datacenter, lines → Telecom, equipment → Hardware, people/time/moves/cleaning → Services, premises → Rent); the classification needs no quote and is shown as "From document". Before, `contractType` was not part of the answer schema, so every upload landed on SaaS. An unclassified reading now lands on **Other** with a hint instead of SaaS.
+- **New types on request.** When no listed type fits, the AI returns a type proposal (name, icon, description, 2–8 fields; dates can carry reminders). The review shows it; a Contracts admin creates it with one click and the values the AI already read for those fields are filed with the record. Invalid proposed fields are filtered.
+- **Force the type.** "Read again as the selected type" re-reads the original with the chosen type's fields and ignores proposals (`reprocessSourceAs`). Unknown type fields in an answer are dropped with a note instead of failing the reading. `ProposalView` gains `typeProposal`.
+
 ## [0.14.0] — 2026-10-09
 
 - **Mail relay removed.** Contracts no longer receives e-mail. Documents arrive by upload (PDF, image, text, saved .eml) or pasted text from a signed-in member; the Cloudflare worker (`contracts/relay`), the Mail setup guide, the Relay tab, the contracts address and the per-workspace relay binding are gone. `setSpaceRelay` and `setRelayPrincipals` no longer exist; `intakeBegin` requires a session and accepts kinds `eml` and `manual`. Stored state of earlier relay deliveries stays readable.
