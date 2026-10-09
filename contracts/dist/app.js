@@ -160,7 +160,7 @@ async function routeView() {
   if (h.startsWith("#/docs")) { setNav("docs"); show("viewDocs"); return; }
   setNav("today"); return enterSaas("overview");
 }
-async function enterSaas(page,id=null){show("viewSaas");return renderSaas($("saasBody"),{api:backend,token:hubTok,stale:viewGuard("saas"),space:currentSpace,me,canWrite:isStaff(),isAdmin:isAdmin(),listTypes:()=>loadTypes(true),download,toast},page,id);}
+async function enterSaas(page,id=null){show("viewSaas");return renderSaas($("saasBody"),{api:backend,token:hubTok,stale:viewGuard("saas"),space:currentSpace,me,canWrite:isStaff(),isAdmin:isAdmin(),listTypes:()=>loadTypes(true),spaces,openSpace:(id)=>chooseSpace(id),download,toast},page,id);}
 async function route() {
   const token = hubTok, hash = location.hash;
   try { return await routeView(); }
@@ -197,7 +197,13 @@ async function boot() {
 async function loadSpaces() {
   spaces = await backend.listSpaces(session.load());
   if (me?.space) currentSpace = spaces.find(s => s.id === me.space) || null;
-  $("spaceSelect").innerHTML = spaces.map(s => `<option value="${esc(s.id)}">${s.kind === "personal" ? "◉ " : "▦ "}${esc(s.name)}${s.archived ? " · archived" : ""}</option>`).join("");
+  // The selector shows what is mine (personal, my teamspaces) and what is shared; everything an app admin can open by role only lives under Settings → All workspaces.
+  const optionOf = (s) => `<option value="${esc(s.id)}">${s.kind === "personal" ? "◉ " : "▦ "}${esc(s.name)}${s.archived ? " · archived" : ""}</option>`;
+  const groupOf = (label, list) => list.length ? `<optgroup label="${label}">${list.map(optionOf).join("")}</optgroup>` : "";
+  const mine = spaces.filter(s => s.member !== false && (s.kind === "personal" || s.kind === "team"));
+  const shared = spaces.filter(s => s.member !== false && (s.kind === "intake" || s.kind === "legacy"));
+  const byRole = currentSpace && spaces.find(s => s.id === currentSpace.id && s.member === false);
+  $("spaceSelect").innerHTML = groupOf("My workspaces", mine) + groupOf("Shared", shared) + (byRole ? groupOf("Opened as app admin", [byRole]) : "");
   if (currentSpace) $("spaceSelect").value = currentSpace.id;
   $("spaceAccess").textContent = currentSpace?.archived ? "Archived · read-only" : currentSpace?.kind === "personal" ? "Owner and app admins" : currentSpace?.kind === "intake" ? "App admins (Hub)" : ({owner:"Space owner",editor:"Can edit",viewer:"Read-only"}[spaceRoleName()] || "Read-only");
   $("spaceManage").textContent = currentSpace?.kind === "team" ? "Members & settings" : currentSpace?.kind === "intake" ? "Access & mail setup" : "About this space";
@@ -277,6 +283,15 @@ async function enterSpace() {
     box.querySelectorAll("[data-remove]").forEach(el => el.onclick = () => { members.splice(Number(el.dataset.remove),1); renderMembers(); });
   }
   renderMembers(); if (!owner) return;
+  { const items = Number(currentSpace?.items ?? 0); const danger = document.createElement("div"); danger.className = "scard";
+    danger.innerHTML = `<h3>Delete this teamspace</h3><p class="spacehelp">${items ? `It still holds ${items} record${items === 1 ? "" : "s"} (including its trash). Move or delete them first.` : "It is empty. Deleting removes its settings, membership and relay connection."}</p><div class="btnrow"><button class="pill outline sm" id="spDelete" ${items ? "disabled" : ""}>DELETE TEAMSPACE</button><span class="status" id="spDeleteStatus"></span></div>`;
+    box.append(danger);
+    $("spDelete").onclick = () => confirmBox(`Delete the teamspace “${v.space.name}”? This cannot be undone.`, async () => {
+      try { const r = await backend.deleteSpace(token, v.space.revision); if (!r.ok) { setStatus("spDeleteStatus", "err", r.detail); return; } }
+      catch (_) { setStatus("spDeleteStatus", "err", "Could not delete. Reload and try again."); return; }
+      hubTok = session.load(); await loadSpaces(); await refreshMe(); await chooseSpace(spaces.find(s => s.kind === "personal" && s.member !== false)?.id); toast("Teamspace deleted");
+    });
+  }
   attachPicker("spPerson", "spPersonList", p => { members.push({pid:p.id,name:p.displayName,role:{editor:null},active:true}); renderMembers(); }, () => members.map(m => m.pid));
   $("spSave").onclick = async () => {
     $("spSave").disabled = true;

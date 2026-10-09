@@ -71,8 +71,11 @@ type SpaceView =
  record {
    archived: bool;
    description: text;
+   email: text;
    id: text;
+   items: nat;
    kind: text;
+   member: bool;
    name: text;
    revision: nat;
    role: SpaceRole;
@@ -763,6 +766,12 @@ service : {
       detail: text;
       ok: bool;
     });
+  /// Owners delete an empty teamspace. Records (including the trash) must be moved or deleted first; sessions bound to it end.
+  deleteSpace: (tok: text, revision: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// People picker (responsible, viewers, seat holders): active directory members matching q — id, address, name, department.
   directory: (tok: text, q: text) ->
    (vec record {
@@ -969,7 +978,8 @@ service : {
   /// The inbox: sources by status (received | processing | review | filed | ignored | failed | "" = everything not filed/ignored). Members see their own uploads and the sources of their contracts.
   listSources: (tok: text, status: text, contractId: opt nat) ->
    (vec SourceRow) query;
-  /// Personal/team memberships stay private. Only the shared intake follows Hub admin/owner roles.
+  /// `member` is false for spaces an app admin can open only by role: other people's personal workspaces (listed only when
+  /// they hold something) and teamspaces the admin does not belong to. The selector shows memberships; Settings lists the rest.
   listSpaces: (tok: text) -> (vec SpaceView) query;
   /// Open tasks the person may see (staff: everything; others: their contracts), soonest first. includeSnoozed shows snoozed ones too.
   listTasks: (tok: text, includeSnoozed: bool, contractId: opt nat) ->

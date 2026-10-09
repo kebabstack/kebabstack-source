@@ -6,7 +6,7 @@ export const idlFactory = ({ IDL }) => {
   const TaskRow = IDL.Record({ assignee: IDL.Text, assigneeName: IDL.Text, auto: IDL.Bool, contractId: IDL.Nat, contractTitle: IDL.Text, daysLeft: IDL.Opt(IDL.Int), doneAt: IDL.Int, dueOn: IDL.Text, id: IDL.Nat, kind: IDL.Text, overdue: IDL.Bool, snoozedUntil: IDL.Int, title: IDL.Text });
   const Task = IDL.Record({ assignee: IDL.Text, auto: IDL.Bool, contractId: IDL.Nat, createdAt: IDL.Int, doneAt: IDL.Int, doneBy: IDL.Text, dueOn: IDL.Text, id: IDL.Nat, kind: IDL.Text, remindersSent: IDL.Vec(IDL.Nat), snoozedUntil: IDL.Int, title: IDL.Text });
   const SpaceRole = IDL.Variant({ editor: IDL.Null, owner: IDL.Null, viewer: IDL.Null });
-  const SpaceView = IDL.Record({ archived: IDL.Bool, description: IDL.Text, id: IDL.Text, kind: IDL.Text, name: IDL.Text, revision: IDL.Nat, role: SpaceRole });
+  const SpaceView = IDL.Record({ archived: IDL.Bool, description: IDL.Text, email: IDL.Text, id: IDL.Text, items: IDL.Nat, kind: IDL.Text, member: IDL.Bool, name: IDL.Text, revision: IDL.Nat, role: SpaceRole });
   const SpaceMember = IDL.Record({ pid: IDL.Text, role: SpaceRole });
   const Space = IDL.Record({ archived: IDL.Bool, createdAt: IDL.Int, description: IDL.Text, id: IDL.Text, members: IDL.Vec(SpaceMember), name: IDL.Text, revision: IDL.Nat, updatedAt: IDL.Int });
   const SourceRow = IDL.Record({ contractId: IDL.Opt(IDL.Nat), contractTitle: IDL.Text, documents: IDL.Nat, fromAddr: IDL.Text, fromName: IDL.Text, handedInByName: IDL.Text, id: IDL.Nat, kind: IDL.Text, note: IDL.Text, proposals: IDL.Nat, receivedAt: IDL.Int, sentAt: IDL.Text, status: IDL.Text, subject: IDL.Text });
@@ -65,6 +65,7 @@ export const idlFactory = ({ IDL }) => {
     decideProposal: IDL.Func([IDL.Text, IDL.Nat, IDL.Record({ accept: IDL.Vec(IDL.Record({ field: IDL.Text, value: IDL.Text })), expectedRevision: IDL.Nat, newContract: IDL.Bool, note: IDL.Text, target: IDL.Opt(IDL.Nat) })], [IDL.Record({ contractId: IDL.Nat, detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
     deleteContractType: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     deletePermanently: IDL.Func([IDL.Text, IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    deleteSpace: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     directory: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(IDL.Record({ department: IDL.Text, displayName: IDL.Text, email: IDL.Text, id: IDL.Text }))], ["query"]),
     directoryGroups: IDL.Func([IDL.Text], [IDL.Vec(IDL.Record({ members: IDL.Nat, name: IDL.Text }))], ["query"]),
     documentData: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ bytes: IDL.Vec(IDL.Nat8), mime: IDL.Text, name: IDL.Text }))], ["query"]),

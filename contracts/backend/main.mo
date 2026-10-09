@@ -67,7 +67,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // trusted relay identities (the mail worker) — intake lane only
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.13.0";
+  transient let BUILD_VERSION : Text = "0.13.1";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -293,7 +293,7 @@ persistent actor Contracts {
   public type SpaceRole = { #owner; #editor; #viewer };
   public type SpaceMember = { pid : Text; role : SpaceRole };
   public type Space = { id : Text; name : Text; description : Text; members : [SpaceMember]; archived : Bool; revision : Nat; createdAt : Int; updatedAt : Int };
-  public type SpaceView = { id : Text; name : Text; description : Text; kind : Text; role : SpaceRole; archived : Bool; revision : Nat };
+  public type SpaceView = { id : Text; name : Text; description : Text; kind : Text; role : SpaceRole; archived : Bool; revision : Nat; email : Text; items : Nat; member : Bool };
   let spaces = Map.empty<Text, Space>();
   let contractSpaces = Map.empty<Nat, Text>();
   let sourceSpaces = Map.empty<Nat, Text>();
@@ -367,24 +367,42 @@ persistent actor Contracts {
     r == ?#owner or c.visibility != "restricted" or legacyDirect(pid, c);
   };
   /// Personal/team memberships stay private. Only the shared intake follows Hub admin/owner roles.
+  /// Records (including trashed ones) and incoming documents that live in a space.
+  func spaceItems(sid : Text) : Nat { var n = 0; for ((id, _) in contracts.entries()) if (contractSpace(id) == sid) n += 1; for ((id, _) in sources.entries()) if (sourceSpace(id) == sid) n += 1; n };
+  /// `member` is false for spaces an app admin can open only by role: other people's personal workspaces (listed only when
+  /// they hold something) and teamspaces the admin does not belong to. The selector shows memberships; Settings lists the rest.
   public shared query func listSpaces(tok : Text) : async [SpaceView] {
     let m = switch (me(tok)) { case (?m) m; case null return [] };
     let out = List.empty<SpaceView>();
-    out.add({ id = personalSpace(m.id); name = "Personal"; description = "Your personal workspace. App admins can also access it"; kind = "personal"; role = #owner; archived = false; revision = 0 });
-    if (intakeReviewer(m.id)) out.add({ id = "intake"; name = "Contract intake"; description = "Shared incoming documents for app admins to review and distribute"; kind = "intake"; role = #owner; archived = false; revision = 0 });
-    switch (spaceRole(m.id, "legacy")) { case (?r) out.add({ id = "legacy"; name = "Existing contracts"; description = "Earlier records; central admins and explicitly assigned people have access"; kind = "legacy"; role = r; archived = false; revision = 0 }); case null {} };
+    out.add({ id = personalSpace(m.id); name = "Personal"; description = "Your personal workspace. App admins can also access it"; kind = "personal"; role = #owner; archived = false; revision = 0; email = emailOfPid(m.id); items = spaceItems(personalSpace(m.id)); member = true });
+    if (intakeReviewer(m.id)) out.add({ id = "intake"; name = "Contract intake"; description = "Shared incoming documents for app admins to review and distribute"; kind = "intake"; role = #owner; archived = false; revision = 0; email = ""; items = spaceItems("intake"); member = true });
+    switch (spaceRole(m.id, "legacy")) { case (?r) out.add({ id = "legacy"; name = "Existing contracts"; description = "Records from before workspaces existed; central admins of that time and explicitly assigned people have access"; kind = "legacy"; role = r; archived = false; revision = 0; email = ""; items = spaceItems("legacy"); member = true }); case null {} };
     if (m.role == "admin") {
       let personal = Map.empty<Text, Bool>();
-      for ((email, _) in people.entries()) { let pid = pidOf(email); if (pid != "") personal.add(personalSpace(pid), true) };
       for (sid in contractSpaces.values()) if (Text.startsWith(sid, #text "personal:")) personal.add(sid, true);
       for (sid in sourceSpaces.values()) if (Text.startsWith(sid, #text "personal:")) personal.add(sid, true);
       for ((sid, _) in personal.entries()) if (sid != personalSpace(m.id)) {
         let pid = Text.stripStart(sid, #text "personal:") ?? "";
-        out.add({ id = sid; name = "Personal · " # nameOf(pid); description = "Visible to this person and app admins"; kind = "personal"; role = #owner; archived = false; revision = 0 });
+        out.add({ id = sid; name = "Personal · " # nameOf(pid); description = "Visible to this person and app admins"; kind = "personal"; role = #owner; archived = false; revision = 0; email = emailOfPid(pid); items = spaceItems(sid); member = false });
       };
     };
-    for ((_, sp) in spaces.entries()) switch (spaceRole(m.id, sp.id)) { case (?r) out.add({ id = sp.id; name = sp.name; description = sp.description; kind = "team"; role = r; archived = sp.archived; revision = sp.revision }); case null {} };
+    for ((_, sp) in spaces.entries()) switch (spaceRole(m.id, sp.id)) { case (?r) out.add({ id = sp.id; name = sp.name; description = sp.description; kind = "team"; role = r; archived = sp.archived; revision = sp.revision; email = ""; items = spaceItems(sp.id); member = sp.members.any(func x = x.pid == m.id) }); case null {} };
     out.toArray();
+  };
+  /// Owners delete an empty teamspace. Records (including the trash) must be moved or deleted first; sessions bound to it end.
+  public shared func deleteSpace(tok : Text, revision : Nat) : async { ok : Bool; detail : Text } {
+    let m = switch (me(tok)) { case (?m) m; case null return { ok = false; detail = "No session" } };
+    let sp = switch (spaces.get(m.space)) { case (?sp) sp; case null return { ok = false; detail = "Only teamspaces can be deleted" } };
+    if (spaceRole(m.id, m.space) != ?#owner) return { ok = false; detail = "Space owners only" };
+    if (sp.revision != revision) return { ok = false; detail = "Space changed; reload before deleting" };
+    let n = spaceItems(sp.id);
+    if (n > 0) return { ok = false; detail = "This teamspace still holds " # Nat.toText(n) # " record(s), including its trash. Move or delete them first" };
+    spaces.remove(sp.id);
+    let relays = List.empty<Principal>(); for ((p, sid) in relaySpaces.entries()) if (sid == sp.id) relays.add(p); for (p in relays.values()) relaySpaces.remove(p);
+    let ended = List.empty<Text>(); for ((key, ss) in spaceSessions.entries()) if (ss.space == sp.id) ended.add(key); for (key in ended.values()) spaceSessions.remove(key);
+    renewalPolicies.remove(sp.id);
+    log(m.id, "teamspace deleted: " # sp.name);
+    { ok = true; detail = "" };
   };
   /// Open a space with a session bound to that space. Tabs cannot change each other's scope.
   public shared func openSpace(tok : Text, sid : Text) : async { ok : Bool; token : Text; detail : Text } {

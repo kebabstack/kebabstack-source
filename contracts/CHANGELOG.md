@@ -1,5 +1,10 @@
 # Changelog — kebab-stack contracts
 
+## [0.13.1] — 2026-10-09
+
+- **Workspace selector shows what is yours.** It lists your personal workspace, the teamspaces you belong to and, for app admins, the shared Contract intake and the pre-workspace "Existing contracts". Everything an app admin can open by role only — other people's personal workspaces (only those holding records; the person's e-mail is shown) and teamspaces they are not a member of — moved to **Settings → All workspaces**. Before, admins saw one entry per directory person, including empty ones.
+- **Teamspaces can be deleted.** An owner deletes an empty teamspace from Manage workspace; one that still holds records (including its trash) says how many must be moved or deleted first. Sessions bound to the deleted space end. `listSpaces` rows carry `email`, `items` and `member`; new `deleteSpace(revision)`.
+
 ## [0.13.0] — 2026-10-09
 
 - **Contract types.** Every contract keeps the shared core (parties, responsibility, term, money, renewal, notice, decision date, documents). An admin-defined type adds its own fields (text, number, date, choice, amount, yes/no, person) under Settings → Contract types; starters ship for SaaS / Subscription, Datacenter / Colocation, Telecom, Hardware lease / Maintenance, Services, Rent / Real estate and Other. Existing records are SaaS / Subscription. The type and its fields show on the record, chosen fields show in the list, the list filters by type, and the document assistant classifies new contracts into a type and fills its fields (`contractType`, `type:<key>` in proposals). Date fields marked "remind" fire reminders like task due dates. Seat follow-up at offboarding applies only to types with seats. Person fields appear in the Desk person panel.

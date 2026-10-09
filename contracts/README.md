@@ -107,6 +107,8 @@ Unknown conditions remain unknown. AI cannot guarantee which legal terms apply.
 | Teamspace editor | Maintains accessible records, incoming documents, proposals, tasks and imports. |
 | Teamspace viewer | Reads and exports accessible content; cannot change it. |
 | Shared Contract intake | Active Hub admins and Hub owners can review and distribute. Contracts Admins assigned in Hub also have access. |
+
+The workspace selector lists your personal workspace, the teamspaces you belong to and (for app admins) the shared Contract intake and the pre-workspace **Existing contracts**. App admins reach everything else — other people's personal workspaces that hold records, and teamspaces they do not belong to — from **Settings → All workspaces**; empty personal workspaces are not listed. A teamspace owner can delete an empty teamspace from Manage workspace; records, including the trash, must be moved or deleted first, and sessions bound to the space end.
 | Hub / app administrator | Configures the Hub connection, AI lane, trusted relay identities and app settings. Can access all personal/team content, including restricted records. |
 
 A restricted record further limits access to its responsible person, deputy and named viewers,

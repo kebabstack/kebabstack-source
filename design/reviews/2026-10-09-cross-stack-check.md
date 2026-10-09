@@ -67,3 +67,13 @@ contract, the consumer, and what was done or deliberately left.
 - Desk: no change needed; the person panel reads the context items as before.
 - Docs: Contracts README (types, reminders), CHANGELOG 0.13.0. `docs/HUB-OPERATIONS.md` unchanged (no new metric).
 - Tests: `tests/security.test.mjs` "contract types" case; smoke fixture carries a datacenter record.
+
+## Contracts 0.13.1 — workspace selector (owner feedback, same day)
+
+- Owner saw one "Personal · <name>" per directory person plus two "IT" teamspaces and could not delete any.
+  Cause: `listSpaces` enumerated every directory person for admins; no delete endpoint existed.
+- Now: selector = memberships (personal, own teamspaces) + shared (intake, legacy) for admins; everything
+  reachable by role only sits under Settings → All workspaces (other people's personal workspaces only when
+  they hold records, with e-mail). `deleteSpace` removes an empty teamspace (owner, revision-checked), ends
+  bound sessions, drops relay links and the reminder policy.
+- Cross-stack: no Hub/Desk contract touched (`SpaceView` is Contracts-internal). Docs: README access section.

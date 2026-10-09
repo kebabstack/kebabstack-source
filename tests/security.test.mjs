@@ -2316,6 +2316,31 @@ test('contracts: contract types — built-ins listed, admin-defined fields valid
  }finally{await pic.tearDown();}
 });
 
+test('contracts: workspaces — the selector lists memberships only, admins see other people\'s workspaces with content, owners delete empty teamspaces and bound sessions end',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const {app,adminTok,adminRoot,memberRoot,memberTok,memberId,adminId,spaceId}=await contractsFixture(pic,{ai:false});
+  const mine=await app.listSpaces(memberRoot);assert.ok(mine.length>=2&&mine.every(s=>s.member===true),JSON.stringify(mine.map(s=>[s.id,s.member])));assert.ok(mine.some(s=>s.id===spaceId));
+  let adminList=await app.listSpaces(adminRoot);assert.ok(!adminList.some(s=>s.id==='personal:'+memberId),'empty personal workspaces of others are not listed');
+  assert.equal((await app.createContract(memberRoot,cinput({title:'Private policy'}))).ok,true);
+  adminList=await app.listSpaces(adminRoot);const theirs=adminList.find(s=>s.id==='personal:'+memberId);assert.ok(theirs,'personal workspace with content appears for admins');assert.equal(theirs.member,false);assert.equal(theirs.items,1n);assert.ok(theirs.email.includes('@'));
+  assert.equal(adminList.find(s=>s.id==='personal:'+adminId).items,0n);
+  const created=await app.createSpace(adminRoot,'Empty IT','');assert.equal(created.ok,true,created.detail);
+  const fresh=(await app.listSpaces(adminRoot)).find(s=>s.id===created.id);assert.equal(fresh.member,true);assert.equal(fresh.items,0n);
+  const team=(await app.listSpaces(adminRoot)).find(s=>s.id===spaceId);
+  assert.equal((await app.createContract(adminTok,cinput({title:'Team record'}))).ok,true);
+  const full=await app.deleteSpace(adminTok,team.revision);assert.equal(full.ok,false);assert.ok(/record/.test(full.detail),full.detail);
+  assert.equal((await app.deleteSpace(memberTok,team.revision)).ok,false,'editors cannot delete');
+  const bound=(await app.openSpace(adminRoot,created.id)).token;assert.ok(bound);
+  assert.equal((await app.deleteSpace(bound,99n)).ok,false,'stale revision refused');
+  assert.equal((await app.deleteSpace(adminRoot,1n)).ok,false,'a personal workspace cannot be deleted');
+  const gone=await app.deleteSpace(bound,fresh.revision);assert.equal(gone.ok,true,gone.detail);
+  assert.ok(!(await app.listSpaces(adminRoot)).some(s=>s.id===created.id),'deleted space disappears');
+  assert.deepEqual(await app.whoami(bound),[],'session bound to the deleted space ended');
+  assert.equal((await app.openSpace(adminRoot,created.id)).ok,false);
+ }finally{await pic.tearDown();}
+});
+
 test('contracts: vendor terms read a public page as supplementary evidence without changing contract fields',async()=>{
  const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
  try{

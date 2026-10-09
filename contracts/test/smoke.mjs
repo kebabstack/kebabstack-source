@@ -52,7 +52,8 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "markNotificationsRead": return 1n;
     case "portalApps": return [{ id: 1n, name: "contracts", url: "https://contracts.test/", note: "", kind: "app", connectorId: 1n, hidden: false, hasIcon: false }];
     case "myAvatarPortal": case "getCompanyLogo": case "tileIcon": return [];
-    case "listSpaces": return [{id:"team:1",name:"People & Operations",description:"Team agreements",kind:"team",role:{[staff ? 'owner' : 'viewer']:null},archived:false,revision:1n},...(role === "admin" ? [{id:"intake",name:"Contract intake",description:"Shared incoming documents",kind:"intake",role:{owner:null},archived:false,revision:0n}] : [])];
+    case "listSpaces": return [{id:"team:1",name:"People & Operations",description:"Team agreements",kind:"team",role:{[staff ? 'owner' : 'viewer']:null},archived:false,revision:1n,email:"",items:3n,member:true},{id:"personal:"+ME,name:"Personal",description:"Your personal workspace",kind:"personal",role:{owner:null},archived:false,revision:0n,email:"me@example.com",items:0n,member:true},...(role === "admin" ? [{id:"intake",name:"Contract intake",description:"Shared incoming documents",kind:"intake",role:{owner:null},archived:false,revision:0n,email:"",items:2n,member:true},{id:"personal:"+ANA,name:"Personal · Ana Ruiz",description:"Visible to this person and app admins",kind:"personal",role:{owner:null},archived:false,revision:0n,email:"ana@example.com",items:2n,member:false},{id:"team:7",name:"Finance",description:"",kind:"team",role:{owner:null},archived:false,revision:2n,email:"",items:0n,member:false}] : [])];
+    case "deleteSpace": return {ok:true,detail:""};
     case "openSpace": fixtureSpace=a[1];return {ok:true,token:"scoped-token",detail:""};
     case "getSpace": return [{space:{id:"team:1",name:"People & Operations",description:"Team agreements",revision:1n,archived:false,members:[{pid:ME,role:{owner:null}}]},members:[{pid:ME,name:"Me Myself",active:true,role:{owner:null}}]}];
     case "whoami": return [{ id: ME, email: "me@example.com", displayName: "Me Myself", role, space:fixtureSpace, spaceRole:[{[staff ? "owner" : "viewer"]:null}], roleSource: role === "admin" ? "hub owner" : role === "editor" ? "group contracts-editors" : "directory member", orgName: "Acme", hubId: "aaaaa-aa", needsClaim: false, aiOn: mode !== "editor" }];
@@ -119,6 +120,9 @@ check(on("viewSaas") && /Annual run rate/.test($("saasBody").textContent), "cont
 await go("#/contracts"); check(document.querySelectorAll(".saas-table tbody tr").length===2 && /Datacenter/.test($("saasBody").textContent),"portfolio table renders every type without record-by-record queries");
 await go("#/reports"); check(/Contract spend/.test($("saasBody").textContent),"management report opens");
 await go("#/settings"); check(/90/.test($("saasBody").textContent) && /IT/.test($("saasBody").textContent),"reminders and Hub groups available");
+check([...$("spaceSelect").querySelectorAll("optgroup")].map(g=>g.label).join("|")===(role==="admin"?"My workspaces|Shared":"My workspaces") && !$("spaceSelect").querySelector('option[value="personal:'+ANA+'"]') && !$("spaceSelect").querySelector('option[value="team:7"]'),"selector shows memberships and shared spaces only: "+$("spaceSelect").innerHTML.slice(0,120));
+check((/All workspaces/.test($("saasBody").textContent) && /ana@example.com/.test($("saasBody").textContent) && /Finance/.test($("saasBody").textContent))===(role==="admin"),"admins reach other workspaces from Settings");
+await go("#/space"); check((!!$("spDelete") && $("spDelete").disabled)===staff,"owners get a delete control that stays disabled while the space holds records");
 await go("#/tasks");
 check(!hidden("navConn"), "workspace tools available for scoped exports");
 check(hidden("aiBox") === !(staff && mode === "editor"), "AI-off notice only for staff when the lane is off: hidden=" + hidden("aiBox"));
