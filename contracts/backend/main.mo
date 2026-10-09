@@ -63,11 +63,11 @@ persistent actor Contracts {
   var tzName : Text = "UTC"; // label for people; the offset below is what the math uses
   var tzOffsetMinutes : Int = 0; // organisation time zone as a fixed UTC offset (DST is not modelled — see README)
   var leadDays : Nat = 14; // internal decision this many days before the last cancellation date
-  var reminderDays : [Nat] = [30, 14, 7]; // reminders before a task's due date
-  var relayPrincipals : [Principal] = []; // trusted relay identities (the mail worker) — intake lane only
+  var reminderDays : [Nat] = [30, 14, 7]; // retired 0.14.0: task and typed-date reminders follow the workspace policy; kept for the stable state contract
+  var relayPrincipals : [Principal] = []; // retired 0.14.0 (mail relay removed); kept for the stable state contract, never consulted
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.13.1";
+  transient let BUILD_VERSION : Text = "0.14.0";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -299,7 +299,7 @@ persistent actor Contracts {
   let sourceSpaces = Map.empty<Nat, Text>();
   // Receipt namespace remains at first intake after routing; it grants no content access.
   let sourceIntakeSpaces = Map.empty<Nat, Text>();
-  let relaySpaces = Map.empty<Principal, Text>();
+  let relaySpaces = Map.empty<Principal, Text>(); // retired 0.14.0; kept for the stable state contract
   var nextSpaceId : Nat = 1;
   // Freeze old elevated content access once. Future Hub role changes never grant it.
   let legacyAdmins : [Text] = adminPids();
@@ -488,16 +488,6 @@ persistent actor Contracts {
     { ok = true; detail = "Contract and related evidence moved" };
   };
 
-  /// A space owner authorizes a trusted intake identity for this space. Global relay trust alone never grants content access.
-  public shared func setSpaceRelay(tok : Text, principal : Text, enabled : Bool) : async { ok : Bool; detail : Text } {
-    let m = switch (me(tok)) { case (?m) m; case null return { ok = false; detail = "No session" } };
-    if (spaceRole(m.id, m.space) != ?#owner) return { ok = false; detail = "Space owners only" };
-    let p = switch (principalSafe(principal)) { case (?p) p; case null return { ok = false; detail = "Invalid principal" } };
-    if (p.isAnonymous() or not isRelay(p)) return { ok = false; detail = "The operator must first trust this relay identity" };
-    switch (relaySpaces.get(p)) { case (?sid) { if (sid != m.space) return { ok = false; detail = "Relay belongs to another space; use a separate identity" } }; case null {} };
-    if (enabled) relaySpaces.add(p, m.space) else relaySpaces.remove(p);
-    { ok = true; detail = "" };
-  };
 
   type Me = { id : Text; email : Text; displayName : Text; role : Text; space : Text };
   func me(tok : Text) : ?Me {
@@ -549,7 +539,7 @@ persistent actor Contracts {
 
   public type Settings = {
     hubId : Text; appUrl : Text; orgName : Text; editorGroup : Text; adminGroup : Text; adminEmails : [Text]; tzName : Text; tzOffsetMinutes : Int;
-    leadDays : Nat; reminderDays : [Nat]; mailboxAddress : Text; relayPrincipals : [Text]; aiDailyBudget : Nat;
+    leadDays : Nat; aiDailyBudget : Nat;
     peopleCount : Nat; lastDirectoryPull : Int; adminCount : Nat; contracts : Nat; sources : Nat; openProposals : Nat; openTasks : Nat; blobBytes : Nat;
     aiSource : Text; aiCallsToday : Nat; demoSeeded : Bool; version : Text;
   };
@@ -558,27 +548,24 @@ persistent actor Contracts {
     switch (admin(tok)) {
       case null null;
       case (?_) ?{
-        hubId; appUrl; orgName; editorGroup = ""; adminGroup = ""; adminEmails = []; tzName; tzOffsetMinutes; leadDays; reminderDays; mailboxAddress;
-        relayPrincipals = Array.map<Principal, Text>(relayPrincipals, Principal.toText); aiDailyBudget;
+        hubId; appUrl; orgName; editorGroup = ""; adminGroup = ""; adminEmails = []; tzName; tzOffsetMinutes; leadDays; aiDailyBudget;
         peopleCount = Map.size(people); lastDirectoryPull; adminCount = adminCount(); contracts = Map.size(contracts); sources = Map.size(sources);
         openProposals = countOpenProposals(); openTasks = countOpenTasks(); blobBytes; aiSource = aiSource(); aiCallsToday = aiCallsToday(); demoSeeded; version = BUILD_VERSION;
       };
     };
   };
-  /// Admins: groups, address, time zone, deadline defaults, AI budget. Unknown time zones are a label + a fixed offset (DST is not modelled).
-  public shared func setSettings(tok : Text, args : { editorGroup : Text; adminGroup : Text; appUrl : Text; orgName : Text; tzName : Text; tzOffsetMinutes : Int; leadDays : Nat; reminderDays : [Nat]; mailboxAddress : Text; aiDailyBudget : Nat }) : async { ok : Bool; detail : Text } {
+  /// Admins: app address, time zone, decision lead, AI budget. Reminder schedules live per workspace (setRenewalPolicy). Unknown time zones are a label + a fixed offset (DST is not modelled).
+  public shared func setSettings(tok : Text, args : { editorGroup : Text; adminGroup : Text; appUrl : Text; orgName : Text; tzName : Text; tzOffsetMinutes : Int; leadDays : Nat; aiDailyBudget : Nat }) : async { ok : Bool; detail : Text } {
     if (norm(args.adminGroup) != "" or norm(args.editorGroup) != "") return { ok = false; detail = "Role settings have moved to Hub Permissions" };
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
     if (args.appUrl != "" and not Text.startsWith(args.appUrl, #text "https://")) return { ok = false; detail = "app url must start with https://" };
     if (args.tzOffsetMinutes < -14 * 60 or args.tzOffsetMinutes > 14 * 60) return { ok = false; detail = "time zone offset must be within ±14 hours" };
     if (args.leadDays > 365) return { ok = false; detail = "lead days: at most 365" };
-    if (args.reminderDays.size() > 6) return { ok = false; detail = "at most six reminder marks" };
-    for (d in args.reminderDays.vals()) if (d > 365) return { ok = false; detail = "reminder marks: at most 365 days" };
     appUrl := norm(args.appUrl); orgName := norm(args.orgName);
     let leadChanged = leadDays != args.leadDays;
     tzName := norm(args.tzName); tzOffsetMinutes := args.tzOffsetMinutes; leadDays := args.leadDays;
     if (leadChanged) { for ((cid, c) in Map.entries(contracts)) { let nt = recompute({ c.terms with decideBy = "" }); if (nt.decideBy != c.terms.decideBy) { contracts.add(cid, { c with terms = nt }); rebuildTasks(cid) } }; lastReminderScan := 0 };
-    reminderDays := Array.sort<Nat>(args.reminderDays, func(a, b) = Nat.compare(b, a)); mailboxAddress := lower(norm(args.mailboxAddress)); aiDailyBudget := args.aiDailyBudget;
+    aiDailyBudget := args.aiDailyBudget;
     rebuildAllTasks();
     log(m.email, "settings updated");
     { ok = true; detail = "" };
@@ -587,26 +574,11 @@ persistent actor Contracts {
   public shared func setAdminEmails(tok : Text, emails : [Text]) : async { ok : Bool; detail : Text } {
     { ok = false; detail = "App permissions are managed only in the Hub" };
   };
-  /// Admins: the relay identities allowed to hand in mail (the worker's principal). Add before deploying the worker, remove to rotate.
-  public shared func setRelayPrincipals(tok : Text, principals : [Text]) : async { ok : Bool; detail : Text } {
-    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
-    if (principals.size() > 5) return { ok = false; detail = "at most five relay identities" };
-    let out = List.empty<Principal>();
-    for (t in principals.vals()) {
-      let p = switch (principalSafe(norm(t))) { case (?p) p; case null return { ok = false; detail = "not a principal: " # norm(t) } };
-      if (p.isAnonymous()) return { ok = false; detail = "the anonymous principal cannot be a relay" };
-      List.add(out, p);
-    };
-    relayPrincipals := List.toArray(out);
-    log(m.email, "relay identities set (" # Nat.toText(relayPrincipals.size()) # ")");
-    { ok = true; detail = "" };
-  };
   func principalSafe(t : Text) : ?Principal {
     if (t.size() < 5 or t.size() > 63) return null;
     for (c in t.chars()) if (not ((c >= 'a' and c <= 'z') or (c >= '0' and c <= '9') or c == '-')) return null;
     ?Principal.fromText(t);
   };
-  func isRelay(p : Principal) : Bool { for (r in relayPrincipals.vals()) if (r == p) return true; false };
   /// Admin log (last 200 lines).
   public shared query func adminLogRows(tok : Text) : async [LogRow] {
     switch (admin(tok)) {
@@ -1043,7 +1015,7 @@ persistent actor Contracts {
   public shared func setRenewalPolicy(tok : Text, p : Saas.Policy) : async { ok : Bool; detail : Text } {
     let m=me(tok) ?? (return {ok=false;detail="No session"});
     if (spaceRole(m.id,m.space)!=?#owner or not spaceWrites(m)) return {ok=false;detail="Workspace owners only"};
-    if (p.days.size()==0 or p.days.size() > 6 or p.days.any(func d=d==0 or d > 365) or not hasN(p.days,90)) return {ok=false;detail="Include the first reminder at 90 days; choose up to six marks between 1 and 365 days"};
+    if (p.days.size()==0 or p.days.size() > 6 or p.days.any(func d=d==0 or d > 365)) return {ok=false;detail="Choose one to six reminder marks between 1 and 365 days before the deadline"};
     if(p.groups.size() > 12 or p.groups.any(func g=not groupExists(g))) return {ok=false;detail="Choose current Hub groups"};
     renewalPolicies.add(m.space,{p with days=Array.sort(p.days,func(a,b)=Nat.compare(b,a))});
     lastReminderScan:=0;
@@ -1144,7 +1116,7 @@ persistent actor Contracts {
       let when = if (left < 0) "deadline passed " # deadline # " (" # Int.toText(-left) # " days ago)" else if (left == 0) "today" else "in " # Int.toText(left) # " days (" # deadline # ")";
       let what = if (isKey(c)) "license expires" else if (deadline != anchor) "cancel by" else if (c.terms.renewalRule == "auto") "renews" else "ends";
       let amount = amountText(c.terms);
-      let title = (if (c.status == "draft") "Draft · " else "") # capText(name, 60) # " — " # what # " " # when # (if (deadline != anchor) " · renews " # anchor else "") # (if (amount != "") " · " # amount else "");
+      let title = spaceTag(sid) # (if (c.status == "draft") "Draft · " else "") # capText(name, 60) # " — " # what # " " # when # (if (deadline != anchor) " · renews " # anchor else "") # (if (amount != "") " · " # amount else "");
       for (pid in recipients.vals()) {
         let prefix = occurrence # ":" # pid # ":";
         if (renewalMarks.containsKey(prefix # Nat.toText(mark))) continue;
@@ -1514,14 +1486,14 @@ persistent actor Contracts {
   transient let pendingIntakes : Map.Map<Nat, Pending> = Map.empty<Nat, Pending>();
   var nextIntakeId : Nat = 1;
 
-  /// who may hand in mail: the trusted relay principal (token "") or a signed-in editor/admin (uploads, pasted text)
+  /// who may hand in a document: a signed-in member (uploads, pasted text). The mail relay was retired in 0.14.0.
   func intakeCaller(caller : Principal, tok : Text) : ?Text {
-    if (tok == "") { if (isRelay(caller)) return ?"" else return null };
+    if (tok == "") return null;
     switch (me(tok)) { case (?m) ?m.id; case null null }; // any signed-in member may hand in a saved message — it stays theirs until it is filed
   };
   func ownsIntake(caller : Principal, tok : Text, pnd : Pending) : Bool {
     if (not spaceAcceptsIntake(pnd.space)) return false;
-    if (pnd.by == "") return tok == "" and caller == pnd.caller and isRelay(caller) and relaySpaces.get(caller) == ?pnd.space;
+    if (pnd.by == "") return false;
     switch (me(tok)) { case (?m) m.id == pnd.by and m.space == pnd.space and spaceWrites(m); case null false };
   };
   func sniffMime(b : Blob, declared : Text) : Text {
@@ -1538,10 +1510,8 @@ persistent actor Contracts {
   };
   /// Step 1 of 3: announce a message. Returns an intake id for the attachment chunks. Caps are checked here, so the relay learns early.
   public shared ({ caller }) func intakeBegin(tok : Text, meta : IntakeMeta) : async { ok : Bool; id : Nat; detail : Text } {
-    let by = switch (intakeCaller(caller, tok)) { case (?b) b; case null return { ok = false; id = 0; detail = "not allowed to hand in mail — the relay identity is not trusted or the session is not staff" } };
-    let scope = if (tok == "") {
-      switch (relaySpaces.get(caller)) { case (?sid) sid; case null return { ok = false; id = 0; detail = "A space owner must connect this relay to a space" } }
-    } else { switch (me(tok)) { case (?m) { if (not spaceWrites(m)) return { ok = false; id = 0; detail = "Space is read-only" }; m.space }; case null return { ok = false; id = 0; detail = "No session" } } };
+    let by = switch (intakeCaller(caller, tok)) { case (?b) b; case null return { ok = false; id = 0; detail = "Sign in to hand in a document" } };
+    let scope = switch (me(tok)) { case (?m) { if (not spaceWrites(m)) return { ok = false; id = 0; detail = "Space is read-only" }; m.space }; case null return { ok = false; id = 0; detail = "No session" } };
     if (not spaceAcceptsIntake(scope)) return { ok = false; id = 0; detail = "Space is archived, inactive or directory access has expired" };
     if (hubId == "") return { ok = false; id = 0; detail = "the app is not wired to a hub yet" };
     let t = now();
@@ -1550,8 +1520,7 @@ persistent actor Contracts {
     if (bytesOf(meta.text) > MAX_TEXT) return { ok = false; id = 0; detail = "message text too large (max " # Nat.toText(MAX_TEXT / 1000) # " KB)" };
     if (bytesOf(meta.html) > MAX_HTML) return { ok = false; id = 0; detail = "message html too large" };
     if (meta.attachments.size() > MAX_ATTACHMENTS) return { ok = false; id = 0; detail = "at most " # Nat.toText(MAX_ATTACHMENTS) # " attachments per message" };
-    if (meta.kind != "relay" and meta.kind != "eml" and meta.kind != "manual") return { ok = false; id = 0; detail = "kind must be relay, eml or manual" };
-    if (by == "" and meta.kind != "relay") return { ok = false; id = 0; detail = "the relay hands in relay messages only" };
+    if (meta.kind != "eml" and meta.kind != "manual") return { ok = false; id = 0; detail = "kind must be eml or manual" };
     for (a in meta.attachments.vals()) {
       if (a.size > MAX_ATTACHMENT and a.link == "") return { ok = false; id = 0; detail = "attachment too large: " # a.name # " (max " # Nat.toText(MAX_ATTACHMENT / 1_000_000) # " MB) — hand in a link or leave it out" };
       if (a.sha256.size() != 64 and a.link == "" and a.size > 0) return { ok = false; id = 0; detail = "attachment without sha256: " # a.name };
@@ -2751,26 +2720,29 @@ persistent actor Contracts {
   };
   /// Reminders: every check (each 6 h) looks at open tasks with a due date; at each configured mark (days before), and once when overdue, one notification goes out.
   /// Date fields of a contract type marked "remind" fire like task due dates: at each reminder mark and when overdue, once per date.
+  /// Tasks are short-lived: they remind within the last 30 days before they are due (the workspace marks at or under 30, else 7) and once when overdue.
+  func taskMarks(p : Saas.Policy) : [Nat] { let m = Array.filter<Nat>(p.days, func d = d <= 30); if (m.size() == 0) [7] else m };
+  /// Workspace name in front of a reminder, so IT and PfOps tell their deadlines apart in Slack.
+  func spaceTag(sid : Text) : Text = switch (spaces.get(sid)) { case (?sp) sp.name # " · "; case null "" };
   func sendTypeReminders() {
-    for ((cid, c) in Map.entries(contracts)) if (c.status == "active" or c.status == "cancelling") {
+    let roster = buildRoster();
+    for ((cid, c) in Map.entries(contracts)) if ((c.status == "active" or c.status == "cancelling") and not trashedContracts.containsKey(cid)) {
+      let sid = contractSpace(cid); let p = policyFor(sid); if (not p.enabled) continue;
       let t = typeOfContract(cid);
       for (f in t.fields.vals()) if (f.kind == "date" and f.remind) {
         let v = valueOf(cid, f.key);
         if (v != "") switch (daysUntil(v)) {
           case (?left) {
             var mark : ?Nat = null;
-            for (r in reminderDays.vals()) if (left <= r and mark == null) mark := ?r;
+            for (r in p.days.vals()) if (left <= r and (switch (mark) { case (?m) r < m; case null true })) mark := ?r;
             if (left < 0) mark := ?0;
             switch (mark) {
               case (?mk) {
                 let key = "tf-" # Nat.toText(cid) # "-" # f.key # "-" # v # "-" # Nat.toText(mk);
                 if (not Map.containsKey(typeRemindersSent, Text.compare, key)) {
                   Map.add(typeRemindersSent, Text.compare, key, true);
-                  let title = (if (left < 0) "Overdue: " else if (left == 0) "Today: " else "In " # Int.toText(left) # " days: ") # f.title # " (" # v # ") · " # c.title;
-                  let who = List.empty<Text>();
-                  if (activePid(c.responsible)) List.add(who, c.responsible);
-                  if (c.deputy != "" and not Text.startsWith(c.deputy, #text "group:") and activePid(c.deputy)) List.add(who, c.deputy);
-                  for (w in List.toArray(who).vals()) queueNotify(w, capText(title, 120), "#/c/" # Nat.toText(cid), "contracts.deadline", key # "-" # w);
+                  let title = spaceTag(sid) # (if (left < 0) "Overdue: " else if (left == 0) "Today: " else "In " # Int.toText(left) # " days: ") # f.title # " (" # v # ") · " # c.title;
+                  for (w in reminderRecipients(c, sid, p, roster).vals()) queueNotify(w, capText(title, 160), "#/c/" # Nat.toText(cid), "contracts.deadline", key # "-" # w);
                 };
               };
               case null {};
@@ -2789,8 +2761,10 @@ persistent actor Contracts {
         switch (daysUntil(t.dueOn)) {
           case (?left) {
             // Smallest unsent mark at or above the days left; every larger mark counts as sent too (no backlog after a late start).
+            let sidT = contractSpace(t.contractId); let pT = policyFor(sidT); if (not pT.enabled) continue;
+            let marks = taskMarks(pT);
             var mark : ?Nat = null;
-            for (r in reminderDays.vals()) if (left <= r and not hasN(t.remindersSent, r)) { switch (mark) { case (?m) { if (r < m) mark := ?r }; case null mark := ?r } };
+            for (r in marks.vals()) if (left <= r and not hasN(t.remindersSent, r)) { switch (mark) { case (?m) { if (r < m) mark := ?r }; case null mark := ?r } };
             if (left < 0 and not hasN(t.remindersSent, 0)) mark := ?0;
             switch (mark) {
               case (?mk) {
@@ -2798,10 +2772,10 @@ persistent actor Contracts {
                 let fallback = switch (c) { case (?x) { let r = reminderRecipients(x, contractSpace(x.id), policyFor(contractSpace(x.id)), buildRoster()); if (r.size() > 0) r else spaceMembers(contractSpace(t.contractId)) }; case null spaceMembers(contractSpace(t.contractId)) };
                 let who = if (t.assignee != "" and activePid(t.assignee)) [t.assignee] else fallback;
                 let suffix = switch (c) { case (?x) " · " # capText(contractLabel(x), 60); case null "" };
-                let title = (if (left < 0) "Overdue (" # t.dueOn # "): " else if (left == 0) "Due today: " else "In " # Int.toText(left) # " days (" # t.dueOn # "): ") # t.title # suffix;
+                let title = spaceTag(sidT) # (if (left < 0) "Overdue (" # t.dueOn # "): " else if (left == 0) "Due today: " else "In " # Int.toText(left) # " days (" # t.dueOn # "): ") # t.title # suffix;
                 for (w in who.vals()) queueNotify(w, capText(title, 160), "#/c/" # Nat.toText(t.contractId), "contracts.deadline", "task-" # Nat.toText(tid) # "-" # Nat.toText(mk) # "-" # w);
                 var sent = Array.concat(t.remindersSent, [mk]);
-                for (r in reminderDays.vals()) if (r >= mk and not hasN(sent, r)) sent := Array.concat(sent, [r]);
+                for (r in marks.vals()) if (r >= mk and not hasN(sent, r)) sent := Array.concat(sent, [r]);
                 Map.add(tasks, Nat.compare, tid, { t with remindersSent = sent });
               };
               case null {};
@@ -3013,7 +2987,7 @@ persistent actor Contracts {
     #ok;
   };
   /// Operating state for the Connection page (staff): what the relay handed in, the oldest open job, failures, AI usage, outbox backlog.
-  public shared query func connectionStatus(tok : Text) : async ?{ mailboxAddress : Text; relayCount : Nat; lastReceivedAt : Int; sourcesToday : Nat; openJobs : Nat; oldestOpenJobAt : Int; failedJobs : Nat; failedSources : Nat; aiSource : Text; aiCallsToday : Nat; aiDailyBudget : Nat; outboxPending : Nat; outboxFailed : Nat; lastDirectoryPull : Int; blobBytes : Nat; jobs : [Job]; outboxFailures : [{ id : Nat; title : Text; attempts : Nat; lastError : Text }] } {
+  public shared query func connectionStatus(tok : Text) : async ?{ lastReceivedAt : Int; sourcesToday : Nat; openJobs : Nat; oldestOpenJobAt : Int; failedJobs : Nat; failedSources : Nat; aiSource : Text; aiCallsToday : Nat; aiDailyBudget : Nat; outboxPending : Nat; outboxFailed : Nat; lastDirectoryPull : Int; blobBytes : Nat; jobs : [Job]; outboxFailures : [{ id : Nat; title : Text; attempts : Nat; lastError : Text }] } {
     switch (staff(tok)) {
       case null null;
       case (?m) {
@@ -3024,7 +2998,7 @@ persistent actor Contracts {
         var failedS = 0; for ((_, s) in Map.entries(sources)) if (canSeeSource(m, s) and s.status == "failed") failedS += 1;
         var pend = 0; var failedO = 0; let of = List.empty<{ id : Nat; title : Text; attempts : Nat; lastError : Text }>();
         for ((_, o) in Map.entries(outbox)) { if (notificationSpace(o.url) == m.space and mayNotify(m.id, o.url) and o.sentAt == 0) { if (o.attempts >= 10) { failedO += 1; if (List.size(of) < 50) List.add(of, { id = o.id; title = o.title; attempts = o.attempts; lastError = o.lastError }) } else pend += 1 } };
-        ?{ mailboxAddress; relayCount = relayPrincipals.size(); lastReceivedAt = lastRecv; sourcesToday = today; openJobs = open; oldestOpenJobAt = oldest; failedJobs = failedJ; failedSources = failedS; aiSource = aiSource(); aiCallsToday = aiCallsToday(); aiDailyBudget; outboxPending = pend; outboxFailed = failedO; lastDirectoryPull; blobBytes; jobs = List.toArray(js); outboxFailures = List.toArray(of) };
+        ?{ lastReceivedAt = lastRecv; sourcesToday = today; openJobs = open; oldestOpenJobAt = oldest; failedJobs = failedJ; failedSources = failedS; aiSource = aiSource(); aiCallsToday = aiCallsToday(); aiDailyBudget; outboxPending = pend; outboxFailed = failedO; lastDirectoryPull; blobBytes; jobs = List.toArray(js); outboxFailures = List.toArray(of) };
       };
     };
   };
@@ -3211,7 +3185,7 @@ persistent actor Contracts {
   /// Admins: the versioned full export for restore — contracts, proposals, observations, sources (meta), documents (meta + hashes), tasks, rules, audit. No files, no sessions, no secrets.
   public shared query func exportAll(tok : Text) : async ?{ schemaVersion : Nat; exportedAt : Int; spaceId : Text; commercialDetails : [{ contractId : Nat; fields : [CommercialField] }]; contracts : [Contract]; proposals : [Proposal]; observations : [Observation]; sources : [Source]; documents : [Document]; tasks : [Task]; rules : [Rule]; audit : [AuditRow]; settings : Settings } {
     let m = switch (me(tok)) { case (?m) m; case null return null };
-    let st : Settings = { hubId; appUrl; orgName; editorGroup = ""; adminGroup = ""; adminEmails = []; tzName; tzOffsetMinutes; leadDays; reminderDays; mailboxAddress = ""; relayPrincipals = []; aiDailyBudget; peopleCount = 0; lastDirectoryPull; adminCount = 0; contracts = 0; sources = 0; openProposals = 0; openTasks = 0; blobBytes = 0; aiSource = aiSource(); aiCallsToday = 0; demoSeeded = false; version = BUILD_VERSION };
+    let st : Settings = { hubId; appUrl; orgName; editorGroup = ""; adminGroup = ""; adminEmails = []; tzName; tzOffsetMinutes; leadDays; aiDailyBudget; peopleCount = 0; lastDirectoryPull; adminCount = 0; contracts = 0; sources = 0; openProposals = 0; openTasks = 0; blobBytes = 0; aiSource = aiSource(); aiCallsToday = 0; demoSeeded = false; version = BUILD_VERSION };
     ?{ schemaVersion = 3; exportedAt = now(); spaceId = m.space;
       commercialDetails = contracts.values().filter(func c = canSee(m, c)).map(func c = { contractId = c.id; fields = commercial(c.id) }).toArray();
       contracts = contracts.values().filter(func c = canSee(m, c)).toArray();
@@ -3253,7 +3227,7 @@ persistent actor Contracts {
     let tb = putBlob(Text.encodeUtf8(body));
     let sid = nextSourceId; nextSourceId += 1;
     sourceSpaces.add(sid, m.space);
-    Map.add(sources, Nat.compare, sid, { id = sid; kind = "relay"; mailbox = "subscriptions@example.com"; providerId = "sample-1"; messageId = "<sample-1@sunrise.example>"; inReplyTo = ""; references = ""; fromAddr = "billing@sunrise.example"; fromName = "Sunrise Cloud billing"; to = ["subscriptions@example.com"]; cc = []; subject = "Your Sunrise CRM renewal — price update"; sentAt = isoFromDays(today - 1); receivedAt = now(); handedInBy = ""; textBlob = tb; htmlBlob = null; hash = sha256Text(body); status = "review"; contractId = ?a; note = ""; forwardComment = "" });
+    Map.add(sources, Nat.compare, sid, { id = sid; kind = "eml"; mailbox = ""; providerId = "sample-1"; messageId = "<sample-1@sunrise.example>"; inReplyTo = ""; references = ""; fromAddr = "billing@sunrise.example"; fromName = "Sunrise Cloud billing"; to = ["subscriptions@example.com"]; cc = []; subject = "Your Sunrise CRM renewal — price update"; sentAt = isoFromDays(today - 1); receivedAt = now(); handedInBy = ""; textBlob = tb; htmlBlob = null; hash = sha256Text(body); status = "review"; contractId = ?a; note = ""; forwardComment = "" });
     let oid = nextObservationId; nextObservationId += 1;
     let ch : [Change] = [{ field = "amountMinor"; oldValue = "150000"; newValue = "1650.00"; basis = "explicit"; evidence = [{ partId = "body"; quote = "changes from EUR 1,500.00 to EUR 1,650.00 (net)" }] }];
     Map.add(observations, Nat.compare, oid, { id = oid; sourceId = sid; kind = "price_change"; fields = ch; effectiveDate = isoFromDays(today + 52); summary = "Announced price change of the annual Team plan from 1,500 to 1,650 EUR net at the next renewal."; uncertainties = []; createdAt = now(); model = "sample"; promptVersion = PROMPT_VERSION; sourceHash = sha256Text(body) });

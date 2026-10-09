@@ -77,3 +77,14 @@ contract, the consumer, and what was done or deliberately left.
   they hold records, with e-mail). `deleteSpace` removes an empty teamspace (owner, revision-checked), ends
   bound sessions, drops relay links and the reminder policy.
 - Cross-stack: no Hub/Desk contract touched (`SpaceView` is Contracts-internal). Docs: README access section.
+
+## Contracts 0.14.0 — no e-mail, one reminder policy per workspace (owner request, same day)
+
+- Mail relay removed end to end: worker (`contracts/relay`, its lock moved to `contracts/tools/pdf-text` for the
+  PDF bundle), Relay tab, Mail setup guide, contracts address, per-space relay binding, `setSpaceRelay`,
+  `setRelayPrincipals`, relay caller path in `intakeBegin`. Stable vars stay (upgrade contract), unused.
+- Reminders: the per-workspace policy (`setRenewalPolicy`) now drives deadlines, typed dates and tasks; the
+  global `reminderDays` is retired; the 90-day mark is no longer mandatory. Titles start with the workspace name.
+- Cross-stack: Hub `hub_notify` unchanged (e-mail → Slack DM; no channel target exists in the Hub, so a
+  per-workspace Slack channel would need a Hub lane change — noted as a follow-up). Desk/Assets untouched.
+- Docs: README, INSTALL, OPERATIONS, agent guide, CONTRACTS design note, GAPS.

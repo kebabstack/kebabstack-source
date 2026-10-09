@@ -174,13 +174,10 @@ type Settings =
    hubId: text;
    lastDirectoryPull: int;
    leadDays: nat;
-   mailboxAddress: text;
    openProposals: nat;
    openTasks: nat;
    orgName: text;
    peopleCount: nat;
-   relayPrincipals: vec text;
-   reminderDays: vec nat;
    sources: nat;
    tzName: text;
    tzOffsetMinutes: int;
@@ -694,7 +691,6 @@ service : {
        jobs: vec Job;
        lastDirectoryPull: int;
        lastReceivedAt: int;
-       mailboxAddress: text;
        oldestOpenJobAt: int;
        openJobs: nat;
        outboxFailed: nat;
@@ -706,7 +702,6 @@ service : {
               title: text;
             };
        outboxPending: nat;
-       relayCount: nat;
        sourcesToday: nat;
      }) query;
   /// Create a contract (draft). Staff, or any member — a member becomes its responsible person.
@@ -1120,18 +1115,12 @@ service : {
                            detail: text;
                            ok: bool;
                          });
-  /// Admins: the relay identities allowed to hand in mail (the worker's principal). Add before deploying the worker, remove to rotate.
-  setRelayPrincipals: (tok: text, principals: vec text) ->
-   (record {
-      detail: text;
-      ok: bool;
-    });
   setRenewalPolicy: (tok: text, p: Policy) ->
    (record {
       detail: text;
       ok: bool;
     });
-  /// Admins: groups, address, time zone, deadline defaults, AI budget. Unknown time zones are a label + a fixed offset (DST is not modelled).
+  /// Admins: app address, time zone, decision lead, AI budget. Reminder schedules live per workspace (setRenewalPolicy). Unknown time zones are a label + a fixed offset (DST is not modelled).
   setSettings: (tok: text, args:
    record {
      adminGroup: text;
@@ -1139,9 +1128,7 @@ service : {
      appUrl: text;
      editorGroup: text;
      leadDays: nat;
-     mailboxAddress: text;
      orgName: text;
-     reminderDays: vec nat;
      tzName: text;
      tzOffsetMinutes: int;
    }) -> (record {
@@ -1150,12 +1137,6 @@ service : {
           });
   /// Staff: mark a source as ignored (spam, unrelated) or back to review. Nothing is deleted.
   setSourceStatus: (tok: text, id: nat, status: text, note: text) ->
-   (record {
-      detail: text;
-      ok: bool;
-    });
-  /// A space owner authorizes a trusted intake identity for this space. Global relay trust alone never grants content access.
-  setSpaceRelay: (tok: text, "principal": text, enabled: bool) ->
    (record {
       detail: text;
       ok: bool;

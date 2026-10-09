@@ -314,7 +314,6 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
       <div class="tabs">
         <button data-tab="status" class="on">Status</button>
         <button data-tab="ai">AI</button>
-        <button data-tab="relay" class="hidden adm">Mail setup</button>
         <button data-tab="settings" class="hidden adm">Settings</button>
         <button data-tab="import" class="hidden spacewriter">Import</button>
         <button data-tab="export">Export</button>
@@ -335,19 +334,6 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
         </div>
         <div class="scard"><h3>Where to change things</h3><p class="kv">A Hub owner manages the provider, model and API key in <a id="aiHubSettings" target="_blank" rel="noopener">Hub Settings → AI</a> and enables the AI lane under Apps → Contracts → Lanes. After a change, refresh the connection here. Contracts administrators can run the model test and adjust the daily budget under <a href="#/connection/settings">Settings</a>.</p><p class="kv">If a document failed earlier, open its Inbox details → Filing → <b>Read again with AI</b>. Your original stays attached. AI reads original PDF pages and images, including scans. Check its readings against the original; a connection test alone does not validate a particular document.</p></div>
       </div>
-      <div id="cnRelay" class="hidden">
-        <div class="scard">
-          <h3>Connect the email relay</h3><p class="kv"><a href="#/mail-setup">Start here: Google Workspace setup, shared intake and recovery →</a></p>
-          <div class="kv">Mail reaches this app through a small relay that receives the contracts address, splits the message into text and files and hands it in here. Only the identities listed below may hand in mail. Add the relay's identity before you deploy it; remove it to rotate. The relay ships with this app under <span class="mono">contracts/relay/</span> — <a href="#/mail-setup">the setup guide</a> walks through the address, forwarding and identity.</div>
-          <label>Contracts address (what people put in CC)</label><input type="text" id="rlMailbox" placeholder="subscriptions@your-company.example">
-          <label>Relay identities (principals, one per line)</label><textarea id="rlPrincipals" rows="3" spellcheck="false" placeholder="aaaaa-bbbbb-…"></textarea>
-          <div class="btnrow"><button class="pill primary sm" id="rlSave">Save</button><span id="rlStatus" class="status"></span></div>
-        </div>
-        <div class="scard">
-          <h3>Without a relay</h3>
-          <div class="kv">Upload saved <span class="mono">.eml</span> files in the inbox (Gmail: ⋮ → Download message; Outlook: drag the message to the desktop). Same pipeline, same proposals — just by hand.</div>
-        </div>
-      </div>
       <div id="cnSettings" class="hidden">
         <div class="scard">
           <h3>Hub connection</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p>
@@ -357,9 +343,9 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 
         </div>
         <div class="scard">
-          <h3>Deadlines and reminders</h3>
-          <div class="kv">The internal decision date is set this many days before the last cancellation date. Reminders go out these many days before each date, through the hub (bell, and Slack if the person switched it on) — title and link only, never amounts.</div>
-          <div class="row"><div><label>Decide this many days before the cancellation date</label><input type="number" id="sLead" min="0" max="365"></div><div><label>Remind this many days before (comma-separated)</label><input type="text" id="sReminders" placeholder="30, 14, 7"></div></div>
+          <h3>Decision date and operating defaults</h3>
+          <div class="kv">The internal decision date is set this many days before the last cancellation date. Who is reminded and how many days ahead is set per workspace under Settings → Reminders.</div>
+          <div class="row"><div><label>Decide this many days before the cancellation date</label><input type="number" id="sLead" min="0" max="365"></div></div>
           <div class="row"><div><label>Time zone label</label><input type="text" id="sTz" placeholder="Europe/Zurich"></div><div><label>Offset from UTC in minutes (the zone is a label; daylight saving is not modelled)</label><input type="number" id="sTzOff" min="-840" max="840"></div></div>
           <label>AI reads per day (budget)</label><input type="number" id="sAiBudget" min="0" max="100000">
           <div class="btnrow"><button id="sSave" class="pill primary sm">Save</button><span id="sStatus" class="status"></span></div>
@@ -393,19 +379,6 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
     </div>
   </section>
 
-  <section class="view docs" id="viewMailSetup"><div class="wrap">
-    <div class="pagehead"><div><a class="back" href="#/docs">← Guide</a><h2>Bring your contracts inbox.</h2><p class="sub">Forward an email or keep the address in CC. Review the document in the same place as an upload.</p></div></div>
-    <div class="mail-flow"><span>Google Workspace<small>contracts@your-company</small></span><b>→</b><span>Email relay<small>Cloudflare Worker</small></span><b>→</b><span>Contract intake<small>Review → choose a space</small></span></div>
-    <div class="scard"><h3>Recommended: one shared, restricted intake space.</h3><p>Choose the built-in <b>Contract intake</b> workspace. Hub-assigned app admins can review and distribute its documents. Admins assigned to Contracts in Hub also have access. Connect the incoming mailbox to this space. Anyone can submit an email, but submitting does not grant access to the inbox. Personal uploads can go straight to your personal space.</p><p>During review, choose a destination you own. The email, attachments and suggestions move together. Moving an existing contract is available under its Access tab. App admins can also route into another person’s personal space.</p></div>
-    <div class="guide-answers">
-      <details open><summary>1. Create the Google Workspace address</summary><p>Use a private Google Group such as <b>contracts@your-company</b>, with conversation history enabled so a copy stays in Google. Restrict who can view conversations and members. Allow external posting if vendors will keep the address in CC; that does not require a public archive. Add the relay address as an external member with “Each email” delivery. Your Workspace administrator must allow external members.</p><p>A dedicated Gmail mailbox with an administrator-managed forwarding copy also works if you prefer mailbox retention and recovery. Avoid a forwarding-only alias with no retained copy.</p><a href="https://support.google.com/groups/answer/2464926?hl=en" target="_blank" rel="noopener">Google’s group settings guide ↗</a></details>
-      <details><summary>2. Receive on a separate Cloudflare subdomain</summary><p>For example, use <b>contracts@relay.kebabstack.com</b> for the forwarding destination. Enable Email Routing for that subdomain and route the exact address to the Contracts Email Worker. Keep the company domain’s existing Google MX records.</p><a href="https://developers.cloudflare.com/email-service/configuration/subdomains/" target="_blank" rel="noopener">Cloudflare’s subdomain setup ↗</a></details>
-      <details><summary>3. Trust the relay, then bind the intake space</summary><p>The operator generates a dedicated relay key and deploys the Worker using the downloadable runbook. Store its secret only in Cloudflare. In <a href="#/connection/relay">Workspace tools → Mail setup</a>, save the public address and the relay’s public principal.</p><p>Open Contract intake → Access &amp; mail setup. Connect the same principal. Both steps are required: infrastructure trust alone grants no access to a workspace. The sender, subject and email headers never choose the destination.</p></details>
-      <details><summary>4. Keep a recovery copy</summary><p>Configure a separate, verified fallback mailbox that a reviewer monitors. Do not point it back to contracts@ or the relay address. If parsing, attachment limits or storage fail, the complete original is forwarded there. If recovery also fails, the Worker rejects the delivery. This is not a guaranteed automatic retry queue; retain and check the Google copy.</p></details>
-      <details><summary>5. Test one complete round trip</summary><p>Send a harmless text PDF to the public address. Check that it appears in Contract intake, open its original, correct one extracted field and save to a destination. Forward the same email again: it should be recognised as a duplicate. Send a reply in the same thread and check its proposal. Finally, temporarily use an untrusted test relay identity to verify recovery delivery before relying on the mailbox.</p></details>
-      <details><summary>What can AI tell me about negotiation and signatures?</summary><p>AI reads the email and original pages, including scanned signature areas. It distinguishes signature requests, visible marks and reported completion, and flags uncertainty. A signature mark, typed name or filename is not verification of identity, a digital signature or legal finality.</p><p>Context includes the current email, its attachments, quoted text and up to four previously received messages referenced by its mail headers in the same workspace. It cannot read unseen emails or your personal mailbox. Once a contract moves, later mail still enters the shared intake space; choose a destination and use <b>Move document there for review</b>. Matching runs again inside that space without creating a duplicate contract; <b>Add to an existing contract</b> lets you choose the record manually. Both spaces must be owned by the reviewer. No automatic cross-space search exposes private contracts.</p></details>
-    </div><div class="btnrow"><a class="pill primary" href="./mail-relay-setup.md" download>Download technical runbook</a><a class="pill outline" href="#/connection/relay">Configure mail setup</a><a class="pill outline" href="#/add">Try a document upload first</a></div>
-  </div></section>
   <!-- ============================ docs ============================ -->
   <section class="view docs" id="viewDocs">
     <div class="wrap">
@@ -423,7 +396,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
         <details><summary>What do the cost totals mean?</summary><p>Annual run rate annualizes recorded active subscriptions. Historical accrual estimates costs across known dates and saved price changes, capped at today. Recorded invoices/receipts are separate and do not prove payment. Currencies and tax bases stay separate; missing values are disclosed. Open Management report, pick a year, then download CSV or print/save PDF.</p></details>
         <details><summary>Can AI look up missing renewal terms?</summary><p>When terms are absent, AI can identify an official vendor page and read its public text. You can enter a direct URL. Source and retrieval time stay visible, and nothing is applied until you choose Use as a reviewed suggestion. Current public terms may differ from your agreement; blocked or unreadable pages leave values unknown.</p></details>
         <details><summary>What about software keys and group assignments?</summary><p>License keys have a separate inventory with hidden values and audited reveal. Values are not sent to AI or included in ordinary exports. People and groups come from Hub. Group assignments keep the roster current without granting access to contracts or provisioning vendor accounts. Other employees cannot access unshared personal content; app admins can.</p></details>
-        <details><summary>How do emails reach a team?</summary><p><a href="#/mail-setup">Open the mail setup guide</a> for the Google Workspace and Cloudflare steps. A space owner connects a separately trusted relay identity to a dedicated incoming address. CC that address or forward a thread there. This requires a configured relay; an address alone does not receive messages. Deduplication and matching remain inside the workspace. Matching routine invoices can be filed automatically; material changes need review.</p></details>
+        <details><summary>How do documents get here?</summary><p>Upload a PDF, image or saved email (.eml) under <b>Add document</b>, or paste text. The AI reads the original pages, including scans, and prepares the details for review. Nothing is filed until you confirm.</p></details>
         <details><summary>Can I delete documents or records?</summary><p>Use <b>Delete item</b> on an inbox document or <b>Delete record</b> on a saved record. It moves to <a href="#/trash">Trash</a> in the same workspace and can be restored. Deleting a record also hides its linked originals and stops its reminders. No file is permanently erased. Workspace permissions still apply.</p></details>
         <details><summary>What if a colleague changes the same contract?</summary><p>Saves check the record’s revision. If someone changed it while you were reviewing, reload and compare before saving. Decisions, source evidence and record history stay available.</p></details>
         <details><summary>How do I import or export records?</summary><p>Settings → Import &amp; export accepts mapped CSV rows with a preview before writing. Existing records are not overwritten. CSV export protects against spreadsheet formulas. Workspace JSON includes visible records and metadata; download document files separately. Older records may be in Existing contracts, with their previous access preserved.</p></details>

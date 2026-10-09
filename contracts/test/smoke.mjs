@@ -71,8 +71,8 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "listContracts": return a[1].q === "zzz" ? [] : [crow(), crow({ id: 2n, title: "Sunrise Cloud — Storage add-on", product: "Storage", complete: false, daysToDecide: [], decideBy: "", noticeDate: "", openProposals: 0n, openTasks: 0n, seats: [], unusedSeats: [] }), crow({ id: 3n, title: "Rocket Mail", vendor: "Rocket Mail", product: "", status: "cancelling", daysToDecide: [-2n] })];
     case "getContract": return a[1] === 1n || a[1] === 2n || a[1] === 9n ? [{ contractType: typeOf(1n), typeValues: [["pricingModel","per seat"],["plan","Team"]], contract: contract(a[1] === 2n ? { id: 2n, title: "Sunrise Cloud — Storage add-on", revision: 1n, terms: terms({ amountMinor: [], noticeMonths: [], noticeDate: "", decideBy: "" }) } : {}), row: crow(), responsibleName: "Me Myself", deputyName: "", viewerNames: [[ANA, "Ana Ruiz"]], holderNames: [[ME, "Me Myself", true], [ANA, "Ana Ruiz", true], ["p_0000000000000099", "Old Colleague", false]], proposals: [prop()], sources: [srow()], documents: [doc()], tasks: [task(), task({ id: 23n, title: "Ask for the signed copy", kind: "manual", auto: false, doneAt: now, daysLeft: [] })], audit: [{ id: 1n, at: now, who: ME, contractId: 1n, sourceId: [7n], what: "terms set by hand", before: "", after: "1,500.00 EUR · yearly", }], rules: [{ id: 41n, contractId: 1n, kind: "senderAddress", value: "billing@sunrise-cloud.example", confirmed: true, createdAt: now, createdBy: ME }], canEdit: staff }] : [];
     case "directory": return [{ id: ANA, email: "ana@example.com", displayName: "Ana Ruiz", department: "Ops" }, { id: "p_00000000000000b2", email: "ben@example.com", displayName: "Ben Ko", department: "IT" }];
-    case "connectionStatus": return [{ mailboxAddress: "subscriptions@acme.example", relayCount: 1n, lastReceivedAt: now, sourcesToday: 4n, openJobs: 1n, oldestOpenJobAt: now, failedJobs: 0n, failedSources: 1n, aiCallsToday: 3n, aiDailyBudget: 200n, aiSource: "hub", outboxPending: 2n, outboxFailed: 1n, outboxFailures: [{ id: 51n, title: "Decide by 17 Sep: Sunrise Cloud", attempts: 3n, lastError: "hub unreachable" }], blobBytes: 4800000n, lastDirectoryPull: now, jobs: [{ id: 61n, step: "extract", ref: 9n, attempts: 2n, nextAt: now, lockedUntil: 0n, doneAt: 0n, lastError: "budget", createdAt: now }] }];
-    case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "https://contracts.test", orgName: "Acme", editorGroup: "contracts-editors", adminGroup: "contracts-admins", adminEmails: ["me@example.com"], mailboxAddress: "subscriptions@acme.example", relayPrincipals: ["aaaaa-bbbbb-ccccc"], tzName: "Europe/Zurich", tzOffsetMinutes: 120n, leadDays: 14n, reminderDays: [30n, 14n, 7n], aiDailyBudget: 200n, aiSource: "hub", aiCallsToday: 3n, peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, contracts: 6n, sources: 9n, openProposals: 1n, openTasks: 2n, blobBytes: 4800000n, demoSeeded: false, version: "0.1.0" }];
+    case "connectionStatus": return [{ lastReceivedAt: now, sourcesToday: 4n, openJobs: 1n, oldestOpenJobAt: now, failedJobs: 0n, failedSources: 1n, aiCallsToday: 3n, aiDailyBudget: 200n, aiSource: "hub", outboxPending: 2n, outboxFailed: 1n, outboxFailures: [{ id: 51n, title: "Decide by 17 Sep: Sunrise Cloud", attempts: 3n, lastError: "hub unreachable" }], blobBytes: 4800000n, lastDirectoryPull: now, jobs: [{ id: 61n, step: "extract", ref: 9n, attempts: 2n, nextAt: now, lockedUntil: 0n, doneAt: 0n, lastError: "budget", createdAt: now }] }];
+    case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "https://contracts.test", orgName: "Acme", editorGroup: "contracts-editors", adminGroup: "contracts-admins", adminEmails: ["me@example.com"], tzName: "Europe/Zurich", tzOffsetMinutes: 120n, leadDays: 14n, aiDailyBudget: 200n, aiSource: "hub", aiCallsToday: 3n, peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, contracts: 6n, sources: 9n, openProposals: 1n, openTasks: 2n, blobBytes: 4800000n, demoSeeded: false, version: "0.1.0" }];
     case "adminLogRows": return [{ at: now, who: "me@example.com", what: "settings saved" }];
     case "importPreview": return { ok: true, detail: "", headers: ["Vendor", "Product", "Amount", "Currency", "Interval", "Renews", "Notice months", "Owner e-mail"], unmapped: [], total: 2n, rows: [{ line: 2n, ok: true, title: "Nimbus · Pro", vendor: "Nimbus", problems: [], exists: [] }, { line: 3n, ok: true, title: "Sunrise Cloud · Team", vendor: "Sunrise Cloud", problems: [], exists: [1n] }] };
     case "importCommit": return { ok: true, detail: "", created: 1n, skipped: 1n, problems: 0n };
@@ -352,7 +352,7 @@ if (!staff) {
   check(on("viewConn") && !hidden("cnExport"), "viewers can export their current space");
   check(!document.querySelector("#srcProposals [data-confirm]"), "viewers cannot confirm proposals");
 } else {
-  check(on("viewConn") && document.querySelectorAll("#cnStatus .tstat").length === 6 && /subscriptions@acme.example/.test($("cnStatus").textContent) && /1 trusted/.test($("cnStatus").textContent), "connection status page");
+  check(on("viewConn") && document.querySelectorAll("#cnStatus .tstat").length === 6 && /Uploads and pasted text/.test($("cnStatus").textContent) && !/relay/i.test($("cnStatus").textContent), "connection status page without mail relay");
   check(/hub unreachable/.test($("cnStatus").textContent) && /extract/.test($("cnStatus").textContent), "outbox failure + job queue shown");
   await click($("cnStatus").querySelector("[data-retry]")); check(last("retryNotification") && last("retryNotification")[1][1] === 51n, "retry a failed reminder");
   const admTabs = [...document.querySelectorAll("#viewConn .tabs .adm")];
@@ -362,15 +362,12 @@ if (!staff) {
   if (role === "admin") {
     await click($("exAll")); check(last("exportAll") && downloads.length >= 3 && /downloaded/.test($("exStatus").textContent), "full export downloads JSON");
     await go("#/connection/settings");
-    check(!hidden("cnSettings") && $("sLead").value === "14" && $("sReminders").value === "30, 14, 7" && $("sTzOff").value === "120", "settings prefilled");
-    $("sLead").value = "21"; $("sReminders").value = "45, 14"; await click($("sSave"));
+    check(!hidden("cnSettings") && $("sLead").value === "14" && !$("sReminders") && $("sTzOff").value === "120", "settings prefilled, no global reminder schedule");
+    $("sLead").value = "21"; await click($("sSave"));
     const ss = last("setSettings");
-    check(ss && ss[1][1].leadDays === 21n && ss[1][1].reminderDays.length === 2 && ss[1][1].reminderDays[0] === 45n && ss[1][1].tzOffsetMinutes === 120n && ss[1][1].mailboxAddress === "subscriptions@acme.example", "setSettings with bigint fields + mailbox from the relay tab");
+    check(ss && ss[1][1].leadDays === 21n && ss[1][1].tzOffsetMinutes === 120n && !("reminderDays" in ss[1][1]) && !("mailboxAddress" in ss[1][1]), "setSettings carries the decision lead, no schedule, no mailbox");
     check(!last("setAdminEmails") && !$("sEditorGroup") && /saved/.test($("sStatus").textContent), "settings save never writes local roles");
-    await go("#/connection/relay");
-    check(!hidden("cnRelay") && $("rlPrincipals").value === "aaaaa-bbbbb-ccccc", "relay tab prefilled");
-    $("rlPrincipals").value = "aaaaa-bbbbb-ccccc\nddddd-eeeee"; await click($("rlSave"));
-    check(last("setRelayPrincipals") && last("setRelayPrincipals")[1][1].length === 2 && last("setRelayPrincipals")[1][1][1] === "ddddd-eeeee", "setRelayPrincipals(2)");
+    check(!$("cnRelay") && !document.querySelector('[data-tab="relay"]'), "no mail relay tab");
     // import: paste → columns guessed → preview → commit
     await go("#/connection/import");
     $("imCsv").value = "Vendor;Product;Amount;Currency;Interval;Renews;Notice months;Owner e-mail\nNimbus;Pro;1.200,00;EUR;year;2027-03-01;3;ana@example.com\nSunrise Cloud;Team;1500.00;EUR;year;2027-01-01;3;me@example.com\n";
@@ -441,9 +438,7 @@ if (role === "admin") {
   await go("#/s/intake/space");
   check(/Access follows your Hub roles/.test($("spContent").textContent), "shared intake displays explicit Hub role policy");
   check(!$("spSave")&&!$("spPerson"), "built-in intake cannot edit its membership locally");
-  overrides.setSpaceRelay=async()=>{throw new Error("offline");};
-  $("spRelay").value="aaaaa-bbbbb-ccccc";await click($("spRelayConnect"));
-  check(/could not be saved/.test($("spRelayStatus").textContent)&&!$("spRelayConnect").disabled,"relay failure recovers controls");delete overrides.setSpaceRelay;
+  check(!$("spRelay")&&!/relay/i.test($("spContent").textContent),"no mail relay controls on the shared intake");
   await go("#/intake/12");const destination=document.querySelector('[data-destination]');destination.value="team:1";destination.dispatchEvent(new window.Event('change'));
   const saves=calls.filter(c=>c[0]==="createContractFromSource").length;
   await click(document.querySelector('[data-move]'));

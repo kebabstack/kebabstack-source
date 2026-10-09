@@ -109,7 +109,7 @@ Unknown conditions remain unknown. AI cannot guarantee which legal terms apply.
 | Shared Contract intake | Active Hub admins and Hub owners can review and distribute. Contracts Admins assigned in Hub also have access. |
 
 The workspace selector lists your personal workspace, the teamspaces you belong to and (for app admins) the shared Contract intake and the pre-workspace **Existing contracts**. App admins reach everything else — other people's personal workspaces that hold records, and teamspaces they do not belong to — from **Settings → All workspaces**; empty personal workspaces are not listed. A teamspace owner can delete an empty teamspace from Manage workspace; records, including the trash, must be moved or deleted first, and sessions bound to the space end.
-| Hub / app administrator | Configures the Hub connection, AI lane, trusted relay identities and app settings. Can access all personal/team content, including restricted records. |
+| Hub / app administrator | Configures the Hub connection, AI lane and app settings. Can access all personal/team content, including restricted records. |
 
 A restricted record further limits access to its responsible person, deputy and named viewers,
 plus that **space’s owners** and app admins. Those people must already belong to the space. Ordinary workspace
@@ -130,11 +130,9 @@ were retained. Since **0.8.0**, central permissions supersede frozen local admin
 space owners may move individual records, including their evidence, into spaces they own.
 An owner can also move a record between two spaces they own. Moving shared evidence is refused.
 
-Old relay identities must be bound to their intended space by a space owner before mail intake
-resumes. Do this during the upgrade window. No sender address or message header selects the space.
 Archived spaces remain readable; intake and content changes stop.
 
-## AI and mail are optional
+## AI is optional; documents arrive by upload
 
 AI access is checked in the background after startup, then at most once every five minutes. This
 checks the Hub configuration without sending a document or making a billable model request.
@@ -176,8 +174,9 @@ of displaying an inflated amount; other supported facts remain available.
 Delete an inbox item or saved record to **Trash** to remove it from active work. Restore is
 available in the same workspace. This does not permanently erase originals or change access.
 
-The optional Cloudflare Email Worker requires one dedicated relay identity per space, operator trust
-and approval by the space owner. See [relay/RUNBOOK.md](relay/RUNBOOK.md). Manual uploads need no relay.
+Since **0.14.0** there is no mail relay: documents reach a workspace by upload (PDF, image, text or a saved
+.eml) or pasted text from a signed-in member. Nothing is sent or received by e-mail; reminders go through the
+Hub to Slack.
 
 ## Costs and practical limits
 
@@ -202,10 +201,10 @@ multiple team owners before someone leaves.
 The backend uses the pinned Motoko compiler and existing persistent state contract. Before deploying,
 check the candidate stable signature against the committed baseline and run the upgrade regression.
 
-The browser PDF bundle is pinned through `relay/package-lock.json`. Rebuild with:
+The browser PDF bundle is pinned through `tools/pdf-text/package-lock.json`. Rebuild with:
 
 ```sh
-npm ci --ignore-scripts --prefix contracts/relay
+npm ci --ignore-scripts --prefix contracts/tools/pdf-text
 node contracts/tools/build-pdf-text.mjs
 ```
 
@@ -219,7 +218,7 @@ as the destination. Existing-contract suggestions keep their revision-checked re
 For a shared address, use the built-in **Contract intake**, available to current Hub admins
 and owners, then distribute reviewed records. To route a later email to an existing private
 or team agreement, choose **Move document there for review** before matching it in the
-destination. Transfers require ownership of both spaces and carry the original evidence. The app includes **Guide → Mail setup** and a [Google Workspace runbook](relay/RUNBOOK.md).
+destination. Transfers require ownership of both spaces and carry the original evidence.
 AI uses complete original supported files, bounded supplementary text and available thread
 references. Large groups of attachments require multiple model calls within outcall limits.
 Visible signature marks and reported signing remain unverified suggestions, not automatic
@@ -241,6 +240,8 @@ Every contract shares the same core: counterparty, product or agreement, referen
 
 The record shows the type and its details beside the terms; the Contracts list shows the type and the fields marked for it, filters by type and searches those fields. New contracts pick a type in the editor. When a document is uploaded, the AI reading classifies it into a type and proposes the type's field values (`contractType`, `type:<key>`); the review screen shows the type (changeable) with its fields above the shared terms, hides seats for types without seats, and files everything with one **Save contract**. A person field accepts an e-mail and is stored as the directory id. Invalid type values are refused before anything is written. The sidebar reads Overview · To do · Contracts · License keys · Inbox · Settings; the Contract types card sits on the Settings page next to the renewal reminders (Hub admins). Offboarding in Desk asks about seats only for types that have seats; a person named in a type field appears in that person's context in Desk.
 
-## Reminder schedule (0.13.0)
+## Reminders (0.14.0): one schedule per workspace
 
-Reminder marks (default 90, 60, 30, 7 days) run against the **last cancellation date** when the record has one, otherwise against the renewal or end date. Recipients: the policy's picks (responsible person, space owners, Hub admins, groups), always the deputy, and the register's admins when nobody in the space is active. Auto-renewing contracts whose renewal date passed roll forward by their billing interval with an audit entry. A cancellation date typed by a person is kept; a computed one follows changes of the renewal date, the notice rule and the lead-days setting. Reminders do not depend on the app address; without one the notification carries no link.
+Each workspace sets its own reminder policy under **Settings → Reminders**: the marks (days before, default 90, 60, 30, 7), whether reminders are on, and who hears them (responsible person, workspace owners, Hub admins, extra Hub groups; the deputy always). The policy drives all three reminder kinds of that workspace: renewal and cancellation deadlines, dated type fields marked "remind", and task due dates (tasks use the marks at or under 30 days, else 7). Every message starts with the workspace name, so IT and PfOps tell their deadlines apart. There is no global schedule any more; the global settings keep only the decision lead (how many days before the cancellation date the internal decision date falls), time zone and AI budget. Delivery: the Hub notification lane → Slack direct message from the Kebabstack bot; a person who mutes the bot still sees the reminder in the Hub inbox. No e-mail is sent.
+
+Marks run against the **last cancellation date** when the record has one, otherwise against the renewal or end date. Recipients: the policy's picks (responsible person, space owners, Hub admins, groups), always the deputy, and the register's admins when nobody in the space is active. Auto-renewing contracts whose renewal date passed roll forward by their billing interval with an audit entry. A cancellation date typed by a person is kept; a computed one follows changes of the renewal date, the notice rule and the lead-days setting. Reminders do not depend on the app address; without one the notification carries no link.

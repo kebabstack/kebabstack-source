@@ -206,16 +206,14 @@ warns two weeks ahead). A sync runs every six hours; the Apple page shows the ga
 says the company owns and what the register knows.
 
 Contracts keeps vendor mail: text, headers and files (1.5 MB each, 10 per message, 400 MB in
-total) behind the session, plus the AI's proposals with the quoted evidence. Only listed relay
-identities hand mail in (Connection → Relay; remove one to kill it at once); anyone signed in can
-upload a saved message. The AI reads against a daily budget you set and its answers are checked
+total) behind the session, plus the AI's proposals with the quoted evidence. Since Contracts 0.14.0 there is
+no mail relay: anyone signed in uploads a document or a saved message into their workspace. The AI reads against a daily budget you set and its answers are checked
 (schema, allow-lists, quotes that must occur in the text) — a refused answer leaves a note on the
 message, never a change on the record. Confirmations are a person's act and atomic against the
 record's revision; a cancellation in a mail is a proposal, ending is decided through the task and
 the app never contacts a vendor. Reminders carry title and link only and sit in a retrying outbox
-(failures under Connection → Status). The relay is a Cloudflare Email Worker that changes where a
-company address is delivered: deploy it deliberately, on a domain whose MX is not in production
-use, with the fallback mailbox set (`contracts/relay/RUNBOOK.md`).
+(failures under Connection → Status); each workspace sets its own schedule and recipients, delivery is
+the Hub's Slack bot, never e-mail.
 
 Slack notifications and domain checks use external APIs. Outbound calls may fail
 or be rate-limited. There is no durable retry queue covering every integration.

@@ -156,7 +156,6 @@ async function routeView() {
   if ((m = h.match(/^#\/c\/(\d+)(?:\/(\w+))?/))) { setNav("contracts"); return enterRecord(Number(m[1]), m[2] || "terms"); }
   if (h.startsWith("#/contracts")) { setNav("contracts"); return enterSaas("subscriptions",h === "#/contracts/due"?"soon":null); }
   if ((m = h.match(/^#\/connection(?:\/(\w+))?/))) { setNav("connection"); return enterConn(m[1] || "status"); }
-  if (h === "#/mail-setup") { setNav("docs"); show("viewMailSetup"); return; }
   if (h.startsWith("#/docs")) { setNav("docs"); show("viewDocs"); return; }
   setNav("today"); return enterSaas("overview");
 }
@@ -206,7 +205,7 @@ async function loadSpaces() {
   $("spaceSelect").innerHTML = groupOf("My workspaces", mine) + groupOf("Shared", shared) + (byRole ? groupOf("Opened as app admin", [byRole]) : "");
   if (currentSpace) $("spaceSelect").value = currentSpace.id;
   $("spaceAccess").textContent = currentSpace?.archived ? "Archived · read-only" : currentSpace?.kind === "personal" ? "Owner and app admins" : currentSpace?.kind === "intake" ? "App admins (Hub)" : ({owner:"Space owner",editor:"Can edit",viewer:"Read-only"}[spaceRoleName()] || "Read-only");
-  $("spaceManage").textContent = currentSpace?.kind === "team" ? "Members & settings" : currentSpace?.kind === "intake" ? "Access & mail setup" : "About this space";
+  $("spaceManage").textContent = currentSpace?.kind === "team" ? "Members & settings" : currentSpace?.kind === "intake" ? "Who has access" : "About this space";
 }
 async function chooseSpace(id, navigate = true) {
   if (!id || switchingSpace) return false;
@@ -265,8 +264,8 @@ async function enterSpace() {
   if (currentSpace?.kind === "intake") {
     const v = opt(await backend.getSpace(viewToken)); if (staleView()) return;
     if (!v) { box.innerHTML = '<div class="empty">This space is no longer available.</div>'; return; }
-    box.innerHTML = `<div class="scard"><h3>Access follows your Hub roles</h3><p class="spacehelp">Hub-assigned app admins can review this inbox and file documents. Everyone may submit by email; this does not give them access. Admins assigned to Contracts in Hub also have access.</p><div class="spacepeople">${v.members.map(m => `<div class="spacemember"><span>${esc(m.name || m.pid)}</span><span class="spacehelp">App admin (Hub)</span></div>`).join("")}</div><p class="spacehelp">Manage these roles in the Hub. Role and account changes take effect within the Hub’s 60-second access lease. Employees keep workspace membership rules; app admins can access all workspaces.</p></div><div class="scard"><h3>Connect the shared email inbox</h3><p class="spacehelp">Follow the <a href="#/mail-setup">Google Workspace mail setup guide</a>. First trust the relay’s public principal in <a href="#/connection/relay">Workspace tools → Mail setup</a>, then connect it here. Email addresses and subjects cannot choose another workspace.</p><div class="btnrow"><input id="spRelay" aria-label="Trusted relay principal" placeholder="Trusted relay principal"><button class="pill outline sm" id="spRelayConnect">Connect relay</button><button class="linkbtn" id="spRelayDisconnect">Disconnect</button></div><div class="status" id="spRelayStatus" role="status"></div></div>`;
-    bindSpaceRelay(viewToken, staleView); return;
+    box.innerHTML = `<div class="scard"><h3>Access follows your Hub roles</h3><p class="spacehelp">Hub-assigned app admins can review this inbox and file documents. Admins assigned to Contracts in Hub also have access.</p><div class="spacepeople">${v.members.map(m => `<div class="spacemember"><span>${esc(m.name || m.pid)}</span><span class="spacehelp">App admin (Hub)</span></div>`).join("")}</div><p class="spacehelp">Manage these roles in the Hub. Role and account changes take effect within the Hub’s 60-second access lease. Employees keep workspace membership rules; app admins can access all workspaces.</p></div>`;
+    return;
   }
   if (currentSpace?.kind !== "team") {
     box.innerHTML = `<div class="scard"><h3>${currentSpace?.kind === "personal" ? "Your own contract store" : "Your existing contracts"}</h3><p class="spacehelp">${currentSpace?.kind === "personal" ? "Keep your own agreements, licences and subscriptions here. Your account and Hub-assigned app admins can open this workspace. To collaborate, create a teamspace and add its members." : "Existing content stays in place. App admins have access; employees need explicit responsibility or record access."}</p><p class="spacehelp">AI suggestions always need your review. This is access control inside Kebabstack; documents are not end-to-end encrypted. Your organisation’s hosting operators and configured AI service remain part of the processing environment.</p></div>`;
@@ -276,7 +275,7 @@ async function enterSpace() {
   if (staleView()) return;
   if (!v) { box.innerHTML = '<div class="empty">This space is no longer available.</div>'; return; }
   const owner = spaceRoleName() === "owner"; let members = v.members.map(x => ({...x}));
-  box.innerHTML = `<div class="scard"><div class="spacefields"><label>Name<input id="spName" maxlength="80" value="${esc(v.space.name)}" ${owner ? "" : "disabled"}></label><label>Description<textarea id="spDescription" maxlength="500" ${owner ? "" : "disabled"}>${esc(v.space.description)}</textarea></label></div><div class="dsec">Members</div><p class="spacehelp">Owners manage membership. Editors manage records and incoming documents. Viewers can read and export. Removing someone ends access to this space immediately.</p><div id="spMembers" class="spacepeople"></div>${owner ? `<div class="pick"><input id="spPerson" placeholder="Add a colleague from the Hub" autocomplete="off"><div id="spPersonList" class="list hidden"></div></div><label class="spacehelp"><input type="checkbox" id="spArchived" ${v.space.archived ? "checked" : ""}> Archive this space (keep its contents readable)</label><div class="btnrow"><button id="spSave" class="pill primary">SAVE SPACE</button><span class="status" id="spStatus"></span></div><div class="dsec">Mail intake</div><p class="spacehelp">Use a separate relay identity for this workspace. The operator first trusts it under Workspace tools → Relay; you then authorize it here. Sender names and email subjects never choose a workspace.</p><div class="btnrow"><input id="spRelay" placeholder="Trusted relay principal"><button class="pill outline sm" id="spRelayConnect">CONNECT RELAY</button><button class="linkbtn" id="spRelayDisconnect">DISCONNECT</button></div><div class="status" id="spRelayStatus"></div>` : ""}</div>`;
+  box.innerHTML = `<div class="scard"><div class="spacefields"><label>Name<input id="spName" maxlength="80" value="${esc(v.space.name)}" ${owner ? "" : "disabled"}></label><label>Description<textarea id="spDescription" maxlength="500" ${owner ? "" : "disabled"}>${esc(v.space.description)}</textarea></label></div><div class="dsec">Members</div><p class="spacehelp">Owners manage membership. Editors manage records and incoming documents. Viewers can read and export. Removing someone ends access to this space immediately.</p><div id="spMembers" class="spacepeople"></div>${owner ? `<div class="pick"><input id="spPerson" placeholder="Add a colleague from the Hub" autocomplete="off"><div id="spPersonList" class="list hidden"></div></div><label class="spacehelp"><input type="checkbox" id="spArchived" ${v.space.archived ? "checked" : ""}> Archive this space (keep its contents readable)</label><div class="btnrow"><button id="spSave" class="pill primary">SAVE SPACE</button><span class="status" id="spStatus"></span></div>` : ""}</div>`;
   function renderMembers() {
     $("spMembers").innerHTML = members.map((m,i) => `<div class="spacemember"><span>${esc(m.name || m.pid)}${m.active === false ? " · inactive" : ""}</span><select data-role="${i}" aria-label="Role for ${esc(m.name || m.pid)}" ${owner ? "" : "disabled"}>${["owner","editor","viewer"].map(r => `<option value="${r}" ${Object.keys(m.role)[0] === r ? "selected" : ""}>${r}</option>`).join("")}</select>${owner ? `<button class="linkbtn" data-remove="${i}">Remove</button>` : ""}</div>`).join("");
     box.querySelectorAll("[data-role]").forEach(el => el.onchange = () => { members[Number(el.dataset.role)].role = {[el.value]:null}; });
@@ -284,7 +283,7 @@ async function enterSpace() {
   }
   renderMembers(); if (!owner) return;
   { const items = Number(currentSpace?.items ?? 0); const danger = document.createElement("div"); danger.className = "scard";
-    danger.innerHTML = `<h3>Delete this teamspace</h3><p class="spacehelp">${items ? `It still holds ${items} record${items === 1 ? "" : "s"} (including its trash). Move or delete them first.` : "It is empty. Deleting removes its settings, membership and relay connection."}</p><div class="btnrow"><button class="pill outline sm" id="spDelete" ${items ? "disabled" : ""}>DELETE TEAMSPACE</button><span class="status" id="spDeleteStatus"></span></div>`;
+    danger.innerHTML = `<h3>Delete this teamspace</h3><p class="spacehelp">${items ? `It still holds ${items} record${items === 1 ? "" : "s"} (including its trash). Move or delete them first.` : "It is empty. Deleting removes its settings and membership."}</p><div class="btnrow"><button class="pill outline sm" id="spDelete" ${items ? "disabled" : ""}>DELETE TEAMSPACE</button><span class="status" id="spDeleteStatus"></span></div>`;
     box.append(danger);
     $("spDelete").onclick = () => confirmBox(`Delete the teamspace “${v.space.name}”? This cannot be undone.`, async () => {
       try { const r = await backend.deleteSpace(token, v.space.revision); if (!r.ok) { setStatus("spDeleteStatus", "err", r.detail); return; } }
@@ -303,19 +302,6 @@ async function enterSpace() {
       else { await enterSpace(); toast("Space updated"); }
     } catch (_) { setStatus("spStatus", "err", "Could not save. Reload and try again."); }
     finally { if ($("spSave")) $("spSave").disabled = false; }
-  };
-  bindSpaceRelay(token, staleView);
-}
-function bindSpaceRelay(token, staleView) {
-  let saving = false;
-  for (const [id, enabled] of [["spRelayConnect", true],["spRelayDisconnect",false]]) $(id).onclick = async () => {
-    if (saving || staleView()) return;
-    saving = true; $("spRelayConnect").disabled = $("spRelayDisconnect").disabled = true;
-    try {
-      const r = await backend.setSpaceRelay(token, $("spRelay").value.trim(), enabled);
-      if (!staleView()) setStatus("spRelayStatus", r.ok ? "ok" : "err", r.ok ? (enabled ? "Relay connected to this workspace" : "Relay disconnected") : r.detail);
-    } catch (_) { if (!staleView()) setStatus("spRelayStatus", "err", "Connection could not be saved. Please retry."); }
-    finally { saving = false; if (!staleView()) $("spRelayConnect").disabled = $("spRelayDisconnect").disabled = false; }
   };
 }
 
@@ -467,7 +453,7 @@ async function loadInbox() {
     rows.map((s) => `<tr class="rowlink" data-s="${s.id}"><td><b style="font-weight:500">${esc(s.subject || "(no subject)")}</b>${s.note ? `<div class="kv">${esc(s.note)}</div>` : ""}<div class="kv mono">${esc(s.kind)}${s.handedInByName ? " · by " + esc(s.handedInByName) : ""}</div></td><td>${esc(s.fromName || s.fromAddr)}${s.fromName ? `<div class="kv mono">${esc(s.fromAddr)}</div>` : ""}</td><td>${s.contractId.length ? `<a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : '<span class="muted">—</span>'}</td><td class="num">${N(s.documents) || ""}</td><td class="num">${N(s.proposals) || ""}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("") + `</tbody></table></div>`;
   $("ibList").querySelectorAll("tr[data-s]").forEach((r) => { r.onclick = (e) => { if (e.target.closest("a")) return; location.hash = (rows.find(s => String(s.id) === r.dataset.s)?.contractId.length ? "#/inbox/" : "#/intake/") + r.dataset.s; }; });
 }
-// .eml upload — parsed in the browser, handed in through the same intake lane as the relay
+// .eml upload — parsed in the browser, handed in through the intake lane
 $("ibEml").onchange = async () => { const files = [...$("ibEml").files]; $("ibEml").value = ""; if (files.length) await uploadEml(files); };
 async function uploadEml(files) {
   const token = hubTok, stale = viewGuard("uploadEml"), box = $("ibUpload"), lines = [];
@@ -974,16 +960,16 @@ $("tdSave").onclick = async () => {
 $("tdClear").onclick = async () => { const c = cur.contract; const r = await backend.setFutureTerms(hubTok, c.id, c.revision, []); if (!r.ok) { setStatus("tdStatus", "err", r.detail); return; } $("termsDrawer").classList.remove("on"); toast("Future terms cleared"); cur = null; route(); };
 
 /* ============================== connection (staff) ============================== */
-const CN_TABS = ["status", "ai", "relay", "settings", "import", "export", "log"];
+const CN_TABS = ["status", "ai", "settings", "import", "export", "log"];
 $("viewConn").querySelectorAll(".tabs button").forEach((b) => { b.onclick = () => { location.hash = "#/connection/" + b.dataset.tab; }; });
 async function enterConn(tabName) {
   show("viewConn");
   if (!isStaff() && !isAdmin() && tabName !== "ai") tabName = "export";
-  if (!CN_TABS.includes(tabName) || (!isAdmin() && ["relay", "settings", "log"].includes(tabName)) || (tabName === "import" && !isStaff())) tabName = "status";
+  if (!CN_TABS.includes(tabName) || (!isAdmin() && ["settings", "log"].includes(tabName)) || (tabName === "import" && !isStaff())) tabName = "status";
   showTab("viewConn", "cn", tabName, CN_TABS);
   if (tabName === "status") await loadConnStatus();
   if (tabName === "ai") await loadAiStatus();
-  if ((tabName === "relay" || tabName === "settings") && isAdmin()) await loadSettings();
+  if (tabName === "settings" && isAdmin()) await loadSettings();
   if (tabName === "log" && isAdmin()) { const rows = await backend.adminLogRows(hubTok); $("logRows").innerHTML = rows.map((l) => `<tr><td class="mono">${fmtD(l.at)}</td><td>${esc(l.who)}</td><td>${esc(l.what)}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">nothing yet</td></tr>`; }
 }
 let aiPanelState = null;
@@ -1058,7 +1044,7 @@ async function loadConnStatus() {
       <div class="tstat"><div class="v">${N(s.aiCallsToday)}<span class="kv">/${N(s.aiDailyBudget)}</span></div><div class="l">AI reads today</div></div>
       <div class="tstat"><div class="v" ${N(s.outboxFailed) ? 'style="color:var(--ks-accent)"' : ""}>${N(s.outboxPending)}<span class="kv">${N(s.outboxFailed) ? ` · ${N(s.outboxFailed)} failed` : ""}</span></div><div class="l">reminders queued</div></div>
     </div>
-    <div class="scard"><h3>How mail gets here</h3><div class="kvgrid">${[["Contracts address", s.mailboxAddress || "not set — Relay tab"], ["Relay identities", N(s.relayCount) ? `${N(s.relayCount)} trusted` : "none — only .eml uploads work"], ["AI", s.aiSource ? "Hub access available; model test separate" : me.aiChecked === false ? "checking the Hub…" : "not available"], ["Directory refresh", fmtD(s.lastDirectoryPull)], ["Files stored", (N(s.blobBytes) / 1e6).toFixed(1) + " MB of 400 MB"], ["Oldest open job", s.oldestOpenJobAt ? fmtD(s.oldestOpenJobAt) : "—"]].map(([k, v]) => `<div><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div><p class="kv" style="margin-top:16px"><a href="#/connection/ai">AI connection and model test →</a></p></div>
+    <div class="scard"><h3>How documents get here</h3><div class="kvgrid">${[["Intake", "Uploads and pasted text by signed-in members; saved emails (.eml) upload the same way"], ["AI", s.aiSource ? "Hub access available; model test separate" : me.aiChecked === false ? "checking the Hub…" : "not available"], ["Directory refresh", fmtD(s.lastDirectoryPull)], ["Files stored", (N(s.blobBytes) / 1e6).toFixed(1) + " MB of 400 MB"], ["Oldest open job", s.oldestOpenJobAt ? fmtD(s.oldestOpenJobAt) : "—"]].map(([k, v]) => `<div><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div><p class="kv" style="margin-top:16px"><a href="#/connection/ai">AI connection and model test →</a></p></div>
     ${jobs.length ? `<div class="scard"><h3>Processing queue</h3><div class="tblwrap"><table class="plain"><thead><tr><th>Step</th><th>Message</th><th>Attempts</th><th>Next try</th><th>Last error</th></tr></thead><tbody>${jobs.slice(0, 50).map((j) => `<tr><td class="mono">${esc(j.step)}</td><td><a href="#/inbox/${j.ref}">#${j.ref}</a></td><td class="num">${N(j.attempts)}</td><td class="mono">${fmtD(j.nextAt)}</td><td class="kv">${esc(j.lastError)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
     ${s.outboxFailures.length ? `<div class="scard"><h3>Reminders that could not be delivered</h3><div class="kv">The hub did not accept these. Retry once the hub is reachable again.</div><table class="plain"><tbody>${s.outboxFailures.map((f) => `<tr><td>${esc(f.title)}</td><td class="num">${N(f.attempts)} tries</td><td class="kv">${esc(f.lastError)}</td><td style="text-align:right"><button class="linkbtn" data-retry="${f.id}">RETRY</button></td></tr>`).join("")}</tbody></table></div>` : ""}`;
   $("cnStatus").querySelectorAll("[data-retry]").forEach((b) => { b.onclick = async () => { const r = await backend.retryNotification(hubTok, BigInt(b.dataset.retry)); toast(r.ok ? "Retried" : r.detail); loadConnStatus(); }; });
@@ -1068,22 +1054,15 @@ async function loadSettings() {
   const staleView = viewGuard("loadSettings");
   const s = opt(await backend.getSettings(hubTok)); if (staleView() || !s) return;
   settings = s;
-  $("rlMailbox").value = s.mailboxAddress; $("rlPrincipals").value = s.relayPrincipals.join("\n");
   $("sOrg").value = s.orgName; $("sAppUrl").value = s.appUrl;
-  $("sLead").value = N(s.leadDays); $("sReminders").value = s.reminderDays.map(N).join(", "); $("sTz").value = s.tzName; $("sTzOff").value = N(s.tzOffsetMinutes); $("sAiBudget").value = N(s.aiDailyBudget);
+  $("sLead").value = N(s.leadDays); $("sTz").value = s.tzName; $("sTzOff").value = N(s.tzOffsetMinutes); $("sAiBudget").value = N(s.aiDailyBudget);
   $("sMeta").innerHTML = `contracts ${esc(s.version)} · ${N(s.contracts)} contracts · ${N(s.sources)} messages · ${N(s.openProposals)} open proposals · ${N(s.openTasks)} open tasks · ${N(s.peopleCount)} people in the directory (refreshed ${fmtD(s.lastDirectoryPull)}) · ${N(s.adminCount)} admins · AI ${esc(s.aiSource || (me.aiChecked === false ? "checking" : "not available"))} (${N(s.aiCallsToday)}/${N(s.aiDailyBudget)} today) · hub <span class="mono">${esc(s.hubId || "not set")}</span>`;
 }
-function settingsArgs() { return { orgName: $("sOrg").value.trim(), appUrl: $("sAppUrl").value.trim(), editorGroup: "", adminGroup: "", mailboxAddress: $("rlMailbox").value.trim(), tzName: $("sTz").value.trim(), tzOffsetMinutes: BigInt(Number($("sTzOff").value) || 0), leadDays: BigInt(Math.max(0, Number($("sLead").value) || 0)), reminderDays: $("sReminders").value.split(",").map((x) => Number(x.trim())).filter((x) => x > 0).map(BigInt), aiDailyBudget: BigInt(Math.max(0, Number($("sAiBudget").value) || 0)) }; }
+function settingsArgs() { return { orgName: $("sOrg").value.trim(), appUrl: $("sAppUrl").value.trim(), editorGroup: "", adminGroup: "", tzName: $("sTz").value.trim(), tzOffsetMinutes: BigInt(Number($("sTzOff").value) || 0), leadDays: BigInt(Math.max(0, Number($("sLead").value) || 0)), aiDailyBudget: BigInt(Math.max(0, Number($("sAiBudget").value) || 0)) }; }
 $("sSave").onclick = async () => {
   setStatus("sStatus", "", "saving…");
   const r = await backend.setSettings(hubTok, settingsArgs()); if (!r.ok) { setStatus("sStatus", "err", r.detail); return; }
   setStatus("sStatus", "ok", "saved"); await loadSettings(); await refreshMe();
-};
-$("rlSave").onclick = async () => {
-  setStatus("rlStatus", "", "saving…");
-  const r = await backend.setSettings(hubTok, settingsArgs()); if (!r.ok) { setStatus("rlStatus", "err", r.detail); return; }
-  const p = await backend.setRelayPrincipals(hubTok, $("rlPrincipals").value.split(/\s+/).map((x) => x.trim()).filter(Boolean)); if (!p.ok) { setStatus("rlStatus", "err", p.detail); return; }
-  setStatus("rlStatus", "ok", "saved"); await loadSettings();
 };
 $("sSeed").onclick = async () => { const r = await backend.seedDemo(hubTok); setStatus("sSeedStatus", r.ok ? "ok" : "err", r.ok ? "sample data added" : r.detail); loadSettings(); };
 $("sUnseed").onclick = () => confirmBox("Remove the sample data? Contracts, messages and proposals marked as samples go away.", async () => { const r = await backend.removeDemo(hubTok); setStatus("sSeedStatus", r.ok ? "ok" : "err", r.ok ? "sample data removed" : r.detail); loadSettings(); });

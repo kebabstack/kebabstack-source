@@ -1,5 +1,11 @@
 # Changelog — kebab-stack contracts
 
+## [0.14.0] — 2026-10-09
+
+- **Mail relay removed.** Contracts no longer receives e-mail. Documents arrive by upload (PDF, image, text, saved .eml) or pasted text from a signed-in member; the Cloudflare worker (`contracts/relay`), the Mail setup guide, the Relay tab, the contracts address and the per-workspace relay binding are gone. `setSpaceRelay` and `setRelayPrincipals` no longer exist; `intakeBegin` requires a session and accepts kinds `eml` and `manual`. Stored state of earlier relay deliveries stays readable.
+- **One reminder schedule per workspace.** The workspace policy (Settings → Reminders: marks, on/off, recipients) now drives renewal and cancellation deadlines, dated type fields and task due dates of that workspace; tasks use the marks at or under 30 days. The global "remind this many days before" setting is gone; global settings keep the decision lead, time zone and AI budget. The 90-day mark is no longer mandatory, so IT and PfOps can choose different schedules. Reminder titles start with the workspace name. Delivery stays the Hub notification lane → Slack bot; nothing is sent by e-mail.
+- `getSettings`/`setSettings` drop `reminderDays`, `mailboxAddress`, `relayPrincipals`; `connectionStatus` drops `mailboxAddress` and `relayCount`.
+
 ## [0.13.1] — 2026-10-09
 
 - **Workspace selector shows what is yours.** It lists your personal workspace, the teamspaces you belong to and, for app admins, the shared Contract intake and the pre-workspace "Existing contracts". Everything an app admin can open by role only — other people's personal workspaces (only those holding records; the person's e-mail is shown) and teamspaces they are not a member of — moved to **Settings → All workspaces**. Before, admins saw one entry per directory person, including empty ones.

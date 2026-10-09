@@ -644,7 +644,7 @@ test('audit TR-01/05: re-enrolment with a colleague\'s serial does not hand out 
 // ---- contracts (P16): the acceptance table of docs/CONTRACTS.md, against the real hub Wasm and a mocked AI provider
 const TERMS = { amountMinor: [150000n], currency: 'EUR', taxBasis: 'net', interval: 'year', quantity: [], unitMinor: [], start: '2025-01-01', end: '', renewalRule: 'auto', renewalDate: '2027-01-01', noticeDays: [], noticeMonths: [3n], noticeDate: '', decideBy: '', note: '' };
 const cinput = (over = {}) => ({ title: 'Sunrise Cloud — Team plan', vendor: 'Sunrise Cloud', product: 'Team', customerRef: 'SC-4471', responsible: '', deputy: '', visibility: 'team', viewers: [], seats: [25n], holders: [], tags: [], ...over });
-const mail = (over = {}) => ({ kind: 'relay', mailbox: 'subscriptions@relay.example.test', providerId: 'raw:' + 'a1'.repeat(20), messageId: '<renewal-1@sunrise-cloud.example>', inReplyTo: '', references: '', fromAddr: 'billing@sunrise-cloud.example', fromName: 'Sunrise Cloud Billing', to: ['me@example.test'], cc: ['subscriptions@relay.example.test'], subject: 'Your Team plan renews on 1 January 2027', sentAt: '2026-09-01T08:00:00Z', text: 'Dear customer, your Team plan (account SC-4471) renews automatically on 2027-01-01. The new yearly price is EUR 1,650.00 net (was EUR 1,500.00). You can cancel with two months notice before the renewal date.', html: '', attachments: [], ...over });
+const mail = (over = {}) => ({ kind: 'eml', mailbox: '', providerId: 'raw:' + 'a1'.repeat(20), messageId: '<renewal-1@sunrise-cloud.example>', inReplyTo: '', references: '', fromAddr: 'billing@sunrise-cloud.example', fromName: 'Sunrise Cloud Billing', to: ['me@example.test'], cc: ['subscriptions@relay.example.test'], subject: 'Your Team plan renews on 1 January 2027', sentAt: '2026-09-01T08:00:00Z', text: 'Dear customer, your Team plan (account SC-4471) renews automatically on 2027-01-01. The new yearly price is EUR 1,650.00 net (was EUR 1,500.00). You can cancel with two months notice before the renewal date.', html: '', attachments: [], ...over });
 const aiAnswer = (events) => ({ choices: [{ message: { content: JSON.stringify({ schemaVersion: 1, events }) } }] });
 const field = (f, value, quote, basis = 'explicit') => ({ field: f, value, basis, evidence: quote ? [{ partId: 'body', quote }] : [] });
 async function contractsFixture(pic, { ai = true, hubOptions = {}, appOptions = {} } = {}) {
@@ -893,7 +893,7 @@ async function extractWith(pic, events) {
   await settled(pic);
 }
 
-test('contracts: relay gate, dedupe (redelivery · CC copy · eml upload), a proposal with evidence, revision conflict, routine invoice filed, cancellation stays a person\'s decision', async () => {
+test('contracts: intake needs a session, dedupe (redelivery · CC copy · eml upload), a proposal with evidence, revision conflict, routine invoice filed, cancellation stays a person\'s decision', async () => {
   const pic = await PocketIc.create(server.getUrl(), { application: [{ state: { type: SubnetStateType.New }, costSchedule: CanisterCyclesCostSchedule.Free }] });
   try {
     const { app, adminTok, memberTok, helpdeskTok, memberId } = await contractsFixture(pic);
@@ -910,18 +910,16 @@ test('contracts: relay gate, dedupe (redelivery · CC copy · eml upload), a pro
     rec = (await app.getContract(adminTok, cid))[0]; assert.equal(rec.contract.status, 'active');
     assert.ok(rec.tasks.some((t) => t.kind === 'decide' && t.dueOn === '2026-09-17' && t.assignee === memberId), 'a decide task for the responsible person: ' + JSON.stringify(rec.tasks.map((t) => [t.kind, t.dueOn])));
     assert.equal((await app.addRule(adminTok, 'senderAddress', 'billing@sunrise-cloud.example', cid)).ok, true);
-    // relay gate: only listed principals hand in relay mail, with no session and nothing else
+    // intake gate: no session, no intake (the mail relay was retired in 0.14.0); kinds are eml or manual
     app.setPrincipal(stranger);
-    assert.equal((await app.intakeBegin('', mail())).ok, false, 'an unknown principal is not a relay');
-    assert.equal((await app.setRelayPrincipals(adminTok, [stranger.toText()])).ok, true);
-    assert.equal((await app.setSpaceRelay(adminTok, stranger.toText(), true)).ok, true);
-    assert.equal((await app.intakeBegin('', mail({ kind: 'eml' }))).ok, false, 'the relay hands in relay messages only');
-    assert.deepEqual(await app.listSources('', '', []), [], 'the relay identity reads nothing');
+    assert.equal((await app.intakeBegin('', mail())).ok, false, 'without a session nothing is handed in');
+    assert.equal((await app.intakeBegin(adminTok, mail({ kind: 'relay' }))).ok, false, 'relay deliveries are no longer accepted');
+    assert.deepEqual(await app.listSources('', '', []), [], 'no session reads nothing');
     assert.deepEqual(await app.whoami(''), []);
-    const b = await app.intakeBegin('', mail()); assert.equal(b.ok, true, b.detail);
-    const c1 = await app.intakeCommit('', b.id); assert.equal(c1.ok, true, c1.detail); assert.equal(c1.status, 'received'); const sid = c1.sourceId;
+    const b = await app.intakeBegin(adminTok, mail()); assert.equal(b.ok, true, b.detail);
+    const c1 = await app.intakeCommit(adminTok, b.id); assert.equal(c1.ok, true, c1.detail); assert.equal(c1.status, 'received'); const sid = c1.sourceId;
     // dedupe: the same delivery again (provider id), and the same message handed in by a person as .eml (message id + content)
-    assert.match((await app.intakeBegin('', mail())).detail, /^duplicate/);
+    assert.match((await app.intakeBegin(adminTok, mail())).detail, /^duplicate/);
     app.setPrincipal(member);
     const b2 = await app.intakeBegin(memberTok, mail({ kind: 'eml', providerId: '', mailbox: '' })); assert.equal(b2.ok, true, b2.detail);
     const c2 = await app.intakeCommit(memberTok, b2.id); assert.equal(c2.status, 'duplicate'); assert.equal(c2.sourceId, sid);
@@ -956,8 +954,8 @@ test('contracts: relay gate, dedupe (redelivery · CC copy · eml upload), a pro
     assert.ok(rec.audit.some((a) => /proposal #\d+ confirmed/.test(a.what) && /checked with the invoice/.test(a.what)), 'history line with the note');
     // routine invoice: same amount, same interval, contract active → filed without a proposal or a task
     app.setPrincipal(stranger);
-    const b3 = await app.intakeBegin('', mail({ providerId: 'raw:' + 'b2'.repeat(20), messageId: '<inv-2026-09@sunrise-cloud.example>', subject: 'Invoice 2026-09 — Team plan', text: 'Invoice for your Team plan (account SC-4471): EUR 1,650.00 per year, due 2026-10-01.' }));
-    assert.equal(b3.ok, true, b3.detail); const c3 = await app.intakeCommit('', b3.id); assert.equal(c3.ok, true);
+    const b3 = await app.intakeBegin(adminTok, mail({ providerId: 'raw:' + 'b2'.repeat(20), messageId: '<inv-2026-09@sunrise-cloud.example>', subject: 'Invoice 2026-09 — Team plan', text: 'Invoice for your Team plan (account SC-4471): EUR 1,650.00 per year, due 2026-10-01.' }));
+    assert.equal(b3.ok, true, b3.detail); const c3 = await app.intakeCommit(adminTok, b3.id); assert.equal(c3.ok, true);
     const tasksBefore = (await app.listTasks(adminTok, true, [cid])).length;
     await extractWith(pic, [{ kind: 'invoice', contractCandidates: [String(cid)], effectiveDate: '', proposedFields: [field('amountMinor', '1650.00', 'EUR 1,650.00 per year'), field('interval', 'year', 'per year')], uncertainties: [], summary: 'Yearly invoice' }]);
     const inv = (await app.getSource(adminTok, c3.sourceId))[0];
@@ -965,8 +963,8 @@ test('contracts: relay gate, dedupe (redelivery · CC copy · eml upload), a pro
     assert.equal((await app.listProposals(adminTok, '', [])).length, 0, 'no proposal for a routine invoice');
     assert.equal((await app.listTasks(adminTok, true, [cid])).length, tasksBefore, 'no task for a routine invoice');
     // a cancellation request in the mail is a proposal, never a status change — ending is a person's decision through the task
-    const b4 = await app.intakeBegin('', mail({ providerId: 'raw:' + 'c3'.repeat(20), messageId: '<cancel-1@example.test>', fromAddr: 'me@example.test', fromName: 'Me', subject: 'Cancellation of the Sunrise Cloud Team plan', text: 'We hereby cancel the Sunrise Cloud Team plan with account SC-4471 effective at the end of the current term.' }));
-    assert.equal(b4.ok, true, b4.detail); const c4 = await app.intakeCommit('', b4.id); assert.equal(c4.ok, true);
+    const b4 = await app.intakeBegin(adminTok, mail({ providerId: 'raw:' + 'c3'.repeat(20), messageId: '<cancel-1@example.test>', fromAddr: 'me@example.test', fromName: 'Me', subject: 'Cancellation of the Sunrise Cloud Team plan', text: 'We hereby cancel the Sunrise Cloud Team plan with account SC-4471 effective at the end of the current term.' }));
+    assert.equal(b4.ok, true, b4.detail); const c4 = await app.intakeCommit(adminTok, b4.id); assert.equal(c4.ok, true);
     await extractWith(pic, [{ kind: 'cancellation_request', contractCandidates: [String(cid)], effectiveDate: '', proposedFields: [], uncertainties: [], summary: 'Cancellation requested' }]);
     const cp = await app.listProposals(adminTok, '', []);
     assert.equal(cp.length, 1); assert.equal(cp[0].kind, 'cancellation_request');
@@ -993,10 +991,7 @@ test('contracts: the AI\'s answer is checked — no JSON, a quote that is not in
     const { app, adminTok, memberId } = await contractsFixture(pic);
     const created = await app.createContract(adminTok, cinput({ responsible: memberId })); const cid = created.id;
     assert.equal((await app.addRule(adminTok, 'senderAddress', 'billing@sunrise-cloud.example', cid)).ok, true);
-    assert.equal((await app.setRelayPrincipals(adminTok, [stranger.toText()])).ok, true);
-    assert.equal((await app.setSpaceRelay(adminTok, stranger.toText(), true)).ok, true);
-    app.setPrincipal(stranger);
-    const b = await app.intakeBegin('', mail()); const c = await app.intakeCommit('', b.id); assert.equal(c.ok, true); const sid = c.sourceId;
+    const b = await app.intakeBegin(adminTok, mail()); const c = await app.intakeCommit(adminTok, b.id); assert.equal(c.ok, true); const sid = c.sourceId;
     const status = async () => (await app.getSource(adminTok, sid))[0].source;
     // 1 · prose instead of JSON
     await pic.advanceTime(21_000); await pic.tick(2);
@@ -1048,7 +1043,7 @@ test('contracts: team roles — employee membership isolates content, Hub Admin 
     const mine = await app.createContract(memberRoot, cinput({ title: 'My tool', vendor: 'Small Vendor', responsible: adminId }));
     assert.equal(mine.ok, true); assert.equal((await app.getContract(memberRoot, mine.id))[0].contract.responsible, memberId, 'a member files their own — the responsible person is them, whatever they typed');
     assert.equal((await app.getSettings(memberTok)).length, 0); assert.equal((await app.exportAll(memberTok)).length, 1, 'space members can export authorized contents');
-    assert.deepEqual(await app.getContract(adminRoot, mine.id), [], 'Hub owner has no automatic access to personal files'); assert.equal((await app.setRelayPrincipals(memberTok, [])).ok, false);
+    assert.deepEqual(await app.getContract(adminRoot, mine.id), [], 'Hub owner has no automatic access to personal files');
     assert.equal((await app.connectionStatus(memberTok)).length, 1, 'space editors can inspect their own inbox processing');
     // the editors group in the hub makes helpdesk an editor here: everything except restricted records
     hub.setPrincipal(owner);
@@ -1080,11 +1075,8 @@ test('contracts: team roles — employee membership isolates content, Hub Admin 
     const mine2 = await app.exportCsv(memberTok);
     assert.ok(/Rocket Mail/.test(mine2) && !/My tool/.test(mine2) && !/Board minutes/.test(mine2) && /Nimbus/.test(mine2), 'export stays in the team and respects restricted records');
     // a proposal for an unknown vendor becomes a DRAFT contract, never an active one
-    assert.equal((await app.setRelayPrincipals(adminTok, [stranger.toText()])).ok, true);
-    assert.equal((await app.setSpaceRelay(adminTok, stranger.toText(), true)).ok, true);
-    app.setPrincipal(stranger);
-    const ib = await app.intakeBegin('', mail({ fromAddr: 'sales@pixelforge.example', fromName: 'Pixelforge', subject: 'Order confirmation — Studio plan', text: 'Thank you for your order of the Studio plan: EUR 480.00 per month, starting 2026-10-01.', messageId: '<order-1@pixelforge.example>', providerId: 'raw:' + 'd4'.repeat(20) }));
-    const icm = await app.intakeCommit('', ib.id); assert.equal(icm.ok, true);
+    const ib = await app.intakeBegin(adminTok, mail({ fromAddr: 'sales@pixelforge.example', fromName: 'Pixelforge', subject: 'Order confirmation — Studio plan', text: 'Thank you for your order of the Studio plan: EUR 480.00 per month, starting 2026-10-01.', messageId: '<order-1@pixelforge.example>', providerId: 'raw:' + 'd4'.repeat(20) }));
+    const icm = await app.intakeCommit(adminTok, ib.id); assert.equal(icm.ok, true);
     assert.deepEqual((await app.getSource(adminTok, icm.sourceId))[0].source.contractId, [], 'no rule, no vendor match → unfiled');
     const pr = await app.proposeChange(adminTok, c.id, [icm.sourceId], [{ field: 'amountMinor', value: '480.00' }], 'typed from the order');
     assert.equal(pr.ok, true, pr.detail);
@@ -1753,7 +1745,7 @@ test('contracts: upgrade keeps legacy records and evidence, freezes former acces
   } finally {await pic.tearDown();}
 });
 
-test('contracts: general agreements need no invented price or expiry; archived spaces block relay intake; rejected draft creation is atomic', async () => {
+test('contracts: general agreements need no invented price or expiry; archived spaces block intake; rejected draft creation is atomic', async () => {
   const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
   try {
     const {app,adminTok,adminId,memberId,memberTok}=await contractsFixture(pic,{ai:false});
@@ -1769,12 +1761,11 @@ test('contracts: general agreements need no invented price or expiry; archived s
     const d=await app.decideProposal(adminTok,p.id,{expectedRevision:0n,target:[],newContract:true,accept:[{field:'amountMinor',value:'-10.00'}],note:''});assert.equal(d.ok,false);
     assert.equal((await app.exportAll(adminTok))[0].contracts.length,before,'invalid decision creates no orphan draft');
     assert.equal((await app.getProposal(adminTok,p.id))[0].status,'open');
-    app.setPrincipal(stranger);assert.equal((await app.setRelayPrincipals(adminTok,[stranger.toText()])).ok,true);assert.equal((await app.setSpaceRelay(adminTok,stranger.toText(),true)).ok,true);
-    const pending=await app.intakeBegin('',mail({providerId:'archive-pending'}));assert.equal(pending.ok,true);
+    const pending=await app.intakeBegin(adminTok,mail({providerId:'archive-pending'}));assert.equal(pending.ok,true);
     const sp=(await app.getSpace(adminTok))[0].space;
     assert.equal((await app.updateSpace(adminTok,sp.revision,sp.name,sp.description,[{pid:adminId,role:{owner:null}},{pid:memberId,role:{editor:null}}],true)).ok,true);
-    assert.equal((await app.intakeCommit('',pending.id)).ok,false,'an archived space cannot accept a pending delivery');
-    assert.equal((await app.intakeBegin('',mail({providerId:'archive-new'}))).ok,false);
+    assert.equal((await app.intakeCommit(adminTok,pending.id)).ok,false,'an archived space cannot accept a pending delivery');
+    assert.equal((await app.intakeBegin(adminTok,mail({providerId:'archive-new'}))).ok,false);
     assert.equal((await app.createContract(memberTok,cinput())).ok,false);
     assert.equal((await app.getContract(memberTok,c.id)).length,1,'archive keeps member read access');
   } finally {await pic.tearDown();}
@@ -1915,23 +1906,20 @@ test('contracts: shared intake follows central Hub app administration; routing p
     assert.equal((await app.openSpace(hubAdminRoot,spaceId)).ok,true,'Hub admin can open every teamspace');
     const personal=(await app.listSpaces(adminRoot)).find(s=>s.kind==='personal').id;
     assert.equal((await app.openSpace(hubAdminRoot,personal)).ok,true,'Hub admin can open another personal space');
-    app.setPrincipal(stranger);
-    assert.equal((await app.setRelayPrincipals(adminRoot,[stranger.toText()])).ok,true);
-    assert.equal((await app.setSpaceRelay(intake.token,stranger.toText(),true)).ok,true);
     const bytes=Buffer.from('The agreement is awaiting signature.');
     const meta=mail({providerId:'shared-intake',messageId:'<shared-intake@test>',attachments:[{name:'agreement.txt',mime:'text/plain',size:BigInt(bytes.length),sha256:createHash('sha256').update(bytes).digest('hex'),textExtract:bytes.toString(),link:''}]});
-    const pending=await app.intakeBegin('',meta);assert.equal(pending.ok,true,pending.detail);
-    assert.equal((await app.intakeChunk('',pending.id,0n,bytes)).ok,true);
-    const received=await app.intakeCommit('',pending.id);assert.equal(received.ok,true,received.detail);
+    const pending=await app.intakeBegin(intake.token,meta);assert.equal(pending.ok,true,pending.detail);
+    assert.equal((await app.intakeChunk(intake.token,pending.id,0n,bytes)).ok,true);
+    const received=await app.intakeCommit(intake.token,pending.id);assert.equal(received.ok,true,received.detail);
     const source=(await app.getSource(hubAdminIntake.token,received.sourceId))[0];assert.ok(source,'second Hub reviewer sees original');
     assert.deepEqual(await app.getSource(memberRoot,received.sourceId),[]);
     assert.equal((await app.moveIncomingSource(memberRoot,received.sourceId,personal)).ok,false,'ordinary member cannot route somebody else source');
     assert.equal((await app.moveIncomingSource(intake.token,received.sourceId,personal)).ok,true,'owner routes complete source');
     assert.deepEqual(await app.getSource(hubAdminIntake.token,received.sourceId),[],'other intake reviewer loses access');
-    const repeat=await app.intakeBegin('',meta);assert.equal(repeat.ok,false);assert.match(repeat.detail,/duplicate/i);assert.equal(repeat.id,0n,'receipt does not disclose private source id');
-    const forwarded=await app.intakeBegin('',{...meta,providerId:'forward-copy'});assert.equal(forwarded.ok,true);
-    assert.equal((await app.intakeChunk('',forwarded.id,0n,bytes)).ok,true);
-    const again=await app.intakeCommit('',forwarded.id);assert.equal(again.ok,true);assert.equal(again.status,'duplicate');assert.equal(again.sourceId,0n);
+    const repeat=await app.intakeBegin(intake.token,meta);assert.equal(repeat.ok,false);assert.match(repeat.detail,/duplicate/i);assert.equal(repeat.id,0n,'receipt does not disclose private source id');
+    const forwarded=await app.intakeBegin(intake.token,{...meta,providerId:'forward-copy'});assert.equal(forwarded.ok,true);
+    assert.equal((await app.intakeChunk(intake.token,forwarded.id,0n,bytes)).ok,true);
+    const again=await app.intakeCommit(intake.token,forwarded.id);assert.equal(again.ok,true);assert.equal(again.status,'duplicate');assert.equal(again.sourceId,0n);
     assert.equal((await app.listSources(intake.token,'',[])).length,0,'duplicate cannot recreate routed content in old intake');
     assert.deepEqual(await app.documentData(hubAdminIntake.token,source.documents[0].id),[],'file bytes also protected');
     assert.deepEqual(Buffer.from((await app.documentData(adminRoot,source.documents[0].id))[0].bytes),bytes,'original retained in destination');
@@ -2227,7 +2215,10 @@ test('contracts: SaaS keys stay private, group assignments update without sharin
   const filed=await app.createContractFromSource(adminTok,src.sourceId,{proposalId:[],destination:(await app.whoami(adminTok))[0].space,fields});assert.equal(filed.ok,true,filed.detail);const saved=(await app.getContract(adminTok,filed.contractId))[0].contract;assert.equal(saved.status,'active');assert.equal(saved.responsible,memberId);assert.ok(saved.terms.noticeDate,'deadline computed on one-save filing');
   const policy=(await app.portfolio(adminTok))[0].policy;
   assert.equal((await app.setRenewalPolicy(memberTok,policy)).ok,false,'editor cannot change workspace delivery');
-  assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[30n]})).ok,false,'90-day first warning required');
+  assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[30n]})).ok,true,'a workspace may choose its own schedule (0.14.0: 90 days no longer mandatory)');
+  assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[]})).ok,false,'at least one mark');
+  assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[400n]})).ok,false,'marks within a year');
+  assert.equal((await app.setRenewalPolicy(adminTok,{...policy})).ok,true);
   assert.equal((await app.setRenewalPolicy(adminTok,{...policy,groups:['Design']})).ok,true);
  }finally{await pic.tearDown();}
 });

@@ -81,12 +81,9 @@ Keys are excluded from normal data exports and need a canister snapshot for full
 A return to older code cannot expose the new key fields through its old interface; preserve the
 candidate state and test rollback compatibility before attempting a downgrade.
 
-## 5 · Optional mail routing
+## 5 · Mail routing
 
-Follow [relay/RUNBOOK.md](relay/RUNBOOK.md). The operator trusts the relay principal in **Settings → Inspect connection → Relay**; the space owner then connects that same principal under **Members & settings → Mail intake**.
-Use a separate identity per space. A trusted but unbound identity cannot submit mail. A bound relay
-cannot read records or choose another destination from an email header. Archived spaces reject intake.
-Personal-space relay binding is available through `setSpaceRelay`; the browser relay panel is for teams.
+Removed in 0.14.0. Contracts receives no e-mail; signed-in members upload documents (PDF, image, text, saved .eml) or paste text into their workspace. Earlier relay deliveries stay readable as sources.
 
 ## Upgrading 0.2.x to 0.3.0
 
@@ -100,7 +97,7 @@ Rejecting a proposal now records the decision without creating an empty contract
 source stays in review so an editor can choose **Filing → Create a contract** or link it to an
 existing record. No automatic cleanup of previously created drafts is performed.
 
-No relay configuration is added by this update. Since 0.5.0 original PDFs and images use native
+Since 0.5.0 original PDFs and images use native
 provider vision. Configure a vision-capable model in Hub → AI; a separate vision model is optional.
 Employees need personal ownership or team membership. App admins can access all workspaces.
 
@@ -125,10 +122,7 @@ The frozen administrator/editor access described below applied through 0.7.x. In
    In-memory workspace views are recreated from the existing session; records and memberships persist.
 5. Existing records appear under **Existing contracts**, with the previous admin/editor person IDs
    captured once and explicit responsibility/viewers preserved. Later Hub promotions confer no access.
-6. Before resuming relay deliveries, open **Existing contracts** as a captured owner and call
-   `setSpaceRelay(scopedToken, relayPrincipal, true)`, or create the destination Teamspace, move its
-   records explicitly and bind the relay there. The legacy binding step uses the API; teamspaces
-   have a browser panel. Unbound deliveries are refused, so test the relay retry/failure handling.
+6. Relay binding is no longer needed (the mail relay was removed in 0.14.0).
 7. If distributing via Kitchen, regenerate the pantry from the committed release with
    `python3 kitchen/tools/pack-recipes.py --build` and deploy Kitchen separately. The recipe version
    comes from `contracts/mops.toml`; do not publish a new frontend with an older backend recipe.
@@ -149,12 +143,7 @@ The frozen administrator/editor access described below applied through 0.7.x. In
 
 ## Email intake setup
 
-Use **Guide → Mail setup** in the app or [relay/RUNBOOK.md](relay/RUNBOOK.md). A shared mailbox
-lands in the built-in **Contract intake** after its relay is bound there. Only current Hub
-admins and owners, and Contracts Admins assigned in Hub, can review this inbox. A different team destination
-requires its own explicitly bound relay. Email cannot route itself into private spaces based
-on a subject or sender. Both global relay trust and workspace-owner binding are required.
-Retain a Google copy and configure an independent recovery address before real deliveries.
+Removed in 0.14.0 together with the relay worker; see section 5.
 
 The 0.4.0 upgrade adds a receipt namespace for document moves. Existing data stays in place;
 receipts are captured when an existing source next moves. It does not reconstruct the original
