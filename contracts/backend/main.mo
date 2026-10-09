@@ -67,7 +67,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // trusted relay identities (the mail worker) — intake lane only
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.12.0";
+  transient let BUILD_VERSION : Text = "0.12.1";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -2987,16 +2987,17 @@ persistent actor Contracts {
     assert Hub.isHub(caller, hubId);
     let email = emailOfPid(viewer);
     if (viewer == "" or pidOf(email) != viewer or not Hub.directoryFresh(lastDirectoryPull) or not Hub.isActive(people, email) or Hub.appRole(people, email, "contracts") != "admin") return Operations.denied();
-    var total = 0; var due = 0; var overdue = 0; var unknown = 0; var unowned = 0;
+    var total = 0; var due = 0; var overdue = 0; var unknown = 0; var unowned = 0; var seatsHeld = 0;
     for (c in contracts.values()) if (pidCanSeeContract(viewer, c) and not isBillingDocument(c) and recordType(c) != "offer" and recordType(c) != "license" and (c.status == "active" or c.status == "cancelling")) {
       total += 1;
+      if (c.holders.any(func h = not activePid(h))) seatsHeld += 1; // a seat still listed for someone who left: Desk asks the owner at offboarding, this keeps the leftovers visible
       if (c.responsible == "" or not activePid(c.responsible)) unowned += 1;
       switch (daysUntil(c.terms.decideBy)) {
         case (?d) { if (d < 0) overdue += 1 else if (d <= 30) due += 1 };
         case null { if (c.terms.renewalRule != "indefinite" and c.terms.renewalRule != "none") unknown += 1 };
       };
     };
-    Operations.ready([("total", total), ("due", due), ("overdue", overdue), ("unknown", unknown), ("unowned", unowned)]);
+    Operations.ready([("total", total), ("due", due), ("overdue", overdue), ("unknown", unknown), ("unowned", unowned), ("seatsHeld", seatsHeld)]);
   };
 
 };

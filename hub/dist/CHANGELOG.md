@@ -1,5 +1,9 @@
 # Changelog — kebab-stack hub
 
+## [0.39.1] — 2026-10-09
+
+- Operations and the team-room screen show two counts newer apps add: Assets `deployed` (devices in use at a location without a personal owner, Assets 0.23.1) and Contracts `seatsHeld` (contracts still listing a seat holder who left, Contracts 0.12.1). Both are optional: an older Assets or Contracts remains a valid source and the count reads 0. The display whitelist admits them explicitly; nothing else changes in what a screen may see.
+
 ## [0.39.0] — 2026-10-06
 
 - Offboarding seats: a new `hub_syncSeats` broker lets the registered Desk ask every connected Contracts app how many seats a departing person still holds, with the same case shape, caller checks and 15-second bound as the hardware follow-up. No directory or Lunch change; apps that do not implement the call are simply not seat sources. Desk 0.31 and Contracts 0.12 use it.

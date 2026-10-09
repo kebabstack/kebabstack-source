@@ -48,12 +48,16 @@
     return {load,stop(){active=false;epoch++;root.replaceChildren();}};
   }
   const expected={desk:['active','unassigned','breached'],trust:['total','passing','attention','unverified','assessed','score'],assets:['total','stock','assigned','preparing'],contracts:['total','due','overdue','unknown','unowned'],watch:['enabled','alerts','warnings','stale','expiring','unknown','expiryDays']};
+  // Counts newer app releases add; an older app without them is still a valid source (treated as 0).
+  const optional={assets:['deployed'],contracts:['seatsHeld']};
   expected['desk-workboard']=[...expected.desk,'workProjects','workOpen','workWaiting','workOverdue','workUnowned','workSteps','workStepsDone'];
   function parsed(app,result,now){
     if(result?.schema!==1n||!result.state||!('ready' in result.state))return null;
     const at=ns(result.checkedAt);if(!Number.isFinite(at)||at>now+5000||now-at>90000)return null;
-    const m=Object.create(null);for(const[k,v]of result.metrics||[]){if(!expected[app].includes(k)||k in m)return null;const n=Number(v);if(!Number.isSafeInteger(n)||n<0)return null;m[k]=n;}
+    const base=app==='desk-workboard'?'desk':app,extra=optional[base]||[];
+    const m=Object.create(null);for(const[k,v]of result.metrics||[]){if((!expected[app].includes(k)&&!extra.includes(k))||k in m)return null;const n=Number(v);if(!Number.isSafeInteger(n)||n<0)return null;m[k]=n;}
     if(expected[app].some(k=>!(k in m)))return null;
+    for(const k of extra)if(!(k in m))m[k]=0;
     return {at,m};
   }
   function summary(app,m){
@@ -61,8 +65,8 @@
       case 'desk':return {value:m.active,unit:'open requests',detail:'Internal support',rows:[[m.breached,'past their service target'],[m.unassigned,'without an agent']],flag:m.breached+m.unassigned,focus:'requests need an owner or response'};
       case 'workboard':return {value:m.workOpen,unit:'open project tasks',detail:`${m.workProjects} shared projects · own tasks only`,rows:[[m.workOverdue,'past their target date'],[m.workWaiting,'waiting on something'],[m.workUnowned,'without an available owner']],flag:m.workOverdue+m.workWaiting+m.workUnowned,focus:'review project dates, blockers and ownership',note:`${m.workStepsDone} of ${m.workSteps} subtasks complete · dates use UTC`};
       case 'trust':return {value:m.assessed?m.score:'—',unit:'verified device score',detail:m.total?`${m.assessed} of ${m.total} devices fully assessed`:'No devices enrolled yet',rows:[[m.attention,'with failing checks'],[m.unverified,'not fully verified']],flag:m.attention+m.unverified,focus:'check failures and missing evidence',bar:m.total?m.assessed/m.total:0};
-      case 'assets':return {value:m.stock,unit:'devices ready in stock',detail:`${m.total} registered · ${m.assigned} assigned`,rows:[[m.preparing,'received, still being prepared']],flag:m.preparing,focus:'hardware needs preparation'};
-      case 'contracts':return {value:m.due,unit:'decisions in the next 30 days',detail:`${m.total} active or cancelling contracts`,rows:[[m.overdue,'decision dates passed'],[m.unowned,'without an active owner'],[m.unknown,'decision dates unknown']],flag:m.overdue+m.unowned+m.unknown,focus:'review decisions and ownership'};
+      case 'assets':return {value:m.stock,unit:'devices ready in stock',detail:`${m.total} registered · ${m.assigned} assigned${m.deployed?` · ${m.deployed} deployed`:''}`,rows:[[m.preparing,'received, still being prepared']],flag:m.preparing,focus:'hardware needs preparation'};
+      case 'contracts':return {value:m.due,unit:'decisions in the next 30 days',detail:`${m.total} active or cancelling contracts`,rows:[[m.overdue,'decision dates passed'],[m.unowned,'without an active owner'],[m.unknown,'decision dates unknown'],[m.seatsHeld,'with seats held by departed people']],flag:m.overdue+m.unowned+m.unknown+m.seatsHeld,focus:'review decisions, ownership and leftover seats'};
       case 'watch':return {value:m.alerts,unit:'domains with alerts',detail:`${m.enabled} domains monitored`,rows:[[m.warnings,'monitoring warnings'],[m.stale,'checks late or unsuccessful'],[m.unknown,'expiry dates unverified']],flag:m.alerts+m.warnings+m.stale+m.unknown+m.expiring,focus:'review domain evidence and expiry',note:`${m.expiring} expiring within ${m.expiryDays} days`};
     }
   }

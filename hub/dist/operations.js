@@ -4,8 +4,8 @@
   const APPS = {
     desk: {name:'Desk', category:'INTERNAL SUPPORT', path:'#/queue', icon:'M3 8V4h18v4a4 4 0 0 0 0 8v4H3v-4a4 4 0 0 0 0-8m11-4v3m0 4v2m0 4v3', keys:['active','unassigned','breached','departureReview','offboarding','lifecycleUnverified','workProjects','workOpen','workWaiting','workOverdue','workUnowned','workSteps','workStepsDone']},
     trust: {name:'Trust', category:'DEVICE HEALTH', path:'#/devices', icon:'m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Zm-4 9 3 3 5-6', keys:['total','passing','attention','unverified','assessed','score']},
-    assets: {name:'Assets', category:'HARDWARE', path:'#/devices', icon:'M4 4h16v12H4zM2 20h20M8 16l-1 4m9-4 1 4', keys:['total','stock','assigned','handover','preparing','sales']},
-    contracts: {name:'Contracts', category:'RENEWALS & OWNERSHIP', path:'', icon:'M14 2H4v20h16V8l-6-6Zm0 0v6h6M8 13h8m-8 4h5', keys:['total','due','overdue','unknown','unowned']},
+    assets: {name:'Assets', category:'HARDWARE', path:'#/devices', icon:'M4 4h16v12H4zM2 20h20M8 16l-1 4m9-4 1 4', keys:['total','stock','assigned','handover','preparing','sales'], optional:['deployed']},
+    contracts: {name:'Contracts', category:'RENEWALS & OWNERSHIP', path:'', icon:'M14 2H4v20h16V8l-6-6Zm0 0v6h6M8 13h8m-8 4h5', keys:['total','due','overdue','unknown','unowned'], optional:['seatsHeld']},
     watch: {name:'Watch', category:'DOMAIN MONITORING', path:'#/overview', icon:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z', keys:['enabled','alerts','warnings','stale','expiring','unknown','expiryDays']}
   };
   APPS.workboard={...APPS.desk,name:'Workboard',category:'SHARED IT PROJECTS',path:'#/workboard/projects'};
@@ -41,10 +41,11 @@
       case 'trust': return {value:m.assessed ? m.score : '—', unit:'average verified score', context:`${number(m.assessed)} of ${number(m.total)} real devices fully assessed`, rows:[[m.attention,'with failing checks'],[m.unverified,'not fully verified']], note:'Samples excluded · evidence must be current within 24h', bar:m.total ? m.assessed/m.total : null, barLabel:'Full assessment coverage', work:[
         [m.attention,'Investigate failing checks','Open Trust for evidence and the next step.'],
         [m.unverified,'Restore device reporting','Check stale, missing or failed assessments.'] ]};
-      case 'assets': return {value:m.stock, unit:'devices in stock', context:`${number(m.total)} registered · ${number(m.assigned)} assigned`, rows:[[m.handover,'hardware handovers open'],[m.sales,'sales to finish']], note:`${number(m.preparing)} received by IT, still in preparation`, work:[
+      case 'assets': return {value:m.stock, unit:'devices in stock', context:`${number(m.total)} registered · ${number(m.assigned)} assigned${m.deployed?` · ${number(m.deployed)} deployed at a location`:''}`, rows:[[m.handover,'hardware handovers open'],[m.sales,'sales to finish']], note:`${number(m.preparing)} received by IT, still in preparation`, work:[
         [m.handover,'Complete hardware handovers','Use the Offboarding filter in Assets.'],
         [m.sales,'Finish outstanding sales','Payment alone does not confirm handover.','#/sales'] ]};
-      case 'contracts': return {value:m.due, unit:'decisions in the next 30 days', context:`${number(m.total)} active or cancelling contracts`, rows:[[m.overdue,'decision dates passed'],[m.unowned,'without an active owner']], note:`${number(m.unknown)} with an unknown decision date`, work:[
+      case 'contracts': return {value:m.due, unit:'decisions in the next 30 days', context:`${number(m.total)} active or cancelling contracts`, rows:[[m.overdue,'decision dates passed'],[m.unowned,'without an active owner'],[m.seatsHeld,'with seats held by departed people']], note:`${number(m.unknown)} with an unknown decision date`, work:[
+        [m.seatsHeld,'Release seats of departed people','Open License assignments on the contract; Desk asked the owner at offboarding.'],
         [m.overdue,'Review overdue contract decisions','Check the recorded terms before renewing.'],
         [m.due,'Plan upcoming renewals','Decide before the cancellation deadline.'],
         [m.unknown,'Complete renewal dates','Unknown terms cannot provide a reliable warning.'],
@@ -115,6 +116,7 @@
           let data;
           try { data=snapshot(await getAPI().operationsSnapshot(e.source.cid),now());
             if(data.state==='ready' && APPS[e.source.app].keys.some(k=>!(k in data.values))) data={state:'unavailable'};
+            if(data.state==='ready') for(const k of APPS[e.source.app].optional||[]) if(!(k in data.values)) data.values[k]=0; // older app release without the newer count
           } catch {data={state:'unavailable'};}
           if(!active || epoch!==generation) return;
           e.data=data;paint();

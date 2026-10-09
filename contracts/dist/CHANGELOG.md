@@ -1,5 +1,9 @@
 # Changelog — kebab-stack contracts
 
+## [0.12.1] — 2026-10-09
+
+- Hub Operations and the team-room screen receive `seatsHeld`: active or cancelling contracts that still list a seat holder who is no longer active in the directory. This is the leftover of the Desk offboarding follow-up (0.12.0) made visible where IT looks every day. Requires Hub 0.39.1 for the count to appear.
+
 ## [0.12.0] — 2026-10-06
 
 - Offboarding follow-up for seats: when Desk runs an offboarding, Contracts reports (through the Hub) how many contracts still list the departing person as a seat holder, explicitly or through a Hub group while the account is active. Desk binds its "Revoke licenses & seats" checklist item to that count. The responsible person of each affected contract receives one notification per case ("… is leaving · release the seat in …") with a link to the contract; the seat is released here under License assignments, Desk never edits contract data. Requires Hub 0.39 and Desk 0.31; older Desks keep the manual checklist item.

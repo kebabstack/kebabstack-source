@@ -70,7 +70,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.23.0";
+  transient let BUILD_VERSION : Text = "0.23.1";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -399,7 +399,7 @@ persistent actor Assets {
       let followup = switch (handovers.get(a.id)) { case (?p) p.person == subject and hardwarePending(a.id); case null false };
       let current = a.assignee == subject or followup;
       let previous = not current and priorAssets.containsKey(a.id);
-      if (current or (previous and roleOf(email) == "admin")) out.add({ id = "asset:" # a.id.toText(); kind = a.kind; title = deviceName(a); detail = a.tag # (if (a.serial != "") " · " # a.serial else "") # (if (previous) " · Previously assigned" else ""); status = switch (handovers.get(a.id)) { case (?p) if (p.person == subject) handoverProgress(p) else a.status; case null a.status }; path = "#/d/" # a.id.toText(); historical = not followup and (previous or a.archived or a.status == "sold" or a.status == "scrapped") });
+      if (current or (previous and roleOf(email) == "admin")) out.add({ id = "asset:" # a.id.toText(); kind = a.kind; title = deviceName(a); detail = a.tag # (if (a.serial != "") " · " # a.serial else "") # (if (locationOf(a.id) != "") " · at " # locationOf(a.id) else "") # (if (previous) " · Previously assigned" else ""); status = switch (handovers.get(a.id)) { case (?p) if (p.person == subject) handoverProgress(p) else a.status; case null a.status }; path = "#/d/" # a.id.toText(); historical = not followup and (previous or a.archived or a.status == "sold" or a.status == "scrapped") });
     };
     for ((_, s) in sales.entries()) if (s.buyer.pid == subject or (roleOf(email) == "admin" and formerBuyer.get(s.id) == ?subject)) {
       let phase = salePhase(s);
@@ -3079,18 +3079,19 @@ persistent actor Assets {
     let email = emailOfPid(viewer);
     if (viewer == "" or pidOf(email) != viewer or not Hub.directoryFresh(lastDirectoryPull) or not Hub.isActive(people, email) or Hub.appRole(people, email, "assets") != "admin") return Operations.denied();
     if (migrating()) return Operations.unavailable();
-    var total = 0; var stock = 0; var assigned = 0; var pending = 0; var preparing = 0; var saleOpen = 0;
+    var total = 0; var stock = 0; var assigned = 0; var pending = 0; var preparing = 0; var saleOpen = 0; var deployed = 0;
     for (a in assets.values()) {
       let tracked = hardwarePending(a.id);
       if (tracked) { pending += 1; switch (handovers.get(a.id)) { case (?p) { if (p.stage == "received") preparing += 1 }; case null {} } };
       if (not a.archived) {
         total += 1;
         if (a.status == "in_stock" and a.assignee == "" and not tracked) stock += 1;
+        if (a.status == "deployed" and a.assignee == "") deployed += 1;
         if (a.assignee != "" and a.status != "sold" and a.status != "scrapped") assigned += 1;
       };
     };
     for (s in sales.values()) { let phase = salePhase(s); if (phase != "complete" and phase != "cancelled") saleOpen += 1 };
-    Operations.ready([("total", total), ("stock", stock), ("assigned", assigned), ("handover", pending), ("preparing", preparing), ("sales", saleOpen)]);
+    Operations.ready([("total", total), ("stock", stock), ("assigned", assigned), ("handover", pending), ("preparing", preparing), ("sales", saleOpen), ("deployed", deployed)]);
   };
 
 };

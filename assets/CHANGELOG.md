@@ -1,5 +1,9 @@
 # Changelog — kebab-stack assets
 
+## [0.23.1] — 2026-10-09
+
+- Stack follow-through for the deployed status: Hub Operations and the team-room screen receive a `deployed` count (devices in use at a location without a personal owner), and the person panel in Desk shows a device's location ("at G11-1") beside tag and serial. Requires Hub 0.39.1 for the new count to appear; older Hubs ignore it.
+
 ## [0.23.0] — 2026-10-08
 
 - New status **deployed**: a device in use at a location without a personal owner (monitors, docks, meeting-room gear). Set it when registering (single or from photos: status per row and for all rows), on the device page (**Mark deployed here** / **Back to stock** next to the location), or for many devices at once.
