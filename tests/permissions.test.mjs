@@ -75,7 +75,7 @@ async function content(app,name,tok) {
     case 'assets':return app.listAssets(tok,'','',false);
     case 'desk':return app.listTickets(tok,{view:'all',status:'',queue:'',assignee:'',q:''});
     case 'forms':return app.listForms(tok);
-    case 'contracts':return app.listContracts(tok,{q:'',status:'',responsible:'',onlyIncomplete:false,onlyDue:false,includeArchived:false});
+    case 'contracts':return app.listContracts(tok,{q:'',status:'',responsible:'',onlyIncomplete:false,onlyDue:false,includeArchived:false,typeId:[]});
     case 'trust':return app.devices(tok);
     case 'watch':return app.listDomains(tok);
   }

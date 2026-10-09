@@ -1039,7 +1039,7 @@ test('contracts: team roles — employee membership isolates content, Hub Admin 
     const a = await app.createContract(adminTok, cinput({ responsible: memberId })); assert.equal(a.ok, true);
     const b = await app.createContract(adminTok, cinput({ title: 'Board minutes tool', vendor: 'Quiet Vendor', product: '', customerRef: '', responsible: adminId, visibility: 'restricted' })); assert.equal(b.ok, true);
     const c = await app.createContract(adminTok, cinput({ title: 'Nimbus', vendor: 'Nimbus', product: 'Pro', customerRef: '', responsible: adminId })); assert.equal(c.ok, true);
-    const titles = async (tok) => (await app.listContracts(tok, { q: '', status: '', responsible: '', onlyIncomplete: false, onlyDue: false, includeArchived: false })).map((r) => r.title).sort();
+    const titles = async (tok) => (await app.listContracts(tok, { q: '', status: '', responsible: '', onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] })).map((r) => r.title).sort();
     assert.deepEqual(await titles(memberTok), ['Nimbus', 'Sunrise Cloud — Team plan'], 'a team editor sees team records except restricted records');
     assert.deepEqual(await titles(helpdeskTok), [], 'hub helpdesk is a plain member here');
     assert.deepEqual(await app.getContract(memberTok, b.id), [], 'a guessed id of a restricted contract gives nothing');
@@ -1071,7 +1071,7 @@ test('contracts: team roles — employee membership isolates content, Hub Admin 
     assert.equal(pv.rows.filter((r) => r.exists.length).length, 0, 'the sheet\'s Sunrise row has no customer reference, so it does not match SC-4471 — a new draft, never an overwrite');
     const ic = await app.importCommit(adminTok, csv, ';', mapping, 'sheet 2026-09');
     assert.equal(ic.ok, true, ic.detail); assert.equal(ic.created, 3n);
-    const rocket = (await app.listContracts(adminTok, { q: 'Rocket', status: '', responsible: '', onlyIncomplete: false, onlyDue: false, includeArchived: false }))[0];
+    const rocket = (await app.listContracts(adminTok, { q: 'Rocket', status: '', responsible: '', onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] }))[0];
     const rr = (await app.getContract(adminTok, rocket.id))[0];
     assert.equal(rr.contract.terms.amountMinor[0], 120000n, '1.200,00 → minor units'); assert.equal(rr.contract.responsible, memberId, 'responsible by address'); assert.equal(rr.contract.status, 'draft'); assert.equal(rr.contract.terms.noticeDate, '2026-12-01');
     const out = await app.exportCsv(adminTok);
@@ -2252,6 +2252,67 @@ test('contracts: SaaS reminders warn at 90 days and earlier cancellation deadlin
   hub.setPrincipal(member);const mine=await hub.myNotifications('',100n);assert.ok(mine.items.some(n=>n.title.includes('PERSONAL DO NOT DISCLOSE')));
   await pic.advanceTime(6*3600_000);await settled(pic);await pic.advanceTime(31_000);await settled(pic);
   hub.setPrincipal(owner);assert.equal((await hub.myNotifications('',100n)).items.filter(n=>n.title.includes('Ninety-day contract')).length,1,'same threshold not sent twice');
+ }finally{await pic.tearDown();}
+});
+
+test('contracts: contract types — built-ins listed, admin-defined fields validated, list filter and typed date reminders; SaaS reminders name the cancellation deadline',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  await pic.setTime(Date.UTC(2026,8,10,10));
+  const {app,hub,adminTok,memberTok,helpdeskTok,memberId,connector}=await contractsFixture(pic,{ai:false});
+  hub.setPrincipal(owner);await hub.setConnectorLanes(connector.id,['identity','roles','groups','notify']);
+  const config=(await app.getSettings(adminTok))[0];assert.equal((await app.setSettings(adminTok,{...config,appUrl:'https://contracts.example.test/'})).ok,true);
+  const types=await app.listContractTypes(adminTok);
+  assert.ok(types.length>=7&&types.every(t=>t.builtin&&t.enabled),'starter types seeded');
+  const saas=types.find(t=>t.name.startsWith('SaaS')),dc=types.find(t=>t.name.startsWith('Datacenter'));
+  assert.equal(saas.hasSeats,true);assert.equal(dc.hasSeats,false);assert.ok(dc.fields.some(f=>f.key==='site'&&f.required));
+  const fd=(key,title,kind,o={})=>({key,title,kind,options:[],required:false,inList:true,remind:false,...o});
+  const input={id:[],name:'Insurance',icon:'🛡️',description:'Policies and cover',fields:[fd('policyNo','Policy number','text',{required:true}),fd('cover','Cover','select',{options:['basic','full']}),fd('audit','Next audit','date',{remind:true}),fd('broker','Broker contact','person',{inList:false})],hasSeats:false,enabled:true};
+  assert.equal((await app.saveContractType(memberTok,input)).ok,false,'members cannot define types');
+  const saved=await app.saveContractType(adminTok,input);assert.equal(saved.ok,true,saved.detail);
+  assert.equal((await app.saveContractType(adminTok,{...input,fields:[fd('bad key','Bad','text')]})).ok,false,'field keys validated');
+  assert.equal((await app.saveContractType(adminTok,{...input,fields:[fd('plan','Plan','select')]})).ok,false,'select needs options');
+  assert.equal((await app.saveContractType(adminTok,{...input,name:'insurance'})).ok,false,'type names unique');
+  assert.equal((await app.deleteContractType(adminTok,saas.id)).ok,false,'built-in types cannot be deleted');
+  const c=await app.createContract(adminTok,cinput({title:'Office insurance',product:'Policy',seats:[]}));assert.equal(c.ok,true,c.detail);
+  let r=(await app.getContract(adminTok,c.id))[0];assert.equal(r.contractType.id,saas.id,'records default to SaaS, the type every earlier record was');
+  const st=await app.setContractType(adminTok,c.id,r.contract.revision,saved.id);assert.equal(st.ok,true,st.detail);
+  assert.equal((await app.setContractType(helpdeskTok,c.id,st.revision,dc.id)).ok,false,'people without edit access cannot retype a contract');
+  assert.equal((await app.setTypeValues(adminTok,c.id,st.revision,[['cover','gold']])).ok,false,'select values validated');
+  assert.equal((await app.setTypeValues(adminTok,c.id,st.revision,[['audit','soon']])).ok,false,'date values validated');
+  assert.equal((await app.setTypeValues(adminTok,c.id,st.revision,[['nope','x']])).ok,false,'unknown fields rejected');
+  assert.equal((await app.setTypeValues(adminTok,c.id,st.revision,[['broker','p_nobody']])).ok,false,'person fields need an active person');
+  const sv=await app.setTypeValues(adminTok,c.id,st.revision,[['policyNo','P-1'],['cover','full'],['audit','2026-10-05'],['broker',memberId]]);assert.equal(sv.ok,true,sv.detail);
+  r=(await app.getContract(adminTok,c.id))[0];assert.equal(r.contractType.name,'Insurance');const vals=Object.fromEntries(r.typeValues);assert.equal(vals.policyNo,'P-1');assert.equal(vals.broker,memberId);
+  const filter={q:'',status:'',responsible:'',onlyIncomplete:false,onlyDue:false,includeArchived:false};
+  const rows=await app.listContracts(adminTok,{...filter,typeId:[saved.id]});
+  assert.equal(rows.length,1);assert.equal(rows[0].typeName,'Insurance');assert.ok(rows[0].listFields.some(([k,v])=>k==='Policy number'&&v==='P-1'),JSON.stringify(rows[0].listFields));
+  assert.ok(!rows[0].listFields.some(([k])=>k==='Broker contact'),'fields marked not-in-list stay off the list');
+  assert.equal((await app.listContracts(adminTok,{...filter,typeId:[dc.id]})).length,0,'type filter excludes other types');
+  assert.equal((await app.deleteContractType(adminTok,saved.id)).ok,false,'a type in use cannot be deleted');
+  const empty=await app.saveContractType(adminTok,{...input,name:'Unused'});assert.equal((await app.deleteContractType(adminTok,empty.id)).ok,true,'an unused custom type can be deleted');
+  // filing from an upload: the review sends the type and its fields; invalid values are refused before anything is written; person e-mails resolve to directory ids
+  const memberEmail=(await app.whoami(memberTok))[0].email;
+  const up=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'typed-upload',text:'Fleet insurance policy P-77, full cover, broker '+memberEmail}));assert.equal(up.ok,true,up.detail);const src=await app.intakeCommit(adminTok,up.id);assert.equal(src.ok,true,src.detail);await settled(pic);
+  const bad=await app.createContractFromSource(adminTok,src.sourceId,{proposalId:[],destination:(await app.whoami(adminTok))[0].space,fields:[{field:'contractType',value:'Insurance'},{field:'type:cover',value:'gold'},{field:'title',value:'Fleet insurance'},{field:'trackStatus',value:'draft'}]});
+  assert.equal(bad.ok,false,'invalid type value refused');assert.ok(/Cover/.test(bad.detail),bad.detail);
+  const filed=await app.createContractFromSource(adminTok,src.sourceId,{proposalId:[],destination:(await app.whoami(adminTok))[0].space,fields:[{field:'contractType',value:'Insurance'},{field:'type:policyNo',value:'P-77'},{field:'type:cover',value:'full'},{field:'type:broker',value:memberEmail},{field:'title',value:'Fleet insurance'},{field:'trackStatus',value:'draft'}]});
+  assert.equal(filed.ok,true,filed.detail);
+  const fr=(await app.getContract(adminTok,filed.contractId))[0];assert.equal(fr.contractType.name,'Insurance');const fv=Object.fromEntries(fr.typeValues);assert.equal(fv.policyNo,'P-77');assert.equal(fv.cover,'full');assert.equal(fv.broker,memberId,'person e-mail resolved to the directory id');
+  const unknown=await app.createContractFromSource(adminTok,src.sourceId,{proposalId:[],destination:(await app.whoami(adminTok))[0].space,fields:[{field:'contractType',value:'Insurance'},{field:'type:nope',value:'x'},{field:'title',value:'Again'},{field:'trackStatus',value:'draft'}]});assert.equal(unknown.ok,false);
+  // typed date reminder: the audit is 25 days out, the 30-day threshold fires once the contract is active
+  const t2=await app.setTerms(adminTok,c.id,sv.revision,{...TERMS,renewalDate:'2026-12-09',noticeMonths:[],noticeDays:[30n]},'Confirmed');assert.equal(t2.ok,true,t2.detail);
+  r=(await app.getContract(adminTok,c.id))[0];assert.equal(r.contract.terms.noticeDate,'2026-11-09','notice date derived from the notice period');
+  assert.equal((await app.setStatus(adminTok,c.id,t2.revision,'active','Confirmed')).ok,true);
+  await pic.advanceTime(121_000);await settled(pic);await pic.advanceTime(31_000);await settled(pic);
+  hub.setPrincipal(owner);const items=(await hub.myNotifications('',100n)).items;
+  const audit=items.find(n=>n.title.includes('Next audit'));assert.ok(audit,'typed date reminder fires: '+JSON.stringify(items.map(i=>i.title)));
+  assert.ok(audit.title.includes('2026-10-05')&&audit.title.includes('Office insurance'),audit.title);
+  const renewal=items.find(n=>n.title.includes('cancel by'));assert.ok(renewal,'renewal reminder names the cancellation deadline: '+JSON.stringify(items.map(i=>i.title)));
+  assert.ok(renewal.title.includes('2026-11-09')&&renewal.title.includes('renews 2026-12-09')&&renewal.title.includes('EUR'),renewal.title);
+  assert.ok(renewal.url.includes('/c/'+c.id),renewal.url);
+  await pic.advanceTime(6*3600_000);await settled(pic);await pic.advanceTime(31_000);await settled(pic);
+  const again=(await hub.myNotifications('',100n)).items;assert.equal(again.filter(n=>n.title.includes('Next audit')).length,1,'typed reminder not repeated for the same threshold');
  }finally{await pic.tearDown();}
 });
 

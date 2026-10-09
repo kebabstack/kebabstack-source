@@ -2,6 +2,7 @@ import {renderAssignments} from "./license-assignment.js";
 import {renderSaas} from "./saas-workspace.js";
 import { analysisPending, proposalIds, watchAnalysis, analysisFeedback, busyButton } from "./analysis-progress.js";
 import { commercialFields, renderCommercialDetails } from "./commercial-details.js";
+import { renderTypeFields } from "./type-fields.js";
 import { uploadDocument } from "./document-upload.js";
 import { renderIntakeReview } from "./intake-review.js";
 import { idlFactory } from "./idl.js";
@@ -33,6 +34,9 @@ const SSTATUS_LBL = { received: "RECEIVED", processing: "PROCESSING", review: "R
 const RULE_LBL = { senderAddress: "sender address", senderDomain: "sender domain", customerRef: "customer reference", subjectContains: "subject contains" };
 const KIND_LBL = { offer: "offer", negotiation: "negotiation", order_confirmation: "order confirmation", invoice: "invoice", renewal_notice: "renewal notice", price_change: "price change", cancellation_request: "cancellation request", cancellation_confirmation: "cancellation confirmation", amendment: "amendment", signature_request: "awaiting signature", execution_reported: "signing reported — unverified", other: "other", unclear: "unclear" };
 for (const [key,label] of commercialFields) FIELD_LBL[key]=label;
+FIELD_LBL.contractType = "Contract type";
+let contractTypesCache = [];
+async function loadTypes(force = false) { if (contractTypesCache.length && !force) return contractTypesCache; try { contractTypesCache = await backend.listContractTypes(hubTok); } catch (_) { contractTypesCache = []; } for (const t of contractTypesCache) for (const f of t.fields) FIELD_LBL["type:" + f.key] = `${f.title} (${t.name})`; return contractTypesCache; }
 const tag = (st, lbl) => `<span class="tag ${esc(st)}"><span class="dot"></span>${esc(lbl || st)}</span>`;
 const days = (d) => (d === null || d === undefined ? "" : (N(d) < 0 ? `${-N(d)} days ago` : N(d) === 0 ? "today" : `in ${N(d)} days`));
 let toastT = null;
@@ -138,7 +142,7 @@ async function routeView() {
     if (!(await chooseSpace(m[1], false))) return;
     history.replaceState(null, "", "#/" + m[2]); return route();
   }
-  if(h === "#/tasks"){setNav("today");return enterToday();}
+  if(h === "#/tasks"){setNav("tasks");return enterToday();}
   if(h === "#/contracts/advanced"){setNav("contracts");return enterContracts();}
   if(h === "#/settings") {setNav("settings");return enterSaas("settings");}
   if(h === "#/reports") {setNav("today");return enterSaas("reports");}
@@ -156,7 +160,7 @@ async function routeView() {
   if (h.startsWith("#/docs")) { setNav("docs"); show("viewDocs"); return; }
   setNav("today"); return enterSaas("overview");
 }
-async function enterSaas(page,id=null){show("viewSaas");return renderSaas($("saasBody"),{api:backend,token:hubTok,stale:viewGuard("saas"),space:currentSpace,me,canWrite:isStaff(),download,toast},page,id);}
+async function enterSaas(page,id=null){show("viewSaas");return renderSaas($("saasBody"),{api:backend,token:hubTok,stale:viewGuard("saas"),space:currentSpace,me,canWrite:isStaff(),isAdmin:isAdmin(),listTypes:()=>loadTypes(true),download,toast},page,id);}
 async function route() {
   const token = hubTok, hash = location.hash;
   try { return await routeView(); }
@@ -302,6 +306,7 @@ function bindSpaceRelay(token, staleView) {
 
 /* ============================== pickers (hub directory · contracts) ============================== */
 // people: onPick({ id, email, displayName }) — ids are hub person ids, the only thing the backend stores
+function attachPickerEl(input, list, onPick) { const id = "tfp-" + Math.random().toString(36).slice(2); input.id = id; list.id = id + "-list"; return attachPicker(id, list.id, onPick); }
 function attachPicker(inputId, listId, onPick, exclude) {
   const input = $(inputId), list = $(listId);
   let timer = 0;
@@ -326,7 +331,7 @@ function attachContractPicker(inputId, listId, onPick) {
     const q = input.value.trim();
     if (q.length < 1) { list.classList.add("hidden"); return; }
     let rows = [];
-    try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false }); } catch (_) {}
+    try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] }); } catch (_) {}
     list.innerHTML = rows.slice(0, 12).map((r) => `<div data-cid="${r.id}" data-name="${esc(r.title)}">${esc(r.title)}<small>${esc(r.vendor)}${r.product ? " · " + esc(r.product) : ""} · ${esc(CSTATUS_LBL[r.status] || r.status)}</small></div>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">no contract matches</div>';
     list.classList.remove("hidden");
   }, 180); };
@@ -487,10 +492,11 @@ async function enterIntake(id, analysis = null) {
     return;
   }
   body.innerHTML='<div class="intake-progress" role="status"><span class="reading-orbit" aria-hidden="true">▤</span><h3>Opening the original…</h3></div>';
+  const typesForReview=await loadTypes();
   let monitor;
   const render = (view, outcome = null) => {
     monitor?.stop();
-    const ui = renderIntakeReview(body, {view, spaces, currentSpace, canEdit:isStaff(), canTransfer:spaceRoleName()==="owner", stale, api:backend, token, me,
+    const ui = renderIntakeReview(body, {view, spaces, currentSpace, types:typesForReview, canEdit:isStaff(), canTransfer:spaceRoleName()==="owner", stale, api:backend, token, me,
       remove:()=>trashItem("source",BigInt(id),view.source.subject),
       retry:async()=>{const r=await backend.reprocessSource(token,BigInt(id));if(stale())return r;if(r.ok)startWatch({...view,source:{...view.source,status:"received",note:""}},{requested:true,baseline:proposalIds(monitor?.latest()||view)});return r;},
       download:async did=>{const d=opt(await backend.documentData(token,did));if(!stale()&&d) download(d.name,d.bytes instanceof Uint8Array?d.bytes:new Uint8Array(d.bytes),d.mime);},
@@ -665,7 +671,7 @@ async function renderProposals(root, proposals, ctx) {
     if (other) {
       const inp = other.querySelector("[data-other-in]"), list = other.querySelector("[data-other-list]"), chipEl = box.querySelector("[data-other-chip]");
       let timer = 0;
-      inp.oninput = () => { clearTimeout(timer); timer = setTimeout(async () => { const q = inp.value.trim(); if (!q) { list.classList.add("hidden"); return; } let rows = []; try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false }); } catch (_) {} list.innerHTML = rows.slice(0, 12).map((r) => `<div data-cid="${r.id}" data-name="${esc(r.title)}">${esc(r.title)}<small>${esc(r.vendor)} · ${esc(CSTATUS_LBL[r.status] || r.status)}</small></div>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">no contract matches</div>'; list.classList.remove("hidden"); }, 180); };
+      inp.oninput = () => { clearTimeout(timer); timer = setTimeout(async () => { const q = inp.value.trim(); if (!q) { list.classList.add("hidden"); return; } let rows = []; try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] }); } catch (_) {} list.innerHTML = rows.slice(0, 12).map((r) => `<div data-cid="${r.id}" data-name="${esc(r.title)}">${esc(r.title)}<small>${esc(r.vendor)} · ${esc(CSTATUS_LBL[r.status] || r.status)}</small></div>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">no contract matches</div>'; list.classList.remove("hidden"); }, 180); };
       list.onclick = (e) => { const d = e.target.closest("[data-cid]"); if (!d) return; otherPicked = Number(d.dataset.cid); chipEl.innerHTML = `<span class="chipp">${esc(d.dataset.name)}</span>`; inp.value = ""; list.classList.add("hidden"); };
       inp.onblur = () => setTimeout(() => list.classList.add("hidden"), 200);
     }
@@ -708,14 +714,15 @@ let cTimer = 0;
 function enterContracts() { show("viewContracts"); return loadContracts(); }
 async function loadContracts() {
   const viewToken = hubTok, staleView = viewGuard("loadContracts");
+  const types = await loadTypes(); if (staleView()) return; const sel = $("cType"); if (sel.options.length !== types.length + 1) { const keep = sel.value; sel.innerHTML = '<option value="">Any type</option>' + types.map((t) => `<option value="${t.id}">${esc(t.icon)} ${esc(t.name)}</option>`).join(""); sel.value = keep; }
   $("cList").innerHTML = `<div class="empty">Loading…</div>`;
   let rows = [];
-  try { rows = await backend.listContracts(hubTok, { q: $("cQ").value.trim(), status: $("cStatus").value, responsible: "", onlyIncomplete: $("cIncomplete").checked, onlyDue: $("cDue").checked, includeArchived: $("cArchived").checked }); } catch (e) { if (staleView()) return; $("cList").innerHTML = `<div class="empty">Could not load: ${esc(String(e).slice(0, 160))}</div>`; return; }
+  try { rows = await backend.listContracts(hubTok, { q: $("cQ").value.trim(), status: $("cStatus").value, responsible: "", onlyIncomplete: $("cIncomplete").checked, onlyDue: $("cDue").checked, includeArchived: $("cArchived").checked, typeId: $("cType").value ? [BigInt($("cType").value)] : [] }); } catch (e) { if (staleView()) return; $("cList").innerHTML = `<div class="empty">Could not load: ${esc(String(e).slice(0, 160))}</div>`; return; }
   if (staleView()) return;
   if (!rows.length) { $("cList").innerHTML = `<div class="empty">${$("cQ").value || $("cStatus").value || $("cDue").checked || $("cIncomplete").checked ? "No contract matches these filters." : "No contracts yet. Create one, import your sheet under Workspace tools → Import, or let the first message create a draft."}</div>`; return; }
-  $("cList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Contract</th><th>Status</th><th>Amount</th><th>Cancel by</th><th>Decide by</th><th>Responsible</th><th>Seats</th><th>Open</th></tr></thead><tbody>` + rows.map((c) => {
+  $("cList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Contract</th><th>Type</th><th>Status</th><th>Amount</th><th>Cancel by</th><th>Decide by</th><th>Responsible</th><th>Seats</th><th>Open</th></tr></thead><tbody>` + rows.map((c) => {
     const dd = c.daysToDecide.length ? N(c.daysToDecide[0]) : null;
-    return `<tr class="rowlink" data-c="${c.id}"><td><b style="font-weight:500">${esc(c.title)}</b><div class="kv">${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}${c.complete ? "" : ' · <span style="color:var(--ks-accent)">terms incomplete</span>'}</div></td><td>${tag(c.status, CSTATUS_LBL[c.status] || c.status)}</td><td class="num">${esc(c.amount)}${c.interval ? `<div class="kv">${esc(INTERVAL_LBL[c.interval] || c.interval)}</div>` : ""}</td><td class="mono">${fmtDay(c.noticeDate)}</td><td class="mono">${fmtDay(c.decideBy)}${dd !== null ? `<div class="kv" ${dd <= 14 ? 'style="color:var(--ks-accent)"' : ""}>${esc(days(dd))}</div>` : ""}</td><td>${esc(c.responsibleName || (c.responsible ? c.responsible : "—"))}</td><td class="num">${c.seats.length ? `${N(c.holders)}/${N(c.seats[0])}${c.unusedSeats.length && N(c.unusedSeats[0]) > 0 ? `<div class="kv">${N(c.unusedSeats[0])} unused</div>` : ""}` : ""}</td><td class="num">${N(c.openProposals) ? `${N(c.openProposals)} proposal${N(c.openProposals) === 1 ? "" : "s"}` : ""}${N(c.openTasks) ? `<div>${N(c.openTasks)} task${N(c.openTasks) === 1 ? "" : "s"}</div>` : ""}</td></tr>`;
+    return `<tr class="rowlink" data-c="${c.id}"><td><b style="font-weight:500">${esc(c.title)}</b><div class="kv">${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}${c.complete ? "" : ' · <span style="color:var(--ks-accent)">terms incomplete</span>'}</div></td><td>${esc(c.typeIcon)} ${esc(c.typeName)}${c.listFields.length ? `<div class="kv">${c.listFields.map(([k, v]) => esc(k) + ": " + esc(v)).join(" · ")}</div>` : ""}</td><td>${tag(c.status, CSTATUS_LBL[c.status] || c.status)}</td><td class="num">${esc(c.amount)}${c.interval ? `<div class="kv">${esc(INTERVAL_LBL[c.interval] || c.interval)}</div>` : ""}</td><td class="mono">${fmtDay(c.noticeDate)}</td><td class="mono">${fmtDay(c.decideBy)}${dd !== null ? `<div class="kv" ${dd <= 14 ? 'style="color:var(--ks-accent)"' : ""}>${esc(days(dd))}</div>` : ""}</td><td>${esc(c.responsibleName || (c.responsible ? c.responsible : "—"))}</td><td class="num">${c.seats.length ? `${N(c.holders)}/${N(c.seats[0])}${c.unusedSeats.length && N(c.unusedSeats[0]) > 0 ? `<div class="kv">${N(c.unusedSeats[0])} unused</div>` : ""}` : ""}</td><td class="num">${N(c.openProposals) ? `${N(c.openProposals)} proposal${N(c.openProposals) === 1 ? "" : "s"}` : ""}${N(c.openTasks) ? `<div>${N(c.openTasks)} task${N(c.openTasks) === 1 ? "" : "s"}</div>` : ""}</td></tr>`;
   }).join("") + `</tbody></table></div>`;
   $("cList").querySelectorAll("tr[data-c]").forEach((r) => { r.onclick = () => { location.hash = "#/c/" + r.dataset.c; }; });
 }
@@ -744,7 +751,7 @@ async function enterRecord(id, tabName) {
   $("rTitle").textContent = c.title; $("rStatusTag").innerHTML = tag(c.status, CSTATUS_LBL[c.status] || c.status);
   $("rSub").innerHTML = `${esc(c.tags.find(t=>t.startsWith("document-type:"))?.slice(14)||"contract")} · ${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}${c.customerRef ? ` · ref <span class="mono">${esc(c.customerRef)}</span>` : ""} · responsible <b>${esc(r.responsibleName || "nobody")}</b>${c.deputy ? " · deputy " + esc(r.deputyName || c.deputy) : ""} · ${esc(c.visibility)}${c.tags.length ? " · " + c.tags.filter(t=>!t.startsWith("document-type:")).map(esc).join(", ") : ""} · revision ${N(c.revision)}${c.origin ? ` · <span class="mono">${esc(c.origin)}</span>` : ""}`;
   $("rDelete").classList.toggle("hidden",!r.canEdit); $("rDelete").onclick=()=>trashItem("contract",c.id,c.title); $("rEdit").classList.toggle("hidden", !r.canEdit); $("rSetStatus").classList.toggle("hidden", !r.canEdit);
-  $("rSub").innerHTML = `${esc(c.vendor)} · Owner: <b>${esc(r.responsibleName||"Not assigned")}</b>`;
+  $("rSub").innerHTML = `${esc(r.contractType.icon)} ${esc(r.contractType.name)} · ${esc(c.vendor)} · Owner: <b>${esc(r.responsibleName||"Not assigned")}</b>`;
   const recordTabs=$("viewRecord").querySelector('.tabs');
   recordTabs.querySelectorAll('button').forEach(b=>{b.hidden=!['terms','seats','documents',tabName].includes(b.dataset.tab);if(b.dataset.tab==='terms')b.firstChild.textContent='Overview';if(b.dataset.tab==='seats')b.firstChild.textContent='People & licenses';});
   recordTabs.querySelector('[data-record-more]')?.remove();
@@ -766,6 +773,10 @@ async function enterRecord(id, tabName) {
   if(c.tags.some(tag=>['document-type:receipt','document-type:invoice'].includes(tag))){
     $('rTerms').innerHTML='<div class="scard"><h3>Document details</h3><div class="kvgrid">'+kv('Supplier',c.vendor)+kv('Product or service',c.product)+kv('Document total',money(t.amountMinor.length?t.amountMinor[0]:null,t.currency))+kv('Tax basis',t.taxBasis==='unknown'?'':t.taxBasis)+(t.interval?kv('Billing frequency shown',INTERVAL_LBL[t.interval]||t.interval):'')+kv('Notes and payment details',t.note,'Not stated')+'</div>'+(r.canEdit?'<div class="btnrow"><button class="pill outline sm" id="rEditTerms">Edit details</button></div>':'')+'</div><div class="notice soft">This record keeps the billing document. It does not itself create renewal obligations or verify payment. The original is available in Documents.</div>';
   }
+  const typeHost=document.createElement('section');typeHost.className='scard type-details';$('rTerms').append(typeHost);
+  const typeNames={};for(const f of r.contractType.fields)if(f.kind==='person'){const v=(r.typeValues.find(([k])=>k===f.key)||[])[1];if(v)typeNames[v]=r.holderNames.find(h=>h[0]===v)?.[1]||r.viewerNames.find(h=>h[0]===v)?.[1]||(v===c.responsible?r.responsibleName:v===c.deputy?r.deputyName:'');}
+  const typesForRecord=await loadTypes();if(staleView())return;
+  renderTypeFields(typeHost,{record:r,types:typesForRecord,names:typeNames,save:values=>backend.setTypeValues(hubTok,c.id,c.revision,values),setType:typeId=>backend.setContractType(hubTok,c.id,c.revision,typeId),pickPerson:(input,list)=>{attachPickerEl(input,list,(p)=>{input.value=p.displayName;input.dataset.pid=p.id;});},done:()=>enterRecord(id,tabName),stale:staleView});
   const commercialHost=document.createElement('section');commercialHost.className='scard commercial-details';$('rTerms').append(commercialHost);
   const commercialToken=hubTok;
   renderCommercialDetails(commercialHost,{record:r,save:fields=>backend.setCommercialDetails(commercialToken,c.id,c.revision,fields),done:()=>enterRecord(id,tabName),stale:staleView});
@@ -773,7 +784,7 @@ async function enterRecord(id, tabName) {
   const ef = $("rEditFuture"); if (ef) ef.onclick = () => openTerms(true);
   if(tabName==='terms'){
     const cards=[...$('rTerms').querySelectorAll(':scope > .scard')];
-    for(const card of cards.slice(1)){const details=document.createElement('details');details.className='scard';const title=card.querySelector('h3')?.textContent||'More details';details.innerHTML='<summary>'+esc(title.replace(/ADD|EDIT/g,''))+'</summary>';card.replaceWith(details);details.append(card);}
+    for(const card of cards.slice(1)){const details=document.createElement('details');details.className='scard';const title=card.querySelector('h3')?.textContent||'More details';details.innerHTML='<summary>'+esc(title.replace(/ADD|EDIT/g,''))+'</summary>';details.open=card.classList.contains('type-details')&&!!card.querySelector('.kvgrid');card.replaceWith(details);details.append(card);}
   }
   // proposals
   await renderProposals($("rProposals"), r.proposals, { candidates: [], onDone: () => enterRecord(id, tabName) });
@@ -884,6 +895,7 @@ function openEdit(rec) {
   $("edTitleIn").value = ed.input.title; $("edVendor").value = ed.input.vendor; $("edProduct").value = ed.input.product; $("edRef").value = ed.input.customerRef; $("edVis").value = ed.input.visibility; $("edSeats").value = ed.input.seats.length ? N(ed.input.seats[0]) : ""; $("edTags").value = ed.input.tags.join(", ");
   $("edRespChip").innerHTML = ed.input.responsible ? chip(ed.names[ed.input.responsible] || ed.input.responsible, ed.input.responsible) : ""; $("edDepChip").innerHTML = ed.input.deputy ? chip(ed.names[ed.input.deputy] || ed.input.deputy, ed.input.deputy) : ""; renderViewers();
   ["edRespIn", "edDepIn", "edViewIn"].forEach((i) => { $(i).value = ""; }); $("edRespIn").disabled = !isStaff() || currentSpace?.kind === "personal"; $("edDepIn").disabled = currentSpace?.kind === "personal"; $("edViewIn").disabled = currentSpace?.kind === "personal"; setStatus("edStatus", "", "");
+  loadTypes().then((types) => { const sel = $("edType"); sel.innerHTML = types.filter((t) => t.enabled).map((t) => `<option value="${t.id}">${esc(t.icon)} ${esc(t.name)}</option>`).join(""); sel.value = rec ? String(rec.contractType.id) : String(types[0]?.id || 1); $("edTypeRow").classList.toggle("hidden", !!rec); });
   $("editDrawer").classList.add("on"); $("edTitleIn").focus();
 }
 $("rEdit").onclick = () => openEdit(cur);
@@ -899,7 +911,7 @@ $("edSave").onclick = () => withAction($("edSave"), "edStatus", async (token) =>
   const r = ed.id === null ? await backend.createContract(token, input) : await backend.updateContract(token, ed.id, ed.revision, input);
   if (token !== hubTok) return;
   if (!r.ok) { setStatus("edStatus", "err", r.detail); return; }
-  if (wasNew) { editor.id = r.id; editor.revision = r.revision || 1n; }
+  if (wasNew) { editor.id = r.id; editor.revision = r.revision || 1n; const chosen = $("edType").value; if (chosen && String(contractTypesCache[0]?.id) !== chosen) { const t = await backend.setContractType(token, r.id, 1n, BigInt(chosen)); if (t.ok) editor.revision = t.revision; } }
   if (editor.sourceId) {
     const linked = await backend.linkSource(token, editor.sourceId, [editor.id], []);
     if (token !== hubTok) return;

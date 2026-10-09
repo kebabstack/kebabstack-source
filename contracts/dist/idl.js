@@ -17,16 +17,18 @@ export const idlFactory = ({ IDL }) => {
   const AuditRow = IDL.Record({ after: IDL.Text, at: IDL.Int, before: IDL.Text, contractId: IDL.Nat, id: IDL.Nat, sourceId: IDL.Opt(IDL.Nat), what: IDL.Text, who: IDL.Text });
   const CommercialField = IDL.Record({ field: IDL.Text, value: IDL.Text });
   const Contract = IDL.Record({ createdAt: IDL.Int, createdBy: IDL.Text, customerRef: IDL.Text, deputy: IDL.Text, futureTerms: IDL.Opt(Terms), holders: IDL.Vec(IDL.Text), id: IDL.Nat, origin: IDL.Text, product: IDL.Text, responsible: IDL.Text, revision: IDL.Nat, seats: IDL.Opt(IDL.Nat), status: IDL.Text, tags: IDL.Vec(IDL.Text), terms: Terms, title: IDL.Text, updatedAt: IDL.Int, vendor: IDL.Text, viewers: IDL.Vec(IDL.Text), visibility: IDL.Text });
+  const FieldDef = IDL.Record({ inList: IDL.Bool, key: IDL.Text, kind: IDL.Text, options: IDL.Vec(IDL.Text), remind: IDL.Bool, required: IDL.Bool, title: IDL.Text });
+  const ContractType = IDL.Record({ builtin: IDL.Bool, description: IDL.Text, enabled: IDL.Bool, fields: IDL.Vec(FieldDef), hasSeats: IDL.Bool, icon: IDL.Text, id: IDL.Nat, name: IDL.Text });
   const DocumentRow = IDL.Record({ createdAt: IDL.Int, hasText: IDL.Bool, hash: IDL.Text, id: IDL.Nat, link: IDL.Text, mime: IDL.Text, name: IDL.Text, size: IDL.Nat, sourceId: IDL.Nat, status: IDL.Text });
   const Evidence = IDL.Record({ partId: IDL.Text, quote: IDL.Text });
   const Change = IDL.Record({ basis: IDL.Text, evidence: IDL.Vec(Evidence), field: IDL.Text, newValue: IDL.Text, oldValue: IDL.Text });
   const ProposalView = IDL.Record({ assignee: IDL.Text, assigneeName: IDL.Text, baseRevision: IDL.Nat, candidates: IDL.Vec(IDL.Nat), changes: IDL.Vec(Change), contractId: IDL.Opt(IDL.Nat), contractTitle: IDL.Text, createdAt: IDL.Int, currentRevision: IDL.Nat, decidedAt: IDL.Int, decidedBy: IDL.Text, decidedByName: IDL.Text, id: IDL.Nat, kind: IDL.Text, note: IDL.Text, snoozedUntil: IDL.Int, sourceId: IDL.Nat, sourceSubject: IDL.Text, status: IDL.Text, summary: IDL.Text, uncertainties: IDL.Vec(IDL.Text) });
-  const ContractRow = IDL.Record({ amount: IDL.Text, complete: IDL.Bool, daysToDecide: IDL.Opt(IDL.Int), decideBy: IDL.Text, end: IDL.Text, holders: IDL.Nat, id: IDL.Nat, interval: IDL.Text, noticeDate: IDL.Text, openProposals: IDL.Nat, openTasks: IDL.Nat, product: IDL.Text, renewalDate: IDL.Text, responsible: IDL.Text, responsibleName: IDL.Text, seats: IDL.Opt(IDL.Nat), status: IDL.Text, title: IDL.Text, unusedSeats: IDL.Opt(IDL.Int), updatedAt: IDL.Int, vendor: IDL.Text });
-  const Record = IDL.Record({ audit: IDL.Vec(AuditRow), canEdit: IDL.Bool, commercialDetails: IDL.Vec(CommercialField), contract: Contract, deputyName: IDL.Text, documents: IDL.Vec(DocumentRow), holderNames: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Bool)), proposals: IDL.Vec(ProposalView), responsibleName: IDL.Text, row: ContractRow, rules: IDL.Vec(Rule), sources: IDL.Vec(SourceRow), tasks: IDL.Vec(TaskRow), viewerNames: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)) });
+  const ContractRow = IDL.Record({ amount: IDL.Text, complete: IDL.Bool, daysToDecide: IDL.Opt(IDL.Int), decideBy: IDL.Text, end: IDL.Text, holders: IDL.Nat, id: IDL.Nat, interval: IDL.Text, listFields: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), noticeDate: IDL.Text, openProposals: IDL.Nat, openTasks: IDL.Nat, product: IDL.Text, renewalDate: IDL.Text, responsible: IDL.Text, responsibleName: IDL.Text, seats: IDL.Opt(IDL.Nat), status: IDL.Text, title: IDL.Text, typeIcon: IDL.Text, typeId: IDL.Nat, typeName: IDL.Text, unusedSeats: IDL.Opt(IDL.Int), updatedAt: IDL.Int, vendor: IDL.Text });
+  const Record = IDL.Record({ audit: IDL.Vec(AuditRow), canEdit: IDL.Bool, commercialDetails: IDL.Vec(CommercialField), contract: Contract, contractType: ContractType, deputyName: IDL.Text, documents: IDL.Vec(DocumentRow), holderNames: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Bool)), proposals: IDL.Vec(ProposalView), responsibleName: IDL.Text, row: ContractRow, rules: IDL.Vec(Rule), sources: IDL.Vec(SourceRow), tasks: IDL.Vec(TaskRow), typeValues: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), viewerNames: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)) });
   const Proposal = IDL.Record({ assignee: IDL.Text, baseRevision: IDL.Nat, candidates: IDL.Vec(IDL.Nat), changes: IDL.Vec(Change), contractId: IDL.Opt(IDL.Nat), createdAt: IDL.Int, decidedAt: IDL.Int, decidedBy: IDL.Text, id: IDL.Nat, kind: IDL.Text, note: IDL.Text, observationId: IDL.Nat, snoozedUntil: IDL.Int, sourceId: IDL.Nat, status: IDL.Text, summary: IDL.Text, uncertainties: IDL.Vec(IDL.Text) });
   const Progress = IDL.Record({ bindings: IDL.Vec(IDL.Text), checkedAt: IDL.Int, open: IDL.Nat, sources: IDL.Nat, state: IDL.Text, total: IDL.Nat });
   const CostRevision = IDL.Record({ at: IDL.Int, terms: Terms });
-  const PortfolioRow = IDL.Record({ assigned: IDL.Nat, canEdit: IDL.Bool, commercial: IDL.Vec(CommercialField), contract: Contract, groups: IDL.Vec(IDL.Text), hasKey: IDL.Bool, history: IDL.Vec(CostRevision), ownerName: IDL.Text });
+  const PortfolioRow = IDL.Record({ assigned: IDL.Nat, canEdit: IDL.Bool, commercial: IDL.Vec(CommercialField), contract: Contract, groups: IDL.Vec(IDL.Text), hasKey: IDL.Bool, hasSeats: IDL.Bool, history: IDL.Vec(CostRevision), listFields: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), ownerName: IDL.Text, typeIcon: IDL.Text, typeId: IDL.Nat, typeName: IDL.Text });
   const Policy = IDL.Record({ days: IDL.Vec(IDL.Nat), enabled: IDL.Bool, groups: IDL.Vec(IDL.Text), hubAdmins: IDL.Bool, owner: IDL.Bool, spaceOwners: IDL.Bool });
   const LegacyGrant = IDL.Record({ email: IDL.Text, role: IDL.Text, source: IDL.Text });
   const PermissionStatus = IDL.Record({ app: IDL.Text, directoryAt: IDL.Int, legacy: IDL.Vec(LegacyGrant), legacyGroups: IDL.Vec(IDL.Record({ name: IDL.Text, role: IDL.Text })), model: IDL.Nat, revision: IDL.Text });
@@ -41,6 +43,7 @@ export const idlFactory = ({ IDL }) => {
   const ImportRow = IDL.Record({ exists: IDL.Opt(IDL.Nat), line: IDL.Nat, ok: IDL.Bool, problems: IDL.Vec(IDL.Text), title: IDL.Text, vendor: IDL.Text });
   const Document = IDL.Record({ blobId: IDL.Opt(IDL.Nat), createdAt: IDL.Int, hash: IDL.Text, id: IDL.Nat, link: IDL.Text, mime: IDL.Text, name: IDL.Text, size: IDL.Nat, sourceId: IDL.Nat, status: IDL.Text, textBlob: IDL.Opt(IDL.Nat) });
   const DirectoryRow = IDL.Record({ active: IDL.Bool, attributes: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), displayName: IDL.Text, email: IDL.Text, externalId: IDL.Text, firstName: IDL.Text, id: IDL.Opt(IDL.Text), lastName: IDL.Text, source: IDL.Text });
+  const ContractTypeInput = IDL.Record({ description: IDL.Text, enabled: IDL.Bool, fields: IDL.Vec(FieldDef), hasSeats: IDL.Bool, icon: IDL.Text, id: IDL.Opt(IDL.Nat), name: IDL.Text });
   const ContractInput = IDL.Record({ customerRef: IDL.Text, deputy: IDL.Text, holders: IDL.Vec(IDL.Text), product: IDL.Text, responsible: IDL.Text, seats: IDL.Opt(IDL.Nat), tags: IDL.Vec(IDL.Text), title: IDL.Text, vendor: IDL.Text, viewers: IDL.Vec(IDL.Text), visibility: IDL.Text });
   const Context = IDL.Record({ checkedAt: IDL.Int, items: IDL.Vec(Item), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   const Case = IDL.Record({ desk: IDL.Text, dueAt: IDL.Opt(IDL.Int), key: IDL.Text, person: IDL.Text, revision: IDL.Int, state: IDL.Text, ticket: IDL.Nat, url: IDL.Text });
@@ -60,6 +63,7 @@ export const idlFactory = ({ IDL }) => {
     createContractFromSource: IDL.Func([IDL.Text, IDL.Nat, IDL.Record({ destination: IDL.Text, fields: IDL.Vec(IDL.Record({ field: IDL.Text, value: IDL.Text })), proposalId: IDL.Opt(IDL.Nat) })], [IDL.Record({ contractId: IDL.Nat, detail: IDL.Text, ok: IDL.Bool })], []),
     createSpace: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, id: IDL.Text, ok: IDL.Bool })], []),
     decideProposal: IDL.Func([IDL.Text, IDL.Nat, IDL.Record({ accept: IDL.Vec(IDL.Record({ field: IDL.Text, value: IDL.Text })), expectedRevision: IDL.Nat, newContract: IDL.Bool, note: IDL.Text, target: IDL.Opt(IDL.Nat) })], [IDL.Record({ contractId: IDL.Nat, detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
+    deleteContractType: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     deletePermanently: IDL.Func([IDL.Text, IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     directory: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(IDL.Record({ department: IDL.Text, displayName: IDL.Text, email: IDL.Text, id: IDL.Text }))], ["query"]),
     directoryGroups: IDL.Func([IDL.Text], [IDL.Vec(IDL.Record({ members: IDL.Nat, name: IDL.Text }))], ["query"]),
@@ -93,7 +97,8 @@ export const idlFactory = ({ IDL }) => {
     intakeCommit: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, sourceId: IDL.Nat, status: IDL.Text })], []),
     licenseAssignment: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ groups: IDL.Vec(IDL.Text), people: IDL.Vec(IDL.Record({ active: IDL.Bool, direct: IDL.Bool, id: IDL.Text, name: IDL.Text })) }))], ["query"]),
     linkSource: IDL.Func([IDL.Text, IDL.Nat, IDL.Opt(IDL.Nat), IDL.Opt(IDL.Record({ kind: IDL.Text, value: IDL.Text }))], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
-    listContracts: IDL.Func([IDL.Text, IDL.Record({ includeArchived: IDL.Bool, onlyDue: IDL.Bool, onlyIncomplete: IDL.Bool, q: IDL.Text, responsible: IDL.Text, status: IDL.Text })], [IDL.Vec(ContractRow)], ["query"]),
+    listContractTypes: IDL.Func([IDL.Text], [IDL.Vec(ContractType)], ["query"]),
+    listContracts: IDL.Func([IDL.Text, IDL.Record({ includeArchived: IDL.Bool, onlyDue: IDL.Bool, onlyIncomplete: IDL.Bool, q: IDL.Text, responsible: IDL.Text, status: IDL.Text, typeId: IDL.Opt(IDL.Nat) })], [IDL.Vec(ContractRow)], ["query"]),
     listProposals: IDL.Func([IDL.Text, IDL.Text, IDL.Opt(IDL.Nat)], [IDL.Vec(ProposalView)], ["query"]),
     listRules: IDL.Func([IDL.Text, IDL.Opt(IDL.Nat)], [IDL.Vec(Rule)], ["query"]),
     listSources: IDL.Func([IDL.Text, IDL.Text, IDL.Opt(IDL.Nat)], [IDL.Vec(SourceRow)], ["query"]),
@@ -113,10 +118,12 @@ export const idlFactory = ({ IDL }) => {
     reprocessSource: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     retryNotification: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     revealLicenseKey: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Text)], []),
+    saveContractType: IDL.Func([IDL.Text, ContractTypeInput], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
     saveLicenseKey: IDL.Func([IDL.Text, IDL.Opt(IDL.Nat), IDL.Nat, IDL.Record({ expires: IDL.Text, key: IDL.Text, note: IDL.Text, ownerId: IDL.Text, seats: IDL.Opt(IDL.Nat), tool: IDL.Text, vendor: IDL.Text })], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
     seedDemo: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setAdminEmails: IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setCommercialDetails: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(CommercialField)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
+    setContractType: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
     setFutureTerms: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Opt(Terms)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
     setHub: IDL.Func([IDL.Text], [IDL.Bool], []),
     setLicenseAssignments: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
@@ -128,6 +135,7 @@ export const idlFactory = ({ IDL }) => {
     setStatus: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
     setTerms: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, Terms, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
     setTrashed: IDL.Func([IDL.Text, IDL.Text, IDL.Nat, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setTypeValues: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
     signOut: IDL.Func([IDL.Text], [], []),
     snoozeProposal: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     snoozeTask: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),

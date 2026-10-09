@@ -13,3 +13,8 @@
 
 /* Keep financial figures readable on narrow phones; never split the amount across cards. */
 @media(max-width:480px){.saas-stats{grid-template-columns:1fr}.saas-stat>strong{overflow-wrap:normal;word-break:normal}}
+
+/* contract type tag in the portfolio table (0.13.0) */
+.saas-type{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--ks-surface-muted,rgba(0,0,0,.05));font-size:12px;white-space:nowrap;color:var(--ks-text-muted,inherit)}
+.saas-toolbar select#saasType{max-width:220px}
+.saas-types{margin-top:16px}

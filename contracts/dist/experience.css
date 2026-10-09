@@ -91,3 +91,8 @@ button.document-link[aria-busy=true]{justify-content:flex-start}
 @media(max-width:640px){.trash-row{align-items:flex-start;flex-direction:column;gap:16px}.trash-actions{justify-content:flex-start}}
 
 .spacecontrols{margin-left:0;flex:1}.spacebar .in{min-height:76px}.spaceaccess{margin-right:auto}
+
+.type-fields input,.type-fields select{width:100%;min-width:70px;padding:5px 7px;font-size:12px}.type-fields input[type=checkbox]{width:16px;min-width:0}.type-details .kvgrid em.muted{font-style:normal;color:var(--ks-accent);font-size:11px}
+
+/* 0.13.0: a card wrapped into a collapsible section keeps its own heading for re-rendering; the summary shows it instead */
+details.scard > .scard > h3:first-child{display:none}

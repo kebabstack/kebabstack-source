@@ -57,3 +57,13 @@ contract, the consumer, and what was done or deliberately left.
 2. Trust: device location from Assets.
 3. SDK consolidation of the six connector copies.
 4. Operations coverage for Forms and Crumbs.
+
+## Contracts 0.13.0 — contract types (same day, second pass)
+
+- Contracts: shared core + admin-defined type fields; starter types for SaaS, datacenter, telecom, hardware,
+  services, rent, other. Existing records stay SaaS. Reminders run against the cancellation deadline.
+- Hub: `hub_personContext` lists a person named in a type field ("Access contact", "Broker contact"), so the
+  Desk person panel and offboarding see them. `seatsHeld` only counts types with seats. No new Operations keys.
+- Desk: no change needed; the person panel reads the context items as before.
+- Docs: Contracts README (types, reminders), CHANGELOG 0.13.0. `docs/HUB-OPERATIONS.md` unchanged (no new metric).
+- Tests: `tests/security.test.mjs` "contract types" case; smoke fixture carries a datacenter record.

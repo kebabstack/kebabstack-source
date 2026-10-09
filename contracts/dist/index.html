@@ -178,8 +178,9 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
     <span class="spaceaccess" id="spaceAccess"></span><button class="pill outline sm" id="spaceManage">Manage workspace</button><button class="pill primary sm" id="spaceCreate">+ Teamspace</button></div>
   </div></div>
   <div class="mainnav"><div class="in">
-    <button data-nav="today" class="on"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Overview<span class="n hidden" id="nToday"></span></button>
-    <button data-nav="contracts"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>SaaS contracts</button>
+    <button data-nav="today" class="on"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Overview</button>
+    <button data-nav="tasks"><svg class="nav-icon nav-icon-todo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>To do<span class="n hidden" id="nToday"></span></button>
+    <button data-nav="contracts"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Contracts</button>
     <button data-nav="keys"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="m11 11 9 9m-5-5 3-3m-1 5 3-3"/></svg>License keys</button>
     <button data-nav="inbox"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4zM4 14h5l2 3h2l2-3h5M12 5v7m-3-3 3 3 3-3"/></svg>Inbox<span class="n hidden" id="nInbox"></span></button>
     <button data-nav="settings" id="navConn"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg>Settings</button>
@@ -198,7 +199,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
   <!-- ============================ today ============================ -->
   <section class="view" id="viewToday">
     <div class="wrap">
-      <div class="today-hero"><div><span class="eyebrow">WORKSPACE OVERVIEW</span><h2>A clear view of your agreements.</h2><p id="tContext">Review incoming documents, keep track of commitments and decide before deadlines.</p></div><div class="hero-actions"><button class="pill outline sm" id="tRefresh" aria-label="Refresh overview">Refresh</button><button class="pill primary sm spacewriter" id="tAdd">+ Add document</button></div></div><div id="tNext"></div>
+      <div class="today-hero"><div><span class="eyebrow">TO DO</span><h2>What needs a decision.</h2><p id="tContext">Incoming documents, proposals and deadlines for this workspace, oldest first.</p></div><div class="hero-actions"><button class="pill outline sm" id="tRefresh" aria-label="Refresh overview">Refresh</button><button class="pill primary sm spacewriter" id="tAdd">+ Add document</button></div></div><div id="tNext"></div>
       <div class="tgrid" id="tStats"></div>
       <div id="tBody"></div>
     </div>
@@ -263,7 +264,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
       </div>
       <div class="filters">
         <input aria-label="Search contracts" type="search" id="cQ" placeholder="Search title, vendor, product, reference…" autocomplete="off">
-        <select id="cStatus" aria-label="Filter by contract status"><option value="">Any status</option><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
+        <select id="cType" aria-label="Filter by contract type"><option value="">Any type</option></select><select id="cStatus" aria-label="Filter by contract status"><option value="">Any status</option><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
         <label class="ck"><input type="checkbox" id="cDue"> decision within 60 days</label>
         <label class="ck"><input type="checkbox" id="cIncomplete"> missing terms</label>
         <label class="ck"><input type="checkbox" id="cArchived"> include archived</label>
@@ -436,6 +437,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 <div class="drawer" id="editDrawer">
   <div class="dhead"><b style="font-family:var(--ks-ui);font-size:15px" id="edTitle">Contract</b><span style="flex:1"></span><button class="linkbtn" id="edClose">Close</button></div>
   <div class="dbody">
+    <div id="edTypeRow"><label>Contract type</label><select id="edType"></select></div>
     <label>Title</label><input type="text" id="edTitleIn" maxlength="200">
     <div class="row"><div><label>Counterparty / vendor</label><input type="text" id="edVendor" maxlength="200"></div><div><label>Agreement / product / plan</label><input type="text" id="edProduct" maxlength="200"></div></div>
     <label>Reference (as written on the agreement)</label><input type="text" id="edRef" maxlength="120">

@@ -1,4 +1,4 @@
-# Contracts — SaaS costs, licenses and renewals
+# Contracts — agreements of every kind, costs, licenses and renewals
 
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical identity, semantic light/dark colours and common navigation/control sizes. Product access and workflow boundaries remain explicit.
 
@@ -232,3 +232,13 @@ data boundaries and rollout. App roles remain managed in Hub.
 ## Hub Operations
 
 This app contributes aggregate-only, Admin-authorized summaries to Hub → Operations. See [definitions, access and freshness](../docs/HUB-OPERATIONS.md). Individual records remain in the app.
+
+## Contract types (0.13.0)
+
+Every contract shares the same core: counterparty, product or agreement, reference, responsible person and deputy, visibility, status, confirmed terms (amount, interval, start, end, renewal rule, notice rule, last cancellation date, internal decision date), documents, tasks and history. A **contract type** adds fields of its own. Admins define types under **Settings → Contract types**: each field has a key, a label, a kind (text, number, date, choice, amount, yes/no, person), whether it is required, whether it shows in the list, and for dates whether it triggers reminders. Starters: SaaS / Subscription (seats and license holders), Datacenter / Colocation (site, racks, power, bandwidth, SLA, access-list owner, access review date), Telecom / Connectivity, Hardware lease / Maintenance, Services / Consulting, Rent / Real estate, Other. Built-in types can be edited and disabled, not deleted.
+
+The record shows the type and its details beside the terms; the Contracts list shows the type and the fields marked for it, filters by type and searches those fields. New contracts pick a type in the editor. When a document is uploaded, the AI reading classifies it into a type and proposes the type's field values (`contractType`, `type:<key>`); the review screen shows the type (changeable) with its fields above the shared terms, hides seats for types without seats, and files everything with one **Save contract**. A person field accepts an e-mail and is stored as the directory id. Invalid type values are refused before anything is written. The sidebar reads Overview · To do · Contracts · License keys · Inbox · Settings; the Contract types card sits on the Settings page next to the renewal reminders (Hub admins). Offboarding in Desk asks about seats only for types that have seats; a person named in a type field appears in that person's context in Desk.
+
+## Reminder schedule (0.13.0)
+
+Reminder marks (default 90, 60, 30, 7 days) run against the **last cancellation date** when the record has one, otherwise against the renewal or end date. Recipients: the policy's picks (responsible person, space owners, Hub admins, groups), always the deputy, and the register's admins when nobody in the space is active. Auto-renewing contracts whose renewal date passed roll forward by their billing interval with an audit entry. A cancellation date typed by a person is kept; a computed one follows changes of the renewal date, the notice rule and the lead-days setting. Reminders do not depend on the app address; without one the notification carries no link.

@@ -1,4 +1,4 @@
-type VendorTerms =
+type VendorTerms = 
  record {
    checkedAt: int;
    detail: text;
@@ -9,7 +9,7 @@ type VendorTerms =
    status: text;
    url: text;
  };
-type TrashRow =
+type TrashRow = 
  record {
    canRestore: bool;
    deletedAt: int;
@@ -18,7 +18,7 @@ type TrashRow =
    kind: text;
    title: text;
  };
-type Terms =
+type Terms = 
  record {
    amountMinor: opt int;
    currency: text;
@@ -36,7 +36,7 @@ type Terms =
    taxBasis: text;
    unitMinor: opt int;
  };
-type TaskRow =
+type TaskRow = 
  record {
    assignee: text;
    assigneeName: text;
@@ -52,7 +52,7 @@ type TaskRow =
    snoozedUntil: int;
    title: text;
  };
-type Task =
+type Task = 
  record {
    assignee: text;
    auto: bool;
@@ -67,7 +67,7 @@ type Task =
    snoozedUntil: int;
    title: text;
  };
-type SpaceView =
+type SpaceView = 
  record {
    archived: bool;
    description: text;
@@ -77,18 +77,18 @@ type SpaceView =
    revision: nat;
    role: SpaceRole;
  };
-type SpaceRole =
+type SpaceRole = 
  variant {
    editor;
    owner;
    viewer;
  };
-type SpaceMember =
+type SpaceMember = 
  record {
    pid: text;
    role: SpaceRole;
  };
-type Space =
+type Space = 
  record {
    archived: bool;
    createdAt: int;
@@ -99,7 +99,7 @@ type Space =
    revision: nat;
    updatedAt: int;
  };
-type SourceRow =
+type SourceRow = 
  record {
    contractId: opt nat;
    contractTitle: text;
@@ -116,7 +116,7 @@ type SourceRow =
    status: text;
    subject: text;
  };
-type Source =
+type Source = 
  record {
    cc: vec text;
    contractId: opt nat;
@@ -141,7 +141,7 @@ type Source =
    textBlob: opt nat;
    to: vec text;
  };
-type Snapshot =
+type Snapshot = 
  record {
    checkedAt: int;
    metrics: vec record {
@@ -155,7 +155,7 @@ type Snapshot =
             unavailable;
           };
  };
-type Settings =
+type Settings = 
  record {
    adminCount: nat;
    adminEmails: vec text;
@@ -183,7 +183,7 @@ type Settings =
    tzOffsetMinutes: int;
    version: text;
  };
-type Rule =
+type Rule = 
  record {
    confirmed: bool;
    contractId: nat;
@@ -193,12 +193,13 @@ type Rule =
    kind: text;
    value: text;
  };
-type Record =
+type Record = 
  record {
    audit: vec AuditRow;
    canEdit: bool;
    commercialDetails: vec CommercialField;
    contract: Contract;
+   contractType: ContractType;
    deputyName: text;
    documents: vec DocumentRow;
    holderNames: vec record {
@@ -212,12 +213,16 @@ type Record =
    rules: vec Rule;
    sources: vec SourceRow;
    tasks: vec TaskRow;
+   typeValues: vec record {
+                     text;
+                     text;
+                   };
    viewerNames: vec record {
                       text;
                       text;
                     };
  };
-type ProposalView =
+type ProposalView = 
  record {
    assignee: text;
    assigneeName: text;
@@ -241,7 +246,7 @@ type ProposalView =
    summary: text;
    uncertainties: vec text;
  };
-type Proposal =
+type Proposal = 
  record {
    assignee: text;
    baseRevision: nat;
@@ -261,7 +266,7 @@ type Proposal =
    summary: text;
    uncertainties: vec text;
  };
-type Progress =
+type Progress = 
  record {
    bindings: vec text;
    checkedAt: int;
@@ -270,7 +275,7 @@ type Progress =
    state: text;
    total: nat;
  };
-type PortfolioRow =
+type PortfolioRow = 
  record {
    assigned: nat;
    canEdit: bool;
@@ -278,10 +283,18 @@ type PortfolioRow =
    contract: Contract;
    groups: vec text;
    hasKey: bool;
+   hasSeats: bool;
    history: vec CostRevision;
+   listFields: vec record {
+                     text;
+                     text;
+                   };
    ownerName: text;
+   typeIcon: text;
+   typeId: nat;
+   typeName: text;
  };
-type Policy =
+type Policy = 
  record {
    days: vec nat;
    enabled: bool;
@@ -290,7 +303,7 @@ type Policy =
    owner: bool;
    spaceOwners: bool;
  };
-type PermissionStatus =
+type PermissionStatus = 
  record {
    app: text;
    directoryAt: int;
@@ -302,7 +315,7 @@ type PermissionStatus =
    model: nat;
    revision: text;
  };
-type OwnedObject =
+type OwnedObject = 
  record {
    id: text;
    kind: text;
@@ -310,7 +323,7 @@ type OwnedObject =
    title: text;
    updatedAt: int;
  };
-type Observation =
+type Observation = 
  record {
    createdAt: int;
    effectiveDate: text;
@@ -324,7 +337,7 @@ type Observation =
    summary: text;
    uncertainties: vec text;
  };
-type Manifest =
+type Manifest = 
  record {
    description: text;
    name: text;
@@ -332,19 +345,19 @@ type Manifest =
    version: text;
    wants: vec text;
  };
-type LogRow =
+type LogRow = 
  record {
    at: int;
    what: text;
    who: text;
  };
-type LegacyGrant =
+type LegacyGrant = 
  record {
    email: text;
    role: text;
    source: text;
  };
-type Job =
+type Job = 
  record {
    attempts: nat;
    createdAt: int;
@@ -356,7 +369,7 @@ type Job =
    ref: nat;
    step: text;
  };
-type Item =
+type Item = 
  record {
    detail: text;
    historical: bool;
@@ -366,7 +379,7 @@ type Item =
    status: text;
    title: text;
  };
-type IntakeMeta =
+type IntakeMeta = 
  record {
    attachments: vec IntakeAttachment;
    cc: vec text;
@@ -384,7 +397,7 @@ type IntakeMeta =
    "text": text;
    to: vec text;
  };
-type IntakeAttachment =
+type IntakeAttachment = 
  record {
    link: text;
    mime: text;
@@ -393,7 +406,7 @@ type IntakeAttachment =
    size: nat;
    textExtract: text;
  };
-type ImportRow =
+type ImportRow = 
  record {
    exists: opt nat;
    line: nat;
@@ -402,12 +415,22 @@ type ImportRow =
    title: text;
    vendor: text;
  };
-type Evidence =
+type FieldDef = 
+ record {
+   inList: bool;
+   key: text;
+   kind: text;
+   options: vec text;
+   remind: bool;
+   required: bool;
+   title: text;
+ };
+type Evidence = 
  record {
    partId: text;
    quote: text;
  };
-type DocumentRow =
+type DocumentRow = 
  record {
    createdAt: int;
    hasText: bool;
@@ -420,7 +443,7 @@ type DocumentRow =
    sourceId: nat;
    status: text;
  };
-type Document =
+type Document = 
  record {
    blobId: opt nat;
    createdAt: int;
@@ -434,7 +457,7 @@ type Document =
    status: text;
    textBlob: opt nat;
  };
-type DirectoryRow =
+type DirectoryRow = 
  record {
    active: bool;
    attributes: vec record {
@@ -449,12 +472,33 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
-type CostRevision =
+type CostRevision = 
  record {
    at: int;
    terms: Terms;
  };
-type ContractRow =
+type ContractTypeInput = 
+ record {
+   description: text;
+   enabled: bool;
+   fields: vec FieldDef;
+   hasSeats: bool;
+   icon: text;
+   id: opt nat;
+   name: text;
+ };
+type ContractType = 
+ record {
+   builtin: bool;
+   description: text;
+   enabled: bool;
+   fields: vec FieldDef;
+   hasSeats: bool;
+   icon: text;
+   id: nat;
+   name: text;
+ };
+type ContractRow = 
  record {
    amount: text;
    complete: bool;
@@ -464,6 +508,10 @@ type ContractRow =
    holders: nat;
    id: nat;
    interval: text;
+   listFields: vec record {
+                     text;
+                     text;
+                   };
    noticeDate: text;
    openProposals: nat;
    openTasks: nat;
@@ -474,11 +522,14 @@ type ContractRow =
    seats: opt nat;
    status: text;
    title: text;
+   typeIcon: text;
+   typeId: nat;
+   typeName: text;
    unusedSeats: opt int;
    updatedAt: int;
    vendor: text;
  };
-type ContractInput =
+type ContractInput = 
  record {
    customerRef: text;
    deputy: text;
@@ -492,7 +543,7 @@ type ContractInput =
    viewers: vec text;
    visibility: text;
  };
-type Contract =
+type Contract = 
  record {
    createdAt: int;
    createdBy: text;
@@ -515,7 +566,7 @@ type Contract =
    viewers: vec text;
    visibility: text;
  };
-type Context =
+type Context = 
  record {
    checkedAt: int;
    items: vec Item;
@@ -526,12 +577,12 @@ type Context =
           };
    total: nat;
  };
-type CommercialField =
+type CommercialField = 
  record {
    field: text;
    value: text;
  };
-type Change =
+type Change = 
  record {
    basis: text;
    evidence: vec Evidence;
@@ -539,7 +590,7 @@ type Change =
    newValue: text;
    oldValue: text;
  };
-type Case =
+type Case = 
  record {
    desk: text;
    dueAt: opt int;
@@ -550,7 +601,7 @@ type Case =
    ticket: nat;
    url: text;
  };
-type AuditRow =
+type AuditRow = 
  record {
    after: text;
    at: int;
@@ -561,14 +612,14 @@ type AuditRow =
    what: text;
    who: text;
  };
-type AiTestResult =
+type AiTestResult = 
  record {
    at: int;
    detail: text;
    model: text;
    ok: bool;
  };
-type AiStatus =
+type AiStatus = 
  record {
    callsToday: nat;
    canTest: bool;
@@ -701,6 +752,11 @@ service : {
             ok: bool;
             revision: nat;
           });
+  deleteContractType: (tok: text, id: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// Permanently remove one explicitly trashed item. No await: access, trash state and cleanup are atomic.
   deletePermanently: (tok: text, kind: text, id: nat) ->
    (record {
@@ -893,6 +949,7 @@ service : {
                 detail: text;
                 ok: bool;
               });
+  listContractTypes: (tok: text) -> (vec ContractType) query;
   /// The contracts this person may see, filtered: q (title/vendor/product/ref), status, responsible id, onlyIncomplete, onlyDue (decision within 60 days).
   listContracts: (tok: text, f:
    record {
@@ -902,6 +959,7 @@ service : {
      q: text;
      responsible: text;
      status: text;
+     typeId: opt nat;
    }) -> (vec ContractRow) query;
   /// Open proposals the person may decide (staff: all; others: their contracts), oldest first. status "" = open, else that status.
   listProposals: (tok: text, status: text, contractId: opt nat) ->
@@ -995,6 +1053,12 @@ service : {
       ok: bool;
     });
   revealLicenseKey: (tok: text, id: nat) -> (opt text);
+  saveContractType: (tok: text, input: ContractTypeInput) ->
+   (record {
+      detail: text;
+      id: nat;
+      ok: bool;
+    });
   saveLicenseKey: (tok: text, id: opt nat, rev: nat, input:
    record {
      expires: text;
@@ -1026,6 +1090,12 @@ service : {
                               ok: bool;
                               revision: nat;
                             });
+  setContractType: (tok: text, id: nat, expectedRevision: nat, typeId:
+   nat) -> (record {
+              detail: text;
+              ok: bool;
+              revision: nat;
+            });
   /// Future terms (an agreed change that starts later) — set, or clear with null.
   setFutureTerms: (tok: text, id: nat, expectedRevision: nat, t:
    opt Terms) -> (record {
@@ -1099,6 +1169,15 @@ service : {
       detail: text;
       ok: bool;
     });
+  setTypeValues: (tok: text, id: nat, expectedRevision: nat, values:
+   vec record {
+         text;
+         text;
+       }) -> (record {
+                detail: text;
+                ok: bool;
+                revision: nat;
+              });
   /// End this app session now (the hub session is separate).
   signOut: (tok: text) -> ();
   /// Remind me later: hides the proposal from Today until then; the contract's deadlines do not move.

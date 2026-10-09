@@ -67,7 +67,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // trusted relay identities (the mail worker) — intake lane only
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.12.1";
+  transient let BUILD_VERSION : Text = "0.13.0";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -557,7 +557,9 @@ persistent actor Contracts {
     if (args.reminderDays.size() > 6) return { ok = false; detail = "at most six reminder marks" };
     for (d in args.reminderDays.vals()) if (d > 365) return { ok = false; detail = "reminder marks: at most 365 days" };
     appUrl := norm(args.appUrl); orgName := norm(args.orgName);
+    let leadChanged = leadDays != args.leadDays;
     tzName := norm(args.tzName); tzOffsetMinutes := args.tzOffsetMinutes; leadDays := args.leadDays;
+    if (leadChanged) { for ((cid, c) in Map.entries(contracts)) { let nt = recompute({ c.terms with decideBy = "" }); if (nt.decideBy != c.terms.decideBy) { contracts.add(cid, { c with terms = nt }); rebuildTasks(cid) } }; lastReminderScan := 0 };
     reminderDays := Array.sort<Nat>(args.reminderDays, func(a, b) = Nat.compare(b, a)); mailboxAddress := lower(norm(args.mailboxAddress)); aiDailyBudget := args.aiDailyBudget;
     rebuildAllTasks();
     log(m.email, "settings updated");
@@ -610,6 +612,7 @@ persistent actor Contracts {
   let seatCases : Map.Map<Text, SeatCase> = Map.empty<Text, SeatCase>();
   func seatHeld(c : Contract, pid : Text, subjectActive : Bool) : Bool {
     if (c.status == "ended" or c.status == "archived" or c.status == "trash") return false;
+    if (not typeHasSeats(c.id)) return false;
     has(c.holders, pid) or (subjectActive and has(effectiveHolders(c), pid));
   };
   public shared ({ caller }) func hub_syncSeats(c : Hardware.Case) : async Hardware.Progress {
@@ -654,6 +657,8 @@ persistent actor Contracts {
       let holder = has(effectiveHolders(c), subject);
       let owner = c.responsible == subject;
       let deputy = c.deputy == subject;
+      let named = typeOfContract(c.id).fields.filter(func f = f.kind == "person" and valueOf(c.id, f.key) == subject);
+      if (named.size() > 0 and not (owner or deputy or holder)) out.add({ id = c.id.toText(); kind = "contract"; title = c.title; detail = c.vendor # " · " # typeOfContract(c.id).name # " · " # named[0].title; status = c.status; path = "#/s/" # contractSpace(c.id) # "/c/" # c.id.toText(); historical = c.status == "ended" or c.status == "archived" });
       if (owner or deputy or holder) out.add({ id = c.id.toText(); kind = if (holder) "license" else "contract"; title = c.title; detail = c.vendor # " · " # (if (owner) "Responsible" else if (deputy) "Deputy" else "License assigned") # (if (holder and owner) " · License assigned" else ""); status = c.status; path = "#/s/" # contractSpace(c.id) # "/c/" # c.id.toText(); historical = c.status == "ended" or c.status == "archived" });
     };
     Support.ready(out.toArray());
@@ -791,8 +796,190 @@ persistent actor Contracts {
   let licenseGroups : Map.Map<Nat, [Text]> = Map.empty();
   let renewalPolicies : Map.Map<Text, Saas.Policy> = Map.empty();
   let renewalMarks : Map.Map<Text, Bool> = Map.empty();
+  /// 0.13.0: whether a person confirmed the cancellation date (true) or it was computed from the rule (absent/false).
+  /// Computed dates follow the renewal date, the notice rule and the lead-days setting; confirmed ones never move by themselves.
+  let noticeConfirmed : Map.Map<Nat, Bool> = Map.empty();
+  func noticeIsConfirmed(cid : Nat) : Bool = Map.get(noticeConfirmed, Nat.compare, cid) ?? false;
+  /// Drop computed dates so recompute() derives them again from the current anchor and rule.
+  func refreshDerived(cid : Nat, t : Terms) : Terms = if (noticeIsConfirmed(cid)) ({ t with decideBy = "" }) else ({ t with noticeDate = ""; decideBy = "" });
   var lastReminderScan : Int = 0;
   let vendorTermChecks : Map.Map<Nat, Saas.VendorTerms> = Map.empty();
+  // ---- contract types (0.13.0): one shared core for every contract, admin-defined fields per type ----
+  /// kind: text | number | date | select | amount | bool | person. inList: shown in the list. remind: date fields that fire reminders.
+  public type FieldDef = { key : Text; title : Text; kind : Text; options : [Text]; required : Bool; inList : Bool; remind : Bool };
+  public type ContractType = { id : Nat; name : Text; icon : Text; description : Text; fields : [FieldDef]; hasSeats : Bool; enabled : Bool; builtin : Bool };
+  let contractTypes : Map.Map<Nat, ContractType> = Map.empty<Nat, ContractType>();
+  var nextContractTypeId : Nat = 1;
+  let contractTypeOf : Map.Map<Nat, Nat> = Map.empty<Nat, Nat>(); // contract id -> type id (missing = SaaS, the type every earlier record was)
+  let typeValues : Map.Map<Nat, [(Text, Text)]> = Map.empty<Nat, [(Text, Text)]>(); // contract id -> values of the type's fields
+  let typeRemindersSent : Map.Map<Text, Bool> = Map.empty<Text, Bool>();
+  transient let FIELD_KINDS : [Text] = ["text", "number", "date", "select", "amount", "bool", "person"];
+  func fd(key : Text, title : Text, kind : Text, options : [Text], required : Bool, inList : Bool, remind : Bool) : FieldDef = { key; title; kind; options; required; inList; remind };
+  /// Starter types. They are ordinary records afterwards: fields can be edited, builtin ones cannot be deleted.
+  func ensureTypes() {
+    if (Map.size(contractTypes) > 0) return;
+    let defs : [(Text, Text, Text, [FieldDef], Bool)] = [
+      ("SaaS / Subscription", "☁️", "Software used per seat or per plan; renewals, seats and license holders.", [fd("pricingModel", "Pricing model", "select", ["per seat", "flat", "usage based", "tiered"], false, true, false), fd("plan", "Plan / edition", "text", [], false, true, false), fd("dataRegion", "Data region", "text", [], false, false, false), fd("provisioning", "Sign-in & provisioning", "select", ["SSO + SCIM", "SSO", "none"], false, false, false)], true),
+      ("Datacenter / Colocation", "🏢", "Racks, power, connectivity and access at a hosting site.", [fd("site", "Site / address", "text", [], true, true, false), fd("rackUnits", "Racks or rack units", "number", [], false, true, false), fd("powerKw", "Power budget (kW)", "number", [], false, false, false), fd("bandwidth", "Bandwidth / cross-connects", "text", [], false, false, false), fd("slaClass", "SLA class", "select", ["99.9 %", "99.95 %", "99.99 %", "other"], false, true, false), fd("accessContact", "Access list owner", "person", [], false, false, false), fd("hardwareOwnership", "Hardware ownership", "select", ["ours", "vendor", "mixed"], false, false, false), fd("accessReview", "Next access-list review", "date", [], false, false, true)], false),
+      ("Telecom / Connectivity", "📡", "Lines, mobile plans and internet access.", [fd("serviceId", "Service / line id", "text", [], false, true, false), fd("bandwidth", "Bandwidth", "text", [], false, true, false), fd("sites", "Sites covered", "text", [], false, false, false), fd("supportHotline", "Support hotline", "text", [], false, false, false)], false),
+      ("Hardware lease / Maintenance", "🛠️", "Leased or maintained equipment with response times.", [fd("serials", "Serial numbers covered", "text", [], false, false, false), fd("responseTime", "Response time", "select", ["4 h", "next business day", "2 business days", "other"], false, true, false), fd("coverage", "Coverage (parts, labour, on-site)", "text", [], false, false, false), fd("warrantyEnd", "Warranty / coverage end", "date", [], false, true, true)], false),
+      ("Services / Consulting", "🤝", "People and projects billed by time or milestone.", [fd("dayRate", "Day rate", "amount", [], false, true, false), fd("budgetCap", "Budget cap", "amount", [], false, true, false), fd("deliverables", "Deliverables", "text", [], false, false, false), fd("acceptanceDate", "Acceptance / review date", "date", [], false, false, true)], false),
+      ("Rent / Real estate", "🏠", "Offices, storage and parking.", [fd("address", "Address", "text", [], true, true, false), fd("areaSqm", "Area (m²)", "number", [], false, true, false), fd("deposit", "Deposit", "amount", [], false, false, false), fd("indexation", "Indexation rule", "text", [], false, false, false), fd("handoverDate", "Handover / inspection date", "date", [], false, false, true)], false),
+      ("Other", "📄", "Anything else; the shared core fields only.", [], false),
+    ];
+    for ((name, icon, description, fields, hasSeats) in defs.vals()) {
+      let id = nextContractTypeId; nextContractTypeId += 1;
+      Map.add(contractTypes, Nat.compare, id, { id; name; icon; description; fields; hasSeats; enabled = true; builtin = true });
+    };
+  };
+  func typeIdOf(cid : Nat) : Nat { ensureTypes(); Map.get(contractTypeOf, Nat.compare, cid) ?? 1 };
+  func typeOfContract(cid : Nat) : ContractType { ensureTypes(); switch (Map.get(contractTypes, Nat.compare, typeIdOf(cid))) { case (?t) t; case null { switch (Map.get(contractTypes, Nat.compare, 1)) { case (?t) t; case null ({ id = 0; name = "Other"; icon = ""; description = ""; fields = []; hasSeats = false; enabled = true; builtin = true }) } } } };
+  func typeHasSeats(cid : Nat) : Bool = typeOfContract(cid).hasSeats;
+  func valuesOf(cid : Nat) : [(Text, Text)] = Map.get(typeValues, Nat.compare, cid) ?? [];
+  func valueOf(cid : Nat, key : Text) : Text { for ((k, v) in valuesOf(cid).vals()) if (k == key) return v; "" };
+  func fieldDef(t : ContractType, key : Text) : ?FieldDef = Array.find<FieldDef>(t.fields, func f = f.key == key);
+  func isTypeField(field : Text) : Bool = field == "contractType" or Text.startsWith(field, #text "type:");
+  /// Validate one typed value against its definition. null = fine.
+  func typeValueError(f : FieldDef, v : Text) : ?Text {
+    if (v == "") return null;
+    switch (f.kind) {
+      case ("number") { if (Nat.fromText(v) == null and parseAmountMinor(v) == null) ?("`" # f.title # "` must be a number") else null };
+      case ("date") { if (not validIso(v)) ?("`" # f.title # "` must be a date (YYYY-MM-DD)") else null };
+      case ("select") { if (not has(f.options, v)) ?("`" # f.title # "` must be one of: " # Text.join(f.options.vals(), ", ")) else null };
+      case ("amount") { if (parseAmountMinor(v) == null and Nat.fromText(v) == null) ?("`" # f.title # "` must be an amount") else null };
+      case ("bool") { if (v != "yes" and v != "no") ?("`" # f.title # "` must be yes or no") else null };
+      case ("person") { if (not activePid(v)) ?("`" # f.title # "` must be an active person from the directory") else null };
+      case (_) { if (v.size() > 1000) ?("`" # f.title # "` is too long") else null };
+    };
+  };
+  func findTypeByName(v : Text) : ?ContractType {
+    ensureTypes();
+    switch (Nat.fromText(v)) { case (?id) { switch (Map.get(contractTypes, Nat.compare, id)) { case (?t) return ?t; case null {} } }; case null {} };
+    let needle = lower(norm(v));
+    for ((_, t) in Map.entries(contractTypes)) if (lower(t.name) == needle) return ?t;
+    for ((_, t) in Map.entries(contractTypes)) if (Text.contains(lower(t.name), #text needle) and needle.size() >= 4) return ?t;
+    null;
+  };
+  /// Apply a type field from a proposal or the intake: "contractType" switches the type, "type:<key>" sets a value. null = applied.
+  /// Person fields may arrive as an e-mail (AI readings, the upload form); store the directory id.
+  func resolveTypeValue(f : FieldDef, v : Text) : Text {
+    if (f.kind == "person" and v != "" and not activePid(v)) { let pid = pidOf(lower(v)); if (pid != "" and activePid(pid)) return pid };
+    v;
+  };
+  func applyTypeField(cid : Nat, field : Text, value : Text) : ?Text {
+    let v0 = norm(value);
+    if (field == "contractType") {
+      switch (findTypeByName(v0)) {
+        case (?t) { if (not t.enabled) return ?("Contract type `" # t.name # "` is disabled"); Map.add(contractTypeOf, Nat.compare, cid, t.id); null };
+        case null ?("Unknown contract type: " # v0);
+      };
+    } else {
+      let key = Text.stripStart(field, #text "type:") ?? field;
+      let t = typeOfContract(cid);
+      let f = switch (fieldDef(t, key)) { case (?f) f; case null return ?("`" # key # "` is not a field of " # t.name) };
+      let v = resolveTypeValue(f, v0);
+      switch (typeValueError(f, v)) { case (?e) return ?e; case null {} };
+      var data = valuesOf(cid).filter(func (k, _) = k != key);
+      if (v != "") data := data.concat([(key, capText(v, 1000))]);
+      if (data.size() == 0) ignore Map.delete(typeValues, Nat.compare, cid) else Map.add(typeValues, Nat.compare, cid, data);
+      null;
+    };
+  };
+  func typeValueText(cid : Nat, field : Text) : Text {
+    if (field == "contractType") return typeOfContract(cid).name;
+    valueOf(cid, Text.stripStart(field, #text "type:") ?? field);
+  };
+  func listFields(c : Contract) : [(Text, Text)] {
+    let t = typeOfContract(c.id);
+    let out = List.empty<(Text, Text)>();
+    for (f in t.fields.vals()) if (f.inList) { let v = valueOf(c.id, f.key); if (v != "") List.add(out, (f.title, if (f.kind == "person") nameOf(v) else v)) };
+    List.toArray(out);
+  };
+  /// What the document assistant needs to know about the types in use (names, keys, kinds), so it can classify and fill them.
+  func typePrompt() : Text {
+    ensureTypes();
+    var out = " CONTRACT TYPES: classify each agreement with contractType (one of the names below) and fill its own fields as type:<key> values (text as written; dates YYYY-MM-DD; select values exactly as listed; person fields as the person's e-mail). Types:";
+    for ((_, t) in Map.entries(contractTypes)) if (t.enabled) {
+      out #= " [" # t.name # "]";
+      for (f in t.fields.vals()) out #= " type:" # f.key # " (" # f.title # ", " # f.kind # (if (f.options.size() > 0) ": " # Text.join(f.options.vals(), "|") else "") # ")";
+      out #= ";";
+    };
+    out # " Default to SaaS / Subscription for software, Other when unsure.";
+  };
+  public type ContractTypeInput = { id : ?Nat; name : Text; icon : Text; description : Text; fields : [FieldDef]; hasSeats : Bool; enabled : Bool };
+  public shared query func listContractTypes(tok : Text) : async [ContractType] {
+    switch (me(tok)) { case null []; case (?_) { ensureTypes(); Array.sort<ContractType>(Iter.toArray(Map.values(contractTypes)), func(a, b) = Nat.compare(a.id, b.id)) } };
+  };
+  public shared func saveContractType(tok : Text, input : ContractTypeInput) : async { ok : Bool; id : Nat; detail : Text } {
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; id = 0; detail = "admins only" } };
+    ensureTypes();
+    let name = capText(norm(input.name), 60);
+    if (name == "") return { ok = false; id = 0; detail = "Give the type a name" };
+    if (input.fields.size() > 30) return { ok = false; id = 0; detail = "At most 30 fields per type" };
+    let keys = List.empty<Text>();
+    for (f in input.fields.vals()) {
+      let key = norm(f.key); let title = capText(norm(f.title), 80);
+      if (key == "" or key.size() > 40 or title == "" or not has(FIELD_KINDS, f.kind)) return { ok = false; id = 0; detail = "Each field needs a key, a label and a known kind" };
+      if (key.chars().any(func ch = not (Char.isAlphabetic(ch) or Char.isDigit(ch) or ch == '_'))) return { ok = false; id = 0; detail = "Field keys use letters, digits and _ only: " # key };
+      if (has(List.toArray(keys), key)) return { ok = false; id = 0; detail = "Duplicate field key: " # key };
+      if (f.kind == "select" and f.options.size() == 0) return { ok = false; id = 0; detail = "A select field needs options: " # title };
+      List.add(keys, key);
+    };
+    let fields = Array.map<FieldDef, FieldDef>(input.fields, func f = { f with key = norm(f.key); title = capText(norm(f.title), 80); options = Array.map<Text, Text>(f.options, func o = capText(norm(o), 80)).filter(func o = o != "") });
+    switch (input.id) {
+      case (?id) {
+        let old = switch (Map.get(contractTypes, Nat.compare, id)) { case (?t) t; case null return { ok = false; id = 0; detail = "No such type" } };
+        for ((_, t) in Map.entries(contractTypes)) if (t.id != id and lower(t.name) == lower(name)) return { ok = false; id = 0; detail = "A type with that name exists" };
+        Map.add(contractTypes, Nat.compare, id, { old with name; icon = capText(norm(input.icon), 8); description = capText(norm(input.description), 300); fields; hasSeats = input.hasSeats; enabled = input.enabled });
+        log(m.id, "contract type updated: " # name);
+        { ok = true; id; detail = "" };
+      };
+      case null {
+        for ((_, t) in Map.entries(contractTypes)) if (lower(t.name) == lower(name)) return { ok = false; id = 0; detail = "A type with that name exists" };
+        let id = nextContractTypeId; nextContractTypeId += 1;
+        Map.add(contractTypes, Nat.compare, id, { id; name; icon = capText(norm(input.icon), 8); description = capText(norm(input.description), 300); fields; hasSeats = input.hasSeats; enabled = input.enabled; builtin = false });
+        log(m.id, "contract type added: " # name);
+        { ok = true; id; detail = "" };
+      };
+    };
+  };
+  public shared func deleteContractType(tok : Text, id : Nat) : async { ok : Bool; detail : Text } {
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+    let t = switch (Map.get(contractTypes, Nat.compare, id)) { case (?t) t; case null return { ok = false; detail = "No such type" } };
+    if (t.builtin) return { ok = false; detail = "Built-in types can be disabled, not deleted" };
+    for ((_, tid) in Map.entries(contractTypeOf)) if (tid == id) return { ok = false; detail = "Contracts still use this type; move them first" };
+    ignore Map.delete(contractTypes, Nat.compare, id);
+    log(m.id, "contract type deleted: " # t.name);
+    { ok = true; detail = "" };
+  };
+  public shared func setContractType(tok : Text, id : Nat, expectedRevision : Nat, typeId : Nat) : async { ok : Bool; revision : Nat; detail : Text } {
+    let m = switch (me(tok)) { case (?m) m; case null return { ok = false; revision = 0; detail = "no session" } };
+    let c = switch (editable(m, id)) { case (?c) c; case null return { ok = false; revision = 0; detail = "no such contract, or not yours to edit" } };
+    if (c.revision != expectedRevision) return { ok = false; revision = c.revision; detail = "This record changed. Reload before saving." };
+    ensureTypes();
+    let t = switch (Map.get(contractTypes, Nat.compare, typeId)) { case (?t) t; case null return { ok = false; revision = c.revision; detail = "No such type" } };
+    if (not t.enabled) return { ok = false; revision = c.revision; detail = "This type is disabled" };
+    let before = typeOfContract(id).name;
+    Map.add(contractTypeOf, Nat.compare, id, typeId);
+    putContract({ c with revision = c.revision + 1; updatedAt = now() });
+    audit(id, m.id, "contract type changed", before, t.name, null);
+    { ok = true; revision = c.revision + 1; detail = "" };
+  };
+  public shared func setTypeValues(tok : Text, id : Nat, expectedRevision : Nat, values : [(Text, Text)]) : async { ok : Bool; revision : Nat; detail : Text } {
+    let m = switch (me(tok)) { case (?m) m; case null return { ok = false; revision = 0; detail = "no session" } };
+    let c = switch (editable(m, id)) { case (?c) c; case null return { ok = false; revision = 0; detail = "no such contract, or not yours to edit" } };
+    if (c.revision != expectedRevision) return { ok = false; revision = c.revision; detail = "This record changed. Reload before saving." };
+    if (values.size() > 40) return { ok = false; revision = c.revision; detail = "Too many fields" };
+    let t = typeOfContract(id);
+    for ((k, v) in values.vals()) {
+      let f = switch (fieldDef(t, k)) { case (?f) f; case null return { ok = false; revision = c.revision; detail = "`" # k # "` is not a field of " # t.name } };
+      switch (typeValueError(f, norm(v))) { case (?e) return { ok = false; revision = c.revision; detail = e }; case null {} };
+    };
+    for ((k, v) in values.vals()) ignore applyTypeField(id, "type:" # k, v);
+    putContract({ c with revision = c.revision + 1; updatedAt = now() });
+    audit(id, m.id, "type details edited", "", Nat.toText(values.size()) # " field(s)", null);
+    { ok = true; revision = c.revision + 1; detail = "" };
+  };
   public type CostRevision = { at : Int; terms : Terms };
   let costRevisions : Map.Map<Nat, [CostRevision]> = Map.empty();
   func policyFor(sid : Text) : Saas.Policy = renewalPolicies.get(sid) ?? Saas.defaultPolicy;
@@ -830,10 +1017,10 @@ persistent actor Contracts {
     (p.owner and o.pid==c.responsible) or (p.spaceOwners and spaceRole(o.pid,contractSpace(c.id))==?#owner) or (p.hubAdmins and has(["owner","admin"],hubRoleOf(email))) or p.groups.any(func g=inGroup(email,g))
   };
 
-  public type PortfolioRow = { contract : Contract; ownerName : Text; groups : [Text]; assigned : Nat; canEdit : Bool; hasKey : Bool; commercial : [CommercialField]; history : [CostRevision] };
+  public type PortfolioRow = { contract : Contract; ownerName : Text; groups : [Text]; assigned : Nat; canEdit : Bool; hasKey : Bool; commercial : [CommercialField]; history : [CostRevision]; typeId : Nat; typeName : Text; typeIcon : Text; hasSeats : Bool; listFields : [(Text, Text)] };
   public shared query func portfolio(tok : Text) : async ?{ rows : [PortfolioRow]; policy : Saas.Policy; directoryAt : Int; canManage : Bool; people : Nat; } {
     let m = me(tok) ?? (return null);
-    ?{ rows = contracts.values().filter(func c = canSee(m,c)).map(func c = { contract=c; canEdit=canEdit(m,c); ownerName=nameOf(c.responsible); groups=licenseGroups.get(c.id) ?? []; assigned=effectiveHolders(c).filter(func p=activePid(p)).size(); hasKey=licenseSecrets.containsKey(c.id); commercial=commercial(c.id); history=costRevisions.get(c.id) ?? [] }).toArray(); policy=policyFor(m.space); directoryAt=lastDirectoryPull; canManage=spaceRole(m.id,m.space)==?#owner; people=people.values().filter(func u=u.active).size() }
+    ?{ rows = contracts.values().filter(func c = canSee(m,c)).map(func c { let ct = typeOfContract(c.id); ({ contract=c; canEdit=canEdit(m,c); ownerName=nameOf(c.responsible); groups=licenseGroups.get(c.id) ?? []; assigned=effectiveHolders(c).filter(func p=activePid(p)).size(); hasKey=licenseSecrets.containsKey(c.id); typeId=ct.id; typeName=ct.name; typeIcon=ct.icon; hasSeats=ct.hasSeats; listFields=listFields(c); commercial=commercial(c.id); history=costRevisions.get(c.id) ?? [] }) }).toArray(); policy=policyFor(m.space); directoryAt=lastDirectoryPull; canManage=spaceRole(m.id,m.space)==?#owner; people=people.values().filter(func u=u.active).size() }
   };
   public shared func setRenewalPolicy(tok : Text, p : Saas.Policy) : async { ok : Bool; detail : Text } {
     let m=me(tok) ?? (return {ok=false;detail="No session"});
@@ -876,34 +1063,79 @@ persistent actor Contracts {
     audit(id,m.id,"license key revealed","","Secret omitted",null);
     licenseSecrets.get(id)
   };
+  /// Who hears about a contract's deadlines: the policy's picks (responsible, space owners, hub admins, groups), always the
+  /// deputy, and app admins when nobody else active is left. Computed from one pass over the directory per scan.
+  type Roster = { pid : Text; email : Text; hubAdmin : Bool; appAdmin : Bool };
+  func buildRoster() : [Roster] {
+    let out = List.empty<Roster>();
+    for ((email, u) in people.entries()) if (u.active) List.add(out, { pid = pidOf(email); email; hubAdmin = has(["admin", "owner"], hubRoleOf(email)); appAdmin = roleOf(email) == "admin" });
+    List.toArray(out);
+  };
+  func reminderRecipients(c : Contract, sid : Text, p : Saas.Policy, roster : [Roster]) : [Text] {
+    let out = List.empty<Text>();
+    func add(pid : Text) { if (pid != "" and activePid(pid) and not has(List.toArray(out), pid) and pidCanSeeContract(pid, c)) List.add(out, pid) };
+    if (p.owner) add(c.responsible);
+    switch (Text.stripStart(c.deputy, #text "group:")) {
+      case (?g) { for (r in roster.vals()) if (inGroup(r.email, g)) add(r.pid) };
+      case null add(c.deputy);
+    };
+    if (p.spaceOwners) switch (spaces.get(sid)) { case (?sp) { for (x in sp.members.vals()) if (x.role == #owner) add(x.pid) }; case null {} };
+    if (p.hubAdmins) for (r in roster.vals()) if (r.hubAdmin) add(r.pid);
+    if (p.groups.size() > 0) for (r in roster.vals()) if (p.groups.any(func g = inGroup(r.email, g))) add(r.pid);
+    if (List.size(out) == 0) for (r in roster.vals()) if (r.appAdmin) add(r.pid); // nobody left in the space: the register's admins hear it
+    List.toArray(out);
+  };
+  func contractLabel(c : Contract) : Text = if (c.product != "") c.product else if (c.title != "") c.title else c.vendor;
+  /// Auto-renewing contracts whose renewal date passed roll forward by their interval (audited); nothing else is touched.
+  func rollForward(c : Contract) : Contract {
+    if (c.terms.renewalRule != "auto" or c.terms.renewalDate == "") return c;
+    let months = switch (c.terms.interval) { case ("month") 1; case ("quarter") 3; case ("year") 12; case (_) return c };
+    var next = c.terms.renewalDate; var guard = 0;
+    while ((daysUntil(next) ?? 0) < 0 and guard < 120) { next := addMonths(next, months); guard += 1 };
+    if (next == c.terms.renewalDate) return c;
+    let nt = recompute(refreshDerived(c.id, { c.terms with renewalDate = next }));
+    let n = { c with terms = nt; updatedAt = now() };
+    putContract(n);
+    audit(c.id, "system", "renewal rolled forward (auto-renew)", c.terms.renewalDate, next, null);
+    rebuildTasks(c.id);
+    n;
+  };
+  /// Deadline reminders. The schedule runs against the LAST CANCELLATION DATE when one is known (that is the date a person can
+  /// still act on), otherwise against the renewal or end date. Drafts with dates are included and say so. Past anchors of
+  /// auto-renewing contracts roll forward first. Titles carry the name, the dates, the days left and the amount.
   func sendSaasReminders() {
-    if(appUrl=="" or hubId=="")return;
-    for(c in contracts.values()) {
-      if(trashedContracts.containsKey(c.id) or not has(["active","cancelling"],c.status) or isBillingDocument(c))continue;
-      let sid=contractSpace(c.id);if(not spaceAcceptsIntake(sid))continue;
-      let p=policyFor(sid);if(not p.enabled)continue;
-      let anchor=if(c.terms.renewalDate!="")c.terms.renewalDate else c.terms.end;
-      if(anchor=="")continue;
-      let left=daysUntil(anchor) ?? (continue);var mark:Nat=366;
-      for(d in p.days.vals())if(left <= d and d < mark)mark:=d;
-      let early=c.terms.noticeDate!="" and c.terms.noticeDate < anchor and (daysUntil(c.terms.noticeDate) ?? 9999) <= 90;
-      if(mark==366 and not early)continue;
-      if(mark==366)mark:=365;
-      if(left < 0)mark:=0;
-      let occurrence=Nat.toText(c.id) # ":" # anchor # ":" # c.terms.noticeDate;
-      for((email,u) in people.entries())if(u.active){
-        let pid=pidOf(email);
-        let selected=(p.owner and pid==c.responsible) or (p.spaceOwners and spaceRole(pid,sid)==?#owner) or (p.hubAdmins and has(["admin","owner"],hubRoleOf(email))) or p.groups.any(func g=inGroup(email,g));
-        if(not selected or not pidCanSeeContract(pid,c))continue;
-        let prefix=occurrence # ":" # pid # ":";
+    if (hubId == "") return;
+    let roster = buildRoster();
+    for (c0 in Iter.toArray(contracts.values()).vals()) {
+      if (trashedContracts.containsKey(c0.id) or not has(["active", "cancelling", "draft"], c0.status) or isBillingDocument(c0)) continue;
+      let c = rollForward(c0);
+      let sid = contractSpace(c.id);
+      let p = policyFor(sid); if (not p.enabled) continue;
+      let anchor = if (c.terms.renewalDate != "") c.terms.renewalDate else c.terms.end;
+      if (anchor == "") continue;
+      let deadline = if (c.terms.noticeDate != "" and c.terms.noticeDate < anchor) c.terms.noticeDate else anchor;
+      let left = daysUntil(deadline) ?? (continue);
+      var mark : Nat = 366;
+      for (d in p.days.vals()) if (left <= d and d < mark) mark := d;
+      if (mark == 366) continue;
+      if (left < 0) mark := 0;
+      let occurrence = Nat.toText(c.id) # ":" # anchor # ":" # c.terms.noticeDate;
+      let recipients = reminderRecipients(c, sid, p, roster);
+      if (recipients.size() == 0) continue;
+      let name = contractLabel(c);
+      let when = if (left < 0) "deadline passed " # deadline # " (" # Int.toText(-left) # " days ago)" else if (left == 0) "today" else "in " # Int.toText(left) # " days (" # deadline # ")";
+      let what = if (isKey(c)) "license expires" else if (deadline != anchor) "cancel by" else if (c.terms.renewalRule == "auto") "renews" else "ends";
+      let amount = amountText(c.terms);
+      let title = (if (c.status == "draft") "Draft · " else "") # capText(name, 60) # " — " # what # " " # when # (if (deadline != anchor) " · renews " # anchor else "") # (if (amount != "") " · " # amount else "");
+      for (pid in recipients.vals()) {
+        let prefix = occurrence # ":" # pid # ":";
+        if (renewalMarks.containsKey(prefix # Nat.toText(mark))) continue;
+        queueNotify(pid, capText(title, 160), "#/c/" # Nat.toText(c.id), "contracts.deadline", "saas-" # prefix # Nat.toText(mark));
         // A late first observation sends the most urgent milestone only, never a backlog.
-        if(renewalMarks.containsKey(prefix # Nat.toText(mark)))continue;
-        let title=capText(c.product # (if(isKey(c))" — license expires " else " — renewal ") # anchor # (if(c.terms.noticeDate!="")"; cancel by " # c.terms.noticeDate else "; check renewal terms"),120);
-        queueNotify(pid,title,linkTo("#/c/" # Nat.toText(c.id)),"contracts.deadline","saas-" # prefix # Nat.toText(mark));
-        for(d in p.days.vals())if(d >= mark)renewalMarks.add(prefix # Nat.toText(d),true);
-        renewalMarks.add(prefix # Nat.toText(mark),true)
-      }
-    }
+        for (d in p.days.vals()) if (d >= mark) renewalMarks.add(prefix # Nat.toText(d), true);
+        renewalMarks.add(prefix # Nat.toText(mark), true);
+      };
+    };
   };
 
   // =====================================================================
@@ -1104,6 +1336,7 @@ persistent actor Contracts {
     };
     contractSpaces.add(id, m.space);
     putContract(c);
+    ensureTypes();
     audit(id, m.id, "created", "", c.title, null);
     rebuildTasks(id);
     { ok = true; id; detail = "" };
@@ -1128,7 +1361,11 @@ persistent actor Contracts {
     let c = switch (editable(m, id)) { case (?c) c; case null return { ok = false; revision = 0; detail = "no such contract, or not yours to edit" } };
     if (c.revision != expectedRevision) return { ok = false; revision = c.revision; detail = "someone changed this contract meanwhile — reload and compare" };
     switch (validTerms(t)) { case (?e) return { ok = false; revision = c.revision; detail = e }; case null {} };
-    let nt = recompute({ t with currency = Text.toUpper(norm(t.currency)) });
+    let typed = { t with currency = Text.toUpper(norm(t.currency)) };
+    // A cancellation date equal to what the rule gives is computed, not confirmed; anything else typed is the person's word.
+    let derived = recompute({ typed with noticeDate = ""; decideBy = "" });
+    if (typed.noticeDate != "" and typed.noticeDate != derived.noticeDate) Map.add(noticeConfirmed, Nat.compare, id, true) else ignore Map.delete(noticeConfirmed, Nat.compare, id);
+    let nt = recompute({ typed with decideBy = (if (typed.decideBy != "" and typed.decideBy != derived.decideBy) typed.decideBy else "") });
     let n = { c with terms = nt; revision = c.revision + 1; updatedAt = now() };
     putContract(n);
     audit(id, m.id, "terms set by hand" # (if (norm(note) == "") "" else " — " # norm(note)), termsText(c.terms), termsText(nt), null);
@@ -1162,7 +1399,7 @@ persistent actor Contracts {
   func termsText(t : Terms) : Text = amountText(t) # (if (t.taxBasis == "unknown") "" else " " # t.taxBasis) # (switch (t.quantity) { case (?q) " · " # Nat.toText(q) # " units"; case null "" }) # (if (t.start == "") "" else " · from " # t.start) # (if (t.end == "") "" else " · to " # t.end) # (if (t.renewalRule == "") "" else " · renewal " # t.renewalRule) # (if (t.renewalDate == "") "" else " " # t.renewalDate) # (switch (t.noticeMonths, t.noticeDays) { case (?mo, _) " · notice " # Nat.toText(mo) # " months"; case (_, ?dd) " · notice " # Nat.toText(dd) # " days"; case _ "" }) # (if (t.noticeDate == "") "" else " · cancel by " # t.noticeDate);
 
   // ---- views ----
-  public type ContractRow = { id : Nat; title : Text; vendor : Text; product : Text; status : Text; responsible : Text; responsibleName : Text; amount : Text; interval : Text; end : Text; renewalDate : Text; noticeDate : Text; decideBy : Text; daysToDecide : ?Int; seats : ?Nat; holders : Nat; unusedSeats : ?Int; openProposals : Nat; openTasks : Nat; complete : Bool; updatedAt : Int };
+  public type ContractRow = { id : Nat; title : Text; vendor : Text; product : Text; status : Text; responsible : Text; responsibleName : Text; amount : Text; interval : Text; end : Text; renewalDate : Text; noticeDate : Text; decideBy : Text; daysToDecide : ?Int; seats : ?Nat; holders : Nat; unusedSeats : ?Int; openProposals : Nat; openTasks : Nat; complete : Bool; updatedAt : Int; typeId : Nat; typeName : Text; typeIcon : Text; listFields : [(Text, Text)] };
   func row(c : Contract) : ContractRow {
     let activeHolders = effectiveHolders(c).filter(func h = activePid(h)).size();
     {
@@ -1170,6 +1407,7 @@ persistent actor Contracts {
       amount = amountText(c.terms); interval = c.terms.interval; end = c.terms.end; renewalDate = c.terms.renewalDate; noticeDate = c.terms.noticeDate; decideBy = c.terms.decideBy; daysToDecide = daysUntil(c.terms.decideBy);
       seats = c.seats; holders = activeHolders; unusedSeats = (switch (c.seats) { case (?s) ?(s - activeHolders); case null null });
       openProposals = countOpenProposalsFor(c.id); openTasks = countOpenTasksFor(c.id); complete = isComplete(c); updatedAt = c.updatedAt;
+      typeId = typeIdOf(c.id); typeName = typeOfContract(c.id).name; typeIcon = typeOfContract(c.id).icon; listFields = listFields(c);
     };
   };
   /// A contract has the data the deadline engine needs: amount, interval, an anchor date and a notice rule (or a confirmed cancellation date).
@@ -1179,7 +1417,7 @@ persistent actor Contracts {
     (c.terms.amountMinor != null or c.terms.interval == "none") and c.terms.interval != "" and (c.terms.renewalRule == "indefinite" or ((c.terms.renewalDate != "" or c.terms.end != "") and (c.terms.noticeDate != "" or c.terms.noticeDays != null or c.terms.noticeMonths != null or c.terms.renewalRule == "none")));
   };
   /// The contracts this person may see, filtered: q (title/vendor/product/ref), status, responsible id, onlyIncomplete, onlyDue (decision within 60 days).
-  public shared query func listContracts(tok : Text, f : { q : Text; status : Text; responsible : Text; onlyIncomplete : Bool; onlyDue : Bool; includeArchived : Bool }) : async [ContractRow] {
+  public shared query func listContracts(tok : Text, f : { q : Text; status : Text; responsible : Text; onlyIncomplete : Bool; onlyDue : Bool; includeArchived : Bool; typeId : ?Nat }) : async [ContractRow] {
     let m = switch (me(tok)) { case (?m) m; case null return [] };
     let needle = lower(norm(f.q));
     func keep(c : Contract) : Bool {
@@ -1187,6 +1425,7 @@ persistent actor Contracts {
       if (c.status == "archived" and not f.includeArchived and f.status != "archived") return false;
       if (f.status != "" and c.status != f.status) return false;
       if (f.responsible != "" and c.responsible != f.responsible) return false;
+      switch (f.typeId) { case (?t) { if (typeIdOf(c.id) != t) return false }; case null {} };
       if (needle != "" and not (Text.contains(lower(c.title), #text needle) or Text.contains(lower(c.vendor), #text needle) or Text.contains(lower(c.product), #text needle) or Text.contains(lower(c.customerRef), #text needle))) return false;
       if (f.onlyIncomplete and isComplete(c)) return false;
       if (f.onlyDue) { switch (daysUntil(c.terms.decideBy)) { case (?d) { if (d > 60) return false }; case null return false } };
@@ -1810,10 +2049,12 @@ persistent actor Contracts {
   };
 
   func currentValue(c : Contract, field : Text) : Text {
+    if (Text.startsWith(field, #text "type:")) return typeValueText(c.id, field);
     if (has(COMMERCIAL_FIELDS, field)) { for (f in commercial(c.id).vals()) if (f.field == field) return f.value; return "" };
     let t = c.terms;
     switch (field) {
       case ("recordType") recordType(c);
+      case ("contractType") typeOfContract(c.id).name;
       case ("title") c.title; case ("vendor") c.vendor; case ("product") c.product; case ("customerRef") c.customerRef;
       case ("amountMinor") (switch (t.amountMinor) { case (?a) Int.toText(a); case null "" });
       case ("currency") t.currency; case ("taxBasis") t.taxBasis; case ("interval") t.interval;
@@ -1849,12 +2090,12 @@ persistent actor Contracts {
       case ("quantity") { if (v != "" and nat(v) == null) #err("quantity must be a whole number") else #ok({ c with terms = { t with quantity = nat(v) } }) };
       case ("seats") { if (v != "" and nat(v) == null) #err("seats must be a whole number") else #ok({ c with seats = nat(v) }) };
       case ("start") { if (not validIso(v)) #err("not a date: " # v) else #ok({ c with terms = { t with start = v } }) };
-      case ("end") { if (not validIso(v)) #err("not a date: " # v) else #ok({ c with terms = { t with end = v } }) };
-      case ("renewalDate") { if (not validIso(v)) #err("not a date: " # v) else #ok({ c with terms = { t with renewalDate = v } }) };
-      case ("noticeDate") { if (not validIso(v)) #err("not a date: " # v) else #ok({ c with terms = { t with noticeDate = v } }) };
+      case ("end") { if (not validIso(v)) #err("not a date: " # v) else #ok({ c with terms = recompute(refreshDerived(c.id, { t with end = v })) }) };
+      case ("renewalDate") { if (not validIso(v)) #err("not a date: " # v) else #ok({ c with terms = recompute(refreshDerived(c.id, { t with renewalDate = v })) }) };
+      case ("noticeDate") { if (not validIso(v)) #err("not a date: " # v) else { if (v != "") Map.add(noticeConfirmed, Nat.compare, c.id, true) else ignore Map.delete(noticeConfirmed, Nat.compare, c.id); #ok({ c with terms = recompute({ t with noticeDate = v; decideBy = "" }) } ) } };
       case ("renewalRule") { if (has(RENEWALS, v)) #ok({ c with terms = { t with renewalRule = v } }) else #err("renewal rule must be auto, manual or none") };
-      case ("noticeDays") { if (v != "" and nat(v) == null) #err("notice days must be a whole number") else #ok({ c with terms = { t with noticeDays = nat(v); noticeMonths = (if (v == "") t.noticeMonths else null) } }) };
-      case ("noticeMonths") { if (v != "" and nat(v) == null) #err("notice months must be a whole number") else #ok({ c with terms = { t with noticeMonths = nat(v); noticeDays = (if (v == "") t.noticeDays else null) } }) };
+      case ("noticeDays") { if (v != "" and nat(v) == null) #err("notice days must be a whole number") else #ok({ c with terms = recompute(refreshDerived(c.id, { t with noticeDays = nat(v); noticeMonths = (if (v == "") t.noticeMonths else null) })) }) };
+      case ("noticeMonths") { if (v != "" and nat(v) == null) #err("notice months must be a whole number") else #ok({ c with terms = recompute(refreshDerived(c.id, { t with noticeMonths = nat(v); noticeDays = (if (v == "") t.noticeDays else null) })) }) };
       case ("note") #ok({ c with terms = { t with note = capText(v, 4000) } });
       case (_) #err("unknown field " # field);
     };
@@ -1910,8 +2151,9 @@ persistent actor Contracts {
     // apply accepted fields
     let applied = List.empty<Text>();
     for (a in d.accept.vals()) {
-      if (not has(FIELDS, a.field)) return { ok = false; contractId = c.id; revision = c.revision; detail = "unknown field " # a.field };
+      if (not has(FIELDS, a.field) and not isTypeField(a.field)) return { ok = false; contractId = c.id; revision = c.revision; detail = "unknown field " # a.field };
       let before = currentValue(c, a.field);
+      if (isTypeField(a.field)) { switch (applyTypeField(c.id, a.field, a.value)) { case (?e) return { ok = false; contractId = c.id; revision = c.revision; detail = e }; case null { List.add(applied, a.field # ": " # before # " → " # norm(a.value)) } } } else
       switch (applyField(c, a.field, a.value)) {
         case (#ok(n)) { c := n; List.add(applied, a.field # ": " # before # " → " # norm(a.value)) };
         case (#err(e)) return { ok = false; contractId = c.id; revision = c.revision; detail = e };
@@ -1952,16 +2194,29 @@ persistent actor Contracts {
       case (?pid) { switch (proposals.get(pid)) { case (?p) { if (p.sourceId != sid or p.status != "open" or not canSeeProposal(m, p)) return { ok = false; contractId = 0; detail = "Suggestion changed; reload before saving" }; ?p }; case null return { ok = false; contractId = 0; detail = "Suggestion no longer available" } } };
       case null null;
     };
-    if (d.fields.size() == 0 or d.fields.size() > FIELDS.size()+2) return { ok = false; contractId = 0; detail = "Enter the contract details" };
+    if (d.fields.size() == 0 or d.fields.size() > FIELDS.size()+34) return { ok = false; contractId = 0; detail = "Enter the contract details" };
     var c : Contract = { id = nextContractId; title = ""; vendor = ""; product = ""; customerRef = ""; responsible = workspaceResponsible(destination, m.id); deputy = ""; visibility = "team"; viewers = []; status = "draft"; terms = emptyTerms(); futureTerms = null; revision = 1; seats = null; holders = []; tags = []; origin = "mail:" # Nat.toText(sid); createdAt = now(); updatedAt = now(); createdBy = m.id };
     let seen = List.empty<Text>();
+    let typeFields = List.empty<(Text, Text)>();
     for (f in d.fields.vals()) {
-      if (not has(FIELDS.concat(["ownerId","trackStatus"]), f.field) or has(seen.toArray(), f.field)) return { ok = false; contractId = 0; detail = "Unknown or repeated field" };
+      if ((not has(FIELDS.concat(["ownerId","trackStatus"]), f.field) and not isTypeField(f.field)) or has(seen.toArray(), f.field)) return { ok = false; contractId = 0; detail = "Unknown or repeated field" };
       seen.add(f.field);
       if (f.value.size() > 4000) return { ok = false; contractId = 0; detail = "A field is too long" };
       if(f.field=="ownerId") { if(f.value!="" and (not activePid(f.value) or spaceRole(f.value,destination)==null))return {ok=false;contractId=0;detail="Owner must be a member of the destination workspace"}; if(f.value!="")c:={c with responsible=f.value} }
       else if(f.field=="trackStatus") {if(not has(["active","draft"],f.value))return {ok=false;contractId=0;detail="Choose active subscription or offer"};c:={c with status=f.value}}
+      else if (isTypeField(f.field)) { typeFields.add((f.field, f.value)) }
       else switch (applyField(c, f.field, f.value)) { case (#ok(next)) c := next; case (#err(e)) return { ok = false; contractId = 0; detail = e } };
+    };
+    // Type fields are checked against the chosen type before anything is written, so a failed save leaves no values behind for the next record id.
+    let typed = List.toArray(typeFields);
+    let chosenType : ContractType = switch (Array.find<(Text, Text)>(typed, func (k, _) = k == "contractType")) {
+      case (?(_, v)) { switch (findTypeByName(norm(v))) { case (?t) { if (not t.enabled) return { ok = false; contractId = 0; detail = "Contract type `" # t.name # "` is disabled" }; t }; case null return { ok = false; contractId = 0; detail = "Unknown contract type: " # v } } };
+      case null typeOfContract(c.id);
+    };
+    for ((k, v) in typed.vals()) if (k != "contractType") {
+      let key = Text.stripStart(k, #text "type:") ?? k;
+      let fdef = switch (fieldDef(chosenType, key)) { case (?f) f; case null return { ok = false; contractId = 0; detail = "`" # key # "` is not a field of " # chosenType.name } };
+      switch (typeValueError(fdef, resolveTypeValue(fdef, norm(v)))) { case (?e) return { ok = false; contractId = 0; detail = e }; case null {} };
     };
     if (Text.startsWith(destination, #text "personal:")) c := { c with responsible = workspaceResponsible(destination, m.id) };
     if (norm(c.title) == "") return { ok = false; contractId = 0; detail = "Give this contract a title" };
@@ -1969,6 +2224,8 @@ persistent actor Contracts {
     switch (validTerms(c.terms)) { case (?e) return { ok = false; contractId = 0; detail = e }; case null {} };
     nextContractId += 1;
     contractSpaces.add(c.id, destination); putContract(c); saveCommercial(c.id, d.fields);
+    Map.add(contractTypeOf, Nat.compare, c.id, chosenType.id);
+    for ((k, v) in typed.vals()) if (k != "contractType") ignore applyTypeField(c.id, k, v);
     rememberSourceReceipt(sid); sourceSpaces.add(sid, destination);
     for ((pid, pr) in proposals.entries()) if (pr.sourceId == sid) {
       let confirmed = switch (selected) { case (?p) p.id == pid; case null false };
@@ -1990,7 +2247,7 @@ persistent actor Contracts {
     if (not canSeeProposal(m, p)) return { ok = false; detail = "Proposal not available" };
     if (assignee != "" and (not activePid(assignee) or not canSeeProposal({ m with id = assignee; email = emailOfPid(assignee) }, p))) return { ok = false; detail = "Assignee must already have access" };
     Map.add(proposals, Nat.compare, id, { p with assignee });
-    if (assignee != "") queueNotify(assignee, "Contract review assigned to you — check the proposed changes", linkTo("#/inbox/" # Nat.toText(p.sourceId)), "contracts.review", "prop-" # Nat.toText(id) # "-" # assignee);
+    if (assignee != "") queueNotify(assignee, "Contract review assigned to you — check the proposed changes", "#/inbox/" # Nat.toText(p.sourceId), "contracts.review", "prop-" # Nat.toText(id) # "-" # assignee);
     log(m.id, "proposal #" # Nat.toText(id) # " assigned to " # nameOf(assignee));
     { ok = true; detail = "" };
   };
@@ -2011,7 +2268,7 @@ persistent actor Contracts {
     let c = switch (visible(m, contractId)) { case (?c) c; case null return { ok = false; id = 0; detail = "no such contract" } };
     if (changes.size() == 0 or changes.size() > 20) return { ok = false; id = 0; detail = "1–20 changes" };
     let ch = List.empty<Change>();
-    for (x in changes.vals()) { if (not has(FIELDS, x.field)) return { ok = false; id = 0; detail = "unknown field " # x.field }; List.add(ch, { field = x.field; oldValue = currentValue(c, x.field); newValue = capText(norm(x.value), 400); basis = "explicit"; evidence = [] }) };
+    for (x in changes.vals()) { if (not has(FIELDS, x.field) and not isTypeField(x.field)) return { ok = false; id = 0; detail = "unknown field " # x.field }; List.add(ch, { field = x.field; oldValue = currentValue(c, x.field); newValue = capText(norm(x.value), 400); basis = "explicit"; evidence = [] }) };
     let sid = switch (sourceId) { case (?sid) { switch (sources.get(sid)) { case (?src) { if (not canSeeSource(m, src) or (src.contractId != null and src.contractId != ?contractId)) return { ok = false; id = 0; detail = "Source not available for this contract" } }; case null return { ok = false; id = 0; detail = "No such source" } }; sid }; case null 0 };
     let id = nextProposalId; nextProposalId += 1;
     Map.add(proposals, Nat.compare, id, { id; sourceId = sid; observationId = 0; kind = "amendment"; contractId = ?contractId; candidates = []; baseRevision = c.revision; changes = List.toArray(ch); uncertainties = []; summary = capText(norm(summary), 400); status = "open"; assignee = ""; snoozedUntil = 0; decidedBy = ""; decidedAt = 0; note = "proposed by " # nameOf(m.id); createdAt = now() });
@@ -2219,7 +2476,7 @@ persistent actor Contracts {
   };
 
   func extractionInput(s : Source) : Text {
-    var u = "SCHEMA:\n" # SCHEMA_HINT # "\n\nCANDIDATE CONTRACTS (id · vendor · product · current terms):\n";
+    var u = "SCHEMA:\n" # SCHEMA_HINT # "\n(fields may also include contractType and type:<key> as described in the system prompt)\n\nCANDIDATE CONTRACTS (id · vendor · product · current terms):\n";
     let cands = candidatesFor(s);
     if (cands.size() == 0) u #= "(none — a new contract may be proposed)\n";
     for (cid in cands.vals()) { switch (Map.get(contracts, Nat.compare, cid)) { case (?c) u #= Nat.toText(c.id) # " · " # c.vendor # " · " # c.product # " · " # termsText(c.terms) # "\n"; case null {} } };
@@ -2262,7 +2519,7 @@ persistent actor Contracts {
       let proposed = switch (AiWire.fields(ev, Json.get(root, "schemaVersion") == ?#number(#int(2)))) { case (#ok(a)) a; case (#err(e)) return #err(e) };
       for (pf in proposed.vals()) {
         let field = jStr(pf, "field"); let basis = jStr(pf, "basis");
-        if (not has(FIELDS, field)) return #err("unknown field: " # field);
+        if (not has(FIELDS, field) and not isTypeField(field)) return #err("unknown field: " # field);
         if (not has(BASES, basis)) return #err("unknown basis: " # basis);
         let value = switch (Json.get(pf, "value")) { case (?#string(t)) t; case (?#number(#int(i))) Int.toText(i); case (?#number(#float(f))) capText(debug_show(f), 40); case (?#bool(b)) (if (b) "true" else "false"); case (_) "" };
         if (value.size() > (if (field == "commercialNotes" or field == "note") 1200 else 400)) return #err("value too long for " # field);
@@ -2356,8 +2613,8 @@ persistent actor Contracts {
     switch (Map.get(sources, Nat.compare, s.id)) { case (?cur) Map.add(sources, Nat.compare, s.id, { cur with status = st; note }); case null {} };
     if (anyOpen) {
       switch (s.contractId) {
-        case (?cid) { switch (Map.get(contracts, Nat.compare, cid)) { case (?c) { if (c.responsible != "") queueNotify(c.responsible, reviewSourceTitle(s), linkTo("#/inbox/" # Nat.toText(s.id)), "contracts.review", "src-" # Nat.toText(s.id)) }; case null {} } };
-        case null { for (a in spaceMembers(sourceSpace(s.id)).vals()) queueNotify(a, reviewSourceTitle(s), linkTo("#/inbox/" # Nat.toText(s.id)), "contracts.review", "src-" # Nat.toText(s.id) # "-" # a) };
+        case (?cid) { switch (Map.get(contracts, Nat.compare, cid)) { case (?c) { if (c.responsible != "") queueNotify(c.responsible, reviewSourceTitle(s), "#/inbox/" # Nat.toText(s.id), "contracts.review", "src-" # Nat.toText(s.id)) }; case null {} } };
+        case null { for (a in spaceMembers(sourceSpace(s.id)).vals()) queueNotify(a, reviewSourceTitle(s), "#/inbox/" # Nat.toText(s.id), "contracts.review", "src-" # Nat.toText(s.id) # "-" # a) };
       };
     };
   };
@@ -2475,21 +2732,59 @@ persistent actor Contracts {
     { ok = true; detail = "" };
   };
   /// Reminders: every check (each 6 h) looks at open tasks with a due date; at each configured mark (days before), and once when overdue, one notification goes out.
-  func sendReminders() {
-    sendSaasReminders();
-    for ((tid, t) in Map.entries(tasks)) {
-      if (not t.auto and t.doneAt == 0 and t.dueOn != "" and t.snoozedUntil <= now()) {
-        switch (daysUntil(t.dueOn)) {
+  /// Date fields of a contract type marked "remind" fire like task due dates: at each reminder mark and when overdue, once per date.
+  func sendTypeReminders() {
+    for ((cid, c) in Map.entries(contracts)) if (c.status == "active" or c.status == "cancelling") {
+      let t = typeOfContract(cid);
+      for (f in t.fields.vals()) if (f.kind == "date" and f.remind) {
+        let v = valueOf(cid, f.key);
+        if (v != "") switch (daysUntil(v)) {
           case (?left) {
             var mark : ?Nat = null;
-            for (r in reminderDays.vals()) if (left <= r and mark == null and not hasN(t.remindersSent, r)) mark := ?r;
+            for (r in reminderDays.vals()) if (left <= r and mark == null) mark := ?r;
+            if (left < 0) mark := ?0;
+            switch (mark) {
+              case (?mk) {
+                let key = "tf-" # Nat.toText(cid) # "-" # f.key # "-" # v # "-" # Nat.toText(mk);
+                if (not Map.containsKey(typeRemindersSent, Text.compare, key)) {
+                  Map.add(typeRemindersSent, Text.compare, key, true);
+                  let title = (if (left < 0) "Overdue: " else if (left == 0) "Today: " else "In " # Int.toText(left) # " days: ") # f.title # " (" # v # ") · " # c.title;
+                  let who = List.empty<Text>();
+                  if (activePid(c.responsible)) List.add(who, c.responsible);
+                  if (c.deputy != "" and not Text.startsWith(c.deputy, #text "group:") and activePid(c.deputy)) List.add(who, c.deputy);
+                  for (w in List.toArray(who).vals()) queueNotify(w, capText(title, 120), "#/c/" # Nat.toText(cid), "contracts.deadline", key # "-" # w);
+                };
+              };
+              case null {};
+            };
+          };
+          case null {};
+        };
+      };
+    };
+  };
+  func sendReminders() {
+    sendSaasReminders();
+    sendTypeReminders();
+    for ((tid, t) in Map.entries(tasks)) {
+      if (t.doneAt == 0 and t.dueOn != "" and t.snoozedUntil <= now()) {
+        switch (daysUntil(t.dueOn)) {
+          case (?left) {
+            // Smallest unsent mark at or above the days left; every larger mark counts as sent too (no backlog after a late start).
+            var mark : ?Nat = null;
+            for (r in reminderDays.vals()) if (left <= r and not hasN(t.remindersSent, r)) { switch (mark) { case (?m) { if (r < m) mark := ?r }; case null mark := ?r } };
             if (left < 0 and not hasN(t.remindersSent, 0)) mark := ?0;
             switch (mark) {
               case (?mk) {
-                let who = if (t.assignee != "" and activePid(t.assignee)) [t.assignee] else spaceMembers(contractSpace(t.contractId));
-                let title = if (left < 0) "Overdue: " # t.title else if (left == 0) "Due today: " # t.title else "In " # Int.toText(left) # " days: " # t.title;
-                for (w in who.vals()) queueNotify(w, capText(title, 120), linkTo("#/c/" # Nat.toText(t.contractId)), "contracts.deadline", "task-" # Nat.toText(tid) # "-" # Nat.toText(mk) # "-" # w);
-                Map.add(tasks, Nat.compare, tid, { t with remindersSent = Array.concat(t.remindersSent, [mk]) });
+                let c = contracts.get(t.contractId);
+                let fallback = switch (c) { case (?x) { let r = reminderRecipients(x, contractSpace(x.id), policyFor(contractSpace(x.id)), buildRoster()); if (r.size() > 0) r else spaceMembers(contractSpace(t.contractId)) }; case null spaceMembers(contractSpace(t.contractId)) };
+                let who = if (t.assignee != "" and activePid(t.assignee)) [t.assignee] else fallback;
+                let suffix = switch (c) { case (?x) " · " # capText(contractLabel(x), 60); case null "" };
+                let title = (if (left < 0) "Overdue (" # t.dueOn # "): " else if (left == 0) "Due today: " else "In " # Int.toText(left) # " days (" # t.dueOn # "): ") # t.title # suffix;
+                for (w in who.vals()) queueNotify(w, capText(title, 160), "#/c/" # Nat.toText(t.contractId), "contracts.deadline", "task-" # Nat.toText(tid) # "-" # Nat.toText(mk) # "-" # w);
+                var sent = Array.concat(t.remindersSent, [mk]);
+                for (r in reminderDays.vals()) if (r >= mk and not hasN(sent, r)) sent := Array.concat(sent, [r]);
+                Map.add(tasks, Nat.compare, tid, { t with remindersSent = sent });
               };
               case null {};
             };
@@ -2579,7 +2874,7 @@ persistent actor Contracts {
         let title = switch (currentNotificationTitle(o)) { case (?title) title; case null { ignore outbox.delete(id); continue go } };
         n += 1;
         let email = emailOfPid(o.pid);
-        if (email == "" or not active(email) or not mayNotify(o.pid, o.url) or not saasDeliveryAllowed(o)) { Map.add(outbox, Nat.compare, id, { o with attempts = 10; lastError = "recipient left — not delivered" }); continue go };
+        if (email == "" or not active(email) or not mayNotify(o.pid, o.url) or not saasDeliveryAllowed(o)) { ignore outbox.delete(id); continue go }; // recipient gone or deadline changed: nothing to deliver, nothing to alarm about
         let deliveryUrl = switch (linkTarget(o.url)) { case (?target) linkTo("#/" # target.kind # "/" # Nat.toText(target.id)); case null o.url };
         let r = try { await (with timeout = 30) Hub.hub(hubId).hub_notify({ email; title; url = deliveryUrl; kind = o.kind; dedupeKey = o.dedupeKey }) } catch (e) { { ok = false; detail = Error.message(e) } };
         switch (Map.get(outbox, Nat.compare, id)) {
@@ -2588,7 +2883,7 @@ persistent actor Contracts {
         };
       };
       // keep the outbox bounded: delivered items older than 30 days go
-      let old = List.empty<Nat>(); for ((id, o) in Map.entries(outbox)) if (o.sentAt != 0 and now() - o.sentAt > 30 * D) List.add(old, id);
+      let old = List.empty<Nat>(); for ((id, o) in Map.entries(outbox)) if ((o.sentAt != 0 and now() - o.sentAt > 30 * D) or (o.sentAt == 0 and o.attempts >= 10 and now() - o.createdAt > 30 * D)) List.add(old, id);
       for (id in List.values(old)) ignore Map.delete(outbox, Nat.compare, id);
     } finally { flushing := false };
   };
@@ -2681,7 +2976,7 @@ persistent actor Contracts {
       sources.add(s.id,{before with status="processing";note="Attempt " # Nat.toText(j.attempts + 1) # " of " # Nat.toText(MAX_AI_ATTEMPTS) # " · " # (if(files.size() > 0)"Reading original pages and images · part " # Nat.toText(part) # " of " # Nat.toText(batches.size()) else "Reading document text and message context")});
       // Originals are complete; bounded supplementary text prevents duplicating whole PDFs.
       let input = if(files.size() > 0) capText(extractionInput(s),12_000) # "\nRead the attached originals in full, including tables and signature pages. Only analyse the supplied originals in this batch; other attachments will be read separately." else extractionInput(s);
-      let r = await aiCompleteDocuments(SYSTEM_PROMPT, input, 6000, files);
+      let r = await aiCompleteDocuments(SYSTEM_PROMPT # typePrompt(), input, 6000, files);
       let cur = switch(sources.get(s.id)){case(?x)x;case null return #ok};
       if (sourceIsTrashed(cur) or cur.status == "ignored" or cur.status == "filed" or (switch(jobs.get(j.id)){case(?x)x.doneAt!=0;case null true})) return #ok;
       if (sourceSpace(s.id) != extractingSpace or cur.contractId != s.contractId) return #err("Source moved during analysis; retry in its current workspace");
@@ -2724,7 +3019,7 @@ persistent actor Contracts {
   // =====================================================================
   // the contract record (everything about one contract)
   // =====================================================================
-  public type Record = { commercialDetails : [CommercialField]; contract : Contract; row : ContractRow; responsibleName : Text; deputyName : Text; viewerNames : [(Text, Text)]; holderNames : [(Text, Text, Bool)]; proposals : [ProposalView]; sources : [SourceRow]; documents : [DocumentRow]; tasks : [TaskRow]; audit : [AuditRow]; rules : [Rule]; canEdit : Bool };
+  public type Record = { contractType : ContractType; typeValues : [(Text, Text)]; commercialDetails : [CommercialField]; contract : Contract; row : ContractRow; responsibleName : Text; deputyName : Text; viewerNames : [(Text, Text)]; holderNames : [(Text, Text, Bool)]; proposals : [ProposalView]; sources : [SourceRow]; documents : [DocumentRow]; tasks : [TaskRow]; audit : [AuditRow]; rules : [Rule]; canEdit : Bool };
   /// Everything about one contract: confirmed terms, future terms, open proposals, sources, documents, tasks, history, rules.
   public shared query func getContract(tok : Text, id : Nat) : async ?Record {
     let m = switch (me(tok)) { case (?m) m; case null return null };
@@ -2735,7 +3030,7 @@ persistent actor Contracts {
     let ts = List.empty<TaskRow>(); for ((_, t) in Map.entries(tasks)) if (t.contractId == id and (t.doneAt == 0 or now() - t.doneAt < 30 * D)) List.add(ts, taskRow(t));
     let au = List.empty<AuditRow>(); for ((_, a) in Map.reverseEntries(auditRows)) if (a.contractId == id and List.size(au) < 200) List.add(au, a);
     let rl = List.empty<Rule>(); for ((_, r) in Map.entries(rules)) if (r.contractId == id) List.add(rl, r);
-    ?{ commercialDetails = commercial(c.id); contract = c; row = row(c); responsibleName = nameOf(c.responsible); deputyName = nameOf(c.deputy); viewerNames = Array.map<Text, (Text, Text)>(c.viewers, func v = (v, nameOf(v))); holderNames = Array.map<Text, (Text, Text, Bool)>(c.holders, func h = (h, nameOf(h), activePid(h)));
+    ?{ contractType = typeOfContract(c.id); typeValues = valuesOf(c.id); commercialDetails = commercial(c.id); contract = c; row = row(c); responsibleName = nameOf(c.responsible); deputyName = nameOf(c.deputy); viewerNames = Array.map<Text, (Text, Text)>(c.viewers, func v = (v, nameOf(v))); holderNames = Array.map<Text, (Text, Text, Bool)>(c.holders, func h = (h, nameOf(h), activePid(h)));
        proposals = List.toArray(props); sources = List.toArray(srcs); documents = List.toArray(docs); tasks = List.toArray(ts); audit = List.toArray(au); rules = List.toArray(rl); canEdit = canEdit(m, c) };
   };
   /// Today: what needs the person — proposals to decide, tasks due or overdue, contracts without a responsible person, processing failures (staff).
@@ -2974,7 +3269,7 @@ persistent actor Contracts {
   // =====================================================================
   // timers
   // =====================================================================
-  ignore Timer.recurringTimer<system>(#seconds 30, func() : async () { try { ignore await pullDirectory() } catch (_) {}; ignore Hub.pruneSessions(sessions); if(appUrl!="" and Hub.directoryFresh(lastDirectoryPull) and (lastReminderScan==0 or now()-lastReminderScan >= 6*H)){lastReminderScan:=now();sendReminders()}; try { await flushOutbox() } catch (_) {} });
+  ignore Timer.recurringTimer<system>(#seconds 30, func() : async () { try { ignore await pullDirectory() } catch (_) {}; ignore Hub.pruneSessions(sessions); if(Hub.directoryFresh(lastDirectoryPull) and (lastReminderScan==0 or now()-lastReminderScan >= 6*H)){lastReminderScan:=now();sendReminders()}; if (Hub.directoryFresh(lastDirectoryPull)) { try { await flushOutbox() } catch (_) {} } });
   ignore Timer.recurringTimer<system>(#seconds 20, func() : async () { try { await runJobs() } catch (_) {} });
   // Discover AI access before the first document, without adding a request to sign-in.
   ignore Timer.recurringTimer<system>(#seconds 30, func() : async () { await refreshHubAi() });
