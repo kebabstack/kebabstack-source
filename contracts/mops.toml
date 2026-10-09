@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-contracts"
-version = "0.16.0"
+version = "0.16.1"
 description = "kebab-stack contracts — personal and team contract store: agreements, licences, evidence-backed proposals and deadlines"
 
 [toolchain]

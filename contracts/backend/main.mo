@@ -67,7 +67,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // retired 0.14.0 (mail relay removed); kept for the stable state contract, never consulted
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.16.0";
+  transient let BUILD_VERSION : Text = "0.16.1";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -474,7 +474,7 @@ persistent actor Contracts {
     for ((sid, src) in sources.entries()) {
       let related = src.contractId == ?id or proposals.values().any(func pr = pr.sourceId == sid and pr.contractId == ?id);
       if (related) {
-        if (not canEditSource(m, src) or (src.contractId != null and src.contractId != ?id) or proposals.values().any(func pr = pr.sourceId == sid and pr.contractId != null and pr.contractId != ?id)) return { ok = false; detail = "A message also belongs to another contract; separate its evidence before moving" };
+        if (not canEditSource(m, src) or (src.contractId != null and src.contractId != ?id) or proposals.values().any(func pr = pr.sourceId == sid and pr.contractId != null and pr.contractId != ?id)) return { ok = false; detail = "A document also belongs to another contract; separate its evidence before moving" };
         moving.add(sid);
       };
     };
@@ -675,7 +675,7 @@ persistent actor Contracts {
   };
   public shared query func hub_manifest() : async Hub.Manifest {
     {
-      name = "contracts"; version = BUILD_VERSION; description = "Contracts and subscriptions kept up to date from the mail people already write: sources, proposals with evidence, confirmed terms, deadlines";
+      name = "contracts"; version = BUILD_VERSION; description = "Contracts of every kind kept up to date from uploaded documents: AI reading with evidence, confirmed terms, deadlines and Slack reminders per workspace";
       needs = ["identity", "notify"]; // notify: reminders and review tasks reach the responsible person
       wants = ["roles", "groups", "ai", "avatars"]; // roles: hub staff run it; groups: editors/admins groups; ai: extraction proposals
     };
@@ -1516,10 +1516,10 @@ persistent actor Contracts {
     if (hubId == "") return { ok = false; id = 0; detail = "the app is not wired to a hub yet" };
     let t = now();
     if (t - intakeWindowStart > H) { intakeWindowStart := t; intakeWindowCount := 0 };
-    if (intakeWindowCount >= MAX_SOURCES_PER_HOUR) return { ok = false; id = 0; detail = "too many messages this hour — try again later" };
-    if (bytesOf(meta.text) > MAX_TEXT) return { ok = false; id = 0; detail = "message text too large (max " # Nat.toText(MAX_TEXT / 1000) # " KB)" };
-    if (bytesOf(meta.html) > MAX_HTML) return { ok = false; id = 0; detail = "message html too large" };
-    if (meta.attachments.size() > MAX_ATTACHMENTS) return { ok = false; id = 0; detail = "at most " # Nat.toText(MAX_ATTACHMENTS) # " attachments per message" };
+    if (intakeWindowCount >= MAX_SOURCES_PER_HOUR) return { ok = false; id = 0; detail = "too many documents this hour — try again later" };
+    if (bytesOf(meta.text) > MAX_TEXT) return { ok = false; id = 0; detail = "text too large (max " # Nat.toText(MAX_TEXT / 1000) # " KB)" };
+    if (bytesOf(meta.html) > MAX_HTML) return { ok = false; id = 0; detail = "html too large" };
+    if (meta.attachments.size() > MAX_ATTACHMENTS) return { ok = false; id = 0; detail = "at most " # Nat.toText(MAX_ATTACHMENTS) # " files per document" };
     if (meta.kind != "eml" and meta.kind != "manual") return { ok = false; id = 0; detail = "kind must be eml or manual" };
     for (a in meta.attachments.vals()) {
       if (a.size > MAX_ATTACHMENT and a.link == "") return { ok = false; id = 0; detail = "attachment too large: " # a.name # " (max " # Nat.toText(MAX_ATTACHMENT / 1_000_000) # " MB) — hand in a link or leave it out" };
@@ -1594,7 +1594,7 @@ persistent actor Contracts {
         case null {};
       };
     };
-    if (blobBytes + required > MAX_BLOB_TOTAL) return { ok = false; sourceId = 0; status = ""; detail = "Not enough storage for the complete message and its attachments" };
+    if (blobBytes + required > MAX_BLOB_TOTAL) return { ok = false; sourceId = 0; status = ""; detail = "Not enough storage for the complete document and its files" };
     let textBlob = putBlob(Text.encodeUtf8(meta.text));
     let htmlBlob = if (meta.html == "") null else putBlob(Text.encodeUtf8(meta.html));
     if (textBlob == null) return { ok = false; sourceId = 0; status = ""; detail = "storage is full — tell an admin" };
@@ -1880,7 +1880,7 @@ persistent actor Contracts {
     var same = 0; for ((_, r) in Map.entries(rules)) if (r.kind == kind and r.value == v and r.contractId != contractId and contractSpace(r.contractId) == contractSpace(contractId) and r.confirmed) same += 1;
     Map.add(rules, Nat.compare, nextRuleId, { id = nextRuleId; kind; value = v; contractId; confirmed = true; createdBy = by; createdAt = now() });
     nextRuleId += 1;
-    if (same > 0) return ?("saved — note: the same rule also points at " # Nat.toText(same) # " other contract(s); such messages will ask which one");
+    if (same > 0) return ?("saved — note: the same rule also points at " # Nat.toText(same) # " other contract(s); such documents will ask which one");
     null;
   };
   /// Staff: the matching rules (all, or one contract's).
@@ -2164,7 +2164,7 @@ persistent actor Contracts {
     if (accepted) {
       c := { c with terms = recompute(c.terms); revision = c.revision + 1; updatedAt = now() };
       switch (validTerms(c.terms)) { case (?e) return { ok = false; contractId = c.id; revision = c.revision - 1; detail = e }; case null {} };
-      if (d.newContract) { nextContractId += 1; contractSpaces.add(c.id, m.space); audit(c.id, m.id, "created from a message", "", "#" # Nat.toText(p.sourceId), ?p.sourceId) };
+      if (d.newContract) { nextContractId += 1; contractSpaces.add(c.id, m.space); audit(c.id, m.id, "created from a document", "", "#" # Nat.toText(p.sourceId), ?p.sourceId) };
       putContract(c); saveCommercial(c.id, d.accept);
       audit(c.id, m.id, "proposal #" # Nat.toText(id) # " confirmed (" # p.kind # ")" # (if (norm(d.note) == "") "" else " — " # norm(d.note)), "", Text.join(List.values(applied), "; "), ?p.sourceId);
       rebuildTasks(c.id);

@@ -1,5 +1,9 @@
 # Changelog — kebab-stack contracts
 
+## [0.16.1] — 2026-10-09
+
+- Wording: no more "email", "message" or "mailbox" in the app. The review's source panel reads "Source text", the inbox and record pages speak of documents, limits and audit entries too (owner feedback). Saved .eml files still upload like any other file; they are just not advertised.
+
 ## [0.16.0] — 2026-10-09
 
 - **One review for new and existing contracts.** The review asks "Save as: a new contract / an update to an existing contract". For an update you pick the record (search by name or vendor; preselected when the document is already linked, when the AI names it, or when the upload started from a record), today's values appear as placeholders, filled fields replace them, empty ones leave the record alone, and the document is attached. The separate "suggested changes" page is no longer where uploads land; it stays as history and for the record's own suggestions. New `fileToContract(sourceId, contractId, revision, fields, note)` applies this atomically and closes open suggestions of that document.

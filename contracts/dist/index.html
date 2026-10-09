@@ -219,7 +219,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
         <button class="linkbtn" id="ibPaste">Paste text</button>
         <button class="pill primary sm spacewriter" id="ibAdd">+ Add document</button>
         <input type="file" id="ibEml" accept=".eml,.pdf,.txt,.png,.jpg,.jpeg,.webp,.gif,message/rfc822,application/pdf,text/plain,image/png,image/jpeg" multiple class="hidden">
-        <div class="sub">Upload a contract, invoice, licence or saved email. The AI reads it (text PDFs, scans, screenshots), you check the details, one click saves the record. Mails about existing contracts appear here as suggested changes.</div>
+        <div class="sub">Upload a contract, invoice or licence document. The AI reads it (text PDFs, scans, screenshots), you check the details, one click saves the record. Mails about existing contracts appear here as suggested changes.</div>
       </div>
       <div class="filters" id="ibFilters">
         <button type="button" class="tag clickable sel" data-st="">Needs attention</button>
@@ -353,7 +353,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
         </div>
         <div class="scard">
           <h3>Sample data</h3>
-          <div class="kv">Six fictional contracts, one message in the inbox and a proposal to try the flow. Removable in one click.</div>
+          <div class="kv">Six fictional contracts, one document in the inbox and a suggestion to try the flow. Removable in one click.</div>
           <div class="btnrow"><button id="sSeed" class="pill outline sm">ADD SAMPLE DATA</button><button id="sUnseed" class="pill outline sm">REMOVE SAMPLE DATA</button><span id="sSeedStatus" class="status"></span></div>
         </div>
       </div>
@@ -384,7 +384,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
     <div class="wrap">
       <div class="today-hero"><div><span class="eyebrow">THE CONTRACTS GUIDE</span><h2>From a document to a decision.</h2><p>Upload a SaaS contract, confirm the essentials, and stay ahead of its next renewal.</p></div></div>
       <div class="guide-grid">
-        <a class="scard" href="#/inbox"><span class="eyebrow">01 · COLLECT</span><h3>Add the original.</h3><p>Add a document, saved email or pasted text to Inbox. Everything goes into the workspace shown above.</p><span class="guide-link">Open inbox →</span></a>
+        <a class="scard" href="#/inbox"><span class="eyebrow">01 · COLLECT</span><h3>Add the original.</h3><p>Add a document or pasted text to Inbox. Everything goes into the workspace shown above.</p><span class="guide-link">Open inbox →</span></a>
         <a class="scard" href="#/inbox"><span class="eyebrow">02 · REVIEW</span><h3>Keep a person in control.</h3><p>AI suggests details with source evidence. Check the fields, correct anything uncertain and save the changes you approve.</p><span class="guide-link">Review incoming items →</span></a>
         <a class="scard" href="#/contracts"><span class="eyebrow">03 · MANAGE</span><h3>Make the record useful.</h3><p>Choose an owner and save the reviewed subscription. Uncheck active tracking for an offer or draft. Dates, costs and license holders appear in your SaaS table.</p><span class="guide-link">Open contracts →</span></a>
       </div>
@@ -396,11 +396,11 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
         <details><summary>What do the cost totals mean?</summary><p>Annual run rate annualizes recorded active subscriptions. Historical accrual estimates costs across known dates and saved price changes, capped at today. Recorded invoices/receipts are separate and do not prove payment. Currencies and tax bases stay separate; missing values are disclosed. Open Management report, pick a year, then download CSV or print/save PDF.</p></details>
         <details><summary>Can AI look up missing renewal terms?</summary><p>When terms are absent, AI can identify an official vendor page and read its public text. You can enter a direct URL. Source and retrieval time stay visible, and nothing is applied until you choose Use as a reviewed suggestion. Current public terms may differ from your agreement; blocked or unreadable pages leave values unknown.</p></details>
         <details><summary>What about software keys and group assignments?</summary><p>License keys have a separate inventory with hidden values and audited reveal. Values are not sent to AI or included in ordinary exports. People and groups come from Hub. Group assignments keep the roster current without granting access to contracts or provisioning vendor accounts. Other employees cannot access unshared personal content; app admins can.</p></details>
-        <details><summary>How do documents get here?</summary><p>Upload a PDF, image or saved email (.eml) under <b>Add document</b>, or paste text. The AI reads the original pages, including scans, and prepares the details for review. Nothing is filed until you confirm.</p></details>
+        <details><summary>How do documents get here?</summary><p>Upload a PDF, image or text file under <b>Add document</b>, or paste text. The AI reads the original pages, including scans, and prepares the details for review. Nothing is filed until you confirm.</p></details>
         <details><summary>Can I delete documents or records?</summary><p>Use <b>Delete item</b> on an inbox document or <b>Delete record</b> on a saved record. It moves to <a href="#/trash">Trash</a> in the same workspace and can be restored. Deleting a record also hides its linked originals and stops its reminders. No file is permanently erased. Workspace permissions still apply.</p></details>
         <details><summary>What if a colleague changes the same contract?</summary><p>Saves check the record’s revision. If someone changed it while you were reviewing, reload and compare before saving. Decisions, source evidence and record history stay available.</p></details>
         <details><summary>How do I import or export records?</summary><p>Settings → Import &amp; export accepts mapped CSV rows with a preview before writing. Existing records are not overwritten. CSV export protects against spreadsheet formulas. Workspace JSON includes visible records and metadata; download document files separately. Older records may be in Existing contracts, with their previous access preserved.</p></details>
-        <details><summary>What limits should I know?</summary><p>Files: up to 1.5 MB each, 10 per message. Keep originals below 1.4 MB for AI reading; larger files may need compression because encoded requests have a separate limit. PDF, PNG, JPEG, WebP and GIF use the Hub vision model, or its main model if no separate one is set. That model must support the file type. Original PDFs are sent complete; supplementary text is bounded. Encrypted, damaged or unreadable documents can still require a clearer copy. Review small print, dates and signature pages. An app admin configures the daily AI budget. Reminders use a fixed UTC offset; daylight-saving changes are not automatic.</p></details>
+        <details><summary>What limits should I know?</summary><p>Files: up to 1.5 MB each, 10 per document. Keep originals below 1.4 MB for AI reading; larger files may need compression because encoded requests have a separate limit. PDF, PNG, JPEG, WebP and GIF use the Hub vision model, or its main model if no separate one is set. That model must support the file type. Original PDFs are sent complete; supplementary text is bounded. Encrypted, damaged or unreadable documents can still require a clearer copy. Review small print, dates and signature pages. An app admin configures the daily AI budget. Reminders use a fixed UTC offset; daylight-saving changes are not automatic.</p></details>
       </div>
     </div>
   </section>
