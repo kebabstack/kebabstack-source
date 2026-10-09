@@ -97,3 +97,14 @@ contract, the consumer, and what was done or deliberately left.
   names become a `typeProposal` (validated fields) the review can create in one click; unknown `type:` keys are
   dropped with a note; "Read again as the selected type" pins a type (`reprocessSourceAs`). Default is Other.
 - Cross-stack: none (Contracts-internal AI contract). Tests: PocketIC classification case, smoke proposal card.
+
+## Contracts 0.14.2 / 0.15.0 — upload path simplified (owner feedback, same day)
+
+- Owner saved an upload, landed on an empty list: the AI had classed the Bechtle invoice as a billing
+  document, which the list hid. Fixes: save opens the record; billing documents are listed and tagged;
+  "Track as subscription" converts one; the document type sits in the first review section; invoices
+  with a period/seats default to a tracked subscription; titles come from vendor and product.
+- 0.15.0: new documents open the review directly (inbox rows, Today items, pasted text, `#/inbox/<id>`
+  redirect); saved documents show "Saved as <contract>", their inbox page is history. "Proposals" became
+  "Suggested changes" (for mails about existing contracts); plain-language statuses.
+- Cross-stack: none; Hub notifications unchanged. Backend only bumps the served version.

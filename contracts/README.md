@@ -208,7 +208,9 @@ npm ci --ignore-scripts --prefix contracts/tools/pdf-text
 node contracts/tools/build-pdf-text.mjs
 ```
 
-## Document-first intake (0.4.0)
+## Document-first intake (0.4.0, simplified in 0.15.0)
+
+Since 0.15.0 the only path for a new document is upload → check → record: the review opens directly, one click saves and opens the record, and the inbox entry then reads "Saved as <contract>". "Suggested changes" (formerly proposals) remain for mails that concern an existing contract: check, correct, save what applies, or decline.
 
 **Add contract** starts with a PDF, text file, saved email or image. The original is stored first;
 the review page shows AI details and lets you complete missing values before a single atomic

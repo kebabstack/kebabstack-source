@@ -146,7 +146,7 @@ check(last("snoozeTask") && last("snoozeTask")[1][1] === 22n && last("snoozeTask
 // ---- inbox
 await go("#/inbox");
 check(on("viewInbox") && document.querySelectorAll("#ibList tr[data-s]").length === 2, "inbox rows: " + document.querySelectorAll("#ibList tr[data-s]").length);
-check(/READY FOR REVIEW/.test($("ibList").textContent) && /FAILED/.test($("ibList").textContent), "status tags in the inbox");
+check(/READY TO CHECK/.test($("ibList").textContent) && /NEEDS A LOOK/.test($("ibList").textContent), "status tags in the inbox");
 await click(document.querySelector('#ibFilters [data-st="filed"]'));
 check(last("listSources")[1][1] === "filed" && /Invoice 2026-08/.test($("ibList").textContent), "filter → listSources(filed)");
 // .eml upload through the intake lane
@@ -198,19 +198,19 @@ await click($("ibPaste")); check(on("pasteModal"), "paste modal opens");
 $("pmFrom").value = "sales@nimbus.example"; $("pmSubject").value = "Quote"; $("pmText").value = "Pro plan, 12 seats, 480.00 EUR per month.";
 await click($("pmSend"));
 check(last("intakeBegin")[1][1].kind === "manual" && last("intakeBegin")[1][1].text.startsWith("Pro plan") && last("intakeCommit"), "manual intake begin+commit");
-check(window.location.hash === "#/inbox/12", "lands on the new source: " + window.location.hash);
+check(window.location.hash === "#/intake/12", "pasted text lands on the review: " + window.location.hash);
 
 }
 // ---- one message
 await go("#/inbox/7");
-check(on("viewSource") && /Your renewal/.test($("srcTitle").textContent) && /READY FOR REVIEW/.test($("srcStatus").textContent), "source head");
+check(on("viewSource") && /Your renewal/.test($("srcTitle").textContent) && /READY TO CHECK/.test($("srcStatus").textContent), "source head");
 check(/Sunrise Cloud/.test($("srcMeta").textContent) && /cc me@example.com/.test($("srcMeta").textContent) && $("srcMeta").querySelector('a[href="#/c/1"]'), "source meta with cc and contract link");
 const propBox = document.querySelector('#srcProposals .prop[data-p="11"]');
 check(!!propBox && document.querySelectorAll('#srcProposals .prop[data-p="11"] tbody tr').length === 3, "open proposal with three field rows");
 check(/1,650\.00/.test(propBox.textContent) && /1,500\.00/.test(propBox.textContent), "money shown as decimals (old and new)");
 check(propBox.querySelector('input[data-i="0"]').checked && propBox.querySelector('input[data-i="1"]').checked && !propBox.querySelector('input[data-i="2"]').checked, "explicit fields pre-ticked, ambiguous not");
 check(/might be counted from the invoice date/.test(propBox.textContent), "uncertainties listed");
-check(/Seats raised to 25/.test($("srcProposals").textContent) && /CONFIRMED/.test($("srcProposals").textContent), "decided proposal listed");
+check(/Seats raised to 25/.test($("srcProposals").textContent) && /saved by/.test($("srcProposals").textContent), "history lists the saved suggestion");
 const tsel = propBox.querySelector("[data-target]");
 check(tsel && tsel.options.length === (staff ? 4 : 1) && tsel.options[0].value === "1" && (!staff || tsel.options[1].value === "2"), "target select: own contract" + (staff ? " + message candidate + other/new" : " only (members choose among the proposal's candidates)") + ": " + (tsel && tsel.options.length));
 check(!!propBox.querySelector("[data-assign]") === staff, "hand-to only for staff");

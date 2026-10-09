@@ -30,7 +30,8 @@ const FIELD_LBL = { recordType: "Document type", title: "Title", vendor: "Vendor
 const INTERVAL_LBL = { "": "unknown", month: "monthly", quarter: "quarterly", year: "yearly", once: "once", other: "other", none: "no payment" };
 const RENEWAL_LBL = { "": "unknown", auto: "renews automatically", manual: "renews only if we act", none: "does not renew", indefinite: "no fixed expiry" };
 const CSTATUS_LBL = { draft: "DRAFT", active: "ACTIVE", cancelling: "CANCELLING", endConfirmed: "END CONFIRMED", ended: "ENDED", archived: "ARCHIVED" };
-const SSTATUS_LBL = { received: "RECEIVED", processing: "PROCESSING", review: "READY FOR REVIEW", filed: "FILED", ignored: "IGNORED", failed: "FAILED" };
+const SSTATUS_LBL = { received: "READING", processing: "READING", review: "READY TO CHECK", filed: "SAVED", ignored: "IGNORED", failed: "NEEDS A LOOK" };
+const DECIDED_LBL = { confirmed: "saved", rejected: "declined", superseded: "replaced" };
 const RULE_LBL = { senderAddress: "sender address", senderDomain: "sender domain", customerRef: "customer reference", subjectContains: "subject contains" };
 const KIND_LBL = { offer: "offer", negotiation: "negotiation", order_confirmation: "order confirmation", invoice: "invoice", renewal_notice: "renewal notice", price_change: "price change", cancellation_request: "cancellation request", cancellation_confirmation: "cancellation confirmation", amendment: "amendment", signature_request: "awaiting signature", execution_reported: "signing reported — unverified", other: "other", unclear: "unclear" };
 for (const [key,label] of commercialFields) FIELD_LBL[key]=label;
@@ -400,8 +401,8 @@ async function enterToday() {
   const waiting = N(t.inboxOpen) > 0;
   $("tNext").innerHTML = `<div class="next-step"><span class="step-icon" aria-hidden="true">${waiting ? "⇥" : "▤"}</span><div class="step-copy"><h3>${waiting ? `${N(t.inboxOpen)} incoming item${N(t.inboxOpen) === 1 ? " is" : "s are"} waiting.` : N(t.contracts) ? "Your agreements, organised." : "Start with one agreement."}</h3><p>${waiting ? "Open the inbox to review suggested details, read the source and decide where it belongs." : N(t.contracts) ? "Add new documents to keep the record up to date. Upcoming tasks and decisions appear below." : "Upload a document or saved email, then review its details. Complete any missing details on the review page, then save it with its original."}</p></div><a class="pill ${waiting ? "primary" : "outline"} sm" href="${waiting ? "#/inbox" : "#/contracts"}">${waiting ? "Review inbox →" : "Open contracts →"}</a></div>`;
   let h = "";
-  h += `<div class="dsec">Proposals to decide (${t.proposals.length})</div>`;
-  h += t.proposals.length ? t.proposals.map(propItem).join("") : `<div class="empty">No proposals need a decision right now.${me.aiOn || me.aiChecked === false || !isStaff() ? "" : " AI access could not be confirmed — see the notice above."}</div>`;
+  h += `<div class="dsec">Suggested changes to check (${t.proposals.length})</div>`;
+  h += t.proposals.length ? t.proposals.map(propItem).join("") : `<div class="empty">No suggested changes to check.${me.aiOn || me.aiChecked === false || !isStaff() ? "" : " AI access could not be confirmed — see the notice above."}</div>`;
   h += `<div class="dsec">Tasks due (${t.tasks.length})</div>`;
   h += t.tasks.length ? t.tasks.map(taskItem).join("") : `<div class="empty">No tasks are due. Saved deadlines appear here 30 days ahead.</div>`;
   if (isStaff() && t.unassigned.length) { h += `<div class="dsec">Contracts without a responsible person (${t.unassigned.length})</div>` + t.unassigned.map((c) => `<div class="item link" data-c="${c.id}"><div class="ttl">${esc(c.title)}<small>${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}</small></div>${tag(c.status, CSTATUS_LBL[c.status])}<span class="meta">open the record to assign</span></div>`).join(""); }
@@ -411,7 +412,7 @@ async function enterToday() {
 }
 function propItem(p) {
   const where = p.contractId.length ? esc(p.contractTitle) : p.candidates.length ? `${p.candidates.length} possible contracts` : "no contract yet";
-  return `<div class="item link" data-s="${p.sourceId}"><div class="ttl">${esc(p.summary || p.sourceSubject || "Proposal")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · ${where} · ${p.changes.length} field${p.changes.length === 1 ? "" : "s"}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}</small></div>${tag("open", "OPEN")}<span class="meta">${fmtD(p.createdAt)}</span><button class="linkbtn" data-s="${p.sourceId}">REVIEW</button></div>`;
+  return `<div class="item link" data-s="${p.sourceId}"><div class="ttl">${esc(p.summary || p.sourceSubject || "Suggestion")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · ${where} · ${p.changes.length} field${p.changes.length === 1 ? "" : "s"}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}</small></div>${tag("open", "TO CHECK")}<span class="meta">${fmtD(p.createdAt)}</span><button class="linkbtn" data-s="${p.sourceId}">REVIEW</button></div>`;
 }
 function taskItem(t) {
   const dl = t.daysLeft.length ? N(t.daysLeft[0]) : null;
@@ -448,10 +449,10 @@ async function loadInbox() {
   let rows = [];
   try { rows = await backend.listSources(hubTok, ibStatus, []); } catch (e) { if (staleView()) return; $("ibList").innerHTML = `<div class="empty">Could not load: ${esc(String(e).slice(0, 160))}</div>`; return; }
   if (staleView()) return;
-  if (!rows.length) { $("ibList").innerHTML = `<div class="empty">${ibStatus === "" ? "Nothing waits here. Put the contracts address in CC, forward a thread, or upload a saved .eml file." : "No messages with this status."}</div>`; return; }
-  $("ibList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Message</th><th>From</th><th>Contract</th><th>Files</th><th>Proposals</th><th>Status</th><th>Received</th></tr></thead><tbody>` +
-    rows.map((s) => `<tr class="rowlink" data-s="${s.id}"><td><b style="font-weight:500">${esc(s.subject || "(no subject)")}</b>${s.note ? `<div class="kv">${esc(s.note)}</div>` : ""}<div class="kv mono">${esc(s.kind)}${s.handedInByName ? " · by " + esc(s.handedInByName) : ""}</div></td><td>${esc(s.fromName || s.fromAddr)}${s.fromName ? `<div class="kv mono">${esc(s.fromAddr)}</div>` : ""}</td><td>${s.contractId.length ? `<a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : '<span class="muted">—</span>'}</td><td class="num">${N(s.documents) || ""}</td><td class="num">${N(s.proposals) || ""}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("") + `</tbody></table></div>`;
-  $("ibList").querySelectorAll("tr[data-s]").forEach((r) => { r.onclick = (e) => { if (e.target.closest("a")) return; location.hash = (rows.find(s => String(s.id) === r.dataset.s)?.contractId.length ? "#/inbox/" : "#/intake/") + r.dataset.s; }; });
+  if (!rows.length) { $("ibList").innerHTML = `<div class="empty">${ibStatus === "" ? "Nothing waits here. Upload a document (PDF, image, text or a saved email) or paste text." : "Nothing with this status."}</div>`; return; }
+  $("ibList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Document</th><th>From</th><th>Saved as</th><th>Files</th><th>Suggestions</th><th>Status</th><th>Received</th></tr></thead><tbody>` +
+    rows.map((s) => `<tr class="rowlink" data-s="${s.id}"><td><b style="font-weight:500">${esc(s.subject || "(no subject)")}</b>${s.note ? `<div class="kv">${esc(s.note)}</div>` : ""}<div class="kv mono">${esc(s.kind)}${s.handedInByName ? " · by " + esc(s.handedInByName) : ""} · <a href="#/inbox/${s.id}">details</a></div></td><td>${esc(s.fromName || s.fromAddr)}${s.fromName ? `<div class="kv mono">${esc(s.fromAddr)}</div>` : ""}</td><td>${s.contractId.length ? `<a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : '<span class="muted">—</span>'}</td><td class="num">${N(s.documents) || ""}</td><td class="num">${N(s.proposals) || ""}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("") + `</tbody></table></div>`;
+  $("ibList").querySelectorAll("tr[data-s]").forEach((r) => { r.onclick = (e) => { if (e.target.closest("a")) return; const src = rows.find(s => String(s.id) === r.dataset.s); location.hash = src?.contractId.length ? "#/c/" + src.contractId[0] : (N(src?.proposals) && src?.status === "review" ? "#/inbox/" : "#/intake/") + r.dataset.s; }; });
 }
 // .eml upload — parsed in the browser, handed in through the intake lane
 $("ibEml").onchange = async () => { const files = [...$("ibEml").files]; $("ibEml").value = ""; if (files.length) await uploadEml(files); };
@@ -536,7 +537,7 @@ $("pmSend").onclick = () => withAction($("pmSend"), "pmStatus", async (token) =>
   const b = await backend.intakeBegin(token, meta); if (!b.ok) { setStatus("pmStatus", "err", b.detail); return; }
   const c = await backend.intakeCommit(token, b.id); if (!c.ok) { setStatus("pmStatus", "err", c.detail); return; }
   if (token !== hubTok) return;
-  $("pasteModal").classList.remove("on"); toast("Handed in — " + (c.status || "")); location.hash = "#/inbox/" + c.sourceId;
+  $("pasteModal").classList.remove("on"); toast("Handed in — " + (c.status || "")); location.hash = "#/intake/" + c.sourceId;
 });
 
 /* ============================== one message (source) ============================== */
@@ -557,15 +558,18 @@ async function enterSource(id, tabName, analysis = null) {
   if (staleView()) return;
   if (!v) { $("srcTitle").textContent = "No such message — or not yours to see"; return; }
   curSrc = v; const s = v.source;
+  // A new document (no contract, no suggestion aimed at an existing one) is reviewed and saved in one step.
+  if (!s.contractId.length && isStaff() && s.status !== "ignored" && !v.proposals.some((p) => p.status === "open" && (p.contractId.length || p.candidates.length))) { location.hash = "#/intake/" + id; return; }
   $("srcTitle").textContent = s.subject || "(no subject)"; $("srcDelete").classList.toggle("hidden",!isStaff()); $("srcDelete").onclick=()=>trashItem("source",s.id,s.subject);
   $("srcStatus").innerHTML = tag(s.status, SSTATUS_LBL[s.status] || s.status);
-  $("srcMeta").innerHTML = `From <b>${esc(s.fromName || s.fromAddr)}</b>${s.fromName ? ` &lt;${esc(s.fromAddr)}&gt;` : ""}${v.to.length ? " · to " + esc(v.to.join(", ")) : ""}${v.cc.length ? " · cc " + esc(v.cc.join(", ")) : ""}${s.sentAt ? " · sent " + esc(s.sentAt.slice(0, 16).replace("T", " ")) : ""} · received ${fmtD(s.receivedAt)} · ${esc(s.kind)}${s.handedInByName ? " by " + esc(s.handedInByName) : ""}${s.contractId.length ? ` · filed to <a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : ""}${s.note ? `<div>${esc(s.note)}</div>` : ""}`;
+  $("srcMeta").innerHTML = `From <b>${esc(s.fromName || s.fromAddr)}</b>${s.fromName ? ` &lt;${esc(s.fromAddr)}&gt;` : ""}${v.to.length ? " · to " + esc(v.to.join(", ")) : ""}${v.cc.length ? " · cc " + esc(v.cc.join(", ")) : ""}${s.sentAt ? " · sent " + esc(s.sentAt.slice(0, 16).replace("T", " ")) : ""} · received ${fmtD(s.receivedAt)} · ${esc(s.kind)}${s.handedInByName ? " by " + esc(s.handedInByName) : ""}${s.contractId.length ? ` · saved as <a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : ""}${s.note ? `<div>${esc(s.note)}</div>` : ""}`;
   const openProps = v.proposals.filter((p) => p.status === "open");
   $("srcPropCount").textContent = openProps.length ? `(${openProps.length})` : ""; $("srcDocCount").textContent = v.documents.length ? `(${v.documents.length})` : "";
   // proposals
   await renderProposals($("srcProposals"), v.proposals, { candidates: v.candidates, source: s, onDone: () => enterSource(id, tabName) });
   if (staleView()) return;
-  if (!s.contractId.length && isStaff()) $("srcProposals").insertAdjacentHTML("afterbegin", `<div class="source-guide"><a class="pill primary" href="#/intake/${s.id}">Review & file document</a> Complete missing details and choose the destination in one step.</div>`);
+  if (!s.contractId.length && isStaff()) $("srcProposals").insertAdjacentHTML("afterbegin", `<div class="source-guide"><a class="pill primary" href="#/intake/${s.id}">Save as a new contract</a> Check the details and save the record in one step, or confirm the suggested changes to an existing contract below.</div>`);
+  if (s.contractId.length && !openProps.length) $("srcProposals").insertAdjacentHTML("afterbegin", `<div class="source-guide"><strong>Saved as <a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>.</strong> Everything below is history: what the AI read and what was saved.</div>`);
   // message
   $("srcMessage").innerHTML = `${v.forwardComment ? `<div class="dsec">Forwarder's comment</div><div class="msgtext">${esc(v.forwardComment)}</div>` : ""}<div class="dsec">Message text</div><div class="msgtext">${esc(v.text || "(no text — see the documents)")}</div>${v.messageId ? `<div class="kv mono" style="margin-top:8px">message id ${esc(v.messageId)}</div>` : ""}`;
   // documents
@@ -573,8 +577,8 @@ async function enterSource(id, tabName, analysis = null) {
   $("srcDocuments").innerHTML = v.documents.length ? docTable(v.documents) : `<div class="empty">No files came with this message.</div>`;
   wireDocs($("srcDocuments"));
   // filing (staff)
-  $("srcFiling").innerHTML = isStaff() ? `<div class="scard"><h3>Where does this belong?</h3><div class="kv">Filing links the message to a contract without changing any terms. Confirm proposals under the first tab to change terms. Ignore takes a message out of the review queue. Delete moves it to Trash, where you can restore it.</div>
-    <div class="btnrow"><button class="pill primary sm" id="sfLink">Choose existing contract</button><button class="pill outline sm" id="sfCreate">Create a contract</button>${s.status === "ignored" ? `<button class="pill outline sm" id="sfBack">Return to review</button>` : `<button class="pill outline sm" id="sfIgnore">Ignore item</button>`}${me.aiOn ? `<button class="pill outline sm" id="sfRerun">Read again with AI</button>` : ""}<span id="sfStatus" class="status"></span></div></div>` : `<div class="notice soft">Workspace owners and editors can file messages and set matching rules.</div>`;
+  $("srcFiling").innerHTML = isStaff() ? `<div class="scard"><h3>Options</h3><div class="kv">Link attaches this document to an existing contract without changing its terms. Save as new creates a contract from it. Ignore takes it out of the queue; Delete moves it to Trash.</div>
+    <div class="btnrow"><button class="pill primary sm" id="sfLink">Link to an existing contract</button><button class="pill outline sm" id="sfCreate">Save as a new contract</button>${s.status === "ignored" ? `<button class="pill outline sm" id="sfBack">Back to review</button>` : `<button class="pill outline sm" id="sfIgnore">Ignore</button>`}${me.aiOn ? `<button class="pill outline sm" id="sfRerun">Read again with AI</button>` : ""}<span id="sfStatus" class="status"></span></div></div>` : `<div class="notice soft">Workspace owners and editors can file messages and set matching rules.</div>`;
   let progress=$("sourceAnalysisProgress");if(!progress){progress=document.createElement("div");progress.id="sourceAnalysisProgress";$("srcMeta").after(progress);}progress.hidden=true;progress.replaceChildren();
   if(analysisPending(v)||analysis?.requested){
     const rerun=$("sfRerun");if(rerun)rerun.disabled=true;
@@ -632,7 +636,7 @@ async function renderProposals(root, proposals, ctx) {
     const refresh = root.querySelector("[data-source-refresh]"); if (refresh) refresh.onclick = ctx.onDone;
     return;
   }
-  let h = open.length ? `<div class="source-guide"><strong>Review, then confirm.</strong>Check the source evidence and edit anything that needs correcting. Only selected fields are saved. An offer creates a draft; it does not become an accepted agreement automatically.</div>` : "";
+  let h = open.length ? `<div class="source-guide"><strong>Suggested changes.</strong> Check them against the source, correct what is wrong, save what applies. Only ticked fields are written. An offer creates a draft; nothing becomes an accepted agreement by itself.</div>` : "";
   for (const p of open) {
     const targets = [];
     if (p.contractId.length) targets.push({ id: N(p.contractId[0]), title: p.contractTitle, rev: N(p.currentRevision) });
@@ -648,7 +652,7 @@ async function renderProposals(root, proposals, ctx) {
       return `<tr><td><input type="checkbox" aria-label="Confirm ${esc(FIELD_LBL[c.field] || c.field)}" data-i="${i}" ${accept ? "checked" : ""}></td><td><b style="font-weight:500">${esc(FIELD_LBL[c.field] || c.field)}</b><div class="basis ${esc(c.basis)}">${esc(c.basis)}</div></td><td>${oldShown ? esc(oldShown) : '<span class="muted">—</span>'}</td><td><input type="text" aria-label="Proposed ${esc(FIELD_LBL[c.field] || c.field)}" data-v="${i}" data-orig="${esc(c.newValue)}" data-field="${esc(c.field)}" value="${esc(shown)}"></td><td class="ev">${ev || '<span class="muted">no quote</span>'}</td></tr>`;
     }).join("");
     h += `<div class="prop" data-p="${p.id}">
-      <div class="ph"><div class="t">${esc(p.summary || KIND_LBL[p.kind] || "Proposal")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · from <a href="#/inbox/${p.sourceId}">${esc(p.sourceSubject || "message #" + p.sourceId)}</a> · ${fmtD(p.createdAt)}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}${p.snoozedUntil ? " · snoozed until " + fmtDate(p.snoozedUntil) : ""}</small></div>${tag("open", "OPEN")}</div>
+      <div class="ph"><div class="t">${esc(p.summary || KIND_LBL[p.kind] || "Suggestion")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · from <a href="#/inbox/${p.sourceId}">${esc(p.sourceSubject || "document #" + p.sourceId)}</a> · ${fmtD(p.createdAt)}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}${p.snoozedUntil ? " · snoozed until " + fmtDate(p.snoozedUntil) : ""}</small></div>${tag("open", "TO CHECK")}</div>
       <div class="pb">
         <div class="target">Applies to
           ${targets.length ? `<select data-target>${targets.map((t) => `<option value="${t.id}" data-rev="${t.rev}">${esc(t.title)}</option>`).join("")}${isStaff() ? `<option value="other">another contract…</option><option value="new">a new contract (draft)</option>` : ""}</select>` : isStaff() ? `<select data-target><option value="new">a new contract (draft)</option><option value="other">an existing contract…</option></select>` : `<span class="muted">no contract could be matched — an editor files it</span>`}
@@ -657,10 +661,10 @@ async function renderProposals(root, proposals, ctx) {
         </div>
         <div class="tblwrap"><table class="plain"><thead><tr><th></th><th>Field</th><th>Today</th><th>Proposed (edit to correct)</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>
         ${p.uncertainties.length ? `<div class="unc">The AI was unsure about:<ul>${p.uncertainties.map((u) => `<li>${esc(u)}</li>`).join("")}</ul></div>` : ""}
-        <div class="btnrow"><input type="text" data-note placeholder="Note for the history (optional)" style="flex:1;min-width:200px;padding:8px 12px;font-size:13.5px"><button class="pill primary sm" data-confirm>Save selected changes</button><button class="pill outline sm" data-reject>Reject proposal</button>${isStaff() ? `<button class="linkbtn" data-assign>HAND TO…</button>` : ""}<button class="linkbtn" data-snooze>LATER</button><span class="status" data-status></span></div>
+        <div class="btnrow"><input type="text" data-note placeholder="Note for the history (optional)" style="flex:1;min-width:200px;padding:8px 12px;font-size:13.5px"><button class="pill primary sm" data-confirm>Save selected changes</button><button class="pill outline sm" data-reject>Decline</button>${isStaff() ? `<button class="linkbtn" data-assign>HAND TO…</button>` : ""}<button class="linkbtn" data-snooze>LATER</button><span class="status" data-status></span></div>
       </div></div>`;
   }
-  if (done.length) h += `<div class="dsec">Decided (${done.length})</div>` + done.map((p) => `<div class="item"><div class="ttl" style="font-size:15px">${esc(p.summary || KIND_LBL[p.kind] || "Proposal")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · ${p.changes.length} field${p.changes.length === 1 ? "" : "s"} · ${esc(p.status)} by ${esc(p.decidedByName || "—")} ${fmtD(p.decidedAt)}${p.note ? " · " + esc(p.note) : ""}${p.contractId.length ? ` · <a href="#/c/${p.contractId[0]}">${esc(p.contractTitle)}</a>` : ""}</small></div>${tag(p.status, p.status.toUpperCase())}</div>`).join("");
+  if (done.length) h += `<div class="dsec">History (${done.length})</div>` + done.map((p) => `<div class="item"><div class="ttl" style="font-size:15px">${esc(p.summary || KIND_LBL[p.kind] || "Suggestion")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · ${p.changes.length} field${p.changes.length === 1 ? "" : "s"} · ${esc(DECIDED_LBL[p.status] || p.status)} by ${esc(p.decidedByName || "—")} ${fmtD(p.decidedAt)}${p.note ? " · " + esc(p.note) : ""}${p.contractId.length ? ` · <a href="#/c/${p.contractId[0]}">${esc(p.contractTitle)}</a>` : ""}</small></div>${tag(p.status, p.status.toUpperCase())}</div>`).join("");
   if (staleView()) return;
   root.innerHTML = h;
   if (!isStaff()) {

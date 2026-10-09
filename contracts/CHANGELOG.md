@@ -1,5 +1,10 @@
 # Changelog — kebab-stack contracts
 
+## [0.15.0] — 2026-10-09
+
+- **One way for documents: upload → check → record.** A new document opens its review directly (also from the inbox list, the Today page and after pasting text); the record is saved with one click and opened. A document that is saved shows "Saved as <contract>" and its inbox page becomes history. The separate proposal/decision/filing vocabulary is gone from the upload path.
+- **Suggested changes, for mails about existing contracts.** What used to be "proposals" is now "Suggested changes": check, correct, save what applies, or decline. Status words in plain language: Reading, Ready to check, Saved, Ignored, Needs a look. Inbox tabs: Suggested changes · Text · Documents · Options.
+
 ## [0.14.2] — 2026-10-09
 
 - **Saving opens the record.** Filing from the review now lands on the saved record instead of the list, so what was saved is visible at once (owner report: a saved upload seemed to vanish).

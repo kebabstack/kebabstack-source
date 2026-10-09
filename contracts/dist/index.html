@@ -219,15 +219,15 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
         <button class="linkbtn" id="ibPaste">Paste text</button>
         <button class="pill primary sm spacewriter" id="ibAdd">+ Add document</button>
         <input type="file" id="ibEml" accept=".eml,.pdf,.txt,.png,.jpg,.jpeg,.webp,.gif,message/rfc822,application/pdf,text/plain,image/png,image/jpeg" multiple class="hidden">
-        <div class="sub">Add an agreement, licence or saved email. Review suggested details before saving them to a contract. AI reads text PDFs, scanned pages and purchase screenshots. Check the suggested details before filing.</div>
+        <div class="sub">Upload a contract, invoice, licence or saved email. The AI reads it (text PDFs, scans, screenshots), you check the details, one click saves the record. Mails about existing contracts appear here as suggested changes.</div>
       </div>
       <div class="filters" id="ibFilters">
         <button type="button" class="tag clickable sel" data-st="">Needs attention</button>
-        <button type="button" class="tag clickable received" data-st="received"><span class="dot"></span>Received</button>
-        <button type="button" class="tag clickable review" data-st="review"><span class="dot"></span>Ready to review</button>
-        <button type="button" class="tag clickable filed" data-st="filed"><span class="dot"></span>Filed</button>
+        <button type="button" class="tag clickable received" data-st="received"><span class="dot"></span>Reading</button>
+        <button type="button" class="tag clickable review" data-st="review"><span class="dot"></span>Ready to check</button>
+        <button type="button" class="tag clickable filed" data-st="filed"><span class="dot"></span>Saved</button>
         <button type="button" class="tag clickable" data-st="ignored"><span class="dot"></span>Ignored</button>
-        <button type="button" class="tag clickable failed" data-st="failed"><span class="dot"></span>Failed</button>
+        <button type="button" class="tag clickable failed" data-st="failed"><span class="dot"></span>Needs a look</button>
       </div>
       <div id="ibUpload" class="notice soft hidden"></div>
       <div id="ibList"></div>
@@ -240,10 +240,10 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
       <div class="rowa"><button class="linkbtn" id="srcBack">← INBOX</button><h2 id="srcTitle"></h2><span id="srcStatus"></span><button class="linkbtn hidden danger" id="srcDelete">Delete item</button></div>
       <div class="sub" id="srcMeta"></div>
       <div class="tabs">
-        <button data-tab="proposals" class="on">Proposals <span id="srcPropCount"></span></button>
-        <button data-tab="message">Message</button>
+        <button data-tab="proposals" class="on">Suggested changes <span id="srcPropCount"></span></button>
+        <button data-tab="message">Text</button>
         <button data-tab="documents">Documents <span id="srcDocCount"></span></button>
-        <button data-tab="filing">Filing</button>
+        <button data-tab="filing">Options</button>
       </div>
     </div></div>
     <div class="wrap">
@@ -287,7 +287,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
       <div class="sub" id="rSub"></div>
       <div class="tabs">
         <button data-tab="terms" class="on">Terms</button>
-        <button data-tab="proposals">Proposals <span id="rPropCount"></span></button>
+        <button data-tab="proposals">Suggested changes <span id="rPropCount"></span></button>
         <button data-tab="tasks">Tasks <span id="rTaskCount"></span></button>
         <button data-tab="messages">Messages <span id="rSrcCount"></span></button>
         <button data-tab="documents">Documents <span id="rDocCount"></span></button>
