@@ -1,5 +1,12 @@
 # Crumbs changelog
 
+## [0.7.0] — 2026-10-10
+
+- Reports open on the last seven days in the website's own time zone: daily buckets follow local midnights, the time zone is editable per website and shown next to the dates, and the last website, period and acquisition goal are remembered per browser. Eight metric cards compare to the previous period; the chart labels its axis, draws the previous period and lists its values.
+- Acquisition answers "which source brought the sign-ups": conversions and rate per channel, source, campaign or page for a chosen goal (new `goalRows` query). Quick goals save with one click; goal values suggest existing paths and events; funnels save from the builder and run again from a list. Managers share a read-only report link in one step.
+- Settings: adding a website asks only for the domain (name, time zone and retention default), Tracking script shows whether the first pageviews arrive, People & access adds a person with one click and explains ineligible people, API keys warn two weeks before expiry and default their names. History appears only once imports exist; website selection, All websites and Add website live in one picker.
+- Entry/exit, direct and unknown values read the same everywhere; countries show flag and name. No collection, authorization or data-model changes; `dayStarts` is optional in report requests and existing API clients keep UTC days.
+
 ## [0.6.2] — 2026-09-29
 
 - Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.

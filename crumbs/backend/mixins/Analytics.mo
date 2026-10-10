@@ -115,6 +115,11 @@ mixin (auth : T.AuthState, lease : T.Lease, db : T.Store, siteAccess : Map.Map<T
     let goal = db.goals.get(request.site # ":" # id) ?? (return #err(#notFound));
     Analytics.goalReport(db,request,goal);
   };
+  public query func goalRows(token : Text, request : T.ReportRequest, id : Text) : async T.Result<[{value : Text; visitors : Nat; completions : Nat}]> {
+    if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
+    let goal = db.goals.get(request.site # ":" # id) ?? (return #err(#notFound));
+    Analytics.goalRows(db,request,goal);
+  };
   public shared func deleteGoal(token : Text, site : Text, id : Text) : async T.Result<()> {
     if (not A.permit(auth, lease, db, siteAccess, token, site, true)) return #err(#unauthorized);
     db.goals.remove(site # ":" # id);
@@ -181,6 +186,11 @@ mixin (auth : T.AuthState, lease : T.Lease, db : T.Store, siteAccess : Map.Map<T
     if (db.imports.size() + pending.size() > 100000) return #err(#capacity("Import row capacity reached"));
     for ((key,row) in pending.entries()) db.imports.add(key,row);
     #ok(pending.size());
+  };
+  /// Whether any imported history exists for a website (the History tab shows only then).
+  public query func hasImports(token : Text, site : Text) : async T.Result<Bool> {
+    if (not A.permit(auth, lease, db, siteAccess, token, site, false)) return #err(#unauthorized);
+    #ok(db.imports.values().any(func r = r.site == site));
   };
   public query func imported(token : Text, site : Text, from : Int, until : Int) : async T.Result<[T.ImportRow]> {
     if (not A.permit(auth, lease, db, siteAccess, token, site, false)) return #err(#unauthorized);

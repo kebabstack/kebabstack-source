@@ -1,11 +1,11 @@
 # Metric contract, version 1
 
-All event times and API ranges are integer Unix seconds. `from` is inclusive, `until` exclusive. Site configuration and daily/hourly buckets currently require UTC. Native reports span at most 1827 days and scan at most 100,000 retained events, including same-day session context before `from`. Larger scans return a capacity error, never sampled totals. List limits truncate breakdown rows only, explicitly indicated by `truncated`.
+All event times and API ranges are integer Unix seconds. `from` is inclusive, `until` exclusive. Daily buckets follow the website's time zone when the client supplies `dayStarts` (the UTC instants of local midnights, as the Crumbs app does); without it, and for hourly/minute buckets, UTC applies. Native reports span at most 1827 days and scan at most 100,000 retained events, including same-day session context before `from`. Larger scans return a capacity error, never sampled totals. List limits truncate breakdown rows only, explicitly indicated by `truncated`.
 
 | Metric | Definition |
 |---|---|
 | Visitors | Distinct site-specific, daily rotating estimates in the selected events. Summing multiple days counts the same person on multiple days. NAT, changing IP/UA and privacy blocking affect accuracy. |
-| Visits | Sessions with a qualifying pageview or custom event, ending after 30 minutes without either. IDs rotate at UTC midnight; visits do not cross midnight. |
+| Visits | Sessions with a qualifying pageview or custom event, ending after 30 minutes without either. IDs rotate at UTC midnight; visits do not cross UTC midnight even when daily buckets use another time zone. |
 | Pageviews / events | Accepted pageview / custom-event records after deduplication. Engagement records increment neither. |
 | Bounces | Visits with at most one pageview and no interactive custom event. A custom-only noninteractive visit can be a bounce. |
 | Bounce rate | `100 * bounces / visits`, zero if no visits. |

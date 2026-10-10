@@ -2,13 +2,23 @@ import {businessWorkspace} from './business.js';
 import {websiteAccess} from './access.js';
 import {idlFactory} from './idl.js';
 import {appSignIn,takeHubTicket,session,mountTopbar,topbarIdlFactory} from './hub-client.js';
-import {esc,num,metricCards,table,chart,money,dimensionLabel} from './view.js';
+import {esc,num,metricCards,table,chart,money,dimensionLabel,journeyLabel} from './view.js';
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
 const HUB_URL = "__HUB_URL__";
 const $=id=>document.getElementById(id);
 session.key='ks-crumbs-session';
 let backend,user,sites=[],current,topbar,filters=[],epoch=0,view='overview',refresh,range,dirty=false,creating=false,setting='general',secret='';
-let funnelRevision=0;
+let funnelRevision=0;let historyAvailable=false;
+// Remembered per person in this browser: last website, period and the goal shown in Acquisition.
+const PREFS='ks-crumbs-prefs';function loadPrefs(){try{return JSON.parse(localStorage.getItem(PREFS)||'{}')||{};}catch{return {};}}function savePrefs(p){try{localStorage.setItem(PREFS,JSON.stringify({...loadPrefs(),...p}));}catch{}}
+// Website time zone: days in reports start at local midnight; the backend buckets by the instants computed here.
+const siteTz=()=>{const tz=current?.timezone||'UTC';try{new Intl.DateTimeFormat('en-US',{timeZone:tz});return tz;}catch{return 'UTC';}};
+function tzOffsetMs(ms,tz){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(new Date(ms)).filter(p=>p.type!=='literal').map(p=>[p.type,Number(p.value)]));return Date.UTC(parts.year,parts.month-1,parts.day,parts.hour===24?0:parts.hour,parts.minute,parts.second)-Math.floor(ms/1000)*1000;}
+function localMidnightUtc(dateStr,tz){let guess=Date.parse(dateStr+'T00:00:00Z');for(let i=0;i<2;i++)guess=Date.parse(dateStr+'T00:00:00Z')-tzOffsetMs(guess,tz);return guess;}
+const localDate=(ms,tz)=>new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms));
+const nextDay=d=>new Date(Date.parse(d+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+function dayStartsBetween(from,through,tz){const out=[];for(let d=from;d<=through;d=nextDay(d))out.push(Math.floor(localMidnightUtc(d,tz)/1000));return out;}
+function bucketLabels(starts,interval,tz){const full=new Intl.DateTimeFormat('en-GB',{timeZone:tz,weekday:'short',day:'numeric',month:'short',year:'numeric',...(interval<86400?{hour:'2-digit',minute:'2-digit'}:{})}),short=new Intl.DateTimeFormat('en-GB',{timeZone:tz,...(interval<86400?{hour:'2-digit',minute:'2-digit'}:{weekday:'short',day:'numeric',month:'short'})});return starts.map(at=>({at,text:full.format(new Date(at*1000)),short:short.format(new Date(at*1000))}));}
 let steps=[{kind:'page',value:'/'},{kind:'event',value:'Signup'}];
 const reportViews=['overview','acquisition','all','goals','journeys','history'];
 const signIn=appSignIn({name:'Crumbs',hubUrl:HUB_URL});
@@ -24,7 +34,11 @@ function controls(){
  document.querySelectorAll('.manager-only').forEach(e=>e.hidden=!canManage());
  $('emptyHub').hidden=admin;$('emptyHub').href=HUB_URL;
  $('newSite').hidden=!admin||!hasSite||creating||view!=='all';
- $('workspaceTitle').textContent=creating?'Add website':view==='all'?'All websites':'Website analytics';
+ $('workspaceTitle').textContent=creating?'Add website':view==='all'?'All websites':(current?.name||'Website analytics');
+ $('workspaceSub').textContent=current&&!creating&&view!=='all'?current.domain:'';$('workspaceSub').hidden=!(current&&!creating&&view!=='all');
+ document.body.classList.toggle('creating',creating);document.querySelector('.settings-access').hidden=creating;
+ $('navHistory').hidden=!historyAvailable;
+ $('shareReport').hidden=!hasSite||creating||!reportViews.includes(view)||view==='all'||!canManage();if($('shareReport').hidden)$('shareResult').hidden=true;
  $('websiteControls').hidden=!hasSite||creating||view==='all';$('nav').hidden=!hasSite||creating;
  $('reportTools').hidden=!hasSite||creating||!reportViews.includes(view);
  const savedVisible=hasSite&&!creating&&['overview','acquisition','goals','journeys'].includes(view);
@@ -42,62 +56,74 @@ function clearReports(){
  clearSecret();business.clear();$('accessPanel').replaceChildren();$('siteForm').reset();resetGoal();dirty=false;
 }
 function notice(message,kind='error'){$('notice').textContent=message;$('notice').hidden=!message;$('notice').dataset.kind=kind;}
-function setPeriod(days){const end=new Date(),begin=new Date(end.getTime()-(days-1)*86400000);setRange(begin.toISOString().slice(0,10),end.toISOString().slice(0,10));}
+function setPeriod(days){const tz=siteTz(),now=Date.now();setRange(localDate(now-(days-1)*86400000,tz),localDate(now,tz));}
 function setRange(from,through){
- const start=Date.parse(from+'T00:00:00Z'),end=Date.parse(through+'T00:00:00Z')+86400000;
+ const tz=siteTz();if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(through))throw new Error('Choose a valid start date on or before the end date.');
+ const start=localMidnightUtc(from,tz),end=localMidnightUtc(nextDay(through),tz);
  if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start)throw new Error('Choose a valid start date on or before the end date.');
- if(end-start>1827*86400000)throw new Error('Choose a period of 1827 days or less.');
- range={from:BigInt(start/1000),until:BigInt(end/1000),fromLabel:from,untilLabel:through};
- $('fromDate').value=from;$('toDate').value=through;$('rangeLabel').textContent=from===through?from:from+' – '+through;
+ if(end-start>1827*86400000+3600000)throw new Error('Choose a period of 1827 days or less.');
+ range={from:BigInt(Math.floor(start/1000)),until:BigInt(Math.floor(end/1000)),fromLabel:from,untilLabel:through,dayStarts:dayStartsBetween(from,through,tz)};
+ $('fromDate').value=from;$('toDate').value=through;$('rangeLabel').textContent=from===through?from:from+' – '+through;$('tzLabel').textContent=tz;
 }
-function request(dimension='',limit=100){return {site:current.id,from:range.from,until:range.until,filters:[...filters],dimension,limit:BigInt(limit)};}
+function request(dimension='',limit=100){return {site:current.id,from:range.from,until:range.until,filters:[...filters],dimension,limit:BigInt(limit),dayStarts:dimension==='day'?[(range.dayStarts||[]).map(BigInt)]:[]};}
 async function report(dimension='',custom){return unwrap(await backend.report(session.load(),custom??request(dimension)));}
 async function loadSites(){
- sites=await backend.listSites(session.load());const previous=current?.id;
+ sites=await backend.listSites(session.load());const previous=current?.id??loadPrefs().site;
  current=sites.find(s=>s.id===previous)??sites[0];
  if(previous!==current?.id){filters=[];clearSecret();}
- $('sitePicker').innerHTML=sites.map(s=>`<option value="${esc(s.id)}">${esc(s.name.toLowerCase()===s.domain.toLowerCase()?s.domain:s.name+' · '+s.domain)}</option>`).join('');
- $('sitePicker').value=current?.id??'';controls();propertyOptions();
+ $('sitePicker').innerHTML=sites.map(s=>`<option value="${esc(s.id)}">${esc(s.name.toLowerCase()===s.domain.toLowerCase()?s.domain:s.name+' · '+s.domain)}</option>`).join('')+(sites.length>1?'<option value="__all">All websites</option>':'')+(user?.role==='admin'?'<option value="__new">＋ Add website…</option>':'');
+ $('sitePicker').value=current?.id??'';
+ if(current){try{historyAvailable=unwrap(await backend.hasImports(session.load(),current.id));}catch{historyAvailable=false;}}else historyAvailable=false;
+ if(current&&range)setRange(range.fromLabel,range.untilLabel);
+ controls();propertyOptions();
 }
 function propertyOptions(){const selected=$('dimension').value;document.querySelectorAll('#dimension [data-property]').forEach(e=>e.remove());for(const name of current?.allowedProperties??[]){const option=document.createElement('option');option.value='prop:'+name;option.textContent='Property: '+name;option.dataset.property='true';$('dimension').append(option);}if([...$('dimension').options].some(o=>o.value===selected))$('dimension').value=selected;}
 async function chartReport(r,dimension){
- const requests=[];for(let from=r.from;from<r.until;from+=900n*86400n)requests.push(report(dimension,{...r,dimension,limit:1000n,from,until:from+900n*86400n<r.until?from+900n*86400n:r.until}));
+ const requests=[];const all=(r.dayStarts&&r.dayStarts[0])||(range?.dayStarts||[]).map(BigInt);for(let from=r.from;from<r.until;from+=900n*86400n){const until=from+900n*86400n<r.until?from+900n*86400n:r.until;requests.push(report(dimension,{...r,dimension,limit:1000n,from,until,dayStarts:dimension==='day'?[all.filter(t=>t>=from&&t<until)]:[]}));}
  const parts=await Promise.all(requests);return {rows:parts.flatMap(p=>p.rows),truncated:parts.some(p=>p.truncated)};
 }
 async function overview(run){
  const r=request(),length=r.until-r.from,old={...r,from:r.from-length<0n?0n:r.from-length,until:r.from};
  const realtime={...r,from:BigInt(Math.floor(Date.now()/1000)-300),until:BigInt(Math.floor(Date.now()/1000)+1),filters:[{dimension:'event',values:[''],exclude:false}]};
- const dimension=$('dimension').value,timeDimension=length<=3600n?'minute':length<=86400n?'hour':'day';
- const data=await Promise.all([report('',r),report('',old),chartReport(r,timeDimension),report('path'),report('source'),report('country'),report('device'),report(dimension),report('',realtime)]);
+ const dimension=$('dimension').value,timeDimension=length<=3600n?'minute':length<=86400n?'hour':'day',tz=siteTz();
+ const oldStarts=timeDimension==='day'?dayStartsBetween(localDate(Number(old.from)*1000,tz),localDate((Number(old.until)-1)*1000,tz),tz):[];const oldReq={...old,dayStarts:timeDimension==='day'?[oldStarts.map(BigInt)]:[]};
+ const data=await Promise.all([report('',r),report('',old),chartReport(r,timeDimension),report('path'),report('source'),report('country'),report('device'),report(dimension),report('',realtime),chartReport(oldReq,timeDimension).catch(()=>null)]);
  if(!isCurrent(run))return;
  $('metrics').innerHTML=metricCards(data[0].totals,data[1].totals);
- const m=data[0].totals,activity=[num(m.events)+' custom events'];
- if(Number(m.scrollSamples))activity.push((Number(m.scrollDepthSum)/Number(m.scrollSamples)).toFixed(0)+'% average scroll depth');
- activity.push(...m.revenue.map(([currency,minor])=>money(currency,minor)+' revenue'));
  if(r.from<BigInt(Math.floor(Date.now()/1000))-current.retentionDays*86400n)notice('Part of this period is older than the website retention of '+current.retentionDays+' days. Deleted records cannot be included.','info');
- $('activity').textContent=activity.join(' · ');$('chart').innerHTML=chart(data[2].rows,Number(r.from),Number(r.until),{metric:$('chartMetric').value,interval:timeDimension==='minute'?60:timeDimension==='hour'?3600:86400});
+ const interval=timeDimension==='minute'?60:timeDimension==='hour'?3600:86400;
+ const starts=timeDimension==='day'?(range.dayStarts||[]):(()=>{const a=[];for(let t=Math.floor(Number(r.from)/interval)*interval;t<Number(r.until);t+=interval)a.push(t);return a;})();
+ const prevStarts=timeDimension==='day'?oldStarts:starts.map(t=>t-Number(length));
+ const previous=data[9]?{byKey:new Map(data[9].rows.map(x=>[Number(x.value),Number(x.metrics[$('chartMetric').value]??0)])),starts:prevStarts}:null;
+ $('activity').textContent='';$('chart').innerHTML=chart(data[2].rows,Number(r.from),Number(r.until),{metric:$('chartMetric').value,interval,labels:bucketLabels(starts,interval,tz),previous});
  $('chartCaption').innerHTML=`<span>${esc(range.fromLabel)}</span><span>${esc(range.untilLabel)}</span>`;
  [['pages','path',3],['sources','source',4],['countries','country',5],['devices','device',6],['breakdown',dimension,7]].forEach(([id,d,i])=>{$(id).innerHTML=table(data[i].rows,d);});
  if(!data[5].rows.some(row=>row.value))$('countries').innerHTML='<p class="empty-report">No location data available.<br><span class="subtle">Native collection does not add geolocation.</span></p>';
- $('realtime').textContent=num(data[8].totals.visitors)+' visitors in the last 5 minutes';$('realtime').title='Across this website, independent of the selected dates and filters.';
+ $('realtime').textContent=num(data[8].totals.visitors)+' live';$('realtime').title=num(data[8].totals.visitors)+' visitors with a pageview in the last 5 minutes, independent of dates and filters. Click to watch live.';
  if(data.some(r=>r.truncated))notice('Showing the top results. Metric totals include the entire selected period.','info');
 }
 function clearFunnel(){funnelRevision++;$('funnel').textContent='';$('funnelStatus').textContent='';}
 async function goals(run){
  clearFunnel();
  const list=unwrap(await backend.goals(session.load(),current.id)),base=await report();
- const rows=await Promise.all(list.map(async g=>({g,hit:unwrap(await backend.goalReport(session.load(),request(),g.id))})));
+ const [rows,paths,events,saved]=await Promise.all([Promise.all(list.map(async g=>({g,hit:unwrap(await backend.goalReport(session.load(),request(),g.id))}))),report('path').catch(()=>null),report('event').catch(()=>null),backend.savedReports(session.load(),current.id).then(unwrap).catch(()=>[])]);
  if(!isCurrent(run))return;
+ $('goalValueList').innerHTML=[...(paths?.rows||[]).map(x=>x.value).filter(Boolean),...(events?.rows||[]).map(x=>x.value).filter(Boolean)].slice(0,200).map(v=>`<option value="${esc(v)}"></option>`).join('');
+ renderSavedFunnels(saved.filter(x=>x.steps.length));
  $('goals').innerHTML=rows.length?rows.map(({g,hit})=>`<div class="data-row goal-row"><span class="access-name"><strong>${esc(g.name)}</strong><span class="subtle">${'scroll'in g.kind?'Scroll '+g.kind.scroll+'%':'page'in g.kind?'Page':'Event'} · ${esc(g.value)}</span></span><span class="number">${num(hit.visitors)} visitors · ${num(hit.completions)} completions <span class="subtle">· ${Number(base.totals.visitors)?(Number(hit.visitors)/Number(base.totals.visitors)*100).toFixed(1):'0.0'}%</span></span>${canManage()?`<button data-delete-goal="${esc(g.id)}" data-name="${esc(g.name)}" aria-label="Delete goal ${esc(g.name)}">Remove</button>`:''}</div>`).join(''):`<p class="empty-report">${canManage()?'Add a goal to measure an important page visit or event.':'No goals have been configured for this website.'}</p>`;
 }
-async function journeys(run){const rows=unwrap(await backend.journeys(session.load(),request()));if(!isCurrent(run))return;$('journeys').innerHTML=rows.length?rows.map(([from,to,count])=>`<div class="data-row"><span class="journey-path">${esc(from)} <span aria-label="to">→</span> ${esc(to)}</span><span class="number">${num(count)}</span></div>`).join(''):'<p class="empty-report">No page transitions in this period.</p>';}
+function renderSavedFunnels(list){$('savedFunnels').innerHTML=list.length?'<p class="subtle">Saved funnels</p>'+list.map(r=>`<div class="data-row"><span>${esc(r.name)}</span><span class="access-add"><button type="button" data-run-funnel="${esc(r.id)}">Run</button>${canManage()?`<button type="button" data-delete-funnel="${esc(r.id)}" data-name="${esc(r.name)}">Remove</button>`:''}</span></div>`).join(''):'';$('savedFunnels').dataset.list=JSON.stringify(list.map(r=>({id:r.id,site:r.site,name:r.name,steps:r.steps.map(x=>({kind:Object.keys(x.kind)[0],value:x.value})),revision:String(r.revision)})));}
+async function journeys(run){const rows=unwrap(await backend.journeys(session.load(),request()));if(!isCurrent(run))return;$('journeys').innerHTML=rows.length?rows.map(([from,to,count])=>`<div class="data-row"><span class="journey-path">${esc(journeyLabel(from))} <span aria-label="to">→</span> ${esc(journeyLabel(to))}</span><span class="number">${num(count)}</span></div>`).join(''):'<p class="empty-report">No page transitions in this period.</p>';}
 async function historyView(run){const r=request(),rows=unwrap(await backend.imported(session.load(),current.id,r.from,r.until));if(!isCurrent(run))return;$('historyRows').innerHTML=rows.length?rows.map(row=>`<div class="data-row"><span class="access-name"><strong>${esc(row.value||'Total')}</strong><span class="subtle">${new Date(Number(row.day)*1000).toISOString().slice(0,10)} · ${esc(dimensionLabel(row.dimension))}</span></span><span class="number">${num(row.metrics.visitors)} visitors · ${num(row.metrics.pageviews)} views</span></div>`).join(''):'<p class="empty-report">No imported data in this period.</p>';}
 function settings(site){
  const form=$('siteForm');form.reset();dirty=false;form.elements.id.readOnly=!!site;
  for(const key of ['id','name','domain'])form.elements[key].value=site?.[key]??'';
- form.elements.retentionDays.value=Number(site?.retentionDays??365);form.elements.enabled.checked=site?.enabled??true;
+ const zones=(()=>{try{return Intl.supportedValuesOf('timeZone');}catch{return ['UTC'];}})(),browserTz=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone;}catch{return 'UTC';}})(),tz=site?.timezone||browserTz||'UTC';
+ form.elements.timezone.innerHTML=[...new Set(['UTC',tz,...zones])].map(z=>`<option value="${esc(z)}">${esc(z.replaceAll('_',' '))}</option>`).join('');form.elements.timezone.value=zones.includes(tz)||tz==='UTC'?tz:'UTC';
+ form.elements.retentionDays.value=String(Number(site?.retentionDays??365));if(form.elements.retentionDays.value!==String(Number(site?.retentionDays??365))){const o=document.createElement('option');o.value=String(Number(site.retentionDays));o.textContent=Number(site.retentionDays)+' days';form.elements.retentionDays.append(o);form.elements.retentionDays.value=o.value;}
+ form.elements.enabled.checked=site?.enabled??true;
  form.elements.allowedProperties.value=(site?.allowedProperties??[]).join(', ');form.elements.excludedPaths.value=(site?.excludedPaths??[]).join('\n');
- $('siteFormTitle').textContent=site?'Website details':'Add a website';$('siteFormHint').textContent=site?'Update the name, domain and collection preferences.':'Start with a name and domain. You can add people and install tracking next.';
+ $('siteFormTitle').textContent=site?'Website details':'Add a website';$('siteFormHint').textContent=site?'Update the name, domain, time zone and collection preferences.':'Enter the domain. Name, time zone and retention default and can be changed later; people and the tracking script come next.';
  $('saveSite').textContent=site?'Save changes':'Create website';$('siteIdLabel').textContent=site?'Website ID: '+site.id:'A website ID is created automatically from the domain.';
  $('siteStatus').textContent='';controls();
 }
@@ -105,11 +131,12 @@ function snippet(){try{const origin=new URL($('collectorUrl').value);if(origin.p
 async function apiView(run){
  if(!canManage())return;const [keys,health]=await Promise.all([backend.listKeys(session.load()),user.role==='admin'?backend.health(session.load()):null]);if(!isCurrent(run))return;
  const labels={read:'Read reports',manage:'Manage content',share:'Shared report'};
- $('keys').innerHTML=unwrap(keys).filter(k=>k.site===current.id).map(k=>`<div class="data-row"><span class="access-name"><strong>${esc(k.name)}</strong><span class="subtle">${labels[Object.keys(k.scope)[0]]??'Key'} · expires ${new Date(Number(k.expiresAt)*1000).toISOString().slice(0,10)}</span></span><button data-revoke="${esc(k.id)}" data-name="${esc(k.name)}">Revoke</button></div>`).join('')||'<p class="empty-report">No keys or shared reports for this website.</p>';
+ const daysLeft=k=>Math.ceil((Number(k.expiresAt)*1000-Date.now())/86400000);
+ $('keys').innerHTML=unwrap(keys).filter(k=>k.site===current.id).map(k=>`<div class="data-row"><span class="access-name"><strong>${esc(k.name)}</strong><span class="subtle${daysLeft(k)<=14?' key-row-expiring':''}">${labels[Object.keys(k.scope)[0]]??'Key'} · ${daysLeft(k)<0?'expired':daysLeft(k)<=14?'expires in '+daysLeft(k)+' day'+(daysLeft(k)===1?'':'s')+' ('+new Date(Number(k.expiresAt)*1000).toISOString().slice(0,10)+')':'expires '+new Date(Number(k.expiresAt)*1000).toISOString().slice(0,10)}</span></span><button data-revoke="${esc(k.id)}" data-name="${esc(k.name)}">Revoke</button></div>`).join('')||'<p class="empty-report">No keys or shared reports for this website.</p>';
  if(health){const h=unwrap(health);$('health').textContent=`${num(h.accepted)} accepted · ${num(h.duplicates)} duplicate deliveries ignored · ${num(h.rejected)} rejected · ${num(h.storedEvents)} retained.`;}
 }
 function renderFilters(){const show=current&&!creating&&['overview','acquisition','goals','journeys'].includes(view)&&filters.length;$('filters').hidden=!show;$('filters').innerHTML=show?filters.map((f,i)=>`<span class="filter">${esc(dimensionLabel(f.dimension))}: ${esc(f.values.map(v=>v||'Direct / none').join(', '))}<button data-remove="${i}" aria-label="Remove ${esc(dimensionLabel(f.dimension))} filter">×</button></span>`).join('')+'<button class="text-button" id="clearFilters">Clear all</button>':'';}
-async function route(){
+async function route(){clearTimeout(trackingTimer);
  if(!user)return;const run=++epoch;creating=location.hash==='#/new'&&user.role==='admin';
  const path=location.hash.replace(/^#\/?/,'').split('/');view=creating?'settings':path[0]||'overview';setting=['general','tracking','access','search'].includes(path[1])?path[1]:'general';
  if(![...reportViews,'settings','api'].includes(view)||(['settings','api'].includes(view)&&!canManage()&&!creating))view='overview';
@@ -131,9 +158,9 @@ async function route(){
   else if(view==='history')await historyView(run);
   else if(view==='settings'){
    if(creating||setting==='general')settings(creating?null:current);
-   else if(setting==='tracking'){snippet();$('copyStatus').textContent='';}
+   else if(setting==='tracking'){snippet();$('copyStatus').textContent='';void trackingStatus(run);}
    else if(setting==='search')await business.searchSettings(run);
-   else await websiteAccess({actor:backend,token:()=>session.load(),site:current.id,mount:$('accessPanel'),isCurrent:()=>isCurrent(run),onDirty:value=>{dirty=value;},onSaved:async()=>{dirty=false;await loadSites();await route();notice('Website access saved.','success');}});
+   else await websiteAccess({actor:backend,token:()=>session.load(),site:current.id,mount:$('accessPanel'),hubUrl:HUB_URL.startsWith('__')?'':HUB_URL,isCurrent:()=>isCurrent(run),onDirty:value=>{dirty=value;},onSaved:async()=>{dirty=false;await loadSites();await route();notice('Website access saved.','success');}});
   }else await apiView(run);
  }catch(e){if(isCurrent(run)){clearReports();notice('Could not load '+(reportViews.includes(view)?'this report':'this section')+': '+e.message);}}
  finally{if(isCurrent(run)){$('loadingStatus').hidden=true;$('v-'+view).setAttribute('aria-busy','false');}}
@@ -147,19 +174,18 @@ async function navigate(hash){if(dirty&&!await confirmAction('Discard unsaved ch
 async function signOut(){++epoch;clearInterval(refresh);const t=session.load();session.clear();if(t)backend.signOut(t).catch(()=>{});user=null;clearReports();topbar?.destroy();topbar=null;$('layout').hidden=true;$('login').hidden=false;}
 async function action(fn,button,status){if(button?.disabled)return;const run=epoch,fields=[...(button?.form?.elements??(button?[button]:[]))].map(el=>[el,el.disabled]);notice('');fields.forEach(([el])=>{el.disabled=true;});if(status)status.textContent='Working…';try{await fn(run);}catch(e){if(isCurrent(run)){if(status)status.textContent=e.message;else notice(e.message);}}finally{fields.forEach(([el,disabled])=>{el.disabled=disabled;});}}
 async function copy(text,status){try{if(!text)throw new Error();await navigator.clipboard.writeText(text);status.textContent='Copied.';}catch{status.textContent='Select and copy the text above. Your browser did not allow clipboard access.';}}
-const business=businessWorkspace({actor:()=>backend,token:()=>session.load(),site:()=>current,sites:()=>sites,request,epoch:()=>epoch,isCurrent,notice,confirm:confirmAction,route,dirty:value=>{dirty=value;},
+const business=businessWorkspace({actor:()=>backend,token:()=>session.load(),site:()=>current,sites:()=>sites,request,epoch:()=>epoch,isCurrent,notice,confirm:confirmAction,route,dirty:value=>{dirty=value;},prefs:loadPrefs,savePrefs,canManage,
  steps:()=>steps.map(s=>({kind:{[s.kind]:null},value:s.value.trim()})),
  applySaved:r=>{$('savedTools').open=false;$('savedTools').querySelector('summary').focus();filters=r.filters.map(f=>({...f,values:[...f.values]}));if(r.steps.length){steps=r.steps.map(s=>({kind:Object.keys(s.kind)[0],value:s.value}));renderSteps();void navigate('#/goals');}else void route();},
  openSite:id=>{current=sites.find(s=>s.id===id);filters=[];clearReports();$('sitePicker').value=id;void navigate('#/overview');}
 });
-$('allWebsites').onclick=()=>navigate('#/all');
 document.addEventListener('click',e=>{if(!$('savedTools').contains(e.target))$('savedTools').open=false;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('savedTools').open){$('savedTools').open=false;$('savedTools').querySelector('summary').focus();}});
 $('chartMetric').onchange=()=>route();
 $('realtime').onclick=()=>{$('period').value='realtime';$('dateRange').hidden=true;void route();};
 $('newSite').onclick=$('emptyAdd').onclick=()=>navigate('#/new');
-$('sitePicker').onchange=async()=>{const id=$('sitePicker').value;if(dirty&&!await confirmAction('Discard unsaved changes?','Your changes have not been saved.')){$('sitePicker').value=current.id;return;}dirty=false;current=sites.find(s=>s.id===id);filters=[];clearReports();propertyOptions();await route();};
-$('period').onchange=()=>{const custom=$('period').value==='custom';$('dateRange').hidden=!custom;if(!custom){if($('period').value!=='realtime')setPeriod(Number($('period').value));void route();}};
+$('sitePicker').onchange=async()=>{const id=$('sitePicker').value;if(id==='__all'||id==='__new'){$('sitePicker').value=current?.id??'';await navigate(id==='__all'?'#/all':'#/new');return;}if(dirty&&!await confirmAction('Discard unsaved changes?','Your changes have not been saved.')){$('sitePicker').value=current.id;return;}dirty=false;current=sites.find(s=>s.id===id);savePrefs({site:id});filters=[];clearReports();propertyOptions();await loadSites();await route();};
+$('period').onchange=()=>{const custom=$('period').value==='custom';$('dateRange').hidden=!custom;savePrefs({period:$('period').value});if(!custom){if($('period').value!=='realtime')setPeriod(Number($('period').value));void route();}};
 $('dateRange').onsubmit=e=>{e.preventDefault();try{setRange($('fromDate').value,$('toDate').value);void route();}catch(e){notice(e.message);}};
 $('dimension').onchange=()=>route();
 $('nav').onclick=e=>{const b=e.target.closest('[data-view]');if(b)void navigate('#/'+b.dataset.view);};
@@ -174,7 +200,9 @@ $('layout').addEventListener('click',async e=>{
  const remove=e.target.closest('[data-remove]');if(remove){filters.splice(Number(remove.dataset.remove),1);await route();}
  if(e.target.closest('#clearFilters')){filters=[];await route();}
  const revoke=e.target.closest('[data-revoke]');if(revoke&&await confirmAction('Revoke '+revoke.dataset.name+'?','Any integration or shared report using this key will stop working.','Revoke'))await action(async run=>{unwrap(await backend.revokeKey(session.load(),revoke.dataset.revoke));if(isCurrent(run))await apiView(run);},revoke);
- const preset=e.target.closest('[data-goal-preset]');if(preset){$('goalForm').hidden=false;$('goalForm').elements.name.value=preset.textContent;$('goalForm').elements.kind.value='event';$('goalForm').elements.value.value=preset.dataset.goalPreset;goalType();$('goalForm').elements.name.focus();}
+ const preset=e.target.closest('[data-goal-preset]');if(preset&&canManage())await action(async run=>{unwrap(await backend.saveGoal(session.load(),{id:crypto.randomUUID(),site:current.id,name:preset.textContent.trim(),kind:{event:null},value:preset.dataset.goalPreset}));if(!isCurrent(run))return;await goals(run);notice('Goal “'+preset.textContent.trim()+'” added. Remove it from the list if you change your mind.','success');},preset);
+ const runSaved=e.target.closest('[data-run-funnel]');if(runSaved){const list=JSON.parse($('savedFunnels').dataset.list||'[]'),r=list.find(x=>x.id===runSaved.dataset.runFunnel);if(r){steps=r.steps.map(x=>({kind:x.kind,value:x.value}));renderSteps();clearFunnel();$('runFunnel').click();}}
+ const delSaved=e.target.closest('[data-delete-funnel]');if(delSaved&&await confirmAction('Remove '+delSaved.dataset.name+'?','Collected data is retained.','Remove funnel'))await action(async run=>{const list=JSON.parse($('savedFunnels').dataset.list||'[]'),r=list.find(x=>x.id===delSaved.dataset.deleteFunnel);if(r)unwrap(await backend.deleteReport(session.load(),r.site,r.id,BigInt(r.revision)));if(isCurrent(run))await goals(run);},delSaved);
  const del=e.target.closest('[data-delete-goal]');if(del&&await confirmAction('Remove '+del.dataset.name+'?','The goal is removed. Collected events remain available.','Remove goal'))await action(async run=>{unwrap(await backend.deleteGoal(session.load(),current.id,del.dataset.deleteGoal));if(isCurrent(run))await goals(run);},del);
 });
 $('siteForm').oninput=()=>{dirty=true;$('siteStatus').textContent='Unsaved changes';controls();};
@@ -184,7 +212,7 @@ $('siteForm').onsubmit=e=>{e.preventDefault();action(async run=>{
  if(creating&&sites.some(s=>s.domain===domain))throw new Error('This website already exists. Choose it in the website menu.');
  let id=creating?domain.replace(/[^a-z0-9_-]/g,'-').slice(0,80):f.id.value;
  if(creating&&sites.some(s=>s.id===id)){const base=id.slice(0,70);let suffix=2;while(sites.some(s=>s.id===base+'-'+suffix))suffix++;id=base+'-'+suffix;}
- const site={id,name:f.name.value.trim(),domain,timezone:'UTC',retentionDays:BigInt(f.retentionDays.value),enabled:f.enabled.checked,allowedProperties:f.allowedProperties.value.split(',').map(x=>x.trim()).filter(Boolean),viewers:[],excludedPaths:f.excludedPaths.value.split('\n').map(x=>x.trim()).filter(Boolean)};
+ const site={id,name:f.name.value.trim()||domain,domain,timezone:creating?((()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone;}catch{return 'UTC';}})()):(f.timezone.value||'UTC'),retentionDays:BigInt(f.retentionDays.value),enabled:f.enabled.checked,allowedProperties:f.allowedProperties.value.split(',').map(x=>x.trim()).filter(Boolean),viewers:[],excludedPaths:f.excludedPaths.value.split('\n').map(x=>x.trim()).filter(Boolean)};
  const wasNew=creating;unwrap(await backend.saveSite(session.load(),site));if(!isCurrent(run))return;dirty=false;await loadSites();if(!isCurrent(run))return;current=sites.find(s=>s.id===site.id);$('sitePicker').value=site.id;
  const target=wasNew?'#/settings/tracking':'#/settings/general';history.replaceState(null,'',target);await route();notice(wasNew?'Website created. Install the script below, then add people under People & access.':'Website saved.','success');
  },$('saveSite'),$('siteStatus'));};
@@ -203,15 +231,26 @@ $('funnelSteps').onchange=e=>{if(e.target.dataset.field==='kind')renderSteps();}
 $('funnelSteps').onclick=e=>{const b=e.target.closest('[data-remove-step]');if(b&&steps.length>2){steps.splice(Number(b.dataset.removeStep),1);renderSteps();clearFunnel();}};
 $('addFunnelStep').onclick=()=>{if(steps.length<10){steps.push({kind:'page',value:''});renderSteps();clearFunnel();}};
 $('runFunnel').onclick=()=>action(async run=>{const revision=funnelRevision,inputs=steps.map((step,i)=>{const value=step.value.trim();if(!value||step.kind==='page'&&!value.startsWith('/'))throw new Error('Check step '+(i+1)+': enter '+(step.kind==='page'?'a path starting with /.':'an event name.'));return {kind:{[step.kind]:null},value};});const result=unwrap(await backend.funnel(session.load(),request(),inputs));if(!isCurrent(run)||revision!==funnelRevision)return;$('funnelStatus').textContent='Visitors completing each step · percentage of the first step';$('funnel').innerHTML=result.map((n,i)=>`<div class="funnel-step"><span>${i+1}. ${esc(inputs[i].value)}</span><strong>${num(n)} · ${Number(result[0])?(Number(n)/Number(result[0])*100).toFixed(1):'0'}%</strong></div>`).join('');},$('runFunnel'),$('funnelStatus'));
-$('keyForm').onsubmit=e=>{e.preventDefault();action(async run=>{const f=e.target.elements,scope=f.scope.value,site=current.id;const r=unwrap(await backend.createKey(session.load(),site,f.name.value.trim(),{[scope]:null},BigInt(f.days.value)));if(!isCurrent(run))return;secret=scope==='share'?new URL('./shared.html',location.href).href+'#site='+encodeURIComponent(site)+'&key='+encodeURIComponent(r.token):r.token;$('keyResult').hidden=false;$('newKey').textContent=secret;$('keyResultLabel').textContent=scope==='share'?'Copy this private report link now. Anyone with the link can read this website until it expires or is revoked.':'Copy this API key now. It will not be shown again. Keep it out of public website code.';$('copyKey').textContent=scope==='share'?'Copy link':'Copy key';$('keyStatus').textContent='Created.';await apiView(run);},e.target.querySelector('button'),$('keyStatus'));};
+$('saveFunnelSteps').onclick=()=>action(async run=>{const inputs=steps.map((step,i)=>{const value=step.value.trim();if(!value||step.kind==='page'&&!value.startsWith('/'))throw new Error('Check step '+(i+1)+' before saving.');return {kind:{[step.kind]:null},value};});const name=inputs.map(x=>x.value).join(' → ').slice(0,100);unwrap(await backend.saveReport(session.load(),{id:crypto.randomUUID(),site:current.id,name,filters:[],steps:inputs,revision:0n,updatedAt:0n}));if(!isCurrent(run))return;await goals(run);notice('Funnel saved as “'+name+'”.','success');},$('saveFunnelSteps'),$('funnelStatus'));
+$('shareReport').onclick=()=>action(async run=>{const site=current.id,date=new Date().toISOString().slice(0,10);const r=unwrap(await backend.createKey(session.load(),site,('Shared report · '+current.name+' · '+date).slice(0,100),{share:null},90n));if(!isCurrent(run))return;secret=new URL('./shared.html',location.href).href+'#site='+encodeURIComponent(site)+'&key='+encodeURIComponent(r.token);$('shareLink').textContent=secret;$('shareLabel').textContent='Read-only link for the last 30 days of this website. It works for 90 days or until revoked under API & exports.';$('shareResult').hidden=false;$('shareStatus').textContent='';try{await navigator.clipboard.writeText(secret);$('shareStatus').textContent='Copied.';}catch{}},$('shareReport'));
+$('copyShare').onclick=()=>copy($('shareLink').textContent,$('shareStatus'));$('dismissShare').onclick=()=>{$('shareResult').hidden=true;$('shareLink').textContent='';};
+let trackingTimer=null;
+async function trackingStatus(run){clearTimeout(trackingTimer);const el=$('trackingStatus');if(!el)return;if(!current||setting!=='tracking'||view!=='settings'||!isCurrent(run)){el.textContent='';el.className='tracking-status';return;}
+ const now=Math.floor(Date.now()/1000);try{const [week,recent]=await Promise.all([report('',{site:current.id,from:BigInt(now-7*86400),until:BigInt(now+1),filters:[],dimension:'',limit:1n,dayStarts:[]}),report('',{site:current.id,from:BigInt(now-1800),until:BigInt(now+1),filters:[],dimension:'',limit:1n,dayStarts:[]})]);if(!isCurrent(run)||setting!=='tracking'||view!=='settings')return;
+  const views=Number(week.totals.pageviews),live=Number(recent.totals.pageviews);
+  if(!views){el.className='tracking-status waiting';el.textContent='Waiting for the first pageview… Publish the script, open your website once, and this line turns green.';}
+  else{el.className='tracking-status ok';el.textContent='✓ Collecting: '+num(views)+' pageviews in the last 7 days'+(live?', '+num(live)+' in the last 30 minutes.':'.');}
+  trackingTimer=setTimeout(()=>trackingStatus(run),views?30000:8000);
+ }catch(e){if(isCurrent(run)){el.className='tracking-status';el.textContent='Status unavailable: '+e.message;}}}
+$('keyForm').onsubmit=e=>{e.preventDefault();action(async run=>{const f=e.target.elements,scope=f.scope.value,site=current.id;const r=unwrap(await backend.createKey(session.load(),site,f.name.value.trim()||({read:'Reporting key',manage:'Management key',share:'Shared report'}[scope]+' · '+new Date().toISOString().slice(0,10)),{[scope]:null},BigInt(f.days.value)));if(!isCurrent(run))return;secret=scope==='share'?new URL('./shared.html',location.href).href+'#site='+encodeURIComponent(site)+'&key='+encodeURIComponent(r.token):r.token;$('keyResult').hidden=false;$('newKey').textContent=secret;$('keyResultLabel').textContent=scope==='share'?'Copy this private report link now. Anyone with the link can read this website until it expires or is revoked.':'Copy this API key now. It will not be shown again. Keep it out of public website code.';$('copyKey').textContent=scope==='share'?'Copy link':'Copy key';$('keyStatus').textContent='Created.';await apiView(run);},e.target.querySelector('button'),$('keyStatus'));};
 $('copyKey').onclick=()=>copy(secret,$('keyCopyStatus'));$('dismissKey').onclick=clearSecret;
 $('export').onclick=()=>action(async run=>{const site=current.id;let cursor='',events=[];$('exportStatus').textContent='Preparing export…';do{const page=unwrap(await backend.exportEvents(session.load(),site,cursor,500n));if(!isCurrent(run))return;events.push(...page.events);cursor=page.events.length===500?page.cursor:'';if(events.length>100000)throw new Error('Use the paginated API for exports above 100,000 events.');}while(cursor);const blob=new Blob([JSON.stringify(events,(_,v)=>typeof v==='bigint'?v.toString():v)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=site+'-events.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('exportStatus').textContent=num(events.length)+' events exported.';},$('export'),$('exportStatus'));
 $('loginBtn').onclick=()=>signIn.continue();
 export async function start(actor,person,info,agent,Actor){
  backend=actor;user=person;if(!$('collectorUrl').value&&!BACKEND_CANISTER_ID.startsWith('__'))$('collectorUrl').value='https://'+BACKEND_CANISTER_ID+'.icp.net';
- $('login').hidden=true;$('layout').hidden=false;$('version').textContent=info.version;setPeriod(30);renderSteps();
+ $('login').hidden=true;$('layout').hidden=false;$('version').textContent=info.version;const prefs=loadPrefs();if(prefs.period&&[...$('period').options].some(o=>o.value===prefs.period&&o.value!=='custom'))$('period').value=prefs.period;else $('period').value='7';renderSteps();
  topbar=mountTopbar($('topbar'),{hub:{actor:info.hubId&&Actor?Actor.createActor(topbarIdlFactory,{agent,canisterId:info.hubId}):null,token:session.loadSuite()},hubUrl:HUB_URL,app: { id: "crumbs", name:'Crumbs',eyebrow:'Website analytics'},person:user,onSignOut:signOut});
- await loadSites();await route();refresh=setInterval(async()=>{try{
+ await loadSites();if($('period').value!=='realtime'&&$('period').value!=='custom')setPeriod(Number($('period').value));else if(!range)setPeriod(7);await route();refresh=setInterval(async()=>{try{
   const refreshed=(await backend.whoami(session.load()))[0];if(!refreshed){await signOut();signIn.status('err','Your access could not be confirmed. Sign in again.');return;}
   const roleChanged=user.role!==refreshed.role,siteBefore=current?.id,accessBefore=siteRole();user=refreshed;await loadSites();
   const changed=roleChanged||accessBefore!==siteRole()||siteBefore!==current?.id;if(changed)clearReports();

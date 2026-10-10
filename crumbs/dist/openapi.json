@@ -696,6 +696,14 @@
                     "maximum": 1000,
                     "default": 100
                   },
+                  "dayStarts": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "description": "Optional for dimension \"day\": ascending Unix seconds of the local midnights that start each day bucket (the website time zone). Omitted = UTC days."
+                  },
                   "steps": {
                     "type": "array",
                     "items": {
@@ -969,6 +977,14 @@
                     "minimum": 1,
                     "maximum": 1000,
                     "default": 100
+                  },
+                  "dayStarts": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "description": "Optional for dimension \"day\": ascending Unix seconds of the local midnights that start each day bucket (the website time zone). Omitted = UTC days."
                   },
                   "id": {
                     "type": "string"
@@ -1923,8 +1939,10 @@
             "type": "string"
           },
           "timezone": {
-            "const": "UTC",
-            "default": "UTC"
+            "type": "string",
+            "pattern": "^[A-Za-z0-9/_+-]{1,64}$",
+            "default": "UTC",
+            "description": "IANA time zone name used for daily report buckets."
           },
           "retentionDays": {
             "type": "string",
@@ -2091,6 +2109,14 @@
             "minimum": 1,
             "maximum": 1000,
             "default": 100
+          },
+          "dayStarts": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Optional for dimension \"day\": ascending Unix seconds of the local midnights that start each day bucket (the website time zone). Omitted = UTC days."
           }
         },
         "required": [
@@ -2447,8 +2473,10 @@
             "type": "string"
           },
           "timezone": {
-            "const": "UTC",
-            "default": "UTC"
+            "type": "string",
+            "pattern": "^[A-Za-z0-9/_+-]{1,64}$",
+            "default": "UTC",
+            "description": "IANA time zone name used for daily report buckets."
           },
           "retentionDays": {
             "type": "integer",
@@ -2503,8 +2531,10 @@
             "type": "string"
           },
           "timezone": {
-            "const": "UTC",
-            "default": "UTC"
+            "type": "string",
+            "pattern": "^[A-Za-z0-9/_+-]{1,64}$",
+            "default": "UTC",
+            "description": "IANA time zone name used for daily report buckets."
           },
           "retentionDays": {
             "type": "string",

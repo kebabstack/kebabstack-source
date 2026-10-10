@@ -9,7 +9,7 @@ import Principal "mo:core/Principal";
 import AccessApi "mixins/Access";
 
 persistent actor Crumbs {
-  transient let BUILD_VERSION : Text = "0.6.2";
+  transient let BUILD_VERSION : Text = "0.7.0";
   let auth : T.AuthState;
   let db : T.Store;
   let siteAccess : Map.Map<Text, T.SiteAccess>;

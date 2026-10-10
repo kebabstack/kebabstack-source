@@ -22,7 +22,7 @@ async function setup(live=false,baseline=false){const pic=await PocketIc.create(
  if(baseline!==true){const p=ok(await app.getSiteAccess(owner.token,'main'));ok(await app.setSiteAccess(owner.token,'main',p.revision,[alice],[]));}
  const now=BigInt(Math.floor(Number(await pic.getTime())/1000));
  const event=(id,extra={})=>({id,site:'main',visitor:'a'.repeat(64),at:now-100n,order:1n,kind:{pageview:null},path:'/',hostname:'example.test',source:'google.com',medium:'',campaign:'',content:'',term:'',country:'CH',region:'',city:'',device:'Desktop',browser:'Firefox',os:'Linux',name:'',props:[],interactive:true,revenueMinor:0n,currency:'',engagementMs:0n,scrollDepth:0n,...extra});
- const request=(extra={})=>({site:'main',from:now-1000n,until:now+100n,filters:[],dimension:'',limit:100n,...extra});
+ const request=(extra={})=>({site:'main',from:now-1000n,until:now+100n,filters:[],dimension:'',limit:100n,dayStarts:[],...extra});
  return {pic,h,c,hub,app,owner,viewer,site,now,event,request,conn,alice,bob,login};}
 function ok(r){assert.ok('ok'in r,JSON.stringify(r,(_,v)=>typeof v==='bigint'?v.toString():v));return r.ok;}
 test('Crumbs: exact metrics, signed collection, atomic validation, deduplication and site authorization',async()=>{const s=await setup();const {pic,app,owner,viewer,event,request}=s;try{
@@ -67,7 +67,7 @@ test('Crumbs: acquisition attribution, engagement isolation, import conflicts an
  const entry=ok(await app.report(owner.token,request({dimension:'entryPath'})));assert.equal(entry.rows[0].value,'/');const exit=ok(await app.report(owner.token,request({dimension:'exitPath'})));assert.equal(exit.rows[0].value,'/pricing');
  const m=source.totals,row={id:'history',site:'main',day:(now/86400n-2n)*86400n,dimension:'import:visitors',value:'{}',metrics:m};
  assert.ok('conflict'in(await app.importAggregates(owner.token,[row,{...row,metrics:{...m,pageviews:9n}}])).err);assert.equal(ok(await app.imported(owner.token,'main',now-86400n*4n,now)).length,0);
- assert.equal(ok(await app.importAggregates(owner.token,[row,row])),1n);assert.equal(ok(await app.importAggregates(owner.token,[row])),0n);
+ assert.equal(ok(await app.hasImports(owner.token,'main')),false,'no history before the first import');assert.equal(ok(await app.importAggregates(owner.token,[row,row])),1n);assert.equal(ok(await app.importAggregates(owner.token,[row])),0n);assert.equal(ok(await app.hasImports(owner.token,'main')),true);assert.ok('unauthorized'in(await app.hasImports(owner.token,'other')).err);
  ok(await app.saveSite(owner.token,{...s.site,retentionDays:1n}));assert.equal(ok(await app.imported(owner.token,'main',now-86400n*4n,now)).length,0,'expired history immediately hidden');
  await pic.advanceTime(86400*1000+1000);await pic.tick(5);await pic.advanceTime(31000);await pic.tick(5);
  const fresh=await s.login('owner');assert.ok(fresh);assert.equal(ok(await app.health(fresh.token)).storedEvents,0n);assert.equal(ok(await app.health(fresh.token)).storageChargeBytes,0n);
@@ -289,6 +289,15 @@ test('Crumbs business: scroll goal deduplication, attribution, currencies, REST 
  assert.deepEqual(channels.find(r=>r.value==='AI assistants').metrics.revenue,[['CHF',1200n]]);assert.deepEqual(channels.find(r=>r.value==='Paid search').metrics.revenue,[['EUR',500n]]);
  const ai=ok(await app.report(owner.token,request({dimension:'aiSource',filters:[{dimension:'aiSource',values:[''],exclude:true}]})));assert.equal(ai.totals.visitors,1n);assert.equal(ai.rows[0].value,'ChatGPT');
  assert.ok(ok(await app.report(viewer.token,request({dimension:'minute'}))).rows.every(r=>BigInt(r.value)%60n===0n));
+ // Conversions per acquisition group: visitors who reached the goal, deduplicated per session for scroll goals.
+ const rows=ok(await app.goalRows(viewer.token,request({dimension:'channel'}),goal.id));assert.deepEqual(rows,[{value:'AI assistants',visitors:1n,completions:1n}]);
+ assert.ok('invalid'in(await app.goalRows(viewer.token,request(),goal.id)).err,'grouping needs a dimension');assert.ok('notFound'in(await app.goalRows(viewer.token,request({dimension:'channel'}),'missing')).err);
+ assert.ok('unauthorized'in(await app.goalRows(viewer.token,request({site:'private',dimension:'channel'}),goal.id)).err);
+ // Day buckets follow the website's local midnights supplied by the client; without them UTC days apply.
+ const utcDay=(s.now/86400n)*86400n,local=utcDay-7200n;const localDays=ok(await app.report(viewer.token,request({dimension:'day',from:utcDay-86400n,dayStarts:[[local-86400n,local,local+86400n]]}))).rows;
+ assert.ok(localDays.every(r=>[local-86400n,local,local+86400n].includes(BigInt(r.value))),JSON.stringify(localDays.map(r=>r.value)));assert.equal(localDays.reduce((n,r)=>n+r.metrics.pageviews,0n),3n);
+ assert.ok(ok(await app.report(viewer.token,request({dimension:'day'}))).rows.every(r=>BigInt(r.value)%86400n===0n),'UTC days without client midnights');
+ assert.ok('invalid'in(await app.saveSite(owner.token,{...s.site,timezone:'Europe/Zürich'})).err,'time zone names are validated');ok(await app.saveSite(owner.token,{...s.site,timezone:'Europe/Zurich'}));assert.equal((await app.listSites(owner.token)).find(x=>x.id==='main').timezone,'Europe/Zurich');
  const rest=await nativeApi(s,'/goals/report',viewer.token,'POST',{...request(),id:goal.id});assert.equal(rest.status,200);assert.equal(rest.data.completions,'1');
  assert.equal((await nativeApi(s,'/goals?site=main',viewer.token)).data[0].scrollDepth,'60');
  ok(await app.saveSite(owner.token,{...s.site,retentionDays:1827n}));assert.ok('invalid'in(await app.saveSite(owner.token,{...s.site,retentionDays:1828n})).err);

@@ -221,7 +221,7 @@ module {
       if (e.at < r.from or e.at >= r.until or not sessionMatches(e, s, r.filters)) continue;
       add(total, e, s);
       if (r.dimension != "") {
-        let v = sessionDimension(e, s, r.dimension);
+        let v = if (r.dimension == "day") dayBucket(r, e.at) else sessionDimension(e, s, r.dimension);
         let g = groups.get(v) ??{ let a = empty(); groups.add(v, a); a };
         add(g, e, s);
       };
@@ -234,6 +234,42 @@ module {
       scanned = events.size();
       truncated = sorted.size() > r.limit;
     });
+  };
+  /// Day bucket: the latest supplied local-midnight instant at or before the event, else the UTC day.
+  func dayBucket(r : T.ReportRequest, at : Int) : Text {
+    switch (r.dayStarts) {
+      case (?starts) {
+        if (starts.size() == 0) return ((at / 86400) * 86400).toText();
+        var lo = 0; var hi = starts.size();
+        while (lo + 1 < hi) { let mid = (lo + hi) / 2; if (starts[mid] <= at) lo := mid else hi := mid };
+        if (starts[lo] <= at) starts[lo].toText() else ((at / 86400) * 86400).toText();
+      };
+      case null ((at / 86400) * 86400).toText();
+    };
+  };
+  /// Goal completions per group of the requested dimension (0.7.0): the question "which source brought the sign-ups".
+  public func goalRows(db : T.Store, r : T.ReportRequest, goal : T.Goal) : T.Result<[{value : Text; visitors : Nat; completions : Nat}]> {
+    if (goal.site != r.site) return #err(#invalid("Goal belongs to a different website"));
+    if (r.dimension == "") return #err(#invalid("Choose a dimension to group by"));
+    let events = switch (load(db, r)) { case (#ok e) e; case (#err e) return #err(e) };
+    let groups = Map.empty<Text, { visitors : Set.Set<Text>; var completions : Nat }>();
+    let scrollVisits = Set.empty<Nat>();
+    for (s in sessions(events).values()) for (e in s.items.values()) {
+      if (e.at < r.from or not sessionMatches(e, s, r.filters)) continue;
+      let hit = switch (goal.kind) {
+        case (#page) e.kind == #pageview and e.path == goal.value;
+        case (#event) e.kind == #event and e.name == goal.value;
+        case (#scroll threshold) e.kind == #engagement and e.path == goal.value and e.scrollDepth >= threshold and not scrollVisits.contains(s.id);
+      };
+      if (hit) {
+        switch (goal.kind) { case (#scroll _) scrollVisits.add(s.id); case _ {} };
+        let v = if (r.dimension == "day") dayBucket(r, e.at) else sessionDimension(e, s, r.dimension);
+        let g = groups.get(v) ?? { let g = { visitors = Set.empty<Text>(); var completions = 0 }; groups.add(v, g); g };
+        g.visitors.add(e.visitor); g.completions += 1;
+      };
+    };
+    let rows = groups.entries().map(func(v, g) = { value = v; visitors = g.visitors.size(); completions = g.completions }).toArray();
+    #ok(rows.sort(func(a, b) = if (a.visitors == b.visitors) Text.compare(a.value, b.value) else Nat.compare(b.visitors, a.visitors)).values().take(r.limit).toArray());
   };
   public func goalReport(db : T.Store, r : T.ReportRequest, goal : T.Goal) : T.Result<{visitors : Nat; completions : Nat; revenue : [(Text,Int)]}> {
     if(goal.site != r.site) return #err(#invalid("Goal belongs to a different website"));

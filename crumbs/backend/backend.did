@@ -1,11 +1,11 @@
-type User =
+type User = 
  record {
    displayName: text;
    email: text;
    id: text;
    role: text;
  };
-type SiteView =
+type SiteView = 
  record {
    accessRole: SiteRole;
    allowedProperties: vec text;
@@ -18,14 +18,14 @@ type SiteView =
    timezone: text;
    viewers: vec text;
  };
-type SiteRole =
+type SiteRole = 
  variant {
    admin;
    manage;
    none;
    read;
  };
-type Site =
+type Site = 
  record {
    allowedProperties: vec text;
    domain: text;
@@ -37,7 +37,7 @@ type Site =
    timezone: text;
    viewers: vec text;
  };
-type SearchSnapshot =
+type SearchSnapshot = 
  record {
    fetchedAt: int;
    from: int;
@@ -49,14 +49,14 @@ type SearchSnapshot =
    truncated: bool;
    until: int;
  };
-type SearchRow =
+type SearchRow = 
  record {
    clicks: nat;
    impressions: nat;
    positionMilli: nat;
    value: text;
  };
-type SavedReport =
+type SavedReport = 
  record {
    filters: vec Filter;
    id: text;
@@ -66,12 +66,12 @@ type SavedReport =
    steps: vec FunnelStep;
    updatedAt: int;
  };
-type Row =
+type Row = 
  record {
    metrics: Metrics;
    value: text;
  };
-type Result_9 =
+type Result_9 = 
  variant {
    err: Error;
    ok: vec record {
@@ -80,37 +80,37 @@ type Result_9 =
              nat;
            };
  };
-type Result_8 =
+type Result_8 = 
  variant {
    err: Error;
    ok: vec Key;
  };
-type Result_7 =
+type Result_7 = 
  variant {
    err: Error;
    ok: Report;
  };
-type Result_6 =
+type Result_6 = 
  variant {
    err: Error;
    ok: SavedReport;
  };
-type Result_5 =
+type Result_5 = 
  variant {
    err: Error;
    ok;
  };
-type Result_4 =
+type Result_4 = 
  variant {
    err: Error;
    ok: Site;
  };
-type Result_3 =
+type Result_3 = 
  variant {
    err: Error;
    ok: vec SavedReport;
  };
-type Result_20 =
+type Result_22 = 
  variant {
    err: Error;
    ok: record {
@@ -118,17 +118,12 @@ type Result_20 =
          truncated: bool;
        };
  };
-type Result_2 =
- variant {
-   err: Error;
-   ok: Connection;
- };
-type Result_19 =
+type Result_21 = 
  variant {
    err: Error;
    ok: vec Annotation;
  };
-type Result_18 =
+type Result_20 = 
  variant {
    err: Error;
    ok: record {
@@ -136,7 +131,12 @@ type Result_18 =
          token: text;
        };
  };
-type Result_17 =
+type Result_2 = 
+ variant {
+   err: Error;
+   ok: Connection;
+ };
+type Result_19 = 
  variant {
    err: Error;
    ok: record {
@@ -144,12 +144,12 @@ type Result_17 =
          events: vec Event;
        };
  };
-type Result_16 =
+type Result_18 = 
  variant {
    err: Error;
    ok: vec nat;
  };
-type Result_15 =
+type Result_17 = 
  variant {
    err: Error;
    ok:
@@ -162,12 +162,26 @@ type Result_15 =
       visitors: nat;
     };
  };
-type Result_14 =
+type Result_16 = 
+ variant {
+   err: Error;
+   ok: vec record {
+             completions: nat;
+             value: text;
+             visitors: nat;
+           };
+ };
+type Result_15 = 
  variant {
    err: Error;
    ok: vec Goal;
  };
-type Result_13 =
+type Result_14 = 
+ variant {
+   err: Error;
+   ok: bool;
+ };
+type Result_13 = 
  variant {
    err: Error;
    ok:
@@ -181,17 +195,17 @@ type Result_13 =
       storedEvents: nat;
     };
  };
-type Result_12 =
+type Result_12 = 
  variant {
    err: Error;
    ok: nat;
  };
-type Result_11 =
+type Result_11 = 
  variant {
    err: Error;
    ok: vec ImportRow;
  };
-type Result_10 =
+type Result_10 = 
  variant {
    err: Error;
    ok: record {
@@ -199,18 +213,19 @@ type Result_10 =
          duplicates: nat;
        };
  };
-type Result_1 =
+type Result_1 = 
  variant {
    err: Error;
    ok: opt SearchSnapshot;
  };
-type Result =
+type Result = 
  variant {
    err: Error;
    ok: AccessView;
  };
-type ReportRequest =
+type ReportRequest = 
  record {
+   dayStarts: opt vec int;
    dimension: text;
    filters: vec Filter;
    from: int;
@@ -218,14 +233,14 @@ type ReportRequest =
    site: text;
    until: int;
  };
-type Report =
+type Report = 
  record {
    rows: vec Row;
    scanned: nat;
    totals: Metrics;
    truncated: bool;
  };
-type PermissionStatus =
+type PermissionStatus = 
  record {
    app: text;
    directoryAt: int;
@@ -237,7 +252,7 @@ type PermissionStatus =
    model: nat;
    revision: text;
  };
-type Metrics =
+type Metrics = 
  record {
    bounces: nat;
    durationSeconds: nat;
@@ -253,7 +268,7 @@ type Metrics =
    visitors: nat;
    visits: nat;
  };
-type Manifest =
+type Manifest = 
  record {
    description: text;
    name: text;
@@ -261,13 +276,13 @@ type Manifest =
    version: text;
    wants: vec text;
  };
-type LegacyGrant =
+type LegacyGrant = 
  record {
    email: text;
    role: text;
    source: text;
  };
-type Key =
+type Key = 
  record {
    expiresAt: int;
    id: text;
@@ -280,7 +295,7 @@ type Key =
           };
    site: text;
  };
-type ImportRow =
+type ImportRow = 
  record {
    day: int;
    dimension: text;
@@ -289,7 +304,7 @@ type ImportRow =
    site: text;
    value: text;
  };
-type HttpResponse =
+type HttpResponse = 
  record {
    body: blob;
    headers: vec record {
@@ -311,7 +326,7 @@ type HttpResponse =
         };};
    upgrade: opt bool;
  };
-type HttpRequest =
+type HttpRequest = 
  record {
    body: blob;
    certificate_version: opt nat16;
@@ -322,7 +337,7 @@ type HttpRequest =
    method: text;
    url: text;
  };
-type Goal =
+type Goal = 
  record {
    id: text;
    kind: variant {
@@ -334,7 +349,7 @@ type Goal =
    site: text;
    value: text;
  };
-type FunnelStep =
+type FunnelStep = 
  record {
    kind: variant {
            event;
@@ -342,13 +357,13 @@ type FunnelStep =
          };
    value: text;
  };
-type Filter =
+type Filter = 
  record {
    dimension: text;
    exclude: bool;
    values: vec text;
  };
-type Event =
+type Event = 
  record {
    at: int;
    browser: text;
@@ -384,7 +399,7 @@ type Event =
    term: text;
    visitor: text;
  };
-type Error =
+type Error = 
  variant {
    capacity: text;
    conflict: text;
@@ -392,7 +407,7 @@ type Error =
    notFound;
    unauthorized;
  };
-type DirectoryRow =
+type DirectoryRow = 
  record {
    active: bool;
    attributes: vec record {
@@ -407,20 +422,20 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
-type Connection =
+type Connection = 
  record {
    clientId: text;
    property: text;
    revision: nat;
  };
-type Annotation =
+type Annotation = 
  record {
    at: int;
    id: text;
    site: text;
    "text": text;
  };
-type AccessView =
+type AccessView = 
  record {
    legacyAllReaders: bool;
    managers: vec AccessPerson;
@@ -430,7 +445,7 @@ type AccessView =
    updatedAt: int;
    updatedBy: text;
  };
-type AccessPerson =
+type AccessPerson = 
  record {
    active: bool;
    automatic: bool;
@@ -440,8 +455,8 @@ type AccessPerson =
    id: text;
  };
 service : {
-  accessPeople: (token: text, site: text, search: text) -> (Result_20) query;
-  annotations: (token: text, site: text) -> (Result_19) query;
+  accessPeople: (token: text, site: text, search: text) -> (Result_22) query;
+  annotations: (token: text, site: text) -> (Result_21) query;
   collectorSites: () -> (vec Site) query;
   configureCollectors: (collectors: vec principal) -> ();
   createKey: (token: text, site: text, name: text, scope:
@@ -449,19 +464,22 @@ service : {
      manage;
      read;
      share;
-   }, days: nat) -> (Result_18);
+   }, days: nat) -> (Result_20);
   deleteGoal: (token: text, site: text, id: text) -> (Result_5);
   deleteReport: (token: text, site: text, id: text, revision: nat) ->
    (Result_5);
   deleteSite: (token: text, id: text) -> (Result_5);
   exportEvents: (token: text, site: text, after: text, limit: nat) ->
-   (Result_17) query;
+   (Result_19) query;
   funnel: (token: text, request: ReportRequest, steps: vec FunnelStep) ->
-   (Result_16) query;
+   (Result_18) query;
   getSiteAccess: (token: text, site: text) -> (Result) query;
   goalReport: (token: text, request: ReportRequest, id: text) ->
-   (Result_15) query;
-  goals: (token: text, site: text) -> (Result_14) query;
+   (Result_17) query;
+  goalRows: (token: text, request: ReportRequest, id: text) ->
+   (Result_16) query;
+  goals: (token: text, site: text) -> (Result_15) query;
+  hasImports: (token: text, site: text) -> (Result_14) query;
   health: (token: text) -> (Result_13) query;
   http_request: (_req: HttpRequest) -> (HttpResponse) query;
   http_request_update: (req: HttpRequest) -> (HttpResponse);

@@ -12,11 +12,13 @@ For operators: [INSTALL](INSTALL.md) covers native collection, Hub access, reten
 
 0.6.1 puts website context in the compact page heading. Use All websites to add a site, Settings to inspect your access and Saved filters to open saved-filter actions.
 
+New in 0.7.0: reports open on the last seven days in the website's time zone with previous-period comparison, Acquisition shows conversions per source for a chosen goal, quick goals and funnels save in one click, and Settings adds a website from its domain alone while showing whether tracking data arrives.
+
 New in 0.6.0: Acquisition compares channels, recognized AI referrals and campaigns with events and revenue. Goals & revenue adds no-code scroll thresholds and source-attributed currency totals. Saved filters/funnels and All websites reduce repeated setup. Search Console has guided, on-demand OAuth setup; a downloadable Data Studio connector reads aggregates with a website-scoped key. See the in-app [integration guide](dist/integrations.html).
 
 - Small tracker with no cookies or browser storage; pageviews, SPA navigation, custom events/properties, optional outbound/download/form events, active time and scroll depth. Consent gating, pause/resume, GPC and DNT support. No account IDs or persistent cross-site identifier.
 - Native canister HTTP ingress with durable commit before acknowledgment, per-site daily HMAC visitor estimates, batching, retries, deduplication and atomic validation. Raw IP/UA are processed by the canister but excluded from stored analytics events. Optional Node/SQLite collector and local GeoIP database.
-- Dashboard with realtime visitors, date comparison, campaign/source/page/device/location reports, compound filters, goals, sequential funnels, journeys, entry/exit pages and imported history. Reporting timezone is explicitly UTC in this release.
+- Dashboard with realtime visitors, date comparison, campaign/source/page/device/location reports, compound filters, goals, sequential funnels, journeys, entry/exit pages and imported history. Daily buckets follow the website's time zone; hourly and realtime buckets and visitor-ID rotation stay on UTC.
 - Task-focused settings for General, Tracking script and People & access; automatic website IDs, quick/custom date ranges, explicit goal/funnel forms, copy controls and unsaved-change confirmation. Empty accounts show one relevant next step.
 - Native Candid plus REST v1, generated Candid/browser bindings, OpenAPI 3.1, JS client with TypeScript declarations, raw export, goals, annotations and import endpoints. Read/manage/share keys require their issuer's current website management rights and a fresh Hub directory.
 - Hub sign-in and central roles: Admin, Analyst (viewer), None. New access defaults to None. Per-website Read/Manage grants to named Hub users; Hub owners/admins always administer all websites. New websites start admin-only. Separate signed collector principals. See [website access](ACCESS.md).
