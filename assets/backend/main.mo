@@ -70,7 +70,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.24.0";
+  transient let BUILD_VERSION : Text = "0.24.1";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -1292,6 +1292,8 @@ persistent actor Assets {
   let mdmConns : Map.Map<Nat, MdmConn> = Map.empty<Nat, MdmConn>();
   let mdmMeta : Map.Map<Nat, MdmMeta> = Map.empty<Nat, MdmMeta>(); // assetId -> what the MDM last said
   let mdmHardware : Map.Map<Nat, Hardware> = Map.empty<Nat, Hardware>(); // assetId -> hardware as the MDM last reported it (0.24.0)
+  var hardwareFormat : Nat = 1; // 2 = sizes parsed by 0.24.1; older entries are dropped once after the upgrade and re-read by the next syncs
+  transient let _hardwareRefresh = Timer.setTimer<system>(#seconds 0, func() : async () { if (hardwareFormat < 2) { Map.clear(mdmHardware); hardwareFormat := 2 } });
   transient let HARDWARE_PER_SYNC : Nat = 40; // Iru needs one HTTPS call per device for hardware: bounded per sync run
   transient let HARDWARE_FRESH : Int = 7 * 86_400 * 1_000_000_000; // re-read a device's hardware after a week
   var nextMdmId : Nat = 1;
@@ -1400,19 +1402,22 @@ persistent actor Assets {
 
   /// One device as every MDM reports it, normalised.
   type MdmDevice = { externalId : Text; serial : Text; name : Text; vendor : Text; model : Text; kind : Text; os : Text; lastSeen : Text; userEmail : Text; userName : Text; compliance : Text; assetTag : Text; hardware : ?Hardware };
-  /// "8 GB", "228.27 GB", "1.02 TB", "512GB", "16384 MB" → whole decimal gigabytes (rounded); unreadable → 0.
-  func gbOf(t : Text) : Nat {
+  /// "8 GB", "24 GB LPDDR5", "228.27 GB", "1.02 TB", "512GB", "16384 MB" → whole gigabytes (rounded); unreadable → 0.
+  /// Only the first number counts; digits after the unit (memory type, revision) are ignored (0.24.1).
+  func gbOf(t : Text) : Nat = (gbMilliOf(t) + 500) / 1000;
+  /// Same, as thousandths of a gigabyte (keeps the fraction for unit conversion).
+  func gbMilliOf(t : Text) : Nat {
     let s = Text.toLower(norm(t)); if (s == "") return 0;
-    var whole = 0; var frac = 0; var fracDigits = 0; var inFrac = false; var unit = "";
-    for (ch in s.chars()) {
-      if (ch >= '0' and ch <= '9') { let d = Nat32.toNat(Char.toNat32(ch) - 48); if (inFrac) { if (fracDigits < 3) { frac := frac * 10 + d; fracDigits += 1 } } else whole := whole * 10 + d }
-      else if (ch == '.') inFrac := true
-      else if (ch != ' ' and ch != ',') unit #= Text.fromChar(ch);
+    var whole = 0; var frac = 0; var fracDigits = 0; var inFrac = false; var unit = ""; var numberDone = false;
+    label scan for (ch in s.chars()) {
+      if (ch >= '0' and ch <= '9') { if (numberDone) { if (unit != "") break scan else continue scan }; let d = Nat32.toNat(Char.toNat32(ch) - 48); if (inFrac) { if (fracDigits < 3) { frac := frac * 10 + d; fracDigits += 1 } } else whole := whole * 10 + d }
+      else if (ch == '.' and not numberDone) inFrac := true
+      else if (ch == ' ' or ch == ',') { if (whole > 0 or frac > 0) numberDone := true; if (unit != "") break scan }
+      else { numberDone := true; unit #= Text.fromChar(ch) };
     };
     while (fracDigits < 3) { frac *= 10; fracDigits += 1 }; // frac is now thousandths
     let milli = whole * 1000 + frac; // value × 1000
-    let gbMilli = if (Text.startsWith(unit, #text "tb")) milli * 1000 else if (Text.startsWith(unit, #text "mb")) milli / 1000 else if (Text.startsWith(unit, #text "kb")) milli / 1_000_000 else milli;
-    (gbMilli + 500) / 1000;
+    if (Text.startsWith(unit, #text "tb")) milli * 1000 else if (Text.startsWith(unit, #text "mb")) milli / 1000 else if (Text.startsWith(unit, #text "kb")) milli / 1_000_000 else milli;
   };
   func natOf(j : Json.Json, path : Text) : Nat {
     let f = jNum(j, path); if (f > 0.0) return Int.abs(Float.toInt(f));
@@ -1431,7 +1436,8 @@ persistent actor Assets {
     var cap = ""; var avail = ""; var enc = "";
     switch (chosen) { case (?v) { cap := jStr(v, "capacity"); avail := jStr(v, "available"); enc := Text.toLower(norm(jStr(v, "encrypted"))) }; case null {} };
     let fileVault = jBool(j, "filevault.filevault_enabled") == ?true;
-    ?{ processor = norm(jStr(j, "hardware_overview.processor_name")); cores = natOf(j, "hardware_overview.total_number_of_cores"); memoryGb = gbOf(jStr(j, "hardware_overview.memory")); storageGb = gbOf(cap); storageFreeGb = gbOf(avail); encrypted = (if (fileVault or enc == "yes" or enc == "true") "yes" else if (enc == "no" or enc == "false") "no" else ""); modelId = norm(jStr(j, "hardware_overview.model_identifier")); source = c.name; fetchedAt = now() };
+    let decimal = func(milliGib : Nat) : Nat = (milliGib * 1_073_741_824 / 1000 + 500_000_000) / 1_000_000_000; // Iru labels GiB as "GB"; macOS and Apple show decimal GB (0.24.1)
+    ?{ processor = norm(jStr(j, "hardware_overview.processor_name")); cores = natOf(j, "hardware_overview.total_number_of_cores"); memoryGb = gbOf(jStr(j, "hardware_overview.memory")); storageGb = decimal(gbMilliOf(cap)); storageFreeGb = decimal(gbMilliOf(avail)); encrypted = (if (fileVault or enc == "yes" or enc == "true") "yes" else if (enc == "no" or enc == "false") "no" else ""); modelId = norm(jStr(j, "hardware_overview.model_identifier")); source = c.name; fetchedAt = now() };
   };
   func hardwareStale(assetId : Nat) : Bool = switch (Map.get(mdmHardware, Nat.compare, assetId)) { case (?h) now() - h.fetchedAt > HARDWARE_FRESH; case null true };
   func kindFromPlatform(p : Text, model : Text) : Text {
@@ -1624,6 +1630,31 @@ persistent actor Assets {
     switch (h) {
       case (?h) { if (admin(tok) == null) return { ok = false; detail = "Access changed." }; Map.add(mdmHardware, Nat.compare, assetId, h); { ok = true; detail = (if (h.processor == "" and h.memoryGb == 0 and h.storageGb == 0) c.name # " answered without hardware details." else "Hardware read from " # c.name # ".") } };
       case null ({ ok = false; detail = "Could not read the device details from " # c.name # ". Check the token's Device Information permission." });
+    };
+  };
+  /// What Iru reports for one device: the section names and the hardware/battery-related sections verbatim
+  /// (admins, read-only, nothing stored). Used to wire further fields against the real answer rather than a guess.
+  public shared func mdmDetailsPreview(tok : Text, assetId : Nat) : async { ok : Bool; detail : Text } {
+    if (migrating()) return { ok = false; detail = MIGRATING };
+    switch (admin(tok)) { case null return { ok = false; detail = "admins only" }; case (?_) {} };
+    let md = switch (Map.get(mdmMeta, Nat.compare, assetId)) { case (?m) m; case null return { ok = false; detail = "No linked MDM device." } };
+    let c = switch (Map.get(mdmConns, Nat.compare, md.connId)) { case (?c) c; case null return { ok = false; detail = "The MDM connection no longer exists." } };
+    if (c.kind != "iru" or md.externalId == "") return { ok = false; detail = "Only Iru devices have a details endpoint." };
+    let r = await fetch(#get, c.url # "/api/v1/devices/" # urlEnc(md.externalId) # "/details", [{ name = "Authorization"; value = "Bearer " # c.secret }, { name = "Accept"; value = "application/json" }], null);
+    if (admin(tok) == null) return { ok = false; detail = "Access changed." };
+    if (not r.ok) return { ok = false; detail = r.detail };
+    let j = switch (Json.parse(r.body)) { case (#ok(j)) j; case (#err(_)) return { ok = false; detail = "not JSON" } };
+    switch (j) {
+      case (#object_(fields)) {
+        var names = ""; var shown = "";
+        for ((k, v) in fields.vals()) {
+          names #= (if (names == "") "" else ", ") # k;
+          let kl = Text.toLower(k);
+          if (kl == "hardware_overview" or Text.contains(kl, #text "batter") or Text.contains(kl, #text "power") or Text.contains(kl, #text "health")) shown #= "\n" # k # ": " # capText(Json.stringify(v, null), 700);
+        };
+        { ok = true; detail = "sections: " # names # shown };
+      };
+      case (_) ({ ok = false; detail = "unexpected answer shape" });
     };
   };
   public shared func syncMdm(tok : Text, id : Nat) : async { ok : Bool; detail : Text } {

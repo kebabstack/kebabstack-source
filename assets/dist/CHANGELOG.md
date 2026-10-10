@@ -1,5 +1,10 @@
 # Changelog — kebab-stack assets
 
+## [0.24.1] — 2026-10-10
+
+- Hardware sizes: a memory value such as "24 GB LPDDR5" is read as 24 GB (0.24.0 appended the digits after the unit and showed 245 GB). Iru reports volume sizes in binary gigabytes labelled "GB"; they are now shown as decimal GB like macOS and Apple Business Manager (a 512 GB drive reads 494 GB, not 460). Stored values refresh with the next sync (devices read in 0.24.0 are re-read once) or with **Refresh hardware**.
+- Device page: **What Iru reports** (admins) lists the sections Iru's details answer contains and quotes the hardware and battery-related ones, read-only and unstored, so further fields (battery condition, cycle count) are wired against the real answer. New update call `mdmDetailsPreview`.
+
 ## [0.24.0] — 2026-10-10
 
 - **Hardware from device management.** Devices synced from Iru (Kandji) show processor, cores, memory, boot-volume size and free space, and encryption: the sync reads `/api/v1/devices/{id}/details` for devices without hardware or older than a week, at most 40 per run (one HTTPS call each), the rest on the next run; **Refresh hardware** on the device reads one now. Jamf delivers processor, cores, RAM and disk size with the existing list (plus `section=STORAGE`), Intune storage, free space, RAM and encryption from its list. Where the MDM has nothing, the Apple Business Manager capacity stands in. Shown as a **Hardware** line on the device, as a second line in the device list and in *My devices*, and as `location, processor, cores, memory gb, storage gb` columns in the CSV export. New query fields `hardware` and `abmCapacity`; new update call `refreshHardware`. The token needs Iru's *Device Information* permission; without it the sync result says so.

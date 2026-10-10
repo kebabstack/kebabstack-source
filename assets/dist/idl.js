@@ -122,6 +122,7 @@ export const idlFactory = ({ IDL }) => {
     listSales: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(SaleView)], ["query"]),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     markPaid: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    mdmDetailsPreview: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     myOffers: IDL.Func([IDL.Text], [IDL.Vec(SaleView)], ["query"]),
     notifyStatus: IDL.Func([IDL.Text], [IDL.Opt(NotifyState)], ["query"]),
     offerSale: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),

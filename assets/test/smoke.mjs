@@ -91,6 +91,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "syncMdm": return { ok: true, detail: "42 devices · 40 matched · 2 created" };
     case "addMdm": return { ok: true, detail: "", id: 2n };
     case "refreshHardware": return { ok: true, detail: "Hardware read from Iru." };
+    case "mdmDetailsPreview": return { ok: true, detail: "sections: general, hardware_overview\nhardware_overview: {\"memory\":\"24 GB LPDDR5\"}" };
     // sales
     case "saleOfDevice": return { purchase: [{ priceMinor: 299900n, currency: "CHF", date: "2024-03-01", note: "shop", by: ME, at: now }], sale: [], proposal: [{ proposedMinor: 62000n, basis: "purchase price 2'999.00 CHF on 2024-03-01 · 30 of 36 months elapsed" }], billingReady: "" };
     case "priceProposal": return [{ proposedMinor: 62000n, basis: "rule" }];
@@ -257,6 +258,7 @@ if (role === "admin") {
   check(!/2026-09-04T08:00:00Z/.test($("dMdm").textContent) && /ago\)/.test($("dMdm").textContent), "MDM last-seen is a formatted date");
   check(!!$("dMdmHand") && /Record hand-over to Ben Ko/.test($("dMdmHand").textContent) && !!$("dHwRefresh"), "mismatch has a one-click answer and hardware can be refreshed");
   const beforeHw = calls.length; $("dHwRefresh").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.slice(beforeHw).includes("refreshHardware"), "refresh asks the backend");
+  $("dHwPreview").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("mdmDetailsPreview") && /LPDDR5/.test($("dHwPreviewOut").textContent) && !$("dHwPreviewOut").classList.contains("hidden"), "what Iru reports is shown read-only");
   check(!!$("dSell") && !!$("dArchive").closest(".more-menu"), "sell is a head action, archive sits in More");
   check(!!$("dDoAct"), "admin action button"); $("dDoAct").click(); await tick(); check(!$("dActCard").classList.contains("hidden") && document.querySelector('#dActChips .chip.on').dataset.act === "returned", "action card default");
   $("dEdit").click(); check(!$("dEditCard").classList.contains("hidden") && $("eSerial").value === "C02XG2JHJGH1", "edit prefilled");

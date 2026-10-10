@@ -1011,6 +1011,13 @@ service : {
       detail: text;
       ok: bool;
     });
+  /// What Iru reports for one device: the section names and the hardware/battery-related sections verbatim
+  /// (admins, read-only, nothing stored). Used to wire further fields against the real answer rather than a guess.
+  mdmDetailsPreview: (tok: text, assetId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// The buyer's own offers and invoices (a colleague signed in through the hub).
   myOffers: (tok: text) -> (vec SaleView) query;
   /// Admins: how the last notification went — the quickest way to see a missing notify lane.
