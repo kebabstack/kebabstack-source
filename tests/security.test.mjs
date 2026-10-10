@@ -1463,8 +1463,23 @@ test('assets: Apple Business Manager — a browser-signed 180-day assertion (the
     pending = await defer.syncMdm(adminTok, mdm.id);
     const iru = await answerOutcall(pic, { results: [{ device_id: 'k1', serial_number: 'f9xq2abm0001', device_name: "Member's iPhone", model: 'iPhone 15', platform: 'iPhone', os_version: '18.6', last_check_in: '2026-09-07T08:00:00Z', user: { email: 'member@example.test', name: 'Member' } }] });
     assert.match(iru.url, /acme\.api\.kandji\.io\/api\/v1\/devices/);
-    r = await pending(); assert.equal(r.ok, true, r.detail); assert.match(r.detail, /1 matched/); assert.match(r.detail, /1 assigned/);
+    // 0.24.0 · the sync follows up with one details call per Iru device and keeps the hardware
+    const details = await answerOutcall(pic, { general: { boot_volume: 'Macintosh HD' }, hardware_overview: { model_name: 'iPhone 15', model_identifier: 'iPhone15,4', processor_name: 'Apple A16', processor_speed: '', number_of_processors: '1', total_number_of_cores: 6, memory: '6 GB' }, volumes: [{ name: 'Data', capacity: '10 GB', available: '1 GB', encrypted: 'No' }, { name: 'Macintosh HD', capacity: '128 GB', available: '61.3 GB', encrypted: 'Yes' }], filevault: { filevault_enabled: false } });
+    assert.match(details.url, /acme\.api\.kandji\.io\/api\/v1\/devices\/k1\/details$/);
+    r = await pending(); assert.equal(r.ok, true, r.detail); assert.match(r.detail, /1 matched/); assert.match(r.detail, /1 assigned/); assert.match(r.detail, /hardware read for 1/);
     const linked = (await app.getAsset(adminTok, a1.id))[0];
+    assert.deepEqual({ ...linked.hardware[0], fetchedAt: 0n }, { processor: 'Apple A16', cores: 6n, memoryGb: 6n, storageGb: 128n, storageFreeGb: 61n, encrypted: 'yes', modelId: 'iPhone15,4', source: 'Iru', fetchedAt: 0n }, 'boot volume wins, sizes are rounded decimal GB');
+    const listed = (await app.listAssets(adminTok, 'f9xq2abm0001', '', false))[0]; assert.equal(listed.hardware[0].memoryGb, 6n); assert.equal(listed.mdmUserName, 'Member');
+    assert.match(await app.exportCsv(adminTok), /,processor,cores,memory gb,storage gb\n/); assert.match(await app.exportCsv(adminTok), /"Apple A16",6,6,128/);
+    // a second sync within a week reads no details again; members cannot refresh; an admin can
+    pending = await defer.syncMdm(adminTok, mdm.id);
+    await answerOutcall(pic, { results: [{ device_id: 'k1', serial_number: 'f9xq2abm0001', device_name: "Member's iPhone", model: 'iPhone 15', platform: 'iPhone', os_version: '18.6', last_check_in: '2026-09-07T08:00:00Z', user: { email: 'member@example.test', name: 'Member' } }] });
+    r = await pending(); assert.equal(r.ok, true, r.detail); assert.doesNotMatch(r.detail, /hardware read/);
+    assert.equal((await app.refreshHardware(memberTok, a1.id)).ok, false, 'members cannot trigger MDM calls');
+    pending = await defer.refreshHardware(adminTok, a1.id);
+    const refreshCall = await answerOutcall(pic, { hardware_overview: { processor_name: 'Apple A16', total_number_of_cores: '6', memory: '8 GB' }, volumes: [] });
+    assert.match(refreshCall.url, /\/devices\/k1\/details$/); r = await pending(); assert.equal(r.ok, true, r.detail);
+    assert.equal((await app.getAsset(adminTok, a1.id))[0].hardware[0].memoryGb, 8n, 'refresh replaces the stored hardware');
     assert.equal(linked.asset.status, 'assigned'); assert.equal(linked.assigneeEmail, 'member@example.test'); assert.equal(linked.mdm[0].connName, 'Iru'); assert.equal(linked.abm[0].connName, 'Apple Business Manager · Group');
     assert.equal((await app.listAbmDevices(adminTok, 'matched', 0n)).length, 3);
     assert.deepEqual(await app.listAbmDevices(adminTok, 'sold', 0n), [], 'nothing sold yet — the release backlog is empty');
@@ -2612,7 +2627,8 @@ test('assets: unlock PIN is read-only, admin-only, transient and rechecks access
     const mdm=await app.addMdm(adminTok,{kind:'iru',name:'Fixture MDM',url:'https://fixture.api.kandji.io',clientId:'',secret:'fixture-secret'});assert.ok(mdm.ok);
     const deferred=pic.createDeferredActor(idlFactory,appId);
     let pending=await deferred.syncMdm(adminTok,mdm.id);
-    await answerOutcall(pic,{results:[{device_id:'test-device',serial_number:'PIN-TEST-001',device_name:'Test Mac',model:'MacBook Pro',platform:'Mac',os_version:'15.0',last_check_in:'2026-09-17'}]});assert.ok((await pending()).ok);
+    await answerOutcall(pic,{results:[{device_id:'test-device',serial_number:'PIN-TEST-001',device_name:'Test Mac',model:'MacBook Pro',platform:'Mac',os_version:'15.0',last_check_in:'2026-09-17'}]});
+    const noDetails=await answerOutcall(pic,{});assert.match(noDetails.url,/\/devices\/test-device\/details$/);assert.ok((await pending()).ok);
     const id=(await app.listAssets(adminTok,'PIN-TEST-001','',false))[0].asset.id;
     pending=await deferred.deviceUnlockPin(adminTok,id);
     const request=await answerOutcall(pic,{pin:'001234'});

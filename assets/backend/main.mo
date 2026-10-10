@@ -70,7 +70,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.23.1";
+  transient let BUILD_VERSION : Text = "0.24.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -1066,13 +1066,14 @@ persistent actor Assets {
     };
   };
 
-  public type AssetRow = { asset : Asset; assigneeName : Text; photoCount : Nat; lastEvent : Text; lastAt : Int; mdm : Text; mdmUser : Text; mdmMismatch : Bool; assigneeEmail : Text; createdByName : Text; location : Text }; // asset.assignee/createdBy are person ids (0.6.0)
+  public type AssetRow = { asset : Asset; assigneeName : Text; photoCount : Nat; lastEvent : Text; lastAt : Int; mdm : Text; mdmUser : Text; mdmUserName : Text; mdmMismatch : Bool; assigneeEmail : Text; createdByName : Text; location : Text; hardware : ?Hardware; abmCapacity : Text }; // asset.assignee/createdBy are person ids (0.6.0)
   func row(a : Asset) : AssetRow {
     var lastEvent = ""; var lastAt = a.updatedAt; var pc = 0;
     for ((_, e) in Map.entries(events)) if (e.assetId == a.id and e.at >= lastAt) { lastEvent := e.detail; lastAt := e.at };
     for ((_, p) in Map.entries(photos)) if (p.assetId == a.id) pc += 1;
-    let (mdm, mdmUser, mm) = switch (Map.get(mdmMeta, Nat.compare, a.id)) { case (?x) (x.connName, x.userEmail, mdmMismatch(a, x)); case null ("", "", false) };
-    { asset = a; assigneeName = (if (a.assignee == "") "" else nameOf(a.assignee)); photoCount = pc; lastEvent; lastAt; mdm; mdmUser; mdmMismatch = mm; assigneeEmail = emailOfPid(a.assignee); createdByName = nameOf(a.createdBy); location = locationOf(a.id) };
+    let (mdm, mdmUser, mdmUserName, mm) = switch (Map.get(mdmMeta, Nat.compare, a.id)) { case (?x) (x.connName, x.userEmail, x.userName, mdmMismatch(a, x)); case null ("", "", "", false) };
+    let abmCapacity = switch (Map.get(abmDevices, Text.compare, normId(a.serial))) { case (?x) x.capacity; case null "" };
+    { asset = a; assigneeName = (if (a.assignee == "") "" else nameOf(a.assignee)); photoCount = pc; lastEvent; lastAt; mdm; mdmUser; mdmUserName; mdmMismatch = mm; assigneeEmail = emailOfPid(a.assignee); createdByName = nameOf(a.createdBy); location = locationOf(a.id); hardware = Map.get(mdmHardware, Nat.compare, a.id); abmCapacity };
   };
   /// Admins see everything; members see their own devices. q matches tag, serial, vendor, model, assignee.
   func hardwarePending(id : Nat) : Bool {
@@ -1100,10 +1101,10 @@ persistent actor Assets {
     Array.tabulate<AssetRow>(Nat.min(arr.size(), 500), func i = arr[i]);
   };
   /// events come display-resolved (by/to as names); asset.assignee is the person id, assigneeEmail its current address
-  public shared query func getAsset(tok : Text, id : Nat) : async ?{ asset : Asset; assigneeName : Text; assigneeEmail : Text; createdByName : Text; events : [Event]; photos : [PhotoMeta]; mdm : ?MdmMeta; mdmMismatch : Bool; abm : ?AbmDevice; location : Text } {
+  public shared query func getAsset(tok : Text, id : Nat) : async ?{ asset : Asset; assigneeName : Text; assigneeEmail : Text; createdByName : Text; events : [Event]; photos : [PhotoMeta]; mdm : ?MdmMeta; mdmMismatch : Bool; abm : ?AbmDevice; location : Text; hardware : ?Hardware } {
     let m = switch (me(tok)) { case (?m) m; case null return null };
     switch (Map.get(assets, Nat.compare, id)) {
-      case (?a) { if (not canSee(m, a)) return null; let md = Map.get(mdmMeta, Nat.compare, id); ?{ location = locationOf(a.id); asset = a; assigneeName = (if (a.assignee == "") "" else nameOf(a.assignee)); assigneeEmail = emailOfPid(a.assignee); createdByName = nameOf(a.createdBy); events = Array.map<Event, Event>(eventsOf(id).filter(func e = m.role == "admin" or e.kind != "offboarding"), showEvent); photos = Array.map<PhotoMeta, PhotoMeta>(photosOf(id), func(ph) = { ph with by = nameOf(ph.by) }); mdm = md; mdmMismatch = (switch (md) { case (?x) mdmMismatch(a, x); case null false }); abm = Map.get(abmDevices, Text.compare, normId(a.serial)) } };
+      case (?a) { if (not canSee(m, a)) return null; let md = Map.get(mdmMeta, Nat.compare, id); ?{ location = locationOf(a.id); asset = a; assigneeName = (if (a.assignee == "") "" else nameOf(a.assignee)); assigneeEmail = emailOfPid(a.assignee); createdByName = nameOf(a.createdBy); events = Array.map<Event, Event>(eventsOf(id).filter(func e = m.role == "admin" or e.kind != "offboarding"), showEvent); photos = Array.map<PhotoMeta, PhotoMeta>(photosOf(id), func(ph) = { ph with by = nameOf(ph.by) }); mdm = md; mdmMismatch = (switch (md) { case (?x) mdmMismatch(a, x); case null false }); abm = Map.get(abmDevices, Text.compare, normId(a.serial)); hardware = Map.get(mdmHardware, Nat.compare, a.id) } };
       case null null;
     };
   };
@@ -1246,9 +1247,11 @@ persistent actor Assets {
   };
   public shared query func exportCsv(tok : Text) : async Text {
     switch (admin(tok)) { case null return ""; case (?_) {} };
-    var out = "id,tag,serial,vendor,model,kind,status,assignee,assignee name,holder,note,updated\n";
+    var out = "id,tag,serial,vendor,model,kind,status,assignee,assignee name,holder,note,updated,location,processor,cores,memory gb,storage gb\n";
     for ((_, a) in Map.entries(assets)) {
-      if (not a.archived) out #= Text.join([Nat.toText(a.id), csv(a.tag), csv(a.serial), csv(a.vendor), csv(a.model), csv(a.kind), csv(a.status), csv(emailOfPid(a.assignee)), csv(if (a.assignee == "") "" else nameOf(a.assignee)), csv(a.holder), csv(a.note), Int.toText(a.updatedAt / 1_000_000_000)].vals(), ",") # "\n";
+      let hw = Map.get(mdmHardware, Nat.compare, a.id);
+      let hwCols = switch (hw) { case (?h) [csv(h.processor), (if (h.cores == 0) "" else Nat.toText(h.cores)), (if (h.memoryGb == 0) "" else Nat.toText(h.memoryGb)), (if (h.storageGb == 0) "" else Nat.toText(h.storageGb))]; case null ["", "", "", ""] };
+      if (not a.archived) out #= Text.join(Array.concat([Nat.toText(a.id), csv(a.tag), csv(a.serial), csv(a.vendor), csv(a.model), csv(a.kind), csv(a.status), csv(emailOfPid(a.assignee)), csv(if (a.assignee == "") "" else nameOf(a.assignee)), csv(a.holder), csv(a.note), Int.toText(a.updatedAt / 1_000_000_000), csv(locationOf(a.id))], hwCols).vals(), ",") # "\n";
     };
     out;
   };
@@ -1283,8 +1286,14 @@ persistent actor Assets {
   };
   public type MdmMeta = { connId : Nat; connName : Text; kind : Text; externalId : Text; deviceName : Text; osVersion : Text; lastSeen : Text; userEmail : Text; userName : Text; compliance : Text; syncedAt : Int };
   public type MdmView = { id : Nat; kind : Text; name : Text; url : Text; clientId : Text; secretSet : Bool; enabled : Bool; createdAt : Int; lastSync : Int; lastResult : Text; devices : Nat; matched : Nat; created : Nat };
+  /// What the MDM last reported about the machine itself (0.24.0): processor, cores, RAM, boot volume, encryption.
+  /// Sizes are decimal gigabytes as Apple shows them; 0 = unknown. `encrypted` is "yes", "no" or "".
+  public type Hardware = { processor : Text; cores : Nat; memoryGb : Nat; storageGb : Nat; storageFreeGb : Nat; encrypted : Text; modelId : Text; source : Text; fetchedAt : Int };
   let mdmConns : Map.Map<Nat, MdmConn> = Map.empty<Nat, MdmConn>();
   let mdmMeta : Map.Map<Nat, MdmMeta> = Map.empty<Nat, MdmMeta>(); // assetId -> what the MDM last said
+  let mdmHardware : Map.Map<Nat, Hardware> = Map.empty<Nat, Hardware>(); // assetId -> hardware as the MDM last reported it (0.24.0)
+  transient let HARDWARE_PER_SYNC : Nat = 40; // Iru needs one HTTPS call per device for hardware: bounded per sync run
+  transient let HARDWARE_FRESH : Int = 7 * 86_400 * 1_000_000_000; // re-read a device's hardware after a week
   var nextMdmId : Nat = 1;
   transient var mdmBusy : Bool = false;
   transient let MDM_KINDS : [Text] = ["iru", "jamf", "intune"];
@@ -1390,7 +1399,41 @@ persistent actor Assets {
   };
 
   /// One device as every MDM reports it, normalised.
-  type MdmDevice = { externalId : Text; serial : Text; name : Text; vendor : Text; model : Text; kind : Text; os : Text; lastSeen : Text; userEmail : Text; userName : Text; compliance : Text; assetTag : Text };
+  type MdmDevice = { externalId : Text; serial : Text; name : Text; vendor : Text; model : Text; kind : Text; os : Text; lastSeen : Text; userEmail : Text; userName : Text; compliance : Text; assetTag : Text; hardware : ?Hardware };
+  /// "8 GB", "228.27 GB", "1.02 TB", "512GB", "16384 MB" → whole decimal gigabytes (rounded); unreadable → 0.
+  func gbOf(t : Text) : Nat {
+    let s = Text.toLower(norm(t)); if (s == "") return 0;
+    var whole = 0; var frac = 0; var fracDigits = 0; var inFrac = false; var unit = "";
+    for (ch in s.chars()) {
+      if (ch >= '0' and ch <= '9') { let d = Nat32.toNat(Char.toNat32(ch) - 48); if (inFrac) { if (fracDigits < 3) { frac := frac * 10 + d; fracDigits += 1 } } else whole := whole * 10 + d }
+      else if (ch == '.') inFrac := true
+      else if (ch != ' ' and ch != ',') unit #= Text.fromChar(ch);
+    };
+    while (fracDigits < 3) { frac *= 10; fracDigits += 1 }; // frac is now thousandths
+    let milli = whole * 1000 + frac; // value × 1000
+    let gbMilli = if (Text.startsWith(unit, #text "tb")) milli * 1000 else if (Text.startsWith(unit, #text "mb")) milli / 1000 else if (Text.startsWith(unit, #text "kb")) milli / 1_000_000 else milli;
+    (gbMilli + 500) / 1000;
+  };
+  func natOf(j : Json.Json, path : Text) : Nat {
+    let f = jNum(j, path); if (f > 0.0) return Int.abs(Float.toInt(f));
+    switch (Nat.fromText(norm(jStr(j, path)))) { case (?n) n; case null 0 };
+  };
+  func jBool(j : Json.Json, path : Text) : ?Bool = switch (Json.get(j, path)) { case (?#bool(b)) ?b; case _ null };
+  /// Iru / Kandji: GET /api/v1/devices/{id}/details → hardware_overview, volumes (boot volume preferred), filevault.
+  func iruDetails(c : MdmConn, externalId : Text) : async ?Hardware {
+    let r = await fetch(#get, c.url # "/api/v1/devices/" # urlEnc(externalId) # "/details", [{ name = "Authorization"; value = "Bearer " # c.secret }, { name = "Accept"; value = "application/json" }], null);
+    if (not r.ok) return null;
+    let j = switch (Json.parse(r.body)) { case (#ok(j)) j; case (#err(_)) return null };
+    let boot = jStr(j, "general.boot_volume"); let vols = jArr(j, "volumes");
+    var chosen : ?Json.Json = null;
+    for (v in vols.vals()) if (boot != "" and jStr(v, "name") == boot) chosen := ?v;
+    if (chosen == null and vols.size() > 0) chosen := ?vols[0];
+    var cap = ""; var avail = ""; var enc = "";
+    switch (chosen) { case (?v) { cap := jStr(v, "capacity"); avail := jStr(v, "available"); enc := Text.toLower(norm(jStr(v, "encrypted"))) }; case null {} };
+    let fileVault = jBool(j, "filevault.filevault_enabled") == ?true;
+    ?{ processor = norm(jStr(j, "hardware_overview.processor_name")); cores = natOf(j, "hardware_overview.total_number_of_cores"); memoryGb = gbOf(jStr(j, "hardware_overview.memory")); storageGb = gbOf(cap); storageFreeGb = gbOf(avail); encrypted = (if (fileVault or enc == "yes" or enc == "true") "yes" else if (enc == "no" or enc == "false") "no" else ""); modelId = norm(jStr(j, "hardware_overview.model_identifier")); source = c.name; fetchedAt = now() };
+  };
+  func hardwareStale(assetId : Nat) : Bool = switch (Map.get(mdmHardware, Nat.compare, assetId)) { case (?h) now() - h.fetchedAt > HARDWARE_FRESH; case null true };
   func kindFromPlatform(p : Text, model : Text) : Text {
     let pl = lower(p); let ml = lower(model);
     if (Text.contains(ml, #text "ipad") or Text.contains(pl, #text "ipad")) return "tablet";
@@ -1408,13 +1451,13 @@ persistent actor Assets {
     let out = List.empty<MdmDevice>();
     for (d in arr.vals()) {
       let model = norm(jStr(d, "model"));
-      List.add(out, { externalId = jStr(d, "device_id"); serial = Text.toUpper(norm(jStr(d, "serial_number"))); name = jStr(d, "device_name"); vendor = "Apple"; model; kind = kindFromPlatform(jStr(d, "platform"), model); os = jStr(d, "os_version"); lastSeen = jStr(d, "last_check_in"); userEmail = lower(norm(jStr(d, "user.email"))); userName = jStr(d, "user.name"); compliance = ""; assetTag = norm(jStr(d, "asset_tag")) });
+      List.add(out, { externalId = jStr(d, "device_id"); serial = Text.toUpper(norm(jStr(d, "serial_number"))); name = jStr(d, "device_name"); vendor = "Apple"; model; kind = kindFromPlatform(jStr(d, "platform"), model); os = jStr(d, "os_version"); lastSeen = jStr(d, "last_check_in"); userEmail = lower(norm(jStr(d, "user.email"))); userName = jStr(d, "user.name"); compliance = ""; assetTag = norm(jStr(d, "asset_tag")); hardware = null });
     };
     { ok = true; detail = ""; devices = List.toArray(out) };
   };
   /// Jamf Pro: computers (v1) then mobile devices (v2), both paged.
   func jamfPage(c : MdmConn, token : Text, mobile : Bool, page : Nat) : async { ok : Bool; detail : Text; devices : [MdmDevice]; total : Nat } {
-    let url = if (mobile) c.url # "/api/v2/mobile-devices?page=" # Nat.toText(page) # "&page-size=100" else c.url # "/api/v1/computers-inventory?section=GENERAL&section=HARDWARE&section=USER_AND_LOCATION&section=OPERATING_SYSTEM&page=" # Nat.toText(page) # "&page-size=100";
+    let url = if (mobile) c.url # "/api/v2/mobile-devices?page=" # Nat.toText(page) # "&page-size=100" else c.url # "/api/v1/computers-inventory?section=GENERAL&section=HARDWARE&section=STORAGE&section=USER_AND_LOCATION&section=OPERATING_SYSTEM&page=" # Nat.toText(page) # "&page-size=100";
     let r = await fetch(#get, url, [{ name = "Authorization"; value = "Bearer " # token }, { name = "Accept"; value = "application/json" }], null);
     if (not r.ok) return { ok = false; detail = r.detail; devices = []; total = 0 };
     let j = switch (Json.parse(r.body)) { case (#ok(j)) j; case (#err(_)) return { ok = false; detail = "not JSON"; devices = []; total = 0 } };
@@ -1423,16 +1466,19 @@ persistent actor Assets {
     for (d in jArr(j, "results").vals()) {
       if (mobile) {
         let model = norm(jStr(d, "model")); let typ = jStr(d, "type");
-        List.add(out, { externalId = jStr(d, "id"); serial = Text.toUpper(norm(jStr(d, "serialNumber"))); name = jStr(d, "name"); vendor = "Apple"; model; kind = kindFromPlatform(typ, model); os = ""; lastSeen = ""; userEmail = ""; userName = jStr(d, "username"); compliance = ""; assetTag = "" });
+        List.add(out, { externalId = jStr(d, "id"); serial = Text.toUpper(norm(jStr(d, "serialNumber"))); name = jStr(d, "name"); vendor = "Apple"; model; kind = kindFromPlatform(typ, model); os = ""; lastSeen = ""; userEmail = ""; userName = jStr(d, "username"); compliance = ""; assetTag = ""; hardware = null });
       } else {
         let model = norm(jStr(d, "hardware.model")); let make = norm(jStr(d, "hardware.make"));
-        List.add(out, { externalId = jStr(d, "id"); serial = Text.toUpper(norm(jStr(d, "hardware.serialNumber"))); name = jStr(d, "general.name"); vendor = (if (make == "") "Apple" else make); model; kind = kindFromPlatform(jStr(d, "general.platform"), model); os = jStr(d, "operatingSystem.version"); lastSeen = jStr(d, "general.lastContactTime"); userEmail = lower(norm(jStr(d, "userAndLocation.email"))); userName = jStr(d, "userAndLocation.realname"); compliance = ""; assetTag = norm(jStr(d, "general.assetTag")) });
+        var disk = 0; for (x in jArr(d, "storage.disks").vals()) { let mb = natOf(x, "sizeMegabytes"); if (mb > disk) disk := mb };
+        let ramMb = natOf(d, "hardware.totalRamMegabytes"); let freeMb = natOf(d, "storage.bootDriveAvailableSpaceMegabytes");
+        let hw : ?Hardware = if (ramMb == 0 and disk == 0 and jStr(d, "hardware.processorType") == "") null else ?{ processor = norm(jStr(d, "hardware.processorType")); cores = natOf(d, "hardware.coreCount"); memoryGb = (ramMb * 1000 / 1024 + 500) / 1000; storageGb = (disk + 500) / 1000; storageFreeGb = (freeMb + 500) / 1000; encrypted = ""; modelId = norm(jStr(d, "hardware.modelIdentifier")); source = c.name; fetchedAt = now() };
+        List.add(out, { externalId = jStr(d, "id"); serial = Text.toUpper(norm(jStr(d, "hardware.serialNumber"))); name = jStr(d, "general.name"); vendor = (if (make == "") "Apple" else make); model; kind = kindFromPlatform(jStr(d, "general.platform"), model); os = jStr(d, "operatingSystem.version"); lastSeen = jStr(d, "general.lastContactTime"); userEmail = lower(norm(jStr(d, "userAndLocation.email"))); userName = jStr(d, "userAndLocation.realname"); compliance = ""; assetTag = norm(jStr(d, "general.assetTag")); hardware = hw });
       };
     };
     { ok = true; detail = ""; devices = List.toArray(out); total };
   };
   /// Intune: Graph managedDevices, following @odata.nextLink.
-  func intunePage(token : Text, url : Text) : async { ok : Bool; detail : Text; devices : [MdmDevice]; next : Text } {
+  func intunePage(c : MdmConn, token : Text, url : Text) : async { ok : Bool; detail : Text; devices : [MdmDevice]; next : Text } {
     let r = await fetch(#get, url, [{ name = "Authorization"; value = "Bearer " # token }, { name = "Accept"; value = "application/json" }], null);
     if (not r.ok) return { ok = false; detail = r.detail; devices = []; next = "" };
     let j = switch (Json.parse(r.body)) { case (#ok(j)) j; case (#err(_)) return { ok = false; detail = "not JSON"; devices = []; next = "" } };
@@ -1440,11 +1486,13 @@ persistent actor Assets {
     for (d in jArr(j, "value").vals()) {
       let model = norm(jStr(d, "model")); let os = jStr(d, "operatingSystem");
       let email = lower(norm(jStr(d, "emailAddress"))); let upn = lower(norm(jStr(d, "userPrincipalName")));
-      List.add(out, { externalId = jStr(d, "id"); serial = Text.toUpper(norm(jStr(d, "serialNumber"))); name = jStr(d, "deviceName"); vendor = norm(jStr(d, "manufacturer")); model; kind = kindFromPlatform(os, model); os = os # " " # jStr(d, "osVersion"); lastSeen = jStr(d, "lastSyncDateTime"); userEmail = (if (email != "") email else upn); userName = jStr(d, "userDisplayName"); compliance = jStr(d, "complianceState"); assetTag = "" });
+      let total = natOf(d, "totalStorageSpaceInBytes"); let free = natOf(d, "freeStorageSpaceInBytes"); let ram = natOf(d, "physicalMemoryInBytes");
+      let hw : ?Hardware = if (total == 0 and ram == 0) null else ?{ processor = ""; cores = 0; memoryGb = (ram + 500_000_000) / 1_000_000_000; storageGb = (total + 500_000_000) / 1_000_000_000; storageFreeGb = (free + 500_000_000) / 1_000_000_000; encrypted = (switch (jBool(d, "isEncrypted")) { case (?true) "yes"; case (?false) "no"; case null "" }); modelId = ""; source = c.name; fetchedAt = now() };
+      List.add(out, { externalId = jStr(d, "id"); serial = Text.toUpper(norm(jStr(d, "serialNumber"))); name = jStr(d, "deviceName"); vendor = norm(jStr(d, "manufacturer")); model; kind = kindFromPlatform(os, model); os = os # " " # jStr(d, "osVersion"); lastSeen = jStr(d, "lastSyncDateTime"); userEmail = (if (email != "") email else upn); userName = jStr(d, "userDisplayName"); compliance = jStr(d, "complianceState"); assetTag = ""; hardware = hw });
     };
     { ok = true; detail = ""; devices = List.toArray(out); next = jStr(j, "@odata.nextLink") };
   };
-  transient let INTUNE_FIRST : Text = "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?$select=id,deviceName,serialNumber,manufacturer,model,operatingSystem,osVersion,userPrincipalName,emailAddress,userDisplayName,lastSyncDateTime,complianceState,managedDeviceOwnerType&$top=100";
+  transient let INTUNE_FIRST : Text = "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?$select=id,deviceName,serialNumber,manufacturer,model,operatingSystem,osVersion,userPrincipalName,emailAddress,userDisplayName,lastSyncDateTime,complianceState,managedDeviceOwnerType,totalStorageSpaceInBytes,freeStorageSpaceInBytes,physicalMemoryInBytes,isEncrypted&$top=100";
   func jamfToken(c : MdmConn) : async { ok : Bool; token : Text; detail : Text } = async { await formToken(c.url # "/api/v1/oauth/token", [("grant_type", "client_credentials"), ("client_id", c.clientId), ("client_secret", c.secret)]) };
   func intuneToken(c : MdmConn) : async { ok : Bool; token : Text; detail : Text } = async { await formToken("https://login.microsoftonline.com/" # c.url # "/oauth2/v2.0/token", [("grant_type", "client_credentials"), ("client_id", c.clientId), ("client_secret", c.secret), ("scope", "https://graph.microsoft.com/.default")]) };
 
@@ -1482,7 +1530,7 @@ persistent actor Assets {
         if (not t.ok) return { ok = false; detail = t.detail; devices = [] };
         var url = INTUNE_FIRST; var pages = 0;
         label paging while (url != "" and pages < 30) {
-          let p = await intunePage(t.token, url);
+          let p = await intunePage(c, t.token, url);
           if (not p.ok) return { ok = false; detail = p.detail; devices = [] };
           for (d in p.devices.vals()) List.add(all, d);
           pages += 1; url := p.next;
@@ -1514,6 +1562,10 @@ persistent actor Assets {
     let p = await mdmPull(c, false);
     if (not p.ok) { Map.add(mdmConns, Nat.compare, c.id, { c with lastSync = now(); lastResult = "FAILED: " # p.detail }); return { ok = false; detail = p.detail } };
     var matched = 0; var created = 0; var assigned = 0; var mism = 0;
+    let wantHardware = List.empty<(Nat, Text)>(); // Iru devices whose hardware is unknown or older than a week
+    func noteHardware(assetId : Nat, d : MdmDevice) {
+      switch (d.hardware) { case (?h) Map.add(mdmHardware, Nat.compare, assetId, h); case null { if (c.kind == "iru" and d.externalId != "" and hardwareStale(assetId)) List.add(wantHardware, (assetId, d.externalId)) } };
+    };
     for (d in p.devices.vals()) {
       if (d.serial != "") {
         let meta : MdmMeta = { connId = c.id; connName = c.name; kind = c.kind; externalId = d.externalId; deviceName = d.name; osVersion = d.os; lastSeen = d.lastSeen; userEmail = d.userEmail; userName = d.userName; compliance = d.compliance; syncedAt = now() };
@@ -1533,21 +1585,46 @@ persistent actor Assets {
             };
             if (mdmMismatch(a2, meta)) mism += 1;
             if (a2 != a) Map.add(assets, Nat.compare, a.id, { a2 with updatedAt = now() });
-            Map.add(mdmMeta, Nat.compare, a.id, meta);
+            Map.add(mdmMeta, Nat.compare, a.id, meta); noteHardware(a.id, d);
           };
           case null {
             let x : AssetInput = { tag = d.assetTag; serial = d.serial; vendor = d.vendor; model = d.model; kind = d.kind; note = "" };
             let a = createInternal(by, x, (if (userKnown) "assigned" else "in_stock"), (if (userKnown) pidOf(d.userEmail) else ""), (if (not userKnown and d.userName != "") d.userName else ""), "mdm:" # c.name);
-            Map.add(mdmMeta, Nat.compare, a.id, meta);
+            Map.add(mdmMeta, Nat.compare, a.id, meta); noteHardware(a.id, d);
             created += 1;
           };
         };
       };
     };
-    let detail = Nat.toText(p.devices.size()) # " devices · " # Nat.toText(matched) # " matched · " # Nat.toText(created) # " created" # (if (assigned > 0) " · " # Nat.toText(assigned) # " assigned" else "") # (if (mism > 0) " · " # Nat.toText(mism) # " mismatch" # (if (mism == 1) "" else "es") else "");
+    // Hardware for Iru devices: one call each, oldest first, at most HARDWARE_PER_SYNC per run; the rest follows next time.
+    let wanted = List.toArray(wantHardware); var hwRead = 0; var hwFailed = 0;
+    label details for ((assetId, externalId) in wanted.vals()) {
+      if (hwRead + hwFailed >= HARDWARE_PER_SYNC) break details;
+      switch (await iruDetails(c, externalId)) {
+        case (?h) { Map.add(mdmHardware, Nat.compare, assetId, h); hwRead += 1 };
+        case null { hwFailed += 1; if (Map.get(mdmHardware, Nat.compare, assetId) == null) Map.add(mdmHardware, Nat.compare, assetId, { processor = ""; cores = 0; memoryGb = 0; storageGb = 0; storageFreeGb = 0; encrypted = ""; modelId = ""; source = c.name; fetchedAt = now() }) };
+      };
+    };
+    let hwLeft : Nat = wanted.size() - Nat.min(wanted.size(), hwRead + hwFailed);
+    let detail = Nat.toText(p.devices.size()) # " devices · " # Nat.toText(matched) # " matched · " # Nat.toText(created) # " created" # (if (assigned > 0) " · " # Nat.toText(assigned) # " assigned" else "") # (if (mism > 0) " · " # Nat.toText(mism) # " mismatch" # (if (mism == 1) "" else "es") else "") # (if (hwRead > 0) " · hardware read for " # Nat.toText(hwRead) else "") # (if (hwFailed > 0) " · hardware unavailable for " # Nat.toText(hwFailed) # " (check the token's Device Information permission)" else "") # (if (hwLeft > 0) " · " # Nat.toText(hwLeft) # " more next sync" else "");
     Map.add(mdmConns, Nat.compare, c.id, { c with lastSync = now(); lastResult = detail; devices = p.devices.size(); matched; created });
     log(by, "MDM sync " # c.name # ": " # detail);
     { ok = true; detail };
+  };
+  /// Read one device's hardware from Iru now (admins). Jamf and Intune hardware arrives with the list sync.
+  public shared func refreshHardware(tok : Text, assetId : Nat) : async { ok : Bool; detail : Text } {
+    if (migrating()) return { ok = false; detail = MIGRATING };
+    switch (admin(tok)) { case null return { ok = false; detail = "admins only" }; case (?_) {} };
+    let md = switch (Map.get(mdmMeta, Nat.compare, assetId)) { case (?m) m; case null return { ok = false; detail = "No linked MDM device." } };
+    let c = switch (Map.get(mdmConns, Nat.compare, md.connId)) { case (?c) c; case null return { ok = false; detail = "The MDM connection no longer exists." } };
+    if (c.kind != "iru") return { ok = false; detail = "Hardware for " # c.name # " devices updates with the next sync." };
+    if (not c.enabled) return { ok = false; detail = c.name # " is paused. Resume it under Settings → Connections." };
+    if (md.externalId == "") return { ok = false; detail = "The MDM did not report a device id." };
+    let h = try { await iruDetails(c, md.externalId) } catch (_) { null };
+    switch (h) {
+      case (?h) { if (admin(tok) == null) return { ok = false; detail = "Access changed." }; Map.add(mdmHardware, Nat.compare, assetId, h); { ok = true; detail = (if (h.processor == "" and h.memoryGb == 0 and h.storageGb == 0) c.name # " answered without hardware details." else "Hardware read from " # c.name # ".") } };
+      case null ({ ok = false; detail = "Could not read the device details from " # c.name # ". Check the token's Device Information permission." });
+    };
   };
   public shared func syncMdm(tok : Text, id : Nat) : async { ok : Bool; detail : Text } {
     if (migrating()) return { ok = false; detail = MIGRATING };

@@ -1,5 +1,15 @@
 # Changelog — kebab-stack assets
 
+## [0.24.0] — 2026-10-10
+
+- **Hardware from device management.** Devices synced from Iru (Kandji) show processor, cores, memory, boot-volume size and free space, and encryption: the sync reads `/api/v1/devices/{id}/details` for devices without hardware or older than a week, at most 40 per run (one HTTPS call each), the rest on the next run; **Refresh hardware** on the device reads one now. Jamf delivers processor, cores, RAM and disk size with the existing list (plus `section=STORAGE`), Intune storage, free space, RAM and encryption from its list. Where the MDM has nothing, the Apple Business Manager capacity stands in. Shown as a **Hardware** line on the device, as a second line in the device list and in *My devices*, and as `location, processor, cores, memory gb, storage gb` columns in the CSV export. New query fields `hardware` and `abmCapacity`; new update call `refreshHardware`. The token needs Iru's *Device Information* permission; without it the sync result says so.
+- **Needs attention** on Devices: one tile with the MDM mismatches, Apple devices not in the register, devices without a serial number and outstanding offboarding follow-ups, each with its answer: **Record hand-over to <person the MDM sees>**, Open Apple inventory, Add serial, Show them. The same one-click hand-over sits in the mismatch note on the device page.
+- Device page: *Managed by Iru (name) · seen 3 weeks ago* opens by default with formatted dates instead of raw ISO text, the Apple box reads *Bought via …*, Hardware sits under Serial, **Sell this device** is a head action and the selling card appears only with a purchase price, an open sale or on request, Archive moved into **More**.
+- Registering: a photo that matches nothing opens the new-device form by itself; **Add device** opens it directly; the kind follows the model (iPhone → phone, iPad → tablet, MacBook → laptop …) until changed.
+- Devices list: checkboxes appear after **Select**; **Clear** returns to reading mode. Tabs wrap on narrow screens so Settings and Apple inventory stay reachable on a phone. Warning pills use the shared rust token; device-page boxes use classes instead of inline styles.
+- Settings: an empty app address is filled from the app's own HTTPS address on first open by an admin; the notification links work without a setup step.
+- No change to collection, authorization or stored device data; the hardware store is additive, existing MDM notes are kept.
+
 ## [0.23.1] — 2026-10-09
 
 - Stack follow-through for the deployed status: Hub Operations and the team-room screen receive a `deployed` count (devices in use at a location without a personal owner), and the person panel in Desk shows a device's location ("at G11-1") beside tag and serial. Requires Hub 0.39.1 for the new count to appear; older Hubs ignore it.

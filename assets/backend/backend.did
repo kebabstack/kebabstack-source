@@ -1,4 +1,4 @@
-type ValuationInput =
+type ValuationInput = 
  record {
    currency: text;
    inServiceOn: text;
@@ -8,14 +8,14 @@ type ValuationInput =
    reason: text;
    residualMinor: nat;
  };
-type Valuation =
+type Valuation = 
  record {
    at: int;
    by: text;
    input: ValuationInput;
    revision: nat;
  };
-type Snapshot =
+type Snapshot = 
  record {
    checkedAt: int;
    metrics: vec record {
@@ -29,7 +29,7 @@ type Snapshot =
             unavailable;
           };
  };
-type Settings =
+type Settings = 
  record {
    adminCount: nat;
    adminEmails: vec text;
@@ -46,19 +46,19 @@ type Settings =
    trustId: text;
    trustLastPull: int;
  };
-type Selection =
+type Selection = 
  variant {
    all;
    ids: vec nat;
  };
-type SalesFilter =
+type SalesFilter = 
  record {
    completed: bool;
    mine: bool;
    offset: nat;
    selection: Selection;
  };
-type SaleView =
+type SaleView = 
  record {
    acceptedByName: text;
    checksByName: text;
@@ -79,7 +79,7 @@ type SaleView =
    waiverText: text;
    waiverVersion: nat;
  };
-type SaleSummary =
+type SaleSummary = 
  record {
    assetId: nat;
    buyerName: text;
@@ -97,7 +97,7 @@ type SaleSummary =
    updatedAt: int;
    wiped: bool;
  };
-type Sale =
+type Sale = 
  record {
    acceptedAt: int;
    acceptedBy: text;
@@ -135,14 +135,14 @@ type Sale =
    waiverVersion: nat;
    wiped: bool;
  };
-type RegisterOptions =
+type RegisterOptions = 
  record {
    digits: nat;
    locations: vec text;
    nextTag: text;
    prefix: text;
  };
-type ReadResult =
+type ReadResult = 
  record {
    detail: text;
    kind: text;
@@ -154,13 +154,13 @@ type ReadResult =
    sticker: text;
    vendor: text;
  };
-type Read =
+type Read = 
  record {
    confidence: float64;
    kind: text;
    value: text;
  };
-type Purchase =
+type Purchase = 
  record {
    at: int;
    by: text;
@@ -169,7 +169,7 @@ type Purchase =
    note: text;
    priceMinor: nat;
  };
-type Progress =
+type Progress = 
  record {
    bindings: vec text;
    checkedAt: int;
@@ -178,7 +178,7 @@ type Progress =
    state: text;
    total: nat;
  };
-type PhotoMeta =
+type PhotoMeta = 
  record {
    assetId: nat;
    at: int;
@@ -188,7 +188,7 @@ type PhotoMeta =
    mime: text;
    size: nat;
  };
-type PermissionStatus =
+type PermissionStatus = 
  record {
    app: text;
    directoryAt: int;
@@ -200,7 +200,7 @@ type PermissionStatus =
    model: nat;
    revision: text;
  };
-type PaymentInput =
+type PaymentInput = 
  record {
    amountMinor: nat;
    paidOn: text;
@@ -209,7 +209,7 @@ type PaymentInput =
    requestId: text;
    reverses: opt nat;
  };
-type PaymentEntry =
+type PaymentEntry = 
  record {
    amountMinor: nat;
    at: int;
@@ -221,7 +221,7 @@ type PaymentEntry =
    requestId: text;
    reverses: opt nat;
  };
-type Page =
+type Page = 
  record {
    checkedAt: int;
    rows: vec Card;
@@ -232,7 +232,7 @@ type Page =
           };
    total: nat;
  };
-type OwnedObject =
+type OwnedObject = 
  record {
    id: text;
    kind: text;
@@ -240,7 +240,7 @@ type OwnedObject =
    title: text;
    updatedAt: int;
  };
-type NotifyState =
+type NotifyState = 
  record {
    at: int;
    detail: text;
@@ -248,7 +248,7 @@ type NotifyState =
    title: text;
    to: text;
  };
-type MdmView =
+type MdmView = 
  record {
    clientId: text;
    created: nat;
@@ -264,7 +264,7 @@ type MdmView =
    secretSet: bool;
    url: text;
  };
-type MdmMeta =
+type MdmMeta = 
  record {
    compliance: text;
    connId: nat;
@@ -278,7 +278,7 @@ type MdmMeta =
    userEmail: text;
    userName: text;
  };
-type Manifest =
+type Manifest = 
  record {
    description: text;
    name: text;
@@ -286,25 +286,25 @@ type Manifest =
    version: text;
    wants: vec text;
  };
-type LogRow =
+type LogRow = 
  record {
    at: int;
    what: text;
    who: text;
  };
-type LegacyGrant =
+type LegacyGrant = 
  record {
    email: text;
    role: text;
    source: text;
  };
-type LabelLayoutView =
+type LabelLayoutView = 
  record {
    fields: vec text;
    note: text;
    size: text;
  };
-type Item =
+type Item = 
  record {
    detail: text;
    historical: bool;
@@ -314,7 +314,7 @@ type Item =
    status: text;
    title: text;
  };
-type InvoiceData =
+type InvoiceData = 
  record {
    acceptedLine: text;
    buyer: Buyer;
@@ -353,7 +353,19 @@ type InvoiceData =
    waiverText: text;
    waiverVersion: nat;
  };
-type HandoverView =
+type Hardware = 
+ record {
+   cores: nat;
+   encrypted: text;
+   fetchedAt: int;
+   memoryGb: nat;
+   modelId: text;
+   processor: text;
+   source: text;
+   storageFreeGb: nat;
+   storageGb: nat;
+ };
+type HandoverView = 
  record {
    context: Case;
    device: text;
@@ -365,7 +377,7 @@ type HandoverView =
    progress: text;
    recipientEmail: text;
  };
-type HandoverInput =
+type HandoverInput = 
  record {
    choice: text;
    dueOn: text;
@@ -373,7 +385,7 @@ type HandoverInput =
    owner: text;
    recipient: text;
  };
-type Handover =
+type Handover = 
  record {
    assetId: nat;
    caseKey: text;
@@ -388,7 +400,7 @@ type Handover =
    stage: text;
    updatedAt: int;
  };
-type FinanceAsset =
+type FinanceAsset = 
  record {
    archived: bool;
    assignee: text;
@@ -403,7 +415,7 @@ type FinanceAsset =
    tag: text;
    valuation: opt Valuation;
  };
-type Event =
+type Event = 
  record {
    assetId: nat;
    at: int;
@@ -414,7 +426,7 @@ type Event =
    photoId: nat;
    to: text;
  };
-type DirectoryRow =
+type DirectoryRow = 
  record {
    active: bool;
    attributes: vec record {
@@ -429,7 +441,7 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
-type DealView =
+type DealView = 
  record {
    acceptedAt: int;
    acceptedHow: text;
@@ -456,7 +468,7 @@ type DealView =
    termsVersion: nat;
    vatRate: text;
  };
-type DealStatus =
+type DealStatus = 
  record {
    active: bool;
    completedAt: int;
@@ -469,14 +481,14 @@ type DealStatus =
    notification: text;
    openedAt: int;
  };
-type DealEvent =
+type DealEvent = 
  record {
    action: text;
    actorLabel: text;
    at: int;
    detail: text;
  };
-type Context =
+type Context = 
  record {
    checkedAt: int;
    items: vec Item;
@@ -487,14 +499,14 @@ type Context =
           };
    total: nat;
  };
-type Column =
+type Column = 
  variant {
    active;
    done;
    planned;
    waiting;
  };
-type Case =
+type Case = 
  record {
    desk: text;
    dueAt: opt int;
@@ -505,7 +517,7 @@ type Case =
    ticket: nat;
    url: text;
  };
-type Card =
+type Card = 
  record {
    column: Column;
    dueOn: text;
@@ -518,13 +530,13 @@ type Card =
    title: text;
    updatedAt: int;
  };
-type Candidate =
+type Candidate = 
  record {
    row: AssetRow;
    score: nat;
    why: text;
  };
-type Buyer =
+type Buyer = 
  record {
    country: text;
    email: text;
@@ -535,7 +547,7 @@ type Buyer =
    street: text;
    town: text;
  };
-type Billing =
+type Billing = 
  record {
    country: text;
    currency: text;
@@ -559,21 +571,24 @@ type Billing =
    waiverVersion: nat;
    yearInNumber: bool;
  };
-type AssetRow =
+type AssetRow = 
  record {
+   abmCapacity: text;
    asset: Asset;
    assigneeEmail: text;
    assigneeName: text;
    createdByName: text;
+   hardware: opt Hardware;
    lastAt: int;
    lastEvent: text;
    location: text;
    mdm: text;
    mdmMismatch: bool;
    mdmUser: text;
+   mdmUserName: text;
    photoCount: nat;
  };
-type AssetInput =
+type AssetInput = 
  record {
    kind: text;
    model: text;
@@ -582,7 +597,7 @@ type AssetInput =
    tag: text;
    vendor: text;
  };
-type Asset =
+type Asset = 
  record {
    archived: bool;
    assignee: text;
@@ -599,7 +614,7 @@ type Asset =
    updatedAt: int;
    vendor: text;
  };
-type AiState =
+type AiState = 
  record {
    connectorId: nat;
    keySet: bool;
@@ -607,7 +622,7 @@ type AiState =
    model: text;
    source: text;
  };
-type AbmView =
+type AbmView = 
  record {
    clientId: text;
    createdAt: int;
@@ -624,7 +639,7 @@ type AbmView =
    signedUntil: int;
    unmatched: nat;
  };
-type AbmRow =
+type AbmRow = 
  record {
    assetId: opt nat;
    assetStatus: text;
@@ -632,7 +647,7 @@ type AbmRow =
    assigneeName: text;
    device: AbmDevice;
  };
-type AbmDevice =
+type AbmDevice = 
  record {
    addedAt: text;
    capacity: text;
@@ -891,6 +906,7 @@ service : {
        assigneeName: text;
        createdByName: text;
        events: vec Event;
+       hardware: opt Hardware;
        location: text;
        mdm: opt MdmMeta;
        mdmMismatch: bool;
@@ -1034,6 +1050,12 @@ service : {
                                ok: bool;
                                state: AiState;
                              });
+  /// Read one device's hardware from Iru now (admins). Jamf and Intune hardware arrives with the list sync.
+  refreshHardware: (tok: text, assetId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// One step for a new device: details (serial, vendor, model from the photo or typed), an automatic tag
   /// unless one is given, optionally the person who gets it or the place it sits, and the photo as evidence.
   registerDevice: (tok: text, args:
@@ -1155,7 +1177,7 @@ service : {
       ok: bool;
     });
   /// Admins: what the company paid for a device (basis of the price proposal); null price clears it.
-  setPurchase: (tok: text, assetId: nat, priceMinor: opt nat, currency:
+  setPurchase: (tok: text, assetId: nat, priceMinor: opt nat, currency: 
    text, date: text, note: text) -> (record {
                                        detail: text;
                                        ok: bool;

@@ -9,7 +9,8 @@ const html = fs.readFileSync("index.html", "utf8").replace('<script type="module
 const now = BigInt(Date.now()) * 1000000n;
 const ANA = "p_00000000000000a1", ME = "p_00000000000000ee"; // assets 0.6.0: people are hub person ids
 const asset = (id, over = {}) => ({ id: BigInt(id), tag: "INV-000" + id, serial: "C02XG2JHJGH" + id, vendor: "Apple", model: "MacBook Pro 14\"", kind: "laptop", status: "assigned", assignee: ANA, holder: "", note: "", createdAt: now, updatedAt: now, createdBy: ME, archived: false, ...over });
-const row = (id, over = {}) => ({ asset: asset(id, over), assigneeName: "Ana Ruiz", photoCount: 1n, lastEvent: "handed out to Ana Ruiz", lastAt: now, mdm: id === 1 ? "Iru" : "", mdmUser: id === 1 ? "ben@example.com" : "", mdmMismatch: id === 1, assigneeEmail: over.assignee === "" ? "" : "ana@example.com", createdByName: "Me Myself" });
+const hardware = { processor: "Apple M1 Pro", cores: 10n, memoryGb: 16n, storageGb: 512n, storageFreeGb: 210n, encrypted: "yes", modelId: "MacBookPro18,3", source: "Iru", fetchedAt: now };
+const row = (id, over = {}) => ({ asset: asset(id, over), assigneeName: "Ana Ruiz", photoCount: 1n, lastEvent: "handed out to Ana Ruiz", lastAt: now, mdm: id === 1 ? "Iru" : "", mdmUser: id === 1 ? "ben@example.com" : "", mdmUserName: id === 1 ? "Ben Ko" : "", mdmMismatch: id === 1, assigneeEmail: over.assignee === "" ? "" : "ana@example.com", createdByName: "Me Myself", location: "", hardware: id === 1 ? [hardware] : [], abmCapacity: id === 3 ? "128GB" : "" });
 const ev = (id, kind, detail, photoId = 0n) => ({ id: BigInt(id), assetId: 1n, at: now, by: "Me Myself", kind, detail, to: "", photoId }); // by/to arrive as names (showEvent)
 // sales (0.7.0)
 const seller = { name: "Acme AG", street: "Musterstrasse", houseNo: "11", postalCode: "8002", town: "Zürich", country: "CH", uid: "CHE-123.456.789", vatRegistered: true };
@@ -58,7 +59,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "listAssets": return [row(1), row(2, { status: "in_stock", assignee: "" }), row(3, { kind: "phone", model: "iPhone 15", serial: "G6TX9RQ2L7" })];
     case "pendingHandoverCount": return 0n;
     case "handoverOf": case "formerBuyerStatus": return [];
-    case "getAsset": return [{ asset: asset(1), assigneeName: "Ana Ruiz", assigneeEmail: "ana@example.com", createdByName: "Me Myself", events: [ev(9, "handed_out", "handed out to Ana Ruiz", 5n), ev(8, "created", "created via photo intake")], photos: [{ id: 5n, assetId: 1n, eventId: 9n, at: now, by: "me@example.com", mime: "image/jpeg", size: 120000n }], mdm: [{ connId: 1n, connName: "Iru", kind: "iru", externalId: "x1", deviceName: "Ana's MacBook", osVersion: "15.6", lastSeen: "2026-09-04T08:00:00Z", userEmail: "ben@example.com", userName: "Ben Ko", compliance: "", syncedAt: now }], mdmMismatch: true, abm: [abmDev("C02XG2JHJGH1", "Iru · Group")] }];
+    case "getAsset": return [{ asset: asset(1), assigneeName: "Ana Ruiz", assigneeEmail: "ana@example.com", createdByName: "Me Myself", events: [ev(9, "handed_out", "handed out to Ana Ruiz", 5n), ev(8, "created", "created via photo intake")], photos: [{ id: 5n, assetId: 1n, eventId: 9n, at: now, by: "me@example.com", mime: "image/jpeg", size: 120000n }], mdm: [{ connId: 1n, connName: "Iru", kind: "iru", externalId: "x1", deviceName: "Ana's MacBook", osVersion: "15.6", lastSeen: "2026-09-04T08:00:00Z", userEmail: "ben@example.com", userName: "Ben Ko", compliance: "", syncedAt: now }], mdmMismatch: true, abm: [abmDev("C02XG2JHJGH1", "Iru · Group")], hardware: [hardware] }];
     case "notifyStatus": return [{ at: now, ok: false, detail: "this app has no notify lane — an admin can grant it under Apps → Lanes", to: "ana@example.com", title: "A device is offered to you — review the price and terms" }];
     case "offerSale": return { ok: true, detail: "offered — but Ana Ruiz could NOT be notified: this app has no notify lane — an admin can grant it under Apps → Lanes. Tell them yourself, or fix it under Settings → Notifications" };
     case "listAbm": return abmConns;
@@ -89,6 +90,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "testMdm": return { ok: true, detail: "reached Iru: 42 devices on the first page, 40 already in the register" };
     case "syncMdm": return { ok: true, detail: "42 devices · 40 matched · 2 created" };
     case "addMdm": return { ok: true, detail: "", id: 2n };
+    case "refreshHardware": return { ok: true, detail: "Hardware read from Iru." };
     // sales
     case "saleOfDevice": return { purchase: [{ priceMinor: 299900n, currency: "CHF", date: "2024-03-01", note: "shop", by: ME, at: now }], sale: [], proposal: [{ proposedMinor: 62000n, basis: "purchase price 2'999.00 CHF on 2024-03-01 · 30 of 36 months elapsed" }], billingReady: "" };
     case "priceProposal": return [{ proposedMinor: 62000n, basis: "rule" }];
@@ -237,12 +239,25 @@ if (role === "admin") {
   // devices
   await go("#/devices"); check(document.querySelectorAll("#devRows .dev").length === 3, "device rows: " + document.querySelectorAll("#devRows .dev").length);
   check(/Review MDM/.test(document.querySelector('#devRows .dev[data-id="1"]').textContent), "mismatch pill on row");
-  check(document.querySelectorAll("#stats .stat").length === 3, "status stats");
+  check(document.querySelectorAll("#stats .stat").length === 4 && /Needs attention/.test($("stats").textContent), "status stats + needs attention: " + document.querySelectorAll("#stats .stat").length);
+  check(/M1 Pro · 16 GB · 512 GB/.test(document.querySelector('#devRows .dev[data-id="1"]').textContent) && /128 GB/.test(document.querySelector('#devRows .dev[data-id="3"]').textContent), "hardware line in the list (MDM, ABM fallback)");
+  check($("devPickAll").textContent === "Select" && !$("devRows").classList.contains("selectable"), "checkboxes hidden until Select");
+  $("devPickAll").click(); check($("devRows").classList.contains("selectable") && $("devPickAll").textContent === "Select all", "select mode on"); $("devBulkClear").click(); check(!$("devRows").classList.contains("selectable"), "select mode off");
+  document.querySelector('#stats [data-st="attention"]').click(); for (let i = 0; i < 5; i++) await tick();
+  check(/Record hand-over to Ben Ko/.test($("devRows").textContent) && /Apple device/.test($("devRows").textContent) && /Open Apple inventory/.test($("devRows").textContent), "needs-attention panel lists the mismatch and the Apple gap");
+  const beforeHand = calls.length; document.querySelector("[data-att-hand]").click(); for (let i = 0; i < 5; i++) await tick();
+  check(calls.slice(beforeHand).includes("addEventTo"), "one click records the hand-over the MDM reported");
+  document.querySelector('#stats [data-st=""]').click(); for (let i = 0; i < 5; i++) await tick();
   document.querySelector('#devRows .dev[data-id="1"]').click(); for (let i = 0; i < 5; i++) await tick();
   check(window.location.hash === "#/d/1" && /MacBook/.test($("dName").textContent), "device detail: " + $("dName").textContent);
   check(document.querySelectorAll("#dEvents .ev").length === 2 && document.querySelectorAll("#dEvents img").length === 1, "history with photo");
   check(/Ana Ruiz/.test($("dKv").textContent) && /ana@example.com/.test($("dKv").textContent) && /Me Myself/.test($("dKv").textContent) && !/p_0000/.test($("dKv").textContent + $("dEvents").textContent), "device card shows names + address resolved from person ids, never the ids: " + $("dKv").textContent.slice(0, 160));
-  check(!$("dMdm").classList.contains("hidden") && /Iru/.test($("dMdm").textContent) && /Ben Ko/.test($("dMdm").textContent) && /Record the hand-over/.test($("dMdm").textContent), "mdm block with mismatch advice");
+  check(!$("dMdm").classList.contains("hidden") && /Managed by Iru/.test($("dMdm").textContent) && /Ben Ko/.test($("dMdm").textContent) && /Record the hand-over/.test($("dMdm").textContent), "mdm block with mismatch advice");
+  check(/Apple M1 Pro · 10 cores · 16 GB memory · 512 GB \(210 GB free\) · encrypted/.test($("dKv").textContent), "hardware line on the device: " + $("dKv").textContent.slice(0, 160));
+  check(!/2026-09-04T08:00:00Z/.test($("dMdm").textContent) && /ago\)/.test($("dMdm").textContent), "MDM last-seen is a formatted date");
+  check(!!$("dMdmHand") && /Record hand-over to Ben Ko/.test($("dMdmHand").textContent) && !!$("dHwRefresh"), "mismatch has a one-click answer and hardware can be refreshed");
+  const beforeHw = calls.length; $("dHwRefresh").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.slice(beforeHw).includes("refreshHardware"), "refresh asks the backend");
+  check(!!$("dSell") && !!$("dArchive").closest(".more-menu"), "sell is a head action, archive sits in More");
   check(!!$("dDoAct"), "admin action button"); $("dDoAct").click(); await tick(); check(!$("dActCard").classList.contains("hidden") && document.querySelector('#dActChips .chip.on').dataset.act === "returned", "action card default");
   $("dEdit").click(); check(!$("dEditCard").classList.contains("hidden") && $("eSerial").value === "C02XG2JHJGH1", "edit prefilled");
   // ---- selling: purchase card, price proposal, start a sale for the colleague who has it

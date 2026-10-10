@@ -199,6 +199,26 @@ register* is the gap to close (Add / Add all → devices land as *unknown* with 
 *No device management* are devices no MDM holds. The sync repeats every six hours; devices released
 from Apple's register disappear from the list, devices already in the register stay.
 
+## 7b · Hardware from device management (0.24.0)
+
+The MDM sync fills a **Hardware** line per device (processor, cores, memory, boot-volume size and free space, encryption).
+
+- **Iru (Kandji):** the device list has no hardware, so the sync calls `GET /api/v1/devices/{device_id}/details` per device.
+  The API token needs the *Device Information* permission (Settings → Access → API token); *Device secrets* stays
+  optional and is only used by the unlock-PIN lookup. Each detail call is one HTTPS outcall of the canister, so a sync
+  reads at most 40 devices per run (unknown first, then older than seven days) and continues with the next run; with
+  the six-hour timer a register of 500 Macs is complete after about two days. **Refresh hardware from Iru** on a device
+  page reads one device immediately. A sync result that says *hardware unavailable for n (check the token's Device
+  Information permission)* means the token lacks that permission or the details endpoint is not licensed.
+- **Jamf Pro:** processor, cores, RAM and disk size come with the existing computer inventory call (sections
+  `HARDWARE` and `STORAGE`); no extra permission beyond *Read Computers*.
+- **Intune:** total and free storage, RAM and encryption come from the managed-devices list; Graph v1.0 reports no
+  processor name.
+- **Fallback:** where the MDM reports nothing, the capacity from Apple Business Manager (e.g. "512 GB") is shown.
+
+The hardware store is additive; nothing is written to the MDM. The CSV export gains `location, processor, cores,
+memory gb, storage gb`. Members see the hardware of their own devices under *My devices*.
+
 ## Upgrades
 
 Before every backend deploy of a live assets (append-only stable state):
