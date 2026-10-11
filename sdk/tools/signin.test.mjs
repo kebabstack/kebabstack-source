@@ -18,14 +18,14 @@ test('session and ticket checks show progress without a second company sign-in f
 
 test('suite cookie: shared only on a company parent domain, never on gateway suffixes, bare hosts or IPs',()=>{
  const dom=new JSDOM(markup,{url:'https://assets.test/',runScripts:'outside-only'}),w=dom.window;w.eval(src+';window.suiteCookie=suiteCookie;');const c=w.suiteCookie;
- assert.equal(c.domainFor('dfinity.kebabstack.com'),'kebabstack.com');assert.equal(c.domainFor('assets.kebabstack.com'),'kebabstack.com');assert.equal(c.domainFor('hub.intra.company.ch'),'intra.company.ch');assert.equal(c.domainFor('hub.company.ch'),'company.ch');
- for(const h of ['abcde-aaaaa-aaaaz-qacia-cai.icp0.io','abcde-cai.raw.icp0.io','abcde-cai.ic0.app','abcde-cai.icp.net','x.icp1.io','company.ch','localhost','app.localhost','127.0.0.1','[::1]',''])assert.equal(c.domainFor(h),'',h);
+ assert.equal(c.domainFor('hub.example-suite.test'),'example-suite.test');assert.equal(c.domainFor('assets.example-suite.test'),'example-suite.test');assert.equal(c.domainFor('hub.intra.company.ch'),'intra.company.ch');assert.equal(c.domainFor('hub.company.ch'),'company.ch');
+ for(const h of ['abcde-aaaaa-aaaaa-aaaaa-cai.icp0.io','abcde-cai.raw.icp0.io','abcde-cai.ic0.app','abcde-cai.icp.net','x.icp1.io','company.ch','localhost','app.localhost','127.0.0.1','[::1]',''])assert.equal(c.domainFor(h),'',h);
  dom.window.close();
 });
 test('suite cookie: write, read and clear on the parent domain; rejects malformed tokens',()=>{
- const dom=new JSDOM(markup,{url:'https://dfinity.kebabstack.com/',runScripts:'outside-only'}),w=dom.window;w.eval(src+';window.suiteCookie=suiteCookie;');const c=w.suiteCookie;
+ const dom=new JSDOM(markup,{url:'https://hub.example-suite.test/',runScripts:'outside-only'}),w=dom.window;w.eval(src+';window.suiteCookie=suiteCookie;');const c=w.suiteCookie;
  assert.equal(c.read(),'');assert.equal(c.write('zz',3600),false);assert.equal(c.write('a'.repeat(64),3600),true);assert.equal(c.read(),'a'.repeat(64));
- const other=new JSDOM(markup,{url:'https://assets.kebabstack.com/',runScripts:'outside-only',cookieJar:dom.cookieJar});other.window.eval(src+';window.suiteCookie=suiteCookie;');assert.equal(other.window.suiteCookie.read(),'a'.repeat(64),'every tool on the parent domain sees it');
+ const other=new JSDOM(markup,{url:'https://assets.example-suite.test/',runScripts:'outside-only',cookieJar:dom.cookieJar});other.window.eval(src+';window.suiteCookie=suiteCookie;');assert.equal(other.window.suiteCookie.read(),'a'.repeat(64),'every tool on the parent domain sees it');
  c.clear();assert.equal(c.read(),'');assert.equal(other.window.suiteCookie.read(),'');
  const gateway=new JSDOM(markup,{url:'https://abcde-cai.icp0.io/',runScripts:'outside-only'});gateway.window.eval(src+';window.suiteCookie=suiteCookie;');assert.equal(gateway.window.suiteCookie.write('a'.repeat(64),3600),false,'no cookie on a public gateway suffix');
  dom.window.close();other.window.close();gateway.window.close();
