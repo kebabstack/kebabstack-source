@@ -1,18 +1,18 @@
-type Workspace =
+type Workspace = 
  record {
    canManage: bool;
    members: vec Person;
    plans: vec Summary;
    project: Project__1;
  };
-type WorkInput =
+type WorkInput = 
  record {
    breakMinutes: nat;
    endAt: int;
    note: text;
    startAt: int;
  };
-type Work =
+type Work = 
  record {
    at: int;
    breakMinutes: nat;
@@ -28,13 +28,13 @@ type Work =
    voidReason: text;
    voidedAt: int;
  };
-type Window =
+type Window = 
  record {
    endAt: int;
    layer: nat;
    startAt: int;
  };
-type View__1 =
+type View__1 = 
  record {
    deliveries: vec Delivery;
    events: vec Event;
@@ -43,7 +43,7 @@ type View__1 =
    monitoring: opt Monitoring;
    work: vec Work;
  };
-type View =
+type View = 
  record {
    adjustmentUnits: vec record {
                           nat;
@@ -52,18 +52,18 @@ type View =
    lines: vec Line;
    rule: opt Rule;
  };
-type Update =
+type Update = 
  record {
    at: int;
    message: text;
    phase: Phase;
  };
-type Unit =
+type Unit = 
  variant {
    minutes;
    money;
  };
-type TypeView =
+type TypeView = 
  record {
    approval: text;
    checklist: vec text;
@@ -81,7 +81,7 @@ type TypeView =
    sortOrder: nat;
    visibility: text;
  };
-type TypeInput =
+type TypeInput = 
  record {
    approval: text;
    checklist: vec text;
@@ -97,7 +97,7 @@ type TypeInput =
    respondH: nat;
    visibility: text;
  };
-type Type =
+type Type = 
  record {
    description: text;
    enabled: bool;
@@ -111,7 +111,7 @@ type Type =
    revision: nat;
    steps: vec Step;
  };
-type TicketRow =
+type TicketRow = 
  record {
    approval: text;
    assignee: text;
@@ -142,7 +142,7 @@ type TicketRow =
    waitingOn: text;
    workflowStep: text;
  };
-type TicketFull =
+type TicketFull = 
  record {
    approval: opt Approval;
    canAct: bool;
@@ -178,7 +178,7 @@ type TicketFull =
    tasks: vec Task;
    ticket: Ticket;
  };
-type Ticket =
+type Ticket = 
  record {
    assignee: text;
    body: text;
@@ -208,7 +208,7 @@ type Ticket =
    updatedAt: int;
    waitingOn: text;
  };
-type TaskView =
+type TaskView = 
  record {
    archived: bool;
    assignee: text;
@@ -229,7 +229,7 @@ type TaskView =
    updatedAt: int;
    waitingFor: text;
  };
-type TaskInput =
+type TaskInput = 
  record {
    assignee: text;
    column: Column;
@@ -239,21 +239,21 @@ type TaskInput =
    title: text;
    waitingFor: text;
  };
-type Task =
+type Task = 
  record {
    at: int;
    by: text;
    state: text;
    title: text;
  };
-type SwapState =
+type SwapState = 
  variant {
    accepted;
    cancelled;
    declined;
    pending;
  };
-type Swap =
+type Swap = 
  record {
    decidedAt: int;
    decidedBy: text;
@@ -268,7 +268,7 @@ type Swap =
    toName: text;
    toPersonId: text;
  };
-type Summary =
+type Summary = 
  record {
    endAt: int;
    id: nat;
@@ -277,13 +277,13 @@ type Summary =
    startAt: int;
    timezone: text;
  };
-type Subtask =
+type Subtask = 
  record {
    done: bool;
    id: nat;
    title: text;
  };
-type Step =
+type Step = 
  record {
    approval: bool;
    checklist: vec text;
@@ -291,7 +291,7 @@ type Step =
    instructions: text;
    name: text;
  };
-type Source__1 =
+type Source__1 = 
  variant {
    cover: record {
             coverId: nat;
@@ -301,7 +301,7 @@ type Source__1 =
           };
    planning: record {day: int;};
  };
-type SourceView =
+type SourceView = 
  record {
    accepted: nat;
    createdAt: int;
@@ -319,14 +319,14 @@ type SourceView =
    "service": text;
    testedAt: int;
  };
-type Source =
+type Source = 
  record {
    app: text;
    cid: nat;
    name: text;
    url: text;
  };
-type Snapshot =
+type Snapshot = 
  record {
    checkedAt: int;
    metrics: vec record {
@@ -340,7 +340,7 @@ type Snapshot =
             unavailable;
           };
  };
-type SlackStatus =
+type SlackStatus = 
  record {
    appUrlSet: bool;
    bots: vec SlackBotView;
@@ -351,7 +351,7 @@ type SlackStatus =
    intakes: vec SlackIntake;
    outbox: nat;
  };
-type SlackIntake =
+type SlackIntake = 
  record {
    channel: text;
    channelName: text;
@@ -364,7 +364,7 @@ type SlackIntake =
    name: text;
    typeId: nat;
  };
-type SlackBotView =
+type SlackBotView = 
  record {
    botKnown: bool;
    hasSigning: bool;
@@ -372,14 +372,14 @@ type SlackBotView =
    name: text;
    teamName: text;
  };
-type Shift =
+type Shift = 
  record {
    endAt: int;
    layer: nat;
    personId: text;
    startAt: int;
  };
-type Settings =
+type Settings = 
  record {
    adminCount: nat;
    adminEmails: vec text;
@@ -404,14 +404,14 @@ type Settings =
    orgName: text;
    peopleCount: nat;
  };
-type Service =
+type Service = 
  record {
    checkedAt: int;
    name: text;
    state: text;
    validUntil: int;
  };
-type Segment =
+type Segment = 
  record {
    endAt: int;
    key: text;
@@ -420,7 +420,7 @@ type Segment =
    shift: nat;
    startAt: int;
  };
-type SecretResult =
+type SecretResult = 
  variant {
    err: text;
    ok: record {
@@ -429,22 +429,22 @@ type SecretResult =
          secret: text;
        };
  };
-type Scope__1 =
+type Scope__1 = 
  variant {
    customer: nat;
    internal: text;
  };
-type Scope =
+type Scope = 
  variant {
    group: text;
    personal;
  };
-type Saved =
+type Saved = 
  record {
    edited: bool;
    recipe: Recipe;
  };
-type Run =
+type Run = 
  record {
    checked: vec bool;
    definition: Type;
@@ -452,7 +452,7 @@ type Run =
    revision: nat;
    step: nat;
  };
-type Rule =
+type Rule = 
  record {
    at: int;
    by: text;
@@ -473,7 +473,7 @@ type Rule =
    work: Rates;
    workUnit: Unit;
  };
-type Result__1 =
+type Result__1 = 
  variant {
    err: Error__1;
    ok: record {
@@ -481,7 +481,7 @@ type Result__1 =
          revision: nat;
        };
  };
-type Result =
+type Result = 
  variant {
    err: Error;
    ok: record {
@@ -489,7 +489,7 @@ type Result =
          revision: nat;
        };
  };
-type RequestType =
+type RequestType = 
  record {
    approval: text;
    checklist: vec text;
@@ -507,12 +507,12 @@ type RequestType =
    sortOrder: nat;
    visibility: text;
  };
-type ReportingScope =
+type ReportingScope = 
  record {
    id: nat;
    name: text;
  };
-type Region =
+type Region = 
  record {
    backup: vec text;
    backupMode: variant {
@@ -528,7 +528,7 @@ type Region =
    startMinute: nat;
    timezone: text;
  };
-type RecordState =
+type RecordState = 
  variant {
    approved;
    confirmed;
@@ -536,7 +536,7 @@ type RecordState =
    excluded;
    pending;
  };
-type Record =
+type Record = 
  record {
    breakMinutes: nat;
    confirmedAt: int;
@@ -557,7 +557,7 @@ type Record =
    startAt: int;
    state: RecordState;
  };
-type Recipe =
+type Recipe = 
  record {
    regions: vec Region;
    requirement: variant {
@@ -569,26 +569,26 @@ type Recipe =
    timezone: text;
    weeks: nat;
  };
-type Rates =
+type Rates = 
  record {
    holiday: nat;
    weekday: nat;
    weekend: nat;
  };
-type QueuePage =
+type QueuePage = 
  record {
    next: opt nat;
    rows: vec TicketRow;
    total: nat;
  };
-type Publication =
+type Publication = 
  record {
    acceptedGaps: bool;
    at: int;
    by: text;
    names: vec Person;
  };
-type PublicNotice =
+type PublicNotice = 
  record {
    endsAt: int;
    id: nat;
@@ -600,7 +600,7 @@ type PublicNotice =
    updatedAt: int;
    updates: vec Update;
  };
-type Project__1 =
+type Project__1 = 
  record {
    createdAt: int;
    createdBy: text;
@@ -611,7 +611,7 @@ type Project__1 =
    scope: Scope__1;
    services: vec text;
  };
-type ProjectView =
+type ProjectView = 
  record {
    archived: bool;
    canManage: bool;
@@ -627,35 +627,35 @@ type ProjectView =
    scope: Scope;
    updatedAt: int;
  };
-type ProjectSettings =
+type ProjectSettings = 
  record {
    archivedAt: int;
    retentionChangedAt: int;
    retentionDays: nat;
    revision: nat;
  };
-type ProjectInput__1 =
+type ProjectInput__1 = 
  record {
    description: text;
    name: text;
    scope: Scope__1;
    services: vec text;
  };
-type ProjectInput =
+type ProjectInput = 
  record {
    description: text;
    dueOn: text;
    name: text;
    scope: Scope;
  };
-type Project =
+type Project = 
  record {
    capabilities: Capabilities;
    id: nat;
    name: text;
    policy: opt Policy;
  };
-type Progress =
+type Progress = 
  record {
    bindings: vec text;
    checkedAt: int;
@@ -664,7 +664,7 @@ type Progress =
    state: text;
    total: nat;
  };
-type Preferences =
+type Preferences = 
  record {
    completed: bool;
    mine: bool;
@@ -672,7 +672,7 @@ type Preferences =
    sales: bool;
    tickets: bool;
  };
-type Policy__3 =
+type Policy__3 = 
  record {
    completedDays: nat;
    graceUntil: int;
@@ -680,7 +680,7 @@ type Policy__3 =
    noticeUrl: text;
    revision: nat;
  };
-type Policy__2 =
+type Policy__2 = 
  record {
    at: int;
    by: text;
@@ -688,7 +688,7 @@ type Policy__2 =
    enabled: bool;
    revision: nat;
  };
-type Policy__1 =
+type Policy__1 = 
  record {
    ackMinutes: nat;
    at: int;
@@ -699,19 +699,19 @@ type Policy__1 =
    retentionDays: nat;
    revision: nat;
  };
-type PolicyInput__2 =
+type PolicyInput__2 = 
  record {
    coordinators: vec text;
    enabled: bool;
  };
-type PolicyInput__1 =
+type PolicyInput__1 = 
  record {
    ackMinutes: nat;
    enabled: bool;
    fallback: text;
    retentionDays: nat;
  };
-type PolicyInput =
+type PolicyInput = 
  record {
    costCenter: text;
    currency: text;
@@ -722,7 +722,7 @@ type PolicyInput =
    workCode: text;
    workRate: nat;
  };
-type Policy =
+type Policy = 
  record {
    at: int;
    by: text;
@@ -736,13 +736,13 @@ type Policy =
    workCode: text;
    workRate: nat;
  };
-type PlanView =
+type PlanView = 
  record {
    issues: vec Issue;
    plan: Plan;
    swaps: vec Swap;
  };
-type PlanInput =
+type PlanInput = 
  record {
    endAt: int;
    layers: vec text;
@@ -753,7 +753,7 @@ type PlanInput =
    timezone: text;
    windows: vec Window;
  };
-type Plan =
+type Plan = 
  record {
    createdAt: int;
    createdBy: text;
@@ -763,7 +763,7 @@ type Plan =
    requestKey: text;
    revision: nat;
  };
-type Phase =
+type Phase = 
  variant {
    identified;
    investigating;
@@ -772,7 +772,7 @@ type Phase =
    resolved;
    scheduled;
  };
-type PersonCard =
+type PersonCard = 
  record {
    active: bool;
    department: text;
@@ -785,12 +785,12 @@ type PersonCard =
    manager: text;
    title: text;
  };
-type Person =
+type Person = 
  record {
    id: text;
    name: text;
  };
-type PermissionStatus =
+type PermissionStatus = 
  record {
    app: text;
    directoryAt: int;
@@ -802,7 +802,7 @@ type PermissionStatus =
    model: nat;
    revision: text;
  };
-type PeriodInput =
+type PeriodInput = 
  record {
    endAt: int;
    projectId: nat;
@@ -810,7 +810,7 @@ type PeriodInput =
    timezone: text;
    title: text;
  };
-type Page__1 =
+type Page__1 = 
  record {
    checkedAt: int;
    rows: vec Card;
@@ -821,7 +821,7 @@ type Page__1 =
           };
    total: nat;
  };
-type Page =
+type Page = 
  record {
    audience: Audience;
    checkedAt: int;
@@ -831,19 +831,19 @@ type Page =
    slug: text;
    title: text;
  };
-type Overview =
+type Overview = 
  record {
    canManage: bool;
    deliveryReady: bool;
    incidents: vec Incident;
    policy: opt Policy__1;
  };
-type Override =
+type Override = 
  record {
    assignee: text;
    typeId: nat;
  };
-type NotifyRecord =
+type NotifyRecord = 
  record {
    at: int;
    detail: text;
@@ -851,7 +851,7 @@ type NotifyRecord =
    ok: bool;
    title: text;
  };
-type Notice =
+type Notice = 
  record {
    at: int;
    by: text;
@@ -872,19 +872,19 @@ type Notice =
    updates: vec Update;
    withdrawnAt: int;
  };
-type Monitoring =
+type Monitoring = 
  record {
    condition: text;
    occurredAt: int;
    receivedAt: int;
    sourceName: text;
  };
-type Mapping =
+type Mapping = 
  record {
    payrollId: text;
    personId: text;
  };
-type Manifest =
+type Manifest = 
  record {
    description: text;
    name: text;
@@ -892,13 +892,13 @@ type Manifest =
    version: text;
    wants: vec text;
  };
-type LogRow =
+type LogRow = 
  record {
    at: int;
    what: text;
    who: text;
  };
-type Link =
+type Link = 
  variant {
    sale: record {
            cid: nat;
@@ -906,7 +906,7 @@ type Link =
          };
    ticket: nat;
  };
-type Line__1 =
+type Line__1 = 
  record {
    amount: int;
    code: text;
@@ -923,7 +923,7 @@ type Line__1 =
    seconds: nat;
    startAt: int;
  };
-type Line =
+type Line = 
  record {
    amount: int;
    basis: variant {
@@ -952,7 +952,7 @@ type Line =
    startAt: int;
    unit: Unit;
  };
-type LifecycleCase =
+type LifecycleCase = 
  record {
    decidedBy: text;
    detectedAt: int;
@@ -970,19 +970,19 @@ type LifecycleCase =
             review;
           };
  };
-type LegacyGrant =
+type LegacyGrant = 
  record {
    email: text;
    role: text;
    source: text;
  };
-type Kind =
+type Kind = 
  variant {
    adjustment;
    readiness;
    work;
  };
-type Job =
+type Job = 
  record {
    attempts: nat;
    createdAt: int;
@@ -1003,7 +1003,7 @@ type Job =
            };
    title: text;
  };
-type Item =
+type Item = 
  record {
    detail: text;
    historical: bool;
@@ -1013,7 +1013,7 @@ type Item =
    status: text;
    title: text;
  };
-type Issue =
+type Issue = 
  record {
    endAt: int;
    kind: variant {
@@ -1023,14 +1023,14 @@ type Issue =
    layer: nat;
    startAt: int;
  };
-type Input__4 =
+type Input__4 = 
  record {
    days: nat;
    name: text;
    projectId: nat;
    "service": text;
  };
-type Input__3 =
+type Input__3 = 
  record {
    detail: text;
    projectId: nat;
@@ -1042,7 +1042,7 @@ type Input__3 =
              };
    title: text;
  };
-type Input__2 =
+type Input__2 = 
  record {
    effectiveAt: int;
    holidays: vec text;
@@ -1059,7 +1059,7 @@ type Input__2 =
    work: Rates;
    workUnit: Unit;
  };
-type Input__1 =
+type Input__1 = 
  record {
    endsAt: int;
    impact: Impact;
@@ -1071,7 +1071,7 @@ type Input__1 =
    startsAt: int;
    title: text;
  };
-type Input =
+type Input = 
  record {
    description: text;
    enabled: bool;
@@ -1082,7 +1082,7 @@ type Input =
    respondH: nat;
    steps: vec Step;
  };
-type Incident =
+type Incident = 
  record {
    ackMinutes: nat;
    acknowledgedAt: int;
@@ -1117,13 +1117,13 @@ type Incident =
    title: text;
    updatedAt: int;
  };
-type Impact =
+type Impact = 
  variant {
    degraded;
    maintenance;
    outage;
  };
-type HttpGwResponse =
+type HttpGwResponse = 
  record {
    body: blob;
    headers: vec record {
@@ -1133,7 +1133,7 @@ type HttpGwResponse =
    status_code: nat16;
    upgrade: opt bool;
  };
-type HttpGwRequest =
+type HttpGwRequest = 
  record {
    body: blob;
    headers: vec record {
@@ -1143,17 +1143,17 @@ type HttpGwRequest =
    method: text;
    url: text;
  };
-type Hold =
+type Hold = 
  record {
    reason: text;
    until: int;
  };
-type History =
+type History = 
  record {
    revision: nat;
    rules: vec Rule;
  };
-type Header =
+type Header = 
  record {
    adjustmentOf: nat;
    approvedAt: int;
@@ -1173,7 +1173,7 @@ type Header =
    timezone: text;
    title: text;
  };
-type Handoff =
+type Handoff = 
  record {
    at: int;
    decidedAt: int;
@@ -1188,7 +1188,7 @@ type Handoff =
    to: text;
    toName: text;
  };
-type FormsSource =
+type FormsSource = 
  record {
    canister: principal;
    enabled: bool;
@@ -1197,13 +1197,13 @@ type FormsSource =
    projectId: nat;
    typeId: nat;
  };
-type FormsDelivery =
+type FormsDelivery = 
  record {
    detail: text;
    ok: bool;
    ticketId: nat;
  };
-type Filter__1 =
+type Filter__1 = 
  record {
    assignee: text;
    q: text;
@@ -1211,7 +1211,7 @@ type Filter__1 =
    status: text;
    view: text;
  };
-type Filter =
+type Filter = 
  record {
    completed: bool;
    mine: bool;
@@ -1219,7 +1219,7 @@ type Filter =
    projectId: opt nat;
    search: text;
  };
-type FileMeta =
+type FileMeta = 
  record {
    at: int;
    by: text;
@@ -1228,7 +1228,7 @@ type FileMeta =
    name: text;
    size: nat;
  };
-type FieldDef =
+type FieldDef = 
  record {
    key: text;
    kind: text;
@@ -1237,7 +1237,7 @@ type FieldDef =
    sensitive: bool;
    title: text;
  };
-type Field =
+type Field = 
  record {
    key: text;
    kind: text;
@@ -1246,7 +1246,7 @@ type Field =
    sensitive: bool;
    title: text;
  };
-type Export =
+type Export = 
  variant {
    err: text;
    ok: record {
@@ -1255,7 +1255,7 @@ type Export =
          filename: text;
        };
  };
-type Example =
+type Example = 
  record {
    amount: nat;
    divisorSeconds: nat;
@@ -1265,7 +1265,7 @@ type Example =
    title: text;
    unit: Unit;
  };
-type Event__1 =
+type Event__1 = 
  record {
    actorKind: text;
    at: int;
@@ -1279,7 +1279,7 @@ type Event__1 =
    ticketId: nat;
    who: text;
  };
-type Event =
+type Event = 
  record {
    at: int;
    by: text;
@@ -1287,7 +1287,7 @@ type Event =
    name: text;
    "text": text;
  };
-type Error__1 =
+type Error__1 = 
  variant {
    denied;
    invalid: text;
@@ -1296,7 +1296,7 @@ type Error__1 =
    stale;
    unavailable;
  };
-type Error =
+type Error = 
  variant {
    denied;
    invalid: text;
@@ -1304,7 +1304,7 @@ type Error =
    missing;
    stale;
  };
-type DirectoryRow =
+type DirectoryRow = 
  record {
    active: bool;
    attributes: vec record {
@@ -1319,7 +1319,7 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
-type Delivery =
+type Delivery = 
  record {
    acceptedAt: int;
    attempts: nat;
@@ -1342,13 +1342,13 @@ type Delivery =
              pending;
            };
  };
-type DayKind =
+type DayKind = 
  variant {
    holiday;
    weekday;
    weekend;
  };
-type CustomerProjectInput =
+type CustomerProjectInput = 
  record {
    description: text;
    enabled: bool;
@@ -1358,7 +1358,7 @@ type CustomerProjectInput =
    origins: vec text;
    widgetEnabled: bool;
  };
-type CustomerProject =
+type CustomerProject = 
  record {
    description: text;
    enabled: bool;
@@ -1372,13 +1372,13 @@ type CustomerProject =
    widgetEnabled: bool;
    widgetId: text;
  };
-type CustomerPrivacyInput =
+type CustomerPrivacyInput = 
  record {
    completedDays: nat;
    inactiveDays: nat;
    noticeUrl: text;
  };
-type CustomerKeyView =
+type CustomerKeyView = 
  record {
    createdAt: int;
    expiresAt: int;
@@ -1388,7 +1388,7 @@ type CustomerKeyView =
    revoked: bool;
    scopes: vec text;
  };
-type CustomerErasure =
+type CustomerErasure = 
  record {
    createdAt: int;
    deletedAt: int;
@@ -1396,7 +1396,7 @@ type CustomerErasure =
    reason: text;
    ticketId: nat;
  };
-type Cover =
+type Cover = 
  record {
    decidedAt: int;
    decidedBy: text;
@@ -1413,7 +1413,7 @@ type Cover =
    toName: text;
    toPersonId: text;
  };
-type Context =
+type Context = 
  record {
    checkedAt: int;
    items: vec Item;
@@ -1424,7 +1424,7 @@ type Context =
           };
    total: nat;
  };
-type Config__1 =
+type Config__1 = 
  record {
    at: int;
    audience: Audience;
@@ -1439,7 +1439,7 @@ type Config__1 =
    slug: text;
    title: text;
  };
-type ConfigInput =
+type ConfigInput = 
  record {
    audience: Audience;
    description: text;
@@ -1449,20 +1449,20 @@ type ConfigInput =
    slug: text;
    title: text;
  };
-type Config =
+type Config = 
  record {
    defaultAssignee: text;
    overrides: vec Override;
    revision: nat;
  };
-type Column =
+type Column = 
  variant {
    active;
    done;
    planned;
    waiting;
  };
-type Case =
+type Case = 
  record {
    desk: text;
    dueAt: opt int;
@@ -1473,7 +1473,7 @@ type Case =
    ticket: nat;
    url: text;
  };
-type Card =
+type Card = 
  record {
    column: Column;
    dueOn: text;
@@ -1486,26 +1486,26 @@ type Card =
    title: text;
    updatedAt: int;
  };
-type Capabilities =
+type Capabilities = 
  record {
    export: bool;
    prepare: bool;
    release: bool;
    review: bool;
  };
-type Cancellation =
+type Cancellation = 
  record {
    at: int;
    by: text;
    from: int;
    reason: text;
  };
-type BulkTarget =
+type BulkTarget = 
  record {
    id: nat;
    updatedAt: int;
  };
-type BulkOutcome =
+type BulkOutcome = 
  record {
    id: nat;
    result: variant {
@@ -1514,7 +1514,7 @@ type BulkOutcome =
              updated;
            };
  };
-type BulkAction =
+type BulkAction = 
  variant {
    assign: text;
    due: opt int;
@@ -1523,7 +1523,7 @@ type BulkAction =
              waitingOn: text;
            };
  };
-type Audit__1 =
+type Audit__1 = 
  record {
    action: text;
    at: int;
@@ -1531,18 +1531,18 @@ type Audit__1 =
    reason: text;
    recordId: nat;
  };
-type Audit =
+type Audit = 
  record {
    action: text;
    at: int;
    by: text;
  };
-type Audience =
+type Audience = 
  variant {
    public;
    workspace;
  };
-type Approval =
+type Approval = 
  record {
    approver: text;
    at: int;
@@ -1550,7 +1550,7 @@ type Approval =
    note: text;
    state: text;
  };
-type Absence =
+type Absence = 
  record {
    at: int;
    by: text;
@@ -1564,7 +1564,7 @@ type Absence =
  };
 service : {
   acknowledgeOncallIncident: (tok: text, id: nat, revision: nat) -> (Result);
-  activateReportingCompensation: (tok: text, projectId: nat, revision:
+  activateReportingCompensation: (tok: text, projectId: nat, revision: 
    nat, input: Input__2) -> (Result);
   /// CLI bootstrap: name the first desk admin by e-mail (controller only).
   addAdminEmail: (email: text) -> (bool);
@@ -1660,7 +1660,7 @@ service : {
       detail: text;
       ok: bool;
     });
-  attestDepartedService: (tok: text, id: nat, recordId: nat, revision:
+  attestDepartedService: (tok: text, id: nat, recordId: nat, revision: 
    nat, reason: text) -> (Result);
   autoAssignmentHealth: (tok: text) -> (vec text) query;
   bulkInternalTickets: (tok: text, targets: vec BulkTarget, action:
@@ -1694,7 +1694,7 @@ service : {
       detail: text;
       ok: bool;
     });
-  confirmReportingRecord: (tok: text, id: nat, recordId: nat, revision:
+  confirmReportingRecord: (tok: text, id: nat, recordId: nat, revision: 
    nat, confirm: bool, reason: text) -> (Result);
   confirmServiceStatus: (tok: text, id: nat, revision: nat, services:
    vec text, hours: nat) -> (Result);
@@ -1757,7 +1757,7 @@ service : {
       detail: text;
       ok: bool;
     });
-  decideLifecycle: (tok: text, id: nat, expectedEvent: nat, departure:
+  decideLifecycle: (tok: text, id: nat, expectedEvent: nat, departure: 
    bool, note: text) -> (record {
                            detail: text;
                            ok: bool;
@@ -1774,7 +1774,7 @@ service : {
      cancel;
      decline;
    }) -> (Result);
-  decideOncallInterval: (tok: text, id: nat, revision: nat, coverId:
+  decideOncallInterval: (tok: text, id: nat, revision: nat, coverId: 
    nat, decision: variant {
                     accept;
                     cancel;
@@ -1866,6 +1866,16 @@ service : {
   listCustomerTypes: (tok: text, projectId: nat) -> (vec Type) query;
   listFormsSources: (tok: text, projectId: nat) -> (vec FormsSource) query;
   listTickets: (tok: text, f: Filter__1) -> (vec TicketRow) query;
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {
@@ -1976,7 +1986,7 @@ service : {
           blob;
         });
   publicServiceStatus: (slug: text) -> (opt Page) query;
-  publishOncallPlan: (tok: text, id: nat, revision: nat, acceptGaps:
+  publishOncallPlan: (tok: text, id: nat, revision: nat, acceptGaps: 
    bool) -> (Result);
   publishServiceNotice: (tok: text, key: text, id: nat, revision: nat, input:
    Input__1) -> (Result);
@@ -2044,7 +2054,7 @@ service : {
                                         });
   resolveOncallIncident: (tok: text, id: nat, revision: nat, resolution:
    text) -> (Result);
-  reviewReportingRecord: (tok: text, id: nat, recordId: nat, revision:
+  reviewReportingRecord: (tok: text, id: nat, recordId: nat, revision: 
    nat, approve: bool, reason: text) -> (Result);
   revokeCustomerKey: (tok: text, id: nat) -> (bool);
   rotateCustomerWidget: (tok: text, id: nat) -> (bool);
@@ -2081,7 +2091,7 @@ service : {
    ProjectInput) -> (Result__1);
   saveWorkTask: (tok: text, id: nat, revision: nat, key: text, input:
    TaskInput) -> (Result__1);
-  saveWorkTaskWithSubtasks: (tok: text, id: nat, revision: nat, key:
+  saveWorkTaskWithSubtasks: (tok: text, id: nat, revision: nat, key: 
    text, input: TaskInput, items: vec Subtask) -> (Result__1);
   saveWorkboardPreferences: (tok: text, input: Preferences) -> (bool);
   /// Demo data for evaluation instances: ~12 requests across all states,
@@ -2132,7 +2142,7 @@ service : {
       detail: text;
       ok: bool;
     });
-  setOncallAbsence: (tok: text, projectId: nat, personId: text, startAt:
+  setOncallAbsence: (tok: text, projectId: nat, personId: text, startAt: 
    int, endAt: int) -> (Result);
   setOncallAlertSource: (tok: text, id: nat, revision: nat, action:
    variant {
@@ -2266,7 +2276,7 @@ service : {
        role: text;
        roleSource: text;
      }) query;
-  withdrawReportingCompensation: (tok: text, projectId: nat, revision:
+  withdrawReportingCompensation: (tok: text, projectId: nat, revision: 
    nat, ruleRevision: nat) -> (Result);
   withdrawServiceNotice: (tok: text, id: nat, revision: nat) -> (Result);
   workboardHome: (tok: text) ->
@@ -2282,7 +2292,7 @@ service : {
           people: vec Person;
           project: ProjectView;
         }) query;
-  workboardSales: (tok: text, cid: nat, projectId: opt nat, completed:
+  workboardSales: (tok: text, cid: nat, projectId: opt nat, completed: 
    bool, mine: bool, offset: nat) -> (Page__1);
   workboardSources: (tok: text) -> (vec Source);
   workboardTask: (tok: text, id: nat) ->

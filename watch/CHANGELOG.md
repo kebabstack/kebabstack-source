@@ -1,5 +1,10 @@
 # Changelog — kebab-stack watch
 
+## [0.11.0] — 2026-10-11
+
+- Faster sign-in: the ticket login redeems at the Hub, refreshes the person's groups and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less); the directory is pulled only when the person is unknown or the cache is stale.
+- Suite login (Hub ≥ 0.40.0): opened on the company domain with the Hub's suite cookie, the tool signs in through `loginWithSuite` without a detour through the Hub page. Sign out here clears the cookie; the Hub re-checks the person and their access on every redemption. No other changes.
+
 ## [0.10.2] — 2026-09-29
 
 - Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.

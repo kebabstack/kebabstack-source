@@ -10,7 +10,7 @@ import { createProfilePictures } from "./profile-pictures.js";
 import { createTicketView, statusPill, typeLabel } from "./ticket-view.js";
 import { plainMessage } from "./message-format.js";
 import { canonicalDestination } from "./canonical-url.js";
-import { appSignIn, takeHubTicket, session, initials, mountTopbar, topbarIdlFactory } from "./hub-client.js";
+import { appSignIn, takeHubTicket, session, initials, mountTopbar, topbarIdlFactory, suiteCookie } from "./hub-client.js";
 
 // deploy-time constants (INSTALL.md: sed the placeholders)
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
@@ -163,6 +163,12 @@ async function boot() {
     const r = opt(await backend.loginWithTicket(ticket));
     if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else setStatus("loginStatus", "err", "the hub ticket was not accepted — try again from the hub");
   }
+  else if (!session.load() && suiteCookie.read()) {
+    // Suite login: the Hub's cookie on the company domain signs in without a round trip through the Hub.
+    setStatus("loginStatus", "", "signing in…");
+    let r = null; try { r = opt(await backend.loginWithSuite(suiteCookie.read())); } catch (e) {}
+    if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else { suiteCookie.clear(); setStatus("loginStatus", "", ""); }
+  }
   if (session.load() && (await refreshMe())) {
     $("login").style.display = "none";
     $("layout").classList.add("on");
@@ -182,6 +188,7 @@ async function boot() {
   }
 }
 function signOut() {
+  suiteCookie.clear(); // leaving this tool also stops the automatic suite sign-in until the Hub is opened again
   queueGeneration++; queueBulk.clear(); assignment.clear(); workboard.clear(); customerProjects.clear(); oncall.clear(); reporting.clear(); serviceStatus.clear(); ticketView.reset(); profilePictures.reset(); knownQueues.clear(); routeGeneration++; agentsAt = 0; agentsCache = []; catalogCache = [];
   const t = session.load();
   session.clear();

@@ -132,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.31.1"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.32.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";
@@ -1641,22 +1641,39 @@ persistent actor Desk {
   // =====================================================================
   // sign-in (hub ticket lane)
   // =====================================================================
+  // ---- sign-in (0.32.0): redeem at the Hub, groups, session — no management-canister round; AI status refreshes afterwards ----
+  var tokenSeed : ?Blob = null; // per-app secret for session tokens (raw_rand, once); see Hub.deriveToken
+  var tokenCounter : Nat = 0;
+  func initTokenSeed() : async () { if (tokenSeed == null) { let r = await ic00.raw_rand(); if (tokenSeed == null) tokenSeed := ?r } };
+  func freshToken() : Text { assert tokenSeed != null; tokenCounter += 1; Hub.deriveToken(switch (tokenSeed) { case (?b) b; case null Blob.fromArray([]) }, tokenCounter, now()) };
+  /// Turn a Hub answer (ticket or suite login) into an app session. The directory is pulled only when the
+  /// person is unknown or the cache is stale.
+  func establishSession(expectedHub : Text, r : Hub.RedeemResult) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
+    if (not r.ok or hubId != expectedHub) return null;
+    if (not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") { try { ignore await pullDirectory() } catch (_) {} };
+    if (hubId != expectedHub or not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") return null;
+    try { Map.add(groupsCache, Text.compare, lower(r.email), await Hub.hub(hubId).groupsOf(r.email)) } catch (_) {};
+    if (tokenSeed == null) await initTokenSeed();
+    if (not hubAiTried) await refreshHubAi(); // first sign-in after an upgrade: the AI banner must not flicker "off"
+    if (hubId != expectedHub or not Hub.isActive(people, r.email) or roleOf(r.email) == "none") return null;
+    let tok = freshToken();
+    ignore Hub.mintSession(sessions, tok, r.email, r.displayName, 10 * H);
+    ignore Timer.setTimer<system>(#seconds 0, func() : async () { await refreshHubAi() });
+    // suiteToken: the hub's read-only token for the shared topbar (bell, menu, name, picture) — passed through, never stored
+    ?{ token = tok; email = lower(r.email); displayName = r.displayName; role = roleOf(r.email); suiteToken = (switch (r.suiteToken) { case (?t) t; case null "" }) };
+  };
   public shared func loginWithTicket(ticket : Text) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
     if (hubId == "" or not Hub.ticketLooksValid(ticket)) return null;
     let expectedHub = hubId;
     let r = await Hub.hub(expectedHub).redeemTicket(ticket);
-    if (not r.ok or hubId != expectedHub) return null;
-    // fresh directory at sign-in (roles, groups, hub staff) unless pulled in the last 2 minutes
-    if (not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") { try { ignore await pullDirectory() } catch (_) {} };
-    if (hubId != expectedHub or not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") return null; // hub said ok but directory scope disagrees
-    // fresh groups for this person (routing/roles)
-    try { Map.add(groupsCache, Text.compare, lower(r.email), await Hub.hub(hubId).groupsOf(r.email)) } catch (_) {};
-    await refreshHubAi(); // cheap: at most once per 5 minutes
-    let tok = hex(await ic00.raw_rand());
-    if (hubId != expectedHub or not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") return null;
-    ignore Hub.mintSession(sessions, tok, r.email, r.displayName, 10 * H);
-    // suiteToken: the hub's read-only token for the shared topbar (bell, menu, name, picture) — passed through, never stored
-    ?{ token = tok; email = lower(r.email); displayName = r.displayName; role = roleOf(r.email); suiteToken = (switch (r.suiteToken) { case (?t) t; case null "" }) };
+    await establishSession(expectedHub, r);
+  };
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  public shared func loginWithSuite(token : Text) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
+    if (hubId == "" or not Hub.ticketLooksValid(token)) return null;
+    let expectedHub = hubId;
+    let r = await Hub.hub(expectedHub).redeemSuiteLogin(token);
+    await establishSession(expectedHub, r);
   };
 
   public shared query func whoami(tok : Text) : async ?{ id : Text; email : Text; displayName : Text; role : Text; roleSource : Text; groups : [Text]; orgName : Text; hubId : Text; needsClaim : Bool; aiOn : Bool; reporting : Bool } {

@@ -1,5 +1,10 @@
 # Changelog — kebab-stack desk
 
+## [0.32.0] — 2026-10-11
+
+- Faster sign-in: the ticket login redeems at the Hub, refreshes the person's groups and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less), the AI status refreshes after the answer; the directory is pulled only when the person is unknown or the cache is stale.
+- Suite login (Hub ≥ 0.40.0): opened on the company domain with the Hub's suite cookie, the tool signs in through `loginWithSuite` without a detour through the Hub page. Sign out here clears the cookie; the Hub re-checks the person and their access on every redemption. No other changes.
+
 ## [0.31.1] — 2026-10-08
 
 - Slack: a mention in a message from Slack (`<@U…>`) now shows the person's name in the request instead of the raw member id. Desk resolves it through the same users.info lookup that already identifies the author, caches the name, and stores the message as `<@U…|Name>`; earlier messages keep what Slack sent.

@@ -1,7 +1,7 @@
 import { domainState, domainCounts, groupEvents, eventCategory, first } from "./workspace.js";
 import { canonicalDestination } from "./canonical-url.js";
 import { idlFactory } from "./idl.js";
-import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory } from "./hub-client.js";
+import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory, suiteCookie } from "./hub-client.js";
 
 // deploy-time constants (the kitchen patches them on install; INSTALL.md for the CLI path)
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
@@ -91,13 +91,17 @@ async function boot() {
   try { const info = await backend.info(); hubInfo = info; const destination = canonicalDestination(info.appUrl, location.href); if (destination) { session.clear(); location.replace(destination); return; } if (info.hubId) hubActor = Actor.createActor(topbarIdlFactory, { agent, canisterId: info.hubId }); if (info.orgName) $("loginSub").textContent = `${info.orgName} · watch`; if (!info.hubSet) { $("loginWarn").classList.remove("hidden"); $("loginWarn").textContent = "This app is not connected to your company Hub yet. Contact your IT team."; } } catch (e) {}
   const ticket = takeHubTicket();
   if (ticket) { session.clear(); setStatus("loginStatus", "", "signing in…"); const r = opt(await backend.loginWithTicket(ticket)); if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else setStatus("loginStatus", "err", "the hub ticket was not accepted — try again from the hub"); }
+  else if (!session.load() && suiteCookie.read()) { // suite login: the Hub's cookie on the company domain signs in without a detour through the Hub page
+    setStatus("loginStatus", "", "signing in…"); let r = null; try { r = opt(await backend.loginWithSuite(suiteCookie.read())); } catch (e) {}
+    if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else { suiteCookie.clear(); setStatus("loginStatus", "", ""); }
+  }
   if (session.load() && (await refreshMe())) {
     $("login").style.display = "none"; $("layout").classList.add("on");
     if (!location.hash || location.hash === "#/" || location.hash === "#") location.hash = "#/overview"; else route();
     setInterval(async () => { try { if (await refreshMe()) return; } catch (_) {} signOut(); setStatus("loginStatus", "err", "Your access could not be confirmed. Check the Hub connection and sign in again from the Hub."); }, 30000);
   } else session.clear();
 }
-function signOut() { const t = session.load(); session.clear(); if (t) backend.signOut(t).catch(() => {}); me = null; viewEpoch++; domainRequest++; settingsReady=false; if (topbar) { topbar.destroy(); topbar = null; } $("layout").classList.remove("on"); $("login").style.display = "grid"; setStatus("loginStatus", "", "signed out"); }
+function signOut() { suiteCookie.clear(); const t = session.load(); session.clear(); if (t) backend.signOut(t).catch(() => {}); me = null; viewEpoch++; domainRequest++; settingsReady=false; if (topbar) { topbar.destroy(); topbar = null; } $("layout").classList.remove("on"); $("login").style.display = "grid"; setStatus("loginStatus", "", "signed out"); }
 $("loginBtn").onclick = () => signIn.continue();
 
 // ---------- shared bits ----------

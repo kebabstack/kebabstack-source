@@ -1,4 +1,4 @@
-type SubView =
+type SubView = 
  record {
    answers: text;
    assignee: text;
@@ -19,14 +19,14 @@ type SubView =
    submitterName: text;
    updatedAt: int;
  };
-type SubStatus =
+type SubStatus = 
  variant {
    accepted;
    declined;
    inReview;
    received;
  };
-type Settings =
+type Settings = 
  record {
    adminCount: nat;
    adminEmails: vec text;
@@ -41,13 +41,13 @@ type Settings =
    submissions: nat;
    trashed: nat;
  };
-type Review =
+type Review = 
  record {
    at: int;
    rating: nat;
    reviewer: text;
  };
-type Policy =
+type Policy = 
  record {
    contextKeys: vec text;
    graceUntil: int;
@@ -56,7 +56,7 @@ type Policy =
    retentionDays: nat;
    revision: nat;
  };
-type PermissionStatus =
+type PermissionStatus = 
  record {
    app: text;
    directoryAt: int;
@@ -68,7 +68,7 @@ type PermissionStatus =
    model: nat;
    revision: text;
  };
-type OwnedObject =
+type OwnedObject = 
  record {
    id: text;
    kind: text;
@@ -76,13 +76,13 @@ type OwnedObject =
    title: text;
    updatedAt: int;
  };
-type Note =
+type Note = 
  record {
    at: int;
    author: text;
    "text": text;
  };
-type Manifest =
+type Manifest = 
  record {
    description: text;
    name: text;
@@ -90,19 +90,19 @@ type Manifest =
    version: text;
    wants: vec text;
  };
-type LogRow =
+type LogRow = 
  record {
    at: int;
    what: text;
    who: text;
  };
-type LegacyGrant =
+type LegacyGrant = 
  record {
    email: text;
    role: text;
    source: text;
  };
-type Item =
+type Item = 
  record {
    detail: text;
    historical: bool;
@@ -112,13 +112,13 @@ type Item =
    status: text;
    title: text;
  };
-type FormStatus =
+type FormStatus = 
  variant {
    closed;
    draft;
    open;
  };
-type FormMeta =
+type FormMeta = 
  record {
    allowEdit: bool;
    cap: nat;
@@ -138,7 +138,7 @@ type FormMeta =
    title: text;
    updatedAt: int;
  };
-type FormFull =
+type FormFull = 
  record {
    form: Form;
    meta: FormMeta;
@@ -148,7 +148,7 @@ type FormFull =
                  text;
                };
  };
-type Form =
+type Form = 
  record {
    allowEdit: bool;
    cap: nat;
@@ -163,7 +163,7 @@ type Form =
    title: text;
    updatedAt: int;
  };
-type DirectoryRow =
+type DirectoryRow = 
  record {
    active: bool;
    attributes: vec record {
@@ -178,7 +178,7 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
-type DeskTarget =
+type DeskTarget = 
  record {
    canister: principal;
    enabled: bool;
@@ -186,7 +186,7 @@ type DeskTarget =
    sourceId: nat;
    url: text;
  };
-type DeliveryView =
+type DeliveryView = 
  record {
    attempts: nat;
    detail: text;
@@ -194,7 +194,7 @@ type DeliveryView =
    ticketId: nat;
    url: text;
  };
-type Context =
+type Context = 
  record {
    checkedAt: int;
    items: vec Item;
@@ -206,14 +206,14 @@ type Context =
    total: nat;
  };
 /// kebab-stack forms — forms in, decisions out.
-///
+/// 
 /// A form builder (sections, the usual question types, go-to-section
 /// branching) with anonymous public links, and a review pipeline for what
 /// comes in: received → in review → accepted / declined, with ratings, an
 /// assignee and team notes per submission. Charts and CSV export. Forms are
 /// shared with colleagues as editors or viewers; deleted forms rest in a
 /// 90-day trash.
-///
+/// 
 /// Access model: people from the hub directory build and review (sign-in by
 /// hub ticket, mo:kebab-hub). Respondents are anonymous — every form has a
 /// random public slug; a client-generated edit token lets a respondent change
@@ -221,7 +221,7 @@ type Context =
 /// and growth-capped. The form definition and the answers are opaque JSON
 /// owned by the frontend ({"v":1,…}); the canister owns identity, lifecycle,
 /// review state and caps.
-///
+/// 
 /// Stable-state rules: every top-level let/var is stable and append-only —
 /// never remove or rename one; new data goes into new side tables.
 service : {
@@ -303,6 +303,16 @@ service : {
           subs: nat;
           title: text;
         }) query;
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {

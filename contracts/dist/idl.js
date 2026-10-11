@@ -107,6 +107,7 @@ export const idlFactory = ({ IDL }) => {
     listSpaces: IDL.Func([IDL.Text], [IDL.Vec(SpaceView)], ["query"]),
     listTasks: IDL.Func([IDL.Text, IDL.Bool, IDL.Opt(IDL.Nat)], [IDL.Vec(TaskRow)], ["query"]),
     listTrash: IDL.Func([IDL.Text], [IDL.Vec(TrashRow)], ["query"]),
+    loginWithSuite: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     lookupVendorTerms: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     moveContract: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),

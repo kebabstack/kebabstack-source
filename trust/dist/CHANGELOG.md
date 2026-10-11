@@ -1,5 +1,10 @@
 # Changelog — kebab-stack trust
 
+## [0.11.0] — 2026-10-11
+
+- Faster sign-in: the ticket login redeems at the Hub, refreshes the person's groups and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less), the AI status refreshes after the answer; the directory is pulled only when the person is unknown or the cache is stale.
+- Suite login (Hub ≥ 0.40.0): opened on the company domain with the Hub's suite cookie, the tool signs in through `loginWithSuite` without a detour through the Hub page. Sign out here clears the cookie; the Hub re-checks the person and their access on every redemption. No other changes.
+
 ## [0.10.0] — 2026-10-06
 
 - Offboarding context: in the person panel that Desk shows beside an offboarding, a device whose owner is no longer active in the directory but has reported within the last seven days is marked "still reporting after departure". Nothing is unenrolled or changed; the mark tells IT which device is still in use and needs to come back. Owners still come from Assets (or the manual list).

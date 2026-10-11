@@ -50,6 +50,7 @@ export const idlFactory = ({ IDL }) => {
     listForms: IDL.Func([IDL.Text], [IDL.Vec(FormMeta)], ["query"]),
     listSubmissions: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(SubView)], ["query"]),
     listTrash: IDL.Func([IDL.Text], [IDL.Vec(IDL.Record({ deletedAt: IDL.Int, id: IDL.Nat, purgeAt: IDL.Int, subs: IDL.Nat, title: IDL.Text }))], ["query"]),
+    loginWithSuite: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     mySubmission: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Record({ answers: IDL.Text, num: IDL.Nat, status: SubStatus, updatable: IDL.Bool }))], ["query"]),
     pauseDesk: IDL.Func([IDL.Text, IDL.Nat], [IDL.Bool], []),

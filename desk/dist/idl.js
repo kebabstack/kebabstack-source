@@ -231,6 +231,7 @@ export const idlFactory = ({ IDL }) => {
     listCustomerTypes: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(Type)], ["query"]),
     listFormsSources: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(FormsSource)], ["query"]),
     listTickets: IDL.Func([IDL.Text, Filter__1], [IDL.Vec(TicketRow)], ["query"]),
+    loginWithSuite: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     moveCustomerStep: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     myApprovals: IDL.Func([IDL.Text], [IDL.Vec(TicketRow)], ["query"]),

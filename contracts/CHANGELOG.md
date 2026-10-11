@@ -1,5 +1,10 @@
 # Changelog — kebab-stack contracts
 
+## [0.17.0] — 2026-10-11
+
+- Faster sign-in: the ticket login redeems at the Hub, refreshes the person's groups and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less); the directory is pulled only when the person is unknown or the cache is stale.
+- Suite login (Hub ≥ 0.40.0): opened on the company domain with the Hub's suite cookie, the tool signs in through `loginWithSuite` without a detour through the Hub page. Sign out here clears the cookie; the Hub re-checks the person and their access on every redemption. No other changes.
+
 ## [0.16.1] — 2026-10-09
 
 - Wording: no more "email", "message" or "mailbox" in the app. The review's source panel reads "Source text", the inbox and record pages speak of documents, limits and audit entries too (owner feedback). Saved .eml files still upload like any other file; they are just not advertised.

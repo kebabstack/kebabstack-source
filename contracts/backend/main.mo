@@ -67,7 +67,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // retired 0.14.0 (mail relay removed); kept for the stable state contract, never consulted
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.16.1";
+  transient let BUILD_VERSION : Text = "0.17.0";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -741,18 +741,37 @@ persistent actor Contracts {
   // sign-in (hub ticket lane)
   // =====================================================================
   /// Redeem a hub ticket for an app session (10 h). The hub decides who may sign in; the 60-second lease decides who stays.
-  public shared func loginWithTicket(ticket : Text) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
-    if (hubId == "" or not Hub.ticketLooksValid(ticket)) return null;
-    let expectedHub = hubId;
-    let r = await Hub.hub(expectedHub).redeemTicket(ticket);
+  // ---- sign-in (0.17.0): redeem at the Hub, groups, session — no management-canister round ----
+  var tokenSeed : ?Blob = null; // per-app secret for session tokens (raw_rand, once); see Hub.deriveToken
+  var tokenCounter : Nat = 0;
+  func initTokenSeed() : async () { if (tokenSeed == null) { let r = await ic00.raw_rand(); if (tokenSeed == null) tokenSeed := ?r } };
+  func freshToken() : Text { assert tokenSeed != null; tokenCounter += 1; Hub.deriveToken(switch (tokenSeed) { case (?b) b; case null Blob.fromArray([]) }, tokenCounter, now()) };
+  /// Turn a Hub answer (ticket or suite login) into an app session. The directory is pulled only when the
+  /// person is unknown or the cache is stale.
+  func establishSession(expectedHub : Text, r : Hub.RedeemResult) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
     if (not r.ok or hubId != expectedHub) return null;
     if (not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") { try { ignore await pullDirectory() } catch (_) {} };
     if (hubId != expectedHub or not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") return null;
     try { Map.add(groupsCache, Text.compare, lower(r.email), await Hub.hub(hubId).groupsOf(r.email)) } catch (_) {};
-    let tok = hex(await ic00.raw_rand());
-    if (hubId != expectedHub or not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") return null;
+    if (tokenSeed == null) await initTokenSeed();
+    if (hubId != expectedHub or not Hub.isActive(people, r.email) or roleOf(r.email) == "none") return null;
+    let tok = freshToken();
     ignore Hub.mintSession(sessions, tok, r.email, r.displayName, 10 * H);
+    // suiteToken: the hub's read-only token for the shared topbar (bell, menu, name, picture) — passed through, never stored
     ?{ token = tok; email = lower(r.email); displayName = r.displayName; role = roleOf(r.email); suiteToken = (switch (r.suiteToken) { case (?t) t; case null "" }) };
+  };
+  public shared func loginWithTicket(ticket : Text) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
+    if (hubId == "" or not Hub.ticketLooksValid(ticket)) return null;
+    let expectedHub = hubId;
+    let r = await Hub.hub(expectedHub).redeemTicket(ticket);
+    await establishSession(expectedHub, r);
+  };
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  public shared func loginWithSuite(token : Text) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
+    if (hubId == "" or not Hub.ticketLooksValid(token)) return null;
+    let expectedHub = hubId;
+    let r = await Hub.hub(expectedHub).redeemSuiteLogin(token);
+    await establishSession(expectedHub, r);
   };
   /// Who am I here: id (hub person id), address, role (admin | editor | member) and why.
   public shared query func whoami(tok : Text) : async ?{ id : Text; email : Text; displayName : Text; role : Text; roleSource : Text; space : Text; spaceRole : ?SpaceRole; orgName : Text; hubId : Text; needsClaim : Bool; aiOn : Bool; aiChecked : Bool } {

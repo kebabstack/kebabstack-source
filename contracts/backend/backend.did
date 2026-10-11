@@ -994,7 +994,16 @@ service : {
   listTasks: (tok: text, includeSnoozed: bool, contractId: opt nat) ->
    (vec TaskRow) query;
   listTrash: (tok: text) -> (vec TrashRow) query;
-  /// Redeem a hub ticket for an app session (10 h). The hub decides who may sign in; the 60-second lease decides who stays.
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {

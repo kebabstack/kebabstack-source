@@ -1,4 +1,4 @@
-type Snapshot =
+type Snapshot = 
  record {
    checkedAt: int;
    metrics: vec record {
@@ -12,7 +12,7 @@ type Snapshot =
             unavailable;
           };
  };
-type Settings =
+type Settings = 
  record {
    adminCount: nat;
    adminEmails: vec text;
@@ -44,7 +44,7 @@ type Settings =
    tuneWatchdogUtil: nat;
    versionMode: text;
  };
-type Removal =
+type Removal = 
  record {
    evidence: text;
    hostname: text;
@@ -55,7 +55,7 @@ type Removal =
    verifiedAt: int;
    verifiedBy: text;
  };
-type PermissionStatus =
+type PermissionStatus = 
  record {
    app: text;
    directoryAt: int;
@@ -67,7 +67,7 @@ type PermissionStatus =
    model: nat;
    revision: text;
  };
-type Manifest =
+type Manifest = 
  record {
    description: text;
    name: text;
@@ -75,19 +75,19 @@ type Manifest =
    version: text;
    wants: vec text;
  };
-type LogRow =
+type LogRow = 
  record {
    at: int;
    what: text;
    who: text;
  };
-type LegacyGrant =
+type LegacyGrant = 
  record {
    email: text;
    role: text;
    source: text;
  };
-type Item =
+type Item = 
  record {
    detail: text;
    historical: bool;
@@ -97,7 +97,7 @@ type Item =
    status: text;
    title: text;
  };
-type HttpGwResponse =
+type HttpGwResponse = 
  record {
    body: blob;
    headers: vec record {
@@ -107,7 +107,7 @@ type HttpGwResponse =
    status_code: nat16;
    upgrade: opt bool;
  };
-type HttpGwRequest =
+type HttpGwRequest = 
  record {
    body: blob;
    headers: vec record {
@@ -117,7 +117,7 @@ type HttpGwRequest =
    method: text;
    url: text;
  };
-type FleetStats =
+type FleetStats = 
  record {
    activeChecks: nat;
    avgScore: nat;
@@ -135,12 +135,12 @@ type FleetStats =
    ownersConfigured: bool;
    unowned: nat;
  };
-type File =
+type File = 
  record {
    body: text;
    name: text;
  };
-type DirectoryRow =
+type DirectoryRow = 
  record {
    active: bool;
    attributes: vec record {
@@ -155,7 +155,7 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
-type DeviceView =
+type DeviceView = 
  record {
    assessment: Assessment;
    configCurrent: bool;
@@ -182,7 +182,7 @@ type DeviceView =
    postureAt: int;
    score: nat;
  };
-type DeviceDetail =
+type DeviceDetail = 
  record {
    checks:
     vec
@@ -204,7 +204,7 @@ type DeviceDetail =
                text;
              };
  };
-type Context =
+type Context = 
  record {
    checkedAt: int;
    items: vec Item;
@@ -215,7 +215,7 @@ type Context =
           };
    total: nat;
  };
-type CheckView =
+type CheckView = 
  record {
    category: text;
    custom: bool;
@@ -227,7 +227,7 @@ type CheckView =
    sql: text;
    title: text;
  };
-type Assessment =
+type Assessment = 
  record {
    errors: nat;
    expected: nat;
@@ -237,7 +237,7 @@ type Assessment =
    stale: nat;
    state: text;
  };
-type AiState =
+type AiState = 
  record {
    connectorId: nat;
    keySet: bool;
@@ -351,6 +351,16 @@ service : {
       version: text;
     }) query;
   installScript: (tok: text, os: text) -> (opt text) query;
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {
