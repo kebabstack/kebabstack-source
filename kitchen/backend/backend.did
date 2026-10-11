@@ -1,10 +1,10 @@
-type Step =
+type Step = 
  record {
    detail: text;
    name: text;
    status: text;
  };
-type RecipeView =
+type RecipeView = 
  record {
    backendSize: nat;
    canUpdate: bool;
@@ -28,14 +28,14 @@ type RecipeView =
    upToDate: opt bool;
    version: text;
  };
-type LogRow =
+type LogRow = 
  record {
    at: int;
    ok: bool;
    what: text;
    who: text;
  };
-type Job =
+type Job = 
  record {
    by: text;
    endedAt: int;
@@ -47,7 +47,7 @@ type Job =
    steps: vec Step;
    version: text;
  };
-type Install =
+type Install = 
  record {
    adopted: bool;
    backend: text;
@@ -61,7 +61,7 @@ type Install =
    version: text;
  };
 /// kebab-stack kitchen — the installer and updater.
-///
+/// 
 /// One canister that cooks the others. It reads RECIPES (wasm modules +
 /// frontend files + a small manifest) from its own asset canister — the
 /// pantry — and, on an owner's click in the hub, creates the app's two
@@ -70,18 +70,15 @@ type Install =
 /// registers it in the hub (lanes from the app's manifest, a bound menu
 /// entry), and hands both canisters to the vault for backups. Updates run the
 /// same way with a vault snapshot first. Nothing here needs a terminal.
-///
+/// 
 /// Trust: the kitchen is a CONTROLLER of everything it installs, so it is the
 /// second most privileged canister of the suite after the vault. Every action
 /// is owner-only (the hub answers kitchenAuth) and journaled.
-///
+/// 
 /// Verified on a cloud engine 2026-09-03: create_canister / install_code /
 /// update_settings / stop / delete work from a canister without cycles.
 /// Stable state is append-only (never remove or rename a top-level var).
 service : {
-  /// Register canisters that were deployed by hand as an installed recipe, so
-  /// the kitchen can update them from now on. Requires the kitchen to be a
-  /// controller of both (add-controller once, like for the vault).
   adopt: (recipeId: text, backend: text, frontend: text, version: text) ->
    (record {
       detail: text;
@@ -165,6 +162,17 @@ service : {
                            detail: text;
                            ok: bool;
                          });
+  /// Register canisters that were deployed by hand as an installed recipe, so
+  /// the kitchen can update them from now on. Requires the kitchen to be a
+  /// controller of both (add-controller once, like for the vault).
+  /// 0.9.0 · installation files: a Hub owner places one file under /.well-known/ on an installed app's frontend
+  /// (custom-domain ownership `ic-domains`, deployment metadata). The Kitchen is the only principal that may write
+  /// there; nothing else on the frontend changes, release updates keep these keys, shared recipes never carry them.
+  setInstallationFile: (recipeId: text, key: text, contentType: text,
+   content: blob) -> (record {
+                        detail: text;
+                        ok: bool;
+                      });
   setPantry: (id: text) -> (record {
                               detail: text;
                               ok: bool;

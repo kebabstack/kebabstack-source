@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-kitchen"
-version = "0.8.3"
+version = "0.9.0"
 description = "kebab-stack kitchen — the installer/updater: cooks apps from recipes, keeps them fresh, hands them to the vault"
 
 [toolchain]
