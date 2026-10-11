@@ -3,6 +3,7 @@ import { test, before, after } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { PocketIc, PocketIcServer, createIdentity } from '@dfinity/pic';
+import { Principal } from '@icp-sdk/core/principal';
 
 const controller = createIdentity('review-controller').getPrincipal();
 const owner = createIdentity('review-owner').getPrincipal();
@@ -1362,6 +1363,42 @@ test('SCIM attributes: enterprise fields, the work address and custom-schema att
     // path-less PUT-style replace keeps working and refreshes the address
     r = await scim(hub, token, 'PATCH', '/' + pid, { Operations: [{ op: 'replace', value: { addresses: [{ type: 'work', locality: 'Basel' }] } }] });
     assert.equal(r.status, 200); a = await attrs(pid); assert.equal(a.city, 'Basel');
+  } finally { await pic.tearDown(); }
+});
+
+test('suite login (hub ≥ 0.40): one Hub sign-in opens a tool without a ticket; connectors only; it ends with the Hub session', async () => {
+  const pic = await PocketIc.create(server.getUrl(), { application: [{ state: { type: SubnetStateType.New }, costSchedule: CanisterCyclesCostSchedule.Free }] });
+  try {
+    const { actor: hub, canisterId: hubId, idlFactory } = await initialized(pic);
+    await settled(pic);
+    const { actor: app, canisterId: appId } = await install(pic, 'assets');
+    app.setPrincipal(controller); await app.setHub(hubId.toText());
+    hub.setPrincipal(owner);
+    const c = await connectTestApp(hub, { name: 'assets', canisterId: appId.toText(), note: '', lanes: ['identity', 'roles', 'groups'], access: { mode: 'everyone', groups: [], roles: [], people: [] }, tile: [{ name: 'assets', kind: 'app', url: 'https://assets.example.test' }] });
+    assert.equal(c.ok, true, c.detail);
+    // the person signs in to the Hub once (OIDC)
+    const provider = await hub.addSsoProvider({ name: 'Test provider', kind: 'google', issuer: '', clientId: 'test-client', clientSecret: 'test-secret' });
+    const seconds = Math.floor((await pic.getTime()) / 1000);
+    const claims = { iss: 'https://accounts.google.com', aud: 'test-client', sub: '123', iat: seconds, exp: seconds + 3600, email: 'member@example.test', email_verified: true, nonce: createHash('sha256').update(verifier).digest('base64url') };
+    const defer = pic.createDeferredActor(idlFactory, hubId);
+    const exchange = await defer.ssoExchange(provider.id, 'code', 'https://hub.example.test', verifier);
+    await answerOutcall(pic, { id_token: jwt(claims) }); await answerOutcall(pic, { keys: [jwk] });
+    const sso = await exchange(); assert.equal(sso.ok, true, sso.detail);
+    // the Hub page mints the suite-login token for the cookie; a second call returns the same token
+    hub.setPrincipal(Principal.anonymous());
+    const first = await hub.mintSuiteLogin(sso.token); assert.equal(first.ok, true, first.detail); assert.match(first.token, /^[0-9a-f]{64}$/);
+    assert.equal((await hub.mintSuiteLogin(sso.token)).token, first.token, 'one token per Hub session');
+    assert.equal((await hub.mintSuiteLogin('no-such-session')).ok, false);
+    // only a registered connector may redeem it — the browser cannot
+    assert.equal((await hub.redeemSuiteLogin(first.token)).ok, false);
+    // the tool redeems it: no ticket, no Hub page
+    const session = (await app.loginWithSuite(first.token))[0]; assert.ok(session, 'suite login opens an app session'); assert.equal(session.email, 'member@example.test'); assert.ok(session.suiteToken.length >= 16);
+    assert.ok((await app.whoami(session.token))[0], 'the app session works');
+    assert.equal((await app.loginWithSuite('ab'.repeat(32)))[0], undefined, 'an unknown token is refused');
+    // sign-out in the Hub ends the automatic sign-in everywhere
+    assert.equal(await hub.ssoLogout(sso.token), true);
+    assert.equal((await app.loginWithSuite(first.token))[0], undefined, 'revoked with the Hub session');
+    assert.equal((await hub.mintSuiteLogin(sso.token)).ok, false, 'no Hub session, no suite login');
   } finally { await pic.tearDown(); }
 });
 

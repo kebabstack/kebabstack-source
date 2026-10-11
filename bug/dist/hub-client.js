@@ -103,6 +103,32 @@ export function appSignIn({ name, hubUrl, navigate = url => { location.href = ur
   };
 }
 
+/**
+ * Suite cookie (hub ≥ 0.40): one Hub sign-in, every tool. The Hub keeps a suite-login token in a cookie on the
+ * company's parent domain (dfinity.kebabstack.com → .kebabstack.com). A tool opened without its own session reads
+ * it and calls its backend's loginWithSuite; the Hub re-checks the person and their access to that tool. Never set
+ * on a public gateway suffix (icp0.io, ic0.app, icp.net …) or a bare host: there the ticket hand-off stays.
+ */
+export const suiteCookie = {
+  name: "ks-suite",
+  domainFor(host) {
+    const h = String(host || "").toLowerCase().replace(/\.$/, "");
+    if (!h || /^[\d.]+$/.test(h) || h.includes(":")) return "";
+    const parts = h.split(".");
+    if (parts.length < 3) return ""; // "hub.company.ch" shares with nothing; "dfinity.kebabstack.com" → "kebabstack.com"
+    const parent = parts.slice(1).join(".");
+    if (/^(raw\.)?(icp0\.io|ic0\.app|icp\.net|icp1\.io|icp2\.io|icp-api\.io|internetcomputer\.org|localhost)$/.test(parent)) return "";
+    return parent;
+  },
+  read() { try { const m = String(document.cookie || "").match(/(?:^|;\s*)ks-suite=([0-9a-fA-F]{16,160})(?:;|$)/); return m ? m[1] : ""; } catch (e) { return ""; } },
+  write(token, maxAgeSeconds, host) {
+    const d = this.domainFor(host || location.hostname);
+    if (!d || !/^[0-9a-fA-F]{16,160}$/.test(String(token || ""))) return false;
+    try { document.cookie = `${this.name}=${token}; Domain=${d}; Path=/; Max-Age=${Math.max(60, Math.floor(Number(maxAgeSeconds) || 0))}; Secure; SameSite=Lax`; return true; } catch (e) { return false; }
+  },
+  clear(host) { const d = this.domainFor(host || location.hostname); if (!d) return; try { document.cookie = `${this.name}=; Domain=${d}; Path=/; Max-Age=0; Secure; SameSite=Lax`; } catch (e) {} },
+};
+
 /** Tiny session-token store (localStorage, one key per app). The suite token rides along under "<key>-suite". */
 export const session = {
   key: "kebab-hub-session",

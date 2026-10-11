@@ -55,7 +55,7 @@ The seven business tools use exactly this markup and stylesheet; synchronize/che
 with `python3 sdk/tools/sync-signin.py` / `--check`.
 
 ```js
-import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory } from "./hub-client.js";
+import { appSignIn, takeHubTicket, session, suiteCookie, mountTopbar, topbarIdlFactory } from "./hub-client.js";
 const signIn = appSignIn({ name: "My app", hubUrl: HUB_URL });
 document.getElementById("loginBtn").onclick = () => signIn.continue();
 try {
@@ -67,6 +67,11 @@ try {
     if (!result) throw new Error("Sign-in was not accepted. Please try again.");
     session.save(result.token);
     session.saveSuite(result.suiteToken);
+  } else if (!session.load() && suiteCookie.read()) {
+    // hub ≥ 0.40: the Hub's suite cookie on the company domain signs in without a detour through the Hub page
+    signIn.status("", "signing in");
+    const [result] = await app.loginWithSuite(suiteCookie.read());
+    if (result) { session.save(result.token); session.saveSuite(result.suiteToken); } else suiteCookie.clear(); // stale cookie: fall back to the Hub button
   }
   // Validate the stored app session and render the authorized workspace here.
 } catch (error) {

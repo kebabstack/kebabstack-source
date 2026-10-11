@@ -21,7 +21,7 @@ PY
 [ -d ../node_modules ] && [ ! -e "$T/node_modules" ] && ln -s "$(cd .. && pwd)/node_modules" "$T/node_modules" || true
 (cd "$T" && node smoke.mjs admin 2>/dev/null | tail -3 && node smoke.mjs admin noai 2>/dev/null | tail -3 && node smoke.mjs member 2>/dev/null | tail -3)
 (cd "$T" && node smoke.mjs admin ai admin-deal)
-(cd "$T" && for flow in auto retry rejected return signed canonical canonical-ticket; do node smoke.mjs member ai "$flow"; done)
+(cd "$T" && for flow in auto retry rejected return signed canonical canonical-ticket suite suite-rejected; do node smoke.mjs member ai "$flow"; done)
 node --test test/intake.test.mjs test/canonical-url.test.mjs test/handover.test.mjs
 rm -rf "$T"
 

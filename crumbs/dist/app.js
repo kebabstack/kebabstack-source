@@ -1,7 +1,7 @@
 import {businessWorkspace} from './business.js';
 import {websiteAccess} from './access.js';
 import {idlFactory} from './idl.js';
-import {appSignIn,takeHubTicket,session,mountTopbar,topbarIdlFactory} from './hub-client.js';
+import {appSignIn,takeHubTicket,session,suiteCookie,mountTopbar,topbarIdlFactory} from './hub-client.js';
 import {esc,num,metricCards,table,chart,money,dimensionLabel,journeyLabel} from './view.js';
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
 const HUB_URL = "__HUB_URL__";
@@ -171,7 +171,7 @@ async function confirmAction(title,text,button='Discard changes'){
  return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true});dialog.showModal();});
 }
 async function navigate(hash){if(dirty&&!await confirmAction('Discard unsaved changes?','Your changes have not been saved.'))return;if(dirty){$('saveReportForm').hidden=true;resetGoal();}dirty=false;$('savedTools').open=false;if(location.hash===hash)await route();else location.hash=hash;}
-async function signOut(){++epoch;clearInterval(refresh);const t=session.load();session.clear();if(t)backend.signOut(t).catch(()=>{});user=null;clearReports();topbar?.destroy();topbar=null;$('layout').hidden=true;$('login').hidden=false;}
+async function signOut(){++epoch;clearInterval(refresh);suiteCookie.clear();const t=session.load();session.clear();if(t)backend.signOut(t).catch(()=>{});user=null;clearReports();topbar?.destroy();topbar=null;$('layout').hidden=true;$('login').hidden=false;}
 async function action(fn,button,status){if(button?.disabled)return;const run=epoch,fields=[...(button?.form?.elements??(button?[button]:[]))].map(el=>[el,el.disabled]);notice('');fields.forEach(([el])=>{el.disabled=true;});if(status)status.textContent='Working…';try{await fn(run);}catch(e){if(isCurrent(run)){if(status)status.textContent=e.message;else notice(e.message);}}finally{fields.forEach(([el,disabled])=>{el.disabled=disabled;});}}
 async function copy(text,status){try{if(!text)throw new Error();await navigator.clipboard.writeText(text);status.textContent='Copied.';}catch{status.textContent='Select and copy the text above. Your browser did not allow clipboard access.';}}
 const business=businessWorkspace({actor:()=>backend,token:()=>session.load(),site:()=>current,sites:()=>sites,request,epoch:()=>epoch,isCurrent,notice,confirm:confirmAction,route,dirty:value=>{dirty=value;},prefs:loadPrefs,savePrefs,canManage,
@@ -257,5 +257,5 @@ export async function start(actor,person,info,agent,Actor){
   if((!dirty&&!document.hidden&&(view==='overview'||($('period').value==='realtime'&&reportViews.includes(view))))||changed)await route();
  }catch{await signOut();signIn.status('err','Your access could not be confirmed.');}},30000);
 }
-async function boot(){try{const {HttpAgent,Actor}=await import('./agent-bundle.js');const agent=await HttpAgent.create({host:'https://icp0.io'});backend=Actor.createActor(idlFactory,{agent,canisterId:BACKEND_CANISTER_ID});const info=await backend.info();const ticket=takeHubTicket();if(ticket){session.clear();const r=(await backend.loginWithTicket(ticket))[0];if(!r)throw new Error('Sign-in was not accepted.');session.save(r.token);session.saveSuite(r.suiteToken);}if(session.load()){const person=(await backend.whoami(session.load()))[0];if(person)await start(backend,person,info,agent,Actor);else session.clear();}}catch(e){signIn.status('err',e.message);}finally{signIn.ready();}}
+async function boot(){try{const {HttpAgent,Actor}=await import('./agent-bundle.js');const agent=await HttpAgent.create({host:'https://icp0.io'});backend=Actor.createActor(idlFactory,{agent,canisterId:BACKEND_CANISTER_ID});const info=await backend.info();const ticket=takeHubTicket();if(ticket){session.clear();const r=(await backend.loginWithTicket(ticket))[0];if(!r)throw new Error('Sign-in was not accepted.');session.save(r.token);session.saveSuite(r.suiteToken);}else if(!session.load()&&suiteCookie.read()){/* suite login (0.8.0): the Hub's cookie on the company domain signs in without a detour through the Hub page */let r=null;try{r=(await backend.loginWithSuite(suiteCookie.read()))[0];}catch{}if(r){session.save(r.token);session.saveSuite(r.suiteToken);}else suiteCookie.clear();}if(session.load()){const person=(await backend.whoami(session.load()))[0];if(person)await start(backend,person,info,agent,Actor);else session.clear();}}catch(e){signIn.status('err',e.message);}finally{signIn.ready();}}
 void boot();

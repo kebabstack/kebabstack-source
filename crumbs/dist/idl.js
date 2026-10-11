@@ -82,6 +82,7 @@ export const idlFactory = ({ IDL }) => {
     journeys: IDL.Func([IDL.Text, ReportRequest], [Result_9], ["query"]),
     listKeys: IDL.Func([IDL.Text], [Result_8], ["query"]),
     listSites: IDL.Func([IDL.Text], [IDL.Vec(SiteView)], ["query"]),
+    loginWithSuite: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     report: IDL.Func([IDL.Text, ReportRequest], [Result_7], ["query"]),
     revokeKey: IDL.Func([IDL.Text, IDL.Text], [Result_5], []),

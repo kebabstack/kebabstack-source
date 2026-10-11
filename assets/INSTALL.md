@@ -37,6 +37,13 @@ icp canister call backend setHub '("<HUB-BACKEND-CANISTER-ID>")' -e ic
 
 `setHub` configures the Hub and clears old authorization caches. Local admin bootstrap methods are retired.
 
+### Suite login (Assets ≥ 0.25.0, Hub ≥ 0.40.0)
+
+When Assets and the Hub run on the same parent domain (for example `assets.kebabstack.com` and
+`dfinity.kebabstack.com`), a person signed in to the Hub opens Assets without a detour: the Hub's suite cookie
+is redeemed by the Assets backend at the Hub, which re-checks the person and their Assets access. On a public
+gateway address (`…icp0.io`) the ticket hand-off through the Hub keeps working unchanged. Nothing to configure.
+
 ## 3 · Register assets in the hub
 
 Hub → **Apps** → 🍢 **Connect an app**: paste the assets **backend** canister

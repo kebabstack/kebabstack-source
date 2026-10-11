@@ -1,4 +1,4 @@
-type View =
+type View = 
  record {
    active: bool;
    createdAt: int;
@@ -7,7 +7,7 @@ type View =
    name: text;
    sources: vec Source__1;
  };
-type UserView =
+type UserView = 
  record {
    active: bool;
    attributes: vec record {
@@ -28,12 +28,12 @@ type UserView =
    status: text;
    updatedAt: int;
  };
-type TransformArgs =
+type TransformArgs = 
  record {
    context: blob;
    response: HttpResponsePayload;
  };
-type TdTeamMember =
+type TdTeamMember = 
  record {
    active: opt bool;
    departmentId: opt text;
@@ -46,7 +46,7 @@ type TdTeamMember =
    title: text;
    version: opt nat;
  };
-type TdTeamInfo =
+type TdTeamInfo = 
  record {
    changeSeq: opt nat;
    memberCount: nat;
@@ -54,14 +54,14 @@ type TdTeamInfo =
    standard: text;
    version: text;
  };
-type SyncStat =
+type SyncStat = 
  record {
    at: int;
    detail: text;
    fetched: nat;
    ok: bool;
  };
-type SyncResult =
+type SyncResult = 
  record {
    created: nat;
    deactivated: nat;
@@ -70,7 +70,7 @@ type SyncResult =
    ok: bool;
    updated: nat;
  };
-type Status =
+type Status = 
  record {
    app: text;
    directoryAt: int;
@@ -82,7 +82,7 @@ type Status =
    model: nat;
    revision: text;
  };
-type State =
+type State = 
  variant {
    ended;
    pending: int;
@@ -95,7 +95,7 @@ type State =
       sources: vec Source__1;
     };
  };
-type SsoProvider =
+type SsoProvider = 
  record {
    clientId: text;
    clientSecret: text;
@@ -105,19 +105,19 @@ type SsoProvider =
    kind: text;
    name: text;
  };
-type Source__1 =
+type Source__1 = 
  record {
    app: text;
    cid: nat;
  };
-type Source =
+type Source = 
  record {
    app: text;
    cid: nat;
    name: text;
    url: text;
  };
-type Snapshot =
+type Snapshot = 
  record {
    checkedAt: int;
    metrics: vec record {
@@ -131,12 +131,12 @@ type Snapshot =
             unavailable;
           };
  };
-type Selection =
+type Selection = 
  variant {
    all;
    ids: vec nat;
  };
-type ScimSourceView =
+type ScimSourceView = 
  record {
    createdAt: int;
    domains: vec text;
@@ -151,21 +151,21 @@ type ScimSourceView =
    note: text;
    userCount: nat;
  };
-type SalesFilter =
+type SalesFilter = 
  record {
    completed: bool;
    mine: bool;
    offset: nat;
    selection: Selection;
  };
-type Role =
+type Role = 
  record {
    can: vec text;
    cannot: vec text;
    id: text;
    name: text;
  };
-type ReviewItem =
+type ReviewItem = 
  record {
    appName: text;
    applied: text;
@@ -180,7 +180,7 @@ type ReviewItem =
    reviewers: vec text;
    subject: text;
  };
-type Review =
+type Review = 
  record {
    apps: vec nat;
    closedAt: int;
@@ -191,12 +191,12 @@ type Review =
    startedBy: text;
    state: text;
  };
-type ReportingScope =
+type ReportingScope = 
  record {
    id: nat;
    name: text;
  };
-type ReportingGrant =
+type ReportingGrant = 
  record {
    capabilities: vec text;
    projectId: nat;
@@ -205,7 +205,7 @@ type ReportingGrant =
               person: text;
             };
  };
-type Progress =
+type Progress = 
  record {
    bindings: vec text;
    checkedAt: int;
@@ -214,19 +214,19 @@ type Progress =
    state: text;
    total: nat;
  };
-type Policy =
+type Policy = 
  record {
    app: text;
    defaultRole: text;
    groups: vec GroupGrant;
    people: vec PersonGrant;
  };
-type PersonGrant =
+type PersonGrant = 
  record {
    id: text;
    role: text;
  };
-type PermissionPerson =
+type PermissionPerson = 
  record {
    active: bool;
    assigned: opt text;
@@ -238,13 +238,13 @@ type PermissionPerson =
    role: text;
    source: text;
  };
-type PairResult =
+type PairResult = 
  variant {
    busy;
    invalid;
    ok: int;
  };
-type Page =
+type Page = 
  record {
    checkedAt: int;
    rows: vec Card;
@@ -255,7 +255,7 @@ type Page =
           };
    total: nat;
  };
-type OwnedObject =
+type OwnedObject = 
  record {
    id: text;
    kind: text;
@@ -263,14 +263,14 @@ type OwnedObject =
    title: text;
    updatedAt: int;
  };
-type OpenTeamRow =
+type OpenTeamRow = 
  record {
    action: text;
    email: text;
    memberId: text;
    name: text;
  };
-type OpenTeamReview =
+type OpenTeamReview = 
  record {
    conflicts: vec text;
    created: nat;
@@ -283,12 +283,12 @@ type OpenTeamReview =
    token: nat;
    updated: nat;
  };
-type OpenTeamConfig =
+type OpenTeamConfig = 
  record {
    excludeIds: vec text;
    includeExternal: bool;
  };
-type OidcClientView =
+type OidcClientView = 
  record {
    access: AccessPolicy;
    alg: text;
@@ -303,7 +303,7 @@ type OidcClientView =
    redirectUris: vec text;
    tileUrl: text;
  };
-type OidcClientArgs =
+type OidcClientArgs = 
  record {
    access: AccessPolicy;
    alg: text;
@@ -315,7 +315,7 @@ type OidcClientArgs =
    redirectUris: vec text;
    tileUrl: text;
  };
-type OidcAuthReq =
+type OidcAuthReq = 
  record {
    clientId: text;
    codeChallenge: text;
@@ -327,7 +327,7 @@ type OidcAuthReq =
    scope: text;
    state: text;
  };
-type Notification =
+type Notification = 
  record {
    at: int;
    email: text;
@@ -339,7 +339,7 @@ type Notification =
    title: text;
    url: text;
  };
-type Manifest =
+type Manifest = 
  record {
    description: text;
    name: text;
@@ -347,27 +347,27 @@ type Manifest =
    version: text;
    wants: vec text;
  };
-type LunchSummary =
+type LunchSummary = 
  record {
    dates: vec text;
    recent: vec text;
    thisMonth: nat;
    total: nat;
  };
-type LegacyGrant =
+type LegacyGrant = 
  record {
    email: text;
    role: text;
    source: text;
  };
-type JournalEntry =
+type JournalEntry = 
  record {
    at: int;
    by: text;
    detail: text;
    kind: text;
  };
-type Item =
+type Item = 
  record {
    detail: text;
    historical: bool;
@@ -377,37 +377,37 @@ type Item =
    status: text;
    title: text;
  };
-type HttpResponsePayload =
+type HttpResponsePayload = 
  record {
    body: blob;
    headers: vec HttpHeader;
    status: nat;
  };
-type HttpHeader =
+type HttpHeader = 
  record {
    name: text;
    value: text;
  };
-type HttpGwResponse =
+type HttpGwResponse = 
  record {
    body: blob;
    headers: vec HeaderField;
    status_code: nat16;
    upgrade: opt bool;
  };
-type HttpGwRequest =
+type HttpGwRequest = 
  record {
    body: blob;
    headers: vec HeaderField;
    method: text;
    url: text;
  };
-type HeaderField =
+type HeaderField = 
  record {
    text;
    text;
  };
-type GroupView =
+type GroupView = 
  record {
    editable: bool;
    id: nat;
@@ -416,12 +416,12 @@ type GroupView =
    note: text;
    source: text;
  };
-type GroupGrant =
+type GroupGrant = 
  record {
    id: nat;
    role: text;
  };
-type Grant =
+type Grant = 
  record {
    email: text;
    endedAt: int;
@@ -435,7 +435,7 @@ type Grant =
    target: text;
    targetName: text;
  };
-type FinanceTeam =
+type FinanceTeam = 
  record {
    apps: vec FinanceBinding;
    groups: vec nat;
@@ -443,12 +443,12 @@ type FinanceTeam =
    people: vec text;
    revision: nat;
  };
-type FinanceBinding =
+type FinanceBinding = 
  record {
    canisterId: principal;
    cid: nat;
  };
-type Event =
+type Event = 
  record {
    at: int;
    effectiveActive: bool;
@@ -463,7 +463,7 @@ type Event =
    seq: nat;
    source: text;
  };
-type DeskReportingAccess =
+type DeskReportingAccess = 
  record {
    capabilities: vec Role;
    detail: text;
@@ -472,7 +472,7 @@ type DeskReportingAccess =
    revision: nat;
    scopes: vec ReportingScope;
  };
-type Context =
+type Context = 
  record {
    checkedAt: int;
    items: vec Item;
@@ -483,7 +483,7 @@ type Context =
           };
    total: nat;
  };
-type ConnectorUser =
+type ConnectorUser = 
  record {
    active: bool;
    attributes: vec record {
@@ -498,7 +498,7 @@ type ConnectorUser =
    lastName: text;
    source: text;
  };
-type ConnView =
+type ConnView = 
  record {
    activeCount: nat;
    baseUrl: text;
@@ -514,14 +514,14 @@ type ConnView =
    tokenMask: text;
    userCount: nat;
  };
-type Column =
+type Column = 
  variant {
    active;
    done;
    planned;
    waiting;
  };
-type Case =
+type Case = 
  record {
    desk: text;
    dueAt: opt int;
@@ -532,7 +532,7 @@ type Case =
    ticket: nat;
    url: text;
  };
-type Card =
+type Card = 
  record {
    column: Column;
    dueOn: text;
@@ -545,13 +545,13 @@ type Card =
    title: text;
    updatedAt: int;
  };
-type Batch =
+type Batch = 
  record {
    cursor: nat;
    events: vec Event;
    gap: bool;
  };
-type AssistantView =
+type AssistantView = 
  record {
    active: bool;
    client: text;
@@ -562,7 +562,7 @@ type AssistantView =
    lastUsedAt: int;
    uses: nat;
  };
-type Approval =
+type Approval = 
  variant {
    denied;
    invalid;
@@ -570,7 +570,7 @@ type Approval =
    missing;
    ok: nat;
  };
-type AppPermissionView =
+type AppPermissionView = 
  record {
    canManage: bool;
    checkedAt: int;
@@ -584,7 +584,7 @@ type AppPermissionView =
    roles: vec Role;
    status: opt Status;
  };
-type AppLinkView =
+type AppLinkView = 
  record {
    connectorId: nat;
    hasIcon: bool;
@@ -595,7 +595,7 @@ type AppLinkView =
    note: text;
    url: text;
  };
-type AccessRequest =
+type AccessRequest = 
  record {
    appName: text;
    at: int;
@@ -610,7 +610,7 @@ type AccessRequest =
    state: text;
    wantedHours: nat;
  };
-type AccessPolicy =
+type AccessPolicy = 
  record {
    groups: vec text;
    mode: text;
@@ -1286,6 +1286,15 @@ service : {
       detail: text;
       ok: bool;
     });
+  /// The signed-in person's suite-login token (portal session required). Reused while it is valid;
+  /// it expires with the Hub session.
+  mintSuiteLogin: (sessionToken: text) ->
+   (record {
+      detail: text;
+      expiresAt: int;
+      ok: bool;
+      token: text;
+    });
   myAccess: () ->
    (record {
       access: variant {
@@ -1475,6 +1484,17 @@ service : {
       orgName: text;
       token: text;
     });
+  /// Redeem a suite-login token. ONLY registered connector canisters may call. Reusable while the
+  /// Hub session lives; the person's live status and their access to THIS app are re-checked.
+  redeemSuiteLogin: (token: text) ->
+   (record {
+      detail: text;
+      displayName: text;
+      email: text;
+      id: opt text;
+      ok: bool;
+      suiteToken: opt text;
+    });
   /// Redeem a hand-off ticket. ONLY registered connector canisters may call.
   /// One-time: the ticket is deleted on first use, valid 90 s, and the
   /// user's live status is re-checked here.
@@ -1582,6 +1602,8 @@ service : {
   revokeInvite: (email: text) -> (nat);
   /// Owners: switch source 1 off (pushes refused; people already pushed stay).
   revokeScimToken: () -> (bool);
+  /// End the caller's suite login now (Hub sign-out in passkey mode; SSO sign-out goes through ssoLogout).
+  revokeSuiteLogin: (sessionToken: text) -> (bool);
   rotateOidcSecret: (id: nat) ->
    (record {
       detail: text;

@@ -5,7 +5,7 @@ import { idlFactory } from "./idl.js";
 import { canonicalDestination } from "./canonical-url.js";
 import { createLabels } from "./labels.js";
 import { createBulk } from "./bulk.js";
-import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory } from "./hub-client.js";
+import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory, suiteCookie } from "./hub-client.js";
 
 // deploy-time constants (INSTALL.md: sed the placeholders; the kitchen patches them on install)
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
@@ -157,6 +157,11 @@ async function boot() {
     setStatus("loginStatus", "", "signing in…");
     const r = opt(await backend.loginWithTicket(ticket));
     if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else setStatus("loginStatus", "err", "the hub ticket was not accepted — try again from the hub");
+  } else if (!session.load() && suiteCookie.read()) {
+    // Suite login (0.25.0): the Hub's cookie on the company domain signs in without a round trip through the Hub.
+    setStatus("loginStatus", "", "signing in…");
+    let r = null; try { r = opt(await backend.loginWithSuite(suiteCookie.read())); } catch (e) {}
+    if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else { suiteCookie.clear(); setStatus("loginStatus", "", ""); }
   }
   if (session.load() && (await refreshMe())) {
     try { sessionStorage.removeItem("ks-assets-offer-login"); } catch (_) {}
@@ -182,6 +187,7 @@ async function boot() {
 }
 function signOut() {
   clearPin();
+  suiteCookie.clear(); // leaving this tool also stops the automatic suite sign-in until the Hub is opened again
   const t = session.load(); session.clear();
   if (t) backend.signOut(t).catch(() => {});
   me = null; if (topbar) { topbar.destroy(); topbar = null; } $("layout").classList.remove("on"); $("login").style.display = "grid"; setStatus("loginStatus", "", "signed out");

@@ -996,6 +996,16 @@ service : {
   listMdm: (tok: text) -> (vec MdmView) query;
   /// Admins: the sales, newest first; status "" = everything, else that status, "open" = draft/offered/accepted/issued.
   listSales: (tok: text, status: text) -> (vec SaleView) query;
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {

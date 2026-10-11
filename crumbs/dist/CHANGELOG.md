@@ -1,5 +1,10 @@
 # Crumbs changelog
 
+## [0.8.0] — 2026-10-11
+
+- Faster sign-in: the ticket login makes one Hub call and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less); the directory is pulled only when the person is unknown or the cache is stale.
+- Suite login: opened on the company domain with the Hub's suite cookie (Hub ≥ 0.40.0), Crumbs signs in through `loginWithSuite` without a detour through the Hub page. Sign out in Crumbs clears the cookie; the Hub re-checks the person and their Crumbs access on every redemption. No analytics or permission changes.
+
 ## [0.7.0] — 2026-10-10
 
 - Reports open on the last seven days in the website's own time zone: daily buckets follow local midnights, the time zone is editable per website and shown next to the dates, and the last website, period and acquisition goal are remembered per browser. Eight metric cards compare to the previous period; the chart labels its axis, draws the previous period and lists its values.

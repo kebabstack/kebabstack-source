@@ -503,6 +503,15 @@ service : {
   journeys: (token: text, request: ReportRequest) -> (Result_9) query;
   listKeys: (token: text) -> (Result_8) query;
   listSites: (token: text) -> (vec SiteView) query;
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {

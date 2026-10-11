@@ -119,7 +119,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.39.1";
+  transient let BUILD_VERSION : Text = "0.40.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -4015,6 +4015,19 @@ persistent actor UserHub {
 
   type Session = { email : Text; displayName : Text; provider : Text; createdAt : Int; expiresAt : Int };
   let sessions : Map.Map<Text, Session> = Map.empty<Text, Session>(); // token -> session
+  // ---- sign-in tokens without an extra consensus round (0.40.0) ----
+  // Session, ticket, suite and suite-login tokens derive from a per-hub secret seed (raw_rand, once),
+  // a counter and the time: unpredictable without the canister state, and the sign-in path no longer
+  // waits for the management canister on every call. Everything else keeps raw_rand.
+  var tokenSeed : ?Blob = null;
+  var tokenCounter : Nat = 0;
+  func initTokenSeed() : async () { if (tokenSeed == null) { let r = await ic00.raw_rand(); if (tokenSeed == null) tokenSeed := ?r } };
+  func freshToken() : Text {
+    assert tokenSeed != null; // callers seed first; a token without the secret would be guessable
+    tokenCounter += 1;
+    let seed = switch (tokenSeed) { case (?b) Blob.toArray(b); case null [] };
+    hex(Sha256.fromArray(#sha256, Array.concat(seed, Blob.toArray(Text.encodeUtf8("tok:" # Nat.toText(tokenCounter) # ":" # Int.toText(Time.now()))))));
+  };
 
   // ---- suite tokens (0.14.0): the person's topbar inside an app ----
   // Minted at redeemTicket and handed to the app, which passes it to its
@@ -4030,6 +4043,67 @@ persistent actor UserHub {
       case null null;
       case (?t) { if (Time.now() >= t.expiresAt or not connectors.containsKey(t.connId) or accessForConn(t.email, t.connId) != #active) null else ?{ email = t.email; displayName = t.displayName; provider = "suite"; createdAt = t.createdAt; expiresAt = t.expiresAt } };
     };
+  };
+  // ---- suite login (0.40.0): one Hub sign-in, every tool ----
+  // The Hub frontend keeps a suite-login token in a cookie on the company's parent domain
+  // (e.g. .kebabstack.com). A tool opened without its own session hands that token to its
+  // backend, which redeems it here. The token can do exactly one thing: open an app session
+  // in a tool the person may use. It dies with the Hub session (sign-out, expiry) and is
+  // never a portal session (no requests, no tickets, no settings).
+  type SuiteLogin = { email : Text; displayName : Text; sessionKey : Text; createdAt : Int; expiresAt : Int };
+  let suiteLogins : Map.Map<Text, SuiteLogin> = Map.empty<Text, SuiteLogin>();
+  func sessionKeyOf(caller : Principal, tok : Text) : Text = if (tok != "") "sso:" # tok else "pk:" # Principal.toText(caller);
+  func pruneSuiteLogins() {
+    let now = Time.now(); let victims = List.empty<Text>();
+    for ((k, l) in Map.entries(suiteLogins)) if (now > l.expiresAt and List.size(victims) < 500) List.add(victims, k);
+    for (k in List.values(victims)) ignore Map.delete(suiteLogins, Text.compare, k);
+  };
+  func revokeSuiteLoginsFor(sessionKey : Text) {
+    let victims = List.empty<Text>();
+    for ((k, l) in Map.entries(suiteLogins)) if (l.sessionKey == sessionKey) List.add(victims, k);
+    for (k in List.values(victims)) ignore Map.delete(suiteLogins, Text.compare, k);
+  };
+  /// The signed-in person's suite-login token (portal session required). Reused while it is valid;
+  /// it expires with the Hub session.
+  public shared ({ caller }) func mintSuiteLogin(sessionToken : Text) : async { ok : Bool; token : Text; expiresAt : Int; detail : Text } {
+    let s = switch (portalSession(caller, sessionToken)) { case (?s) s; case null return { ok = false; token = ""; expiresAt = 0; detail = "no session" } };
+    let key = sessionKeyOf(caller, sessionToken);
+    pruneSuiteLogins();
+    for ((t, l) in Map.entries(suiteLogins)) if (l.sessionKey == key and Time.now() < l.expiresAt) return { ok = true; token = t; expiresAt = l.expiresAt; detail = "" };
+    if (tokenSeed == null) await initTokenSeed();
+    if (portalSession(caller, sessionToken) == null) return { ok = false; token = ""; expiresAt = 0; detail = "session ended" };
+    let t = freshToken();
+    Map.add(suiteLogins, Text.compare, t, { email = s.email; displayName = s.displayName; sessionKey = key; createdAt = Time.now(); expiresAt = s.expiresAt });
+    { ok = true; token = t; expiresAt = s.expiresAt; detail = "" };
+  };
+  /// End the caller's suite login now (Hub sign-out in passkey mode; SSO sign-out goes through ssoLogout).
+  public shared ({ caller }) func revokeSuiteLogin(sessionToken : Text) : async Bool {
+    if (portalSession(caller, sessionToken) == null and sessionToken != "") return false;
+    revokeSuiteLoginsFor(sessionKeyOf(caller, sessionToken));
+    true;
+  };
+  /// Redeem a suite-login token. ONLY registered connector canisters may call. Reusable while the
+  /// Hub session lives; the person's live status and their access to THIS app are re-checked.
+  public shared ({ caller }) func redeemSuiteLogin(token : Text) : async { ok : Bool; email : Text; displayName : Text; detail : Text; suiteToken : ?Text; id : ?Text } {
+    func fail(d : Text) : { ok : Bool; email : Text; displayName : Text; detail : Text; suiteToken : ?Text; id : ?Text } = { ok = false; email = ""; displayName = ""; detail = d; suiteToken = null; id = null };
+    let conn = switch (connectorByPrincipal(caller)) { case (?c) c; case null return fail("caller is not a registered connector") };
+    let l = switch (Map.get(suiteLogins, Text.compare, token)) { case (?l) l; case null return fail("unknown or expired suite login") };
+    if (Time.now() > l.expiresAt) { ignore Map.delete(suiteLogins, Text.compare, token); return fail("suite login expired") };
+    switch (Text.stripStart(l.sessionKey, #text "sso:")) {
+      case (?st) { switch (Map.get(sessions, Text.compare, st)) { case null { ignore Map.delete(suiteLogins, Text.compare, token); return fail("signed out of the Hub") }; case (?hs) { if (Time.now() >= hs.expiresAt) { ignore Map.delete(suiteLogins, Text.compare, token); return fail("Hub session expired") } } } };
+      case null {};
+    };
+    if (accessForConn(l.email, conn.id) != #active) {
+      journal("apps", "suite login DENIED for " # l.email # " at " # conn.name # " (inactive or outside the connector's source scope)", caller);
+      return fail("your account is not eligible for this app");
+    };
+    pruneSuiteTokens();
+    if (tokenSeed == null) await initTokenSeed();
+    if (connectorByPrincipal(caller) != ?conn or accessForConn(l.email, conn.id) != #active or Map.get(suiteLogins, Text.compare, token) == null) return fail("access changed during sign-in");
+    journal("apps", "suite login redeemed for " # l.email # " by connector " # conn.name, caller);
+    let st = freshToken(); let nowS = Time.now();
+    Map.add(suiteTokens, Text.compare, st, { email = l.email; displayName = l.displayName; connId = conn.id; createdAt = nowS; expiresAt = nowS + SUITE_TTL_NS });
+    { ok = true; email = l.email; displayName = l.displayName; detail = ""; suiteToken = ?st; id = ?pidForEmail(l.email) };
   };
   /// Portal session OR suite token — for the read-only topbar calls only.
   func portalOrSuiteSession(caller : Principal, tok : Text) : ?Session {
@@ -4276,7 +4350,8 @@ persistent actor UserHub {
     var dn = jsonField(claims, ["name"]);
     if (dn == "") dn := norm(jsonField(claims, ["given_name"]) # " " # jsonField(claims, ["family_name"]));
     if (dn == "") dn := email;
-    let tok = hex(await ic00.raw_rand()) # hex(await ic00.raw_rand());
+    if (tokenSeed == null) await initTokenSeed();
+    let tok = freshToken();
     let now = Time.now();
     if (ssoProviders.get(providerId) != ?p or not p.enabled or accessOf(email) != #active or now / 1_000_000_000 >= expS) return fail("provider or account changed during sign-in");
     Map.add(sessions, Text.compare, tok, { email; displayName = dn; provider = p.name; createdAt = now; expiresAt = now + sessionTtlNs });
@@ -4298,6 +4373,7 @@ persistent actor UserHub {
 
   public shared func ssoLogout(token : Text) : async Bool {
     ignore Map.delete(sessions, Text.compare, token);
+    revokeSuiteLoginsFor("sso:" # token); // one sign-out ends every tool's automatic sign-in
     true;
   };
 
@@ -4658,8 +4734,9 @@ persistent actor UserHub {
     if (boundCid == 0 or not connectors.containsKey(boundCid)) return { ok = false; ticket = ""; url = ""; detail = "this sign-in tile needs a registered app binding — ask an admin" };
     if (boundCid != 0 and accessForConn(s.email, boundCid) != #active) return { ok = false; ticket = ""; url = ""; detail = "this app is not available to you" };
     if (tileHidden(appId)) return { ok = false; ticket = ""; url = ""; detail = "this app is off the menu right now" };
-    let t = hex(await ic00.raw_rand());
-    // Authorization and the destination can change while entropy is requested.
+    if (tokenSeed == null) await initTokenSeed();
+    let t = freshToken();
+    // Authorization and the destination can change while the seed is requested (first call only).
     if (portalSession(caller, sessionToken) == null or accessForConn(s.email, boundCid) != #active or connectorOfTile(appId) != boundCid or appLinks.get(appId) != ?app or tileHidden(appId)) return { ok = false; ticket = ""; url = ""; detail = "access or app configuration changed — try again" };
     Map.add(tickets, Text.compare, t, { email = s.email; displayName = s.displayName; appId; expiresAt = Time.now() + ticketTtlNs });
     { ok = true; ticket = t; url = app.url; detail = "" };
@@ -4690,7 +4767,8 @@ persistent actor UserHub {
         journal("apps", "ticket redeemed for " # tk.email # " by connector " # conn.name, caller);
         // the suite token: the same bell, menu and identity inside the app — read-only, 12 h
         pruneSuiteTokens();
-        let st = hex(await ic00.raw_rand());
+        if (tokenSeed == null) await initTokenSeed();
+        let st = freshToken();
         if (connectorByPrincipal(caller) != ?conn or connectorOfTile(tk.appId) != conn.id or accessForConn(tk.email, conn.id) != #active) return { ok = false; email = ""; displayName = ""; detail = "access was revoked while signing in"; suiteToken = null; id = null };
         let nowS = Time.now();
         Map.add(suiteTokens, Text.compare, st, { email = tk.email; displayName = tk.displayName; connId = conn.id; createdAt = nowS; expiresAt = nowS + SUITE_TTL_NS });

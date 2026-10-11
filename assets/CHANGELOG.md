@@ -1,5 +1,10 @@
 # Changelog — kebab-stack assets
 
+## [0.25.0] — 2026-10-11
+
+- Faster sign-in: the ticket login makes one Hub call and answers; groups and the AI status refresh in the background, the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less), the directory is pulled only when the person is unknown or the cache is stale. Requires Hub ≥ 0.40.0 for the suite login; the ticket path works with any Hub.
+- Suite login: opened on the company domain with the Hub's suite cookie, Assets signs in through `loginWithSuite` without a detour through the Hub page. Sign out in Assets clears the cookie; the Hub re-checks the person and their Assets access on every redemption.
+
 ## [0.24.1] — 2026-10-10
 
 - Hardware sizes: a memory value such as "24 GB LPDDR5" is read as 24 GB (0.24.0 appended the digits after the unit and showed 245 GB). Iru reports volume sizes in binary gigabytes labelled "GB"; they are now shown as decimal GB like macOS and Apple Business Manager (a 512 GB drive reads 494 GB, not 460). Stored values refresh with the next sync (devices read in 0.24.0 are re-read once) or with **Refresh hardware**.

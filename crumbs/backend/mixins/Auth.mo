@@ -54,32 +54,41 @@ mixin (a : T.AuthState, lease : T.Lease, db : T.Store, siteAccess : Map.Map<Text
       n;
     } finally { lease.pulling := false };
   };
-  public shared func loginWithTicket(ticket : Text) : async ?{
-    token : Text;
-    suiteToken : Text;
-    role : Text;
-    email : Text;
-    displayName : Text;
-  } {
-    if (a.hubId == "" or not Hub.ticketLooksValid(ticket)) return null;
-    let expected = a.hubId;
-    let r = await (with timeout = 30) Hub.hub(expected).redeemTicket(ticket);
+  // ---- sign-in (0.8.0): one Hub round trip, no management-canister round per login ----
+  // Transient on purpose (Crumbs uses enhanced migration, stable fields are declared there): a fresh seed
+  // is drawn once after every upgrade; sessions themselves are stable and unaffected.
+  transient var tokenSeed : ?Blob = null; // per-app secret for session tokens (raw_rand, once); see Hub.deriveToken
+  transient var tokenCounter : Nat = 0;
+  func initTokenSeed() : async () {
+    let ic : actor { raw_rand : () -> async Blob } = actor "aaaaa-aa";
+    if (tokenSeed == null) { let r = await (with timeout = 30) ic.raw_rand(); if (tokenSeed == null) tokenSeed := ?r };
+  };
+  func establishSession(expected : Text, r : Hub.RedeemResult) : async ?{ token : Text; suiteToken : Text; role : Text; email : Text; displayName : Text } {
     if (not r.ok or expected != a.hubId) return null;
     if (not Hub.directoryFresh(lease.at) or Hub.appRole(a.people, r.email, "crumbs") == "none") {
       try { ignore await pull() } catch (_) {};
     };
-    let ic : actor { raw_rand : () -> async Blob } = actor "aaaaa-aa";
-    let token = A.hex(await (with timeout = 30) ic.raw_rand());
+    if (tokenSeed == null) await initTokenSeed();
+    assert tokenSeed != null; // a token without the secret would be guessable
+    tokenCounter += 1;
+    let token = Hub.deriveToken(switch (tokenSeed) { case (?b) b; case null Blob.fromArray([]) }, tokenCounter, Time.now());
     let role = Hub.appRole(a.people, r.email, "crumbs");
     if (expected != a.hubId or not Hub.directoryFresh(lease.at) or role == "none") return null;
     ignore Hub.mintSession(a.sessions, token, r.email, r.displayName, 8 * 3_600_000_000_000);
-    ?{
-      token;
-      suiteToken = r.suiteToken ??"";
-      role;
-      email = r.email;
-      displayName = r.displayName;
-    };
+    ?{ token; suiteToken = r.suiteToken ?? ""; role; email = r.email; displayName = r.displayName };
+  };
+  public shared func loginWithTicket(ticket : Text) : async ?{ token : Text; suiteToken : Text; role : Text; email : Text; displayName : Text } {
+    if (a.hubId == "" or not Hub.ticketLooksValid(ticket)) return null;
+    let expected = a.hubId;
+    let r = await (with timeout = 30) Hub.hub(expected).redeemTicket(ticket);
+    await establishSession(expected, r);
+  };
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their Crumbs access.
+  public shared func loginWithSuite(token : Text) : async ?{ token : Text; suiteToken : Text; role : Text; email : Text; displayName : Text } {
+    if (a.hubId == "" or not Hub.ticketLooksValid(token)) return null;
+    let expected = a.hubId;
+    let r = await (with timeout = 30) Hub.hub(expected).redeemSuiteLogin(token);
+    await establishSession(expected, r);
   };
   public query func whoami(token : Text) : async ?T.User {
     A.user(a, lease, token);

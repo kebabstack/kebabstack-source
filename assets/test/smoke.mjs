@@ -46,7 +46,7 @@ let fakeDeal = { exists:false, active:false, expiresAt:now+14n*86400n*1000000000
 globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
   calls.push(m);
   switch (m) {
-    case "info": return { orgName: "Acme", hubId: "aaaaa-aa", hubSet: true, appUrl: flow.startsWith("canonical") ? "https://new.assets.test/" : "https://assets.test/", version: "0.1.0" };
+    case "info": return { orgName: "Acme", hubId: "aaaaa-aa", hubSet: true, appUrl: flow.startsWith("canonical") ? "https://new.assets.test/" : flow.startsWith("suite") ? "https://assets.kebabstack.test/" : "https://assets.test/", version: "0.1.0" };
     // hub calls made by the shared topbar (same fake actor: the stub ignores the canister id)
     case "suiteState": return [{ email: "me@example.com", displayName: "Me Myself", unread: 1n, expiresAt: now + 3600n * 1000000000n, active: true, provider: "suite" }];
     case "myNotifications": return { total: 1n, unread: 1n, slackDm: true, items: [{ id: 3n, email: "me@example.com", fromApp: "desk", title: "Ticket answered", url: "https://desk.test/#/t/1", kind: "desk", at: now, read: false, slack: "off" }] };
@@ -55,6 +55,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "myAvatarPortal": case "getCompanyLogo": case "tileIcon": return [];
     case "whoami": return [{ id: ME, email: "me@example.com", displayName: "Me Myself", role, roleSource: "hub owner", orgName: "Acme", hubId: "aaaaa-aa", needsClaim: false, aiOn, aiSource: aiOn ? "hub" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: aiOn ? "openai · gpt-4.1-mini" : "" } }];
     case "loginWithTicket": return flow === "rejected" ? [] : [{ token: "t0k", email: "me@example.com", displayName: "Me", role, suiteToken: "su1te" }];
+    case "loginWithSuite": return flow === "suite-rejected" || a[0] !== "c".repeat(64) ? [] : [{ token: "t0k", email: "me@example.com", displayName: "Me", role, suiteToken: "su1te" }];
     case "stats": return { total: 3n, byStatus: [["assigned", 2n], ["in_stock", 1n]], recent: [{ event: ev(9, "handed_out", "handed out to Ana Ruiz", 5n), name: "Apple MacBook Pro 14\"" }], photos: 1n, photoBytes: 120000n };
     case "listAssets": return [row(1), row(2, { status: "in_stock", assignee: "" }), row(3, { kind: "phone", model: "iPhone 15", serial: "G6TX9RQ2L7" })];
     case "pendingHandoverCount": return 0n;
@@ -123,7 +124,8 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     default: return { ok: true, detail: "", id: 1n, eventId: 1n };
   }
 } });
-const dom = new JSDOM(html, { url: "https://assets.test/#uht=" + "ab".repeat(20), runScripts: "outside-only", pretendToBeVisual: true });
+const dom = new JSDOM(html, { url: flow.startsWith("suite") ? "https://assets.kebabstack.test/#/devices" : "https://assets.test/#uht=" + "ab".repeat(20), runScripts: "outside-only", pretendToBeVisual: true });
+if (flow.startsWith("suite")) dom.window.document.cookie = "ks-suite=" + "c".repeat(64) + "; Domain=kebabstack.test; Path=/";
 const { window } = dom;
 globalThis.window = window; globalThis.document = window.document; globalThis.location = window.location; globalThis.history = window.history; globalThis.localStorage = window.localStorage;
 globalThis.sessionStorage = window.sessionStorage;
@@ -136,6 +138,7 @@ if (flow && flow !== "admin-deal") {
     globalThis.location = new Proxy({}, { get: (_, key) => window.location[key], set: (_, key, value) => { if (key === "href") jump = value; else window.location[key] = value; return true; } });
     if (flow === "retry") sessionStorage.setItem("ks-assets-offer-login", String(Date.now()));
   } else if (flow === "signed") localStorage.setItem("ks-assets-session", "existing-session");
+  else if (flow.startsWith("suite")) history.replaceState(null, "", "/#/devices"); // no ticket, no session: only the suite cookie
   else {
     sdk.hubJumpUrl("https://hub.test/", "https://assets.test/");
     history.replaceState(null, "", "/#uht=" + "ab".repeat(20) + "&th=dark");
@@ -163,6 +166,11 @@ if (flow.startsWith("canonical")) {
   check(jump === "https://new.assets.test/#/offers/7", "domain switch keeps the offer and drops credentials/query strings");
   check(!calls.includes("loginWithTicket") && !calls.includes("whoami"), "old-origin credentials are never used after the domain switch");
   check(!$("layout").classList.contains("on"), "old origin does not render buyer data");
+  console.log(flow, errors.length ? errors.join("\n") : "SMOKE OK"); process.exit(errors.length ? 1 : 0);
+}
+if (flow.startsWith("suite")) {
+  if (flow === "suite") check(calls.includes("loginWithSuite") && !calls.includes("loginWithTicket") && localStorage.getItem("ks-assets-session") === "t0k" && $("layout").classList.contains("on"), "suite cookie signs in without a ticket: " + calls.filter(c => /login/.test(c)).join(","));
+  if (flow === "suite-rejected") check(calls.includes("loginWithSuite") && !localStorage.getItem("ks-assets-session") && !/ks-suite=/.test(document.cookie) && !$("layout").classList.contains("on"), "a rejected suite cookie is cleared and the Hub button remains: cookie=" + document.cookie);
   console.log(flow, errors.length ? errors.join("\n") : "SMOKE OK"); process.exit(errors.length ? 1 : 0);
 }
 if (["auto", "retry", "rejected"].includes(flow)) {
