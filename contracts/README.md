@@ -10,6 +10,14 @@ The overview shows current annual recurring cost, upcoming decisions and unassig
 The SaaS table brings tool, owner, license count, dates, cancellation deadline and auto-renewal
 into one view. Personal and teamspaces retain their existing access rules.
 
+### 0.18.0 — one figure, discounts, re-reading
+
+Settings → Reporting currency turns several currencies into one annual figure on the overview using rates the
+workspace owners maintain themselves; every recorded currency and tax basis stays visible underneath. Discounts
+(list price, percent, basis) are commercial fields the AI reads with evidence and a person confirms; the overview
+sums the yearly saving. **Read documents again with AI** on a record re-reads all linked documents and proposes
+changes for confirmation.
+
 ## Start with one contract
 
 1. Open Contracts from Hub and choose your workspace. Personal is yours alone.

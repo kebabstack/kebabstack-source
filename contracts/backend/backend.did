@@ -193,6 +193,16 @@ type Rule =
    kind: text;
    value: text;
  };
+type Reporting = 
+ record {
+   currency: text;
+   rates: vec record {
+                text;
+                nat;
+              };
+   updatedAt: int;
+   updatedBy: text;
+ };
 type Record = 
  record {
    audit: vec AuditRow;
@@ -1045,6 +1055,7 @@ service : {
        directoryAt: int;
        people: nat;
        policy: Policy;
+       reporting: opt Reporting;
        rows: vec PortfolioRow;
      }) query;
   /// A person proposes a change themselves (typed, with an optional source as evidence) — goes through the same confirmation.
@@ -1147,6 +1158,17 @@ service : {
       detail: text;
       ok: bool;
     });
+  setReporting: (tok: text, r:
+   record {
+     currency: text;
+     rates: vec record {
+                  text;
+                  nat;
+                };
+   }) -> (record {
+            detail: text;
+            ok: bool;
+          });
   /// Admins: app address, time zone, decision lead, AI budget. Reminder schedules live per workspace (setRenewalPolicy). Unknown time zones are a label + a fixed offset (DST is not modelled).
   setSettings: (tok: text, args:
    record {

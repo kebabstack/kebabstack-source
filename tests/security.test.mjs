@@ -2183,6 +2183,12 @@ test('contracts: layout evidence keeps SaaS dates, successful rereads replace ol
     assert.equal((await app.setCommercialDetails(helpdeskTok,saved.contractId,record.contract.revision,[{field:'paymentTerms',value:'Forged'}])).ok,false);
     assert.equal((await app.setCommercialDetails(memberTok,saved.contractId,record.contract.revision,[{field:'renewalTermMonths',value:'-1'}])).ok,false);
     assert.equal((await app.setCommercialDetails(adminTok,saved.contractId,record.contract.revision,[{field:'purchaseOrder',value:'PO-EDITED'}])).ok,true);
+    // 0.18.0 · discounts are commercial fields with their own validation
+    { const rev=(await app.getContract(adminTok,saved.contractId))[0].contract.revision;
+      assert.equal((await app.setCommercialDetails(adminTok,saved.contractId,rev,[{field:'discountPercent',value:'150'}])).ok,false,'a discount above 100 percent is refused');
+      assert.equal((await app.setCommercialDetails(adminTok,saved.contractId,rev,[{field:'listPrice',value:'abc'}])).ok,false,'a list price must be an amount');
+      const d=await app.setCommercialDetails(adminTok,saved.contractId,rev,[{field:'listPrice',value:'23580.00'},{field:'discountPercent',value:'40'},{field:'discountNote',value:'non-profit'}]);assert.equal(d.ok,true,d.detail);
+      const cd=(await app.getContract(adminTok,saved.contractId))[0].commercialDetails;assert.deepEqual(cd.filter(f=>/^(listPrice|discountPercent|discountNote)$/.test(f.field)).map(f=>f.value).sort(),['23580.00','40','non-profit']); }
     assert.equal((await app.setCommercialDetails(adminTok,saved.contractId,record.contract.revision,[{field:'purchaseOrder',value:'STALE'}])).ok,false);
     assert.match(await app.exportCsv(memberTok),/PO-EDITED/);
     await pic.upgradeCanister({upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]},sender:controller,canisterId:appId,wasm:candidateWasm('contracts')});
@@ -2275,6 +2281,13 @@ test('contracts: SaaS keys stay private, group assignments update without sharin
   const policy=(await app.portfolio(adminTok))[0].policy;
   assert.equal((await app.setRenewalPolicy(memberTok,policy)).ok,false,'editor cannot change workspace delivery');
   assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[30n]})).ok,true,'a workspace may choose its own schedule (0.14.0: 90 days no longer mandatory)');
+  // 0.18.0 · reporting currency and rates: owners only, validated, returned with the portfolio
+  assert.equal((await app.setReporting(memberTok,{currency:'CHF',rates:[['USD',8800n]]})).ok,false,'editors cannot set the reporting currency');
+  assert.equal((await app.setReporting(adminTok,{currency:'ch',rates:[]})).ok,false,'currency code is three capital letters');
+  assert.equal((await app.setReporting(adminTok,{currency:'CHF',rates:[['CHF',10000n]]})).ok,false,'no rate for the reporting currency itself');
+  assert.equal((await app.setReporting(adminTok,{currency:'CHF',rates:[['USD',0n]]})).ok,false,'a zero rate is refused');
+  const rep=await app.setReporting(adminTok,{currency:'chf',rates:[['usd',8800n],['EUR',9400n]]});assert.equal(rep.ok,true,rep.detail);
+  const rp=(await app.portfolio(adminTok))[0].reporting[0];assert.equal(rp.currency,'CHF');assert.deepEqual(rp.rates,[['USD',8800n],['EUR',9400n]],'codes are normalised');
   assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[]})).ok,false,'at least one mark');
   assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[400n]})).ok,false,'marks within a year');
   assert.equal((await app.setRenewalPolicy(adminTok,{...policy})).ok,true);

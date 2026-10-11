@@ -304,6 +304,7 @@ if (role === "admin") {
   const ft = last("fileToContract"); check(ft && ft[1][1] === 12n && ft[1][2] === 1n && ft[1][3] === 3n && ft[1][4].some(f => f.field === "amountMinor" && f.value === "165000") && !ft[1][4].some(f => f.field === "trackStatus"), "update goes to fileToContract with the record revision and checked fields");
   check(window.location.hash === "#/c/1", "updating opens the record");
   await go("#/c/1/documents"); check(!!document.querySelector('#rDocuments a[href="#/c/1/add"]'), "record offers adding another document");
+  { const btn = $("rReread"); check(!!btn, "staff can read the linked documents again"); if (btn) { const before = calls.filter(([m]) => m === "reprocessSource").length; btn.click(); for (let i = 0; i < 4; i++) await tick(); check(calls.filter(([m]) => m === "reprocessSource").length > before, "re-read queues the linked documents"); } }
   await go("#/c/1/add"); check(on("viewIntake") && /Add a document to Sunrise Cloud — Team plan/.test($("intakeTitle").textContent), "adding a document to a record names the record");
   await go("#/add/manual"); check(on("editDrawer") && /New contract/.test($("edTitle").textContent), "add by hand opens the manual record form");
   $("editDrawer").classList.remove("on");

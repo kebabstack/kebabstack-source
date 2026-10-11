@@ -18,3 +18,12 @@
 .saas-type{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--ks-surface-muted,rgba(0,0,0,.05));font-size:12px;white-space:nowrap;color:var(--ks-text-muted,inherit)}
 .saas-toolbar select#saasType{max-width:220px}
 .saas-types{margin-top:16px}
+
+/* 0.18.0 · one headline in the reporting currency, discounts, rate settings */
+.saas-stat-lines{display:grid;gap:4px;margin:10px 0 6px;font-size:13px}
+.saas-stat-lines div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.saas-stat-lines em{font-style:normal;opacity:.75;font-size:12px}
+.saas-stat.spending .saas-stat-lines span:last-child{opacity:.85;text-align:right}
+.saas-discount{display:block;color:var(--ks-indicator-teal);font-size:12px}
+.saas-reporting label{display:flex;align-items:center;gap:8px;margin:8px 0}
+.saas-reporting input{max-width:120px}

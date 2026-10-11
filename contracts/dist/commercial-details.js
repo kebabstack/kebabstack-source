@@ -6,7 +6,10 @@ export const commercialFields=[
  ['billingContact','Billing contact','text'],
  ['unitInterval','Unit price period',{'':'Not stated',month:'Per month',quarter:'Per quarter',year:'Per year',once:'One-off',other:'Other',none:'No payment'}],
  ['renewalTermMonths','Renewal term (months)','number'],
- ['commercialNotes','True-up, renewal pricing & other conditions','textarea']
+ ['commercialNotes','True-up, renewal pricing & other conditions','textarea'],
+ ['listPrice','List price before discount (same currency and period as the amount)','text'],
+ ['discountPercent','Discount (%)','number'],
+ ['discountNote','Discount basis (non-profit, education, volume…)','text']
 ];
 export function renderCommercialDetails(root,{record,save,done,stale}) {
  const values=Object.fromEntries((record.commercialDetails||[]).map(x=>[x.field,x.value]));

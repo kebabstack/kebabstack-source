@@ -1,5 +1,11 @@
 # Changelog — kebab-stack contracts
 
+## [0.18.0] — 2026-10-11
+
+- **One annual figure.** Workspace owners set a reporting currency and the exchange rates under Settings → Reporting currency (1 USD = 0.88 CHF, maintained by hand, never fetched). The overview then shows one headline run rate in that currency with every recorded currency and tax basis listed beneath it, and says which currencies lack a rate. Amounts on contracts stay exactly as recorded; the tax basis is reported per contract, never converted. New `setReporting`; `portfolio` returns `reporting`.
+- **Discounts.** Three commercial fields: list price before discount (same currency, period and tax basis as the amount), discount in percent, and the discount basis (non-profit, education, volume…). The AI reads them from documents like every other field (prompt version contracts-visual-7, evidence required, confirmed by a person); the contract list shows "40% off list · non-profit" under the annual cost and the overview adds "Discounts received" with the yearly saving.
+- **Read documents again.** On a record, staff can queue every linked document for a fresh AI reading (for example to pick up discounts and list prices on contracts filed before 0.18.0). Results arrive as suggested changes on the record; nothing is overwritten.
+
 ## [0.17.0] — 2026-10-11
 
 - Faster sign-in: the ticket login redeems at the Hub, refreshes the person's groups and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less); the directory is pulled only when the person is unknown or the cache is stale.

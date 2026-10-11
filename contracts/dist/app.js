@@ -826,8 +826,17 @@ async function enterRecord(id, tabName) {
   $("rMessages").querySelectorAll("[data-rmrule]").forEach((b) => { b.onclick = async () => { const x = await backend.removeRule(hubTok, BigInt(b.dataset.rmrule)); toast(x.ok ? "Rule removed" : x.detail); if (x.ok) enterRecord(id, tabName); }; });
   const ra = $("rRuleAdd"); if (ra) ra.onclick = async () => { const v = $("rRuleVal").value.trim(); if (!v) return; const x = await backend.addRule(hubTok, $("rRuleKind").value, v, c.id); toast(x.ok ? "Rule added" : x.detail); if (x.ok) enterRecord(id, tabName); };
   // documents
-  $("rDocuments").innerHTML = (r.canEdit ? `<div class="btnrow" style="margin-bottom:12px"><a class="pill primary sm" href="#/c/${c.id}/add">+ Add document</a><span class="kv">Attach another original (amendment, renewal letter, invoice). The AI reads it and you confirm what changes.</span></div>` : "") + (r.documents.length ? docTable(r.documents) : `<div class="empty">No files yet. Add the signed contract, amendments or invoices here.</div>`);
+  const rereadable = r.sources.filter((s) => !["received", "extracting"].includes(s.status));
+  $("rDocuments").innerHTML = (r.canEdit ? `<div class="btnrow" style="margin-bottom:12px"><a class="pill primary sm" href="#/c/${c.id}/add">+ Add document</a>${me.aiOn && isStaff() && rereadable.length ? `<button type="button" class="pill outline sm" id="rReread">Read documents again with AI</button>` : ""}<span class="kv">Attach another original (amendment, renewal letter, invoice). The AI reads it and you confirm what changes.${me.aiOn && isStaff() && rereadable.length ? " Reading again re-checks every linked document for terms, discounts and list prices; it suggests, never overwrites." : ""}</span></div>` : "") + (r.documents.length ? docTable(r.documents) : `<div class="empty">No files yet. Add the signed contract, amendments or invoices here.</div>`);
   wireDocs($("rDocuments"));
+  const reread = $("rReread"); if (reread) reread.onclick = async () => {
+    reread.disabled = true; reread.textContent = "Reading…";
+    let queued = 0, problem = "";
+    for (const s of rereadable) { try { const x = await backend.reprocessSource(hubTok, BigInt(s.id)); if (x.ok) queued++; else problem = x.detail; } catch (e) { problem = String(e.message || e); } }
+    if (staleView()) return;
+    toast(queued ? `${queued} document${queued === 1 ? "" : "s"} queued for reading — suggested changes appear on this record` : problem || "Nothing to read");
+    enterRecord(id, tabName);
+  };
   // seats
   const active = N(r.row.holders), seats = c.seats.length ? N(c.seats[0]) : null;
   $("rSeats").innerHTML = `<div class="tgrid"><div class="tstat"><div class="v">${seats === null ? "—" : seats}</div><div class="l">seats bought</div></div><div class="tstat"><div class="v">${active}</div><div class="l">active holders</div></div><div class="tstat"><div class="v">${seats === null ? "—" : Math.max(0, seats - active)}</div><div class="l">unused</div></div><div class="tstat"><div class="v">${r.holderNames.filter(h=>!h[2]).length}</div><div class="l">holders who left</div></div></div>

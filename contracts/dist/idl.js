@@ -14,6 +14,7 @@ export const idlFactory = ({ IDL }) => {
   const Snapshot = IDL.Record({ checkedAt: IDL.Int, metrics: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)), schema: IDL.Nat, state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }) });
   const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, aiCallsToday: IDL.Nat, aiDailyBudget: IDL.Nat, aiSource: IDL.Text, appUrl: IDL.Text, blobBytes: IDL.Nat, contracts: IDL.Nat, demoSeeded: IDL.Bool, editorGroup: IDL.Text, hubId: IDL.Text, lastDirectoryPull: IDL.Int, leadDays: IDL.Nat, openProposals: IDL.Nat, openTasks: IDL.Nat, orgName: IDL.Text, peopleCount: IDL.Nat, sources: IDL.Nat, tzName: IDL.Text, tzOffsetMinutes: IDL.Int, version: IDL.Text });
   const Rule = IDL.Record({ confirmed: IDL.Bool, contractId: IDL.Nat, createdAt: IDL.Int, createdBy: IDL.Text, id: IDL.Nat, kind: IDL.Text, value: IDL.Text });
+  const Reporting = IDL.Record({ currency: IDL.Text, rates: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)), updatedAt: IDL.Int, updatedBy: IDL.Text });
   const AuditRow = IDL.Record({ after: IDL.Text, at: IDL.Int, before: IDL.Text, contractId: IDL.Nat, id: IDL.Nat, sourceId: IDL.Opt(IDL.Nat), what: IDL.Text, who: IDL.Text });
   const CommercialField = IDL.Record({ field: IDL.Text, value: IDL.Text });
   const Contract = IDL.Record({ createdAt: IDL.Int, createdBy: IDL.Text, customerRef: IDL.Text, deputy: IDL.Text, futureTerms: IDL.Opt(Terms), holders: IDL.Vec(IDL.Text), id: IDL.Nat, origin: IDL.Text, product: IDL.Text, responsible: IDL.Text, revision: IDL.Nat, seats: IDL.Opt(IDL.Nat), status: IDL.Text, tags: IDL.Vec(IDL.Text), terms: Terms, title: IDL.Text, updatedAt: IDL.Int, vendor: IDL.Text, viewers: IDL.Vec(IDL.Text), visibility: IDL.Text });
@@ -113,7 +114,7 @@ export const idlFactory = ({ IDL }) => {
     moveContract: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     moveIncomingSource: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     openSpace: IDL.Func([IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, token: IDL.Text })], []),
-    portfolio: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ canManage: IDL.Bool, directoryAt: IDL.Int, people: IDL.Nat, policy: Policy, rows: IDL.Vec(PortfolioRow) }))], ["query"]),
+    portfolio: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ canManage: IDL.Bool, directoryAt: IDL.Int, people: IDL.Nat, policy: Policy, reporting: IDL.Opt(Reporting), rows: IDL.Vec(PortfolioRow) }))], ["query"]),
     proposeChange: IDL.Func([IDL.Text, IDL.Nat, IDL.Opt(IDL.Nat), IDL.Vec(IDL.Record({ field: IDL.Text, value: IDL.Text })), IDL.Text], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
     refreshAiStatus: IDL.Func([IDL.Text], [IDL.Opt(AiStatus)], []),
     removeDemo: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
@@ -132,6 +133,7 @@ export const idlFactory = ({ IDL }) => {
     setHub: IDL.Func([IDL.Text], [IDL.Bool], []),
     setLicenseAssignments: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setRenewalPolicy: IDL.Func([IDL.Text, Policy], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setReporting: IDL.Func([IDL.Text, IDL.Record({ currency: IDL.Text, rates: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)) })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSettings: IDL.Func([IDL.Text, IDL.Record({ adminGroup: IDL.Text, aiDailyBudget: IDL.Nat, appUrl: IDL.Text, editorGroup: IDL.Text, leadDays: IDL.Nat, orgName: IDL.Text, tzName: IDL.Text, tzOffsetMinutes: IDL.Int })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSourceStatus: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setStatus: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, revision: IDL.Nat })], []),
