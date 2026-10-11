@@ -1,7 +1,7 @@
 {
   "version": 3,
   "mopsTomlDepsHash": "a715e613c1de0457bc5ff508f856d2cdc9c04cdcdaff1c6c2145b37ac6aff705",
-  "localDepsHash": "bbcb417d2939a273310ace52c22642ad50a9e78d2d0440be6be50957fe196f05",
+  "localDepsHash": "e52aa96349708f0f00a3892c702d4e2117d9267da1eb1438e007029caf0cab2d",
   "deps": {
     "base": "0.11.1",
     "core": "2.6.1",
