@@ -1,5 +1,9 @@
 # Changelog — kebab-stack contracts
 
+## [0.18.1] — 2026-10-11
+
+- Fix: the Reporting currency card under Settings had its save button disabled for everyone, and the overview hint showed no link for workspace owners. Both now follow the workspace role the portfolio reports (`canManage`). No data changes.
+
 ## [0.18.0] — 2026-10-11
 
 - **One annual figure.** Workspace owners set a reporting currency and the exchange rates under Settings → Reporting currency (1 USD = 0.88 CHF, maintained by hand, never fetched). The overview then shows one headline run rate in that currency with every recorded currency and tax basis listed beneath it, and says which currencies lack a rate. Amounts on contracts stay exactly as recorded; the tax basis is reported per contract, never converted. New `setReporting`; `portfolio` returns `reporting`.
