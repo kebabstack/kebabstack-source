@@ -2864,6 +2864,20 @@ test('Assets photo reading: 503 recovery, secret-safe errors, member rejection a
   }
   const payload={content:[{type:'text',text:JSON.stringify({reads:[{kind:'serial',value:'EXAMPLE123',confidence:0.9}],vendor:'Example',model:'Laptop',kind:'laptop',sticker:'current',notes:''})}]};
   const ok=await ask();await respondContractsAi(pic,await pendingContractsAi(pic),payload);assert.equal((await ok()).reads[0].value,'EXAMPLE123');assert.equal((await app.stats(adminToken)).total,0n,'reading never creates an asset');
+  // 0.26.0: a stored photo can be read again; nothing changes until the admin takes the corrections over
+  const made=await app.intakeCommit(adminToken,{assetId:[],create:[{tag:'',serial:'OLDSERIAL01',vendor:'Example',model:'Laptop',kind:'laptop',note:''}],action:'returned',to:'',note:'',photo:[photo],mime:'image/jpeg'});assert.equal(made.ok,true,made.detail);
+  const bare=await app.intakeCommit(adminToken,{assetId:[],create:[{tag:'',serial:'NOPHOTO0001',vendor:'Example',model:'Laptop',kind:'laptop',note:''}],action:'returned',to:'',note:'',photo:[],mime:''});assert.equal(bare.ok,true,bare.detail);
+  assert.equal((await app.rereadPhoto(memberToken,made.assetId)).ok,false,'members cannot trigger a vision call');assert.equal((await pic.getPendingHttpsOutcalls()).length,0);
+  assert.match((await app.rereadPhoto(adminToken,bare.assetId)).detail,/no photo/);assert.match((await app.rereadPhoto(adminToken,999999n)).detail,/no such device/);assert.equal((await pic.getPendingHttpsOutcalls()).length,0);
+  const again=await defer.rereadPhoto(adminToken,made.assetId);await respondContractsAi(pic,await pendingContractsAi(pic),payload);const reread=await again();
+  assert.equal(reread.ok,true,reread.detail);assert.equal(reread.result.reads[0].value,'EXAMPLE123');assert.ok(reread.photoId>0n);
+  assert.equal((await app.getAsset(adminToken,made.assetId))[0].asset.serial,'OLDSERIAL01','reading alone changes nothing');
+  const fix={tag:'',serial:'EXAMPLE123',vendor:'Example',model:'Laptop',kind:'laptop',note:''};
+  assert.equal((await app.applyReading(memberToken,made.assetId,reread.photoId,fix)).ok,false);
+  assert.match((await app.applyReading(adminToken,bare.assetId,reread.photoId,fix)).detail,/another device/,'a photo of one device cannot vouch for another');
+  assert.match((await app.applyReading(adminToken,made.assetId,424242n,fix)).detail,/no such photo/);
+  assert.equal((await app.applyReading(adminToken,made.assetId,reread.photoId,fix)).ok,true);
+  const fixed=(await app.getAsset(adminToken,made.assetId))[0];assert.equal(fixed.asset.serial,'EXAMPLE123');assert.ok(fixed.events.some(e=>e.kind==='edited'&&/read again with AI/.test(e.detail)&&e.photoId===reread.photoId),'the history names the photo');
   const stale=await ask(),req=await pendingContractsAi(pic);hub.setPrincipal(owner);await hub.setPersonRole('helpdesk@example.test','');await app.syncNow(adminToken);await respondContractsAi(pic,req,payload);const denied=await stale();assert.equal(denied.ok,false);assert.deepEqual(denied.reads,[]);
  }finally{await pic.tearDown()}
 });

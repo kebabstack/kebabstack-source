@@ -106,11 +106,15 @@ employees remain unable to invoke photo recognition.
 
 ## Device labels
 
-Open a device and choose **Label**, or **Print labels** on a filtered device list. Pick the label size (Brother DK-11209 62 × 29 mm, DK-11201 90 × 29 mm, DK-11221 23 × 23 mm or DK-22205 62 mm continuous) and the fields to show; the QR code always links to the device page. Printing uses the browser's print dialog: select the label printer and the matching media size once, then every label prints 1:1. Any printer the operating system knows works; nothing is sent to a cloud print service. An admin can save the current layout as the default for the register.
+Open a device and choose **Label**, or **Print labels** on a filtered device list; with devices selected, both label buttons print the selection only (the head button says how many are selected). Pick the label size (Brother DK-11209 62 × 29 mm, DK-11201 90 × 29 mm, DK-11221 23 × 23 mm or DK-22205 62 mm continuous) and the fields to show; the QR code always links to the device page. Printing uses the browser's print dialog: select the label printer and the matching media size once, then every label prints 1:1. Any printer the operating system knows works; nothing is sent to a cloud print service. An admin can save the current layout as the default for the register.
 
 ## Registering a new device
 
 Scan a device → photo of the factory label (or **Find or add manually**) → **Not in the list — add a new device**. Serial, vendor and model are prefilled from the photo and can be corrected. Leave the tag empty to get the next automatic tag (prefix and digits under Settings → Register devices; the number continues from the highest numeric tag in the register). Optionally pick the person who receives the device or one of the admin-defined locations. **Register device & show label** creates the device, records the hand-out, keeps the photo as evidence and opens the label ready to print.
+
+## Reading photos again
+
+A first reading can misread a character. Select the devices on the device list and choose **Read photos again** (admins, with AI on): the newest stored photo of each device is read once more, the review card lists every difference per field with the current value and the proposal, reads below 0.6 confidence stay unticked and devices without a photo say so. **Apply corrections** writes the ticked rows; the device history records the correction with the photo that was read. Nothing changes before that click, and a duplicate tag or serial is refused as in manual editing.
 
 ## Registering many devices from photos
 

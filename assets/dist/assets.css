@@ -119,3 +119,5 @@ table { font-size:12px; }th { font-size:10px; }td { padding:14px 10px; }#v-apple
 .dev-tools{display:flex;justify-content:flex-end;padding:4px 0 8px}
 .bulkbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;margin-bottom:10px;border:1px solid var(--ks-rule);border-radius:12px;background:var(--ks-accent-dim)}.bulkbar select{min-width:180px}
 .pill.s-deployed{background:var(--ks-accent-dim);color:var(--ks-fg)}
+/* Read photos again (0.26.0): one row per selected device, current → proposed per field. */
+.reread-list{display:grid}.reread-row{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1.4fr);gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--ks-rule)}.reread-row .pick{display:flex;align-items:center;min-height:24px}.reread-row .t{display:grid;min-width:0}.reread-row .t b{font-size:14px}.reread-row .t span{color:var(--ks-muted);font-size:12px;overflow-wrap:anywhere}.reread-body{font-size:13px;overflow-wrap:anywhere}.reread-body .low{color:var(--ks-danger)}@media (max-width:560px){.reread-row{grid-template-columns:28px minmax(0,1fr)}.reread-body{grid-column:2}}

@@ -83,6 +83,8 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "getLocations": return ["Zürich office · 3rd floor", "Storage room"];
     case "setLocations": case "setTagScheme": case "setAssetLocation": return { ok: true, detail: "" };
     case "bulkPlace": return { ok: true, changed: 2n, skipped: 0n, detail: "2 updated" };
+    case "rereadPhoto": return Number(a[1]) === 2 ? { ok: false, detail: "This device has no photo. Add one on the device page or scan it.", photoId: 0n, result: { ok: false, retryable: [false], detail: "no photo", reads: [], vendor: "", model: "", kind: "", sticker: "", notes: "" } } : { ok: true, detail: "", photoId: 5n, result: { ok: true, retryable: [false], detail: "", reads: [{ kind: "serial", value: "C02XG2JHJGH1", confidence: 0.92 }, { kind: "asset_tag", value: "INV-0001", confidence: 0.9 }], vendor: "Apple", model: "MacBook Pro 16\"", kind: "laptop", sticker: "current", notes: "" } };
+    case "applyReading": return a[3].model === "MacBook Pro 16\"" && Number(a[2]) === 5 ? { ok: true, detail: "" } : { ok: false, detail: "unexpected input" };
     case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "", orgName: "Acme", adminGroup: "assets-admins", adminEmails: ["me@example.com"], peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, photoBytes: 120000n, aiSource: aiOn ? "hub" : "", aiModel: aiOn ? "openai · gpt-4.1-mini" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: "" } }];
     case "adminLogRows": return [{ at: now, who: "me@example.com", what: "x" }];
     case "importCsv": return { ok: true, created: 2n, updated: 1n, skipped: 0n, detail: "" };
@@ -252,6 +254,23 @@ if (role === "admin") {
   check(/M1 Pro · 16 GB · 512 GB/.test(document.querySelector('#devRows .dev[data-id="1"]').textContent) && /128 GB/.test(document.querySelector('#devRows .dev[data-id="3"]').textContent), "hardware line in the list (MDM, ABM fallback)");
   check($("devPickAll").textContent === "Select" && !$("devRows").classList.contains("selectable"), "checkboxes hidden until Select");
   $("devPickAll").click(); check($("devRows").classList.contains("selectable") && $("devPickAll").textContent === "Select all", "select mode on"); $("devBulkClear").click(); check(!$("devRows").classList.contains("selectable"), "select mode off");
+  // 0.26.0: labels for the selection only, and the stored photos read again
+  $("devPickAll").click(); document.querySelector('[data-pick-id="1"]').click(); document.querySelector('[data-pick-id="2"]').click(); await tick();
+  check(!$("devBulk").classList.contains("hidden") && $("devBulkCount").textContent === "2 selected", "two devices selected");
+  check($("devBulkLabels").classList.contains("hidden") === (role !== "admin") && (role !== "admin" || $("devBulkLabels").textContent === "Print labels (2)"), "selection bar offers labels for the selection: " + $("devBulkLabels").textContent);
+  if (role === "admin") {
+    check($("devLabels").textContent === "Print labels (2 selected)", "head button prints the selection: " + $("devLabels").textContent);
+    $("devLabels").click(); for (let i = 0; i < 6; i++) await tick(); check(!$("devLabelCard").classList.contains("hidden") && /2 labels|2 devices|Print 2/.test($("devLabelCard").textContent), "label card for the two selected devices: " + $("devLabelCard").textContent.slice(0, 80));
+    check($("devBulkReread").classList.contains("hidden") === !aiOn, "read-again button follows the AI setting");
+    if (aiOn) {
+      $("devBulkReread").click(); for (let i = 0; i < 12; i++) await tick();
+      check(!$("devRereadCard").classList.contains("hidden") && /MacBook Pro 14" → MacBook Pro 16"/.test($("devRereadCard").textContent.replace(/\s+/g, " ")) && /This device has no photo/.test($("devRereadCard").textContent), "re-read shows the proposed change and the device without a photo: " + $("devRereadCard").textContent.slice(0, 400));
+      check(document.querySelectorAll("#devRereadCard [data-reread]:checked").length === 1, "confident change is ticked");
+      const beforeApply = calls.length; $("devRereadCard").querySelector("[data-reread-apply]").click(); for (let i = 0; i < 8; i++) await tick();
+      check(calls.slice(beforeApply).includes("applyReading") && /1 updated/.test($("devRereadStatus").textContent), "corrections applied through applyReading: " + $("devRereadStatus").textContent);
+    }
+  }
+  $("devBulkClear").click(); await tick();
   document.querySelector('#stats [data-st="attention"]').click(); for (let i = 0; i < 5; i++) await tick();
   check(/Record hand-over to Ben Ko/.test($("devRows").textContent) && /Apple device/.test($("devRows").textContent) && /Open Apple inventory/.test($("devRows").textContent), "needs-attention panel lists the mismatch and the Apple gap");
   const beforeHand = calls.length; document.querySelector("[data-att-hand]").click(); for (let i = 0; i < 5; i++) await tick();

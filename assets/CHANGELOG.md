@@ -1,5 +1,10 @@
 # Changelog — kebab-stack assets
 
+## [0.26.0] — 2026-10-13
+
+- **Labels for the selection.** With devices selected, **Print labels** prints exactly those (the head button reads *Print labels (4 selected)*, the selection bar offers *Print labels (4)*); without a selection it prints the filtered list as before. Until now the bar's label button appeared only after a bulk status change, so a selection printed the whole list.
+- **Read photos again.** Select devices and choose **Read photos again**: the newest stored photo of each device goes through the vision model once more (one call per device, admins only), the review card shows every difference per field (serial, tag, vendor, model, kind) with the current value and the proposal, low-confidence reads stay unticked, devices without a photo say so. **Apply corrections** writes the ticked rows; the device history records *details corrected from the photo (read again with AI)* with the photo that was read. Nothing changes before that click. New update calls `rereadPhoto` and `applyReading`; stored data, authorization and photo storage are unchanged.
+
 ## [0.25.0] — 2026-10-11
 
 - Faster sign-in: the ticket login makes one Hub call and answers; groups and the AI status refresh in the background, the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less), the directory is pulled only when the person is unknown or the cache is stale. Requires Hub ≥ 0.40.0 for the suite login; the ticket path works with any Hub.

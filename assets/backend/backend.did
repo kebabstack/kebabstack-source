@@ -135,6 +135,13 @@ type Sale =
    waiverVersion: nat;
    wiped: bool;
  };
+type Reread = 
+ record {
+   detail: text;
+   ok: bool;
+   photoId: nat;
+   result: ReadResult;
+ };
 type RegisterOptions = 
  record {
    digits: nat;
@@ -735,6 +742,12 @@ service : {
       ok: bool;
     });
   adminLogRows: (tok: text) -> (vec LogRow) query;
+  /// Take over details corrected from a re-read photo (0.26.0); the history names the photo that was read.
+  applyReading: (tok: text, id: nat, photoId: nat, x: AssetInput) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   archiveAsset: (tok: text, id: nat, archived: bool) ->
    (record {
       detail: text;
@@ -1107,6 +1120,7 @@ service : {
                                                detail: text;
                                                ok: bool;
                                              });
+  rereadPhoto: (tok: text, assetId: nat) -> (Reread);
   revokeDealLink: (tok: text, id: nat) -> (record {
                                              detail: text;
                                              ok: bool;

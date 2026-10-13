@@ -4,7 +4,7 @@ import { PHASES, phaseOf, nextStep } from "./workflow.js";
 import { idlFactory } from "./idl.js";
 import { canonicalDestination } from "./canonical-url.js";
 import { createLabels } from "./labels.js";
-import { createBulk } from "./bulk.js";
+import { createBulk, rowFromReading } from "./bulk.js";
 import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory, suiteCookie } from "./hub-client.js";
 
 // deploy-time constants (INSTALL.md: sed the placeholders; the kitchen patches them on install)
@@ -428,10 +428,14 @@ async function loadDevices() {
 }
 const pickedIds = () => [...$("devRows").querySelectorAll("[data-pick-id]:checked")].map((b) => BigInt(b.dataset.pickId));
 async function paintBulkBar() {
-  const n = pickedIds().length, bar = $("devBulk");
+  const n = pickedIds().length, bar = $("devBulk"), admin = me.role === "admin";
   bar.classList.toggle("hidden", n === 0);
+  // The head button prints the selection as soon as there is one (0.26.0); the list count otherwise.
+  $("devLabels").textContent = n ? `Print labels (${n} selected)` : `Print labels (${lastRows.length})`;
   if (n === 0) return;
   $("devBulkCount").textContent = `${n} selected`;
+  $("devBulkLabels").classList.toggle("hidden", !admin); $("devBulkLabels").textContent = `Print labels (${n})`;
+  $("devBulkReread").classList.toggle("hidden", !admin || !me.aiOn);
   if (!$("devBulkLocation").dataset.loaded) { await fillLocationSelect($("devBulkLocation"), ""); $("devBulkLocation").dataset.loaded = "1"; }
 }
 // Checkboxes appear once someone wants to select (0.24.0); "Clear" puts the list back to reading mode.
@@ -471,8 +475,72 @@ async function bulkApply(status) {
 $("devBulkDeploy").onclick = () => bulkApply("deployed");
 $("devBulkStock").onclick = () => bulkApply("in_stock");
 $("devBulkMove").onclick = () => bulkApply("");
-$("devBulkLabels").onclick = () => { const ids = new Set(pickedIds().map(String)); const picked = lastRows.filter((r) => ids.has(String(r.asset.id))).map((r) => r.asset); if (picked.length) listLabels.open(picked); };
-$("devLabels").onclick = () => { if (lastRows.length) listLabels.open(lastRows.map((r) => r.asset)); };
+const pickedRows = () => { const ids = new Set(pickedIds().map(String)); return lastRows.filter((r) => ids.has(String(r.asset.id))); };
+$("devBulkLabels").onclick = () => { const picked = pickedRows().map((r) => r.asset); if (picked.length) listLabels.open(picked); };
+$("devLabels").onclick = () => { const picked = pickedRows().map((r) => r.asset); if (picked.length) listLabels.open(picked); else if (lastRows.length) listLabels.open(lastRows.map((r) => r.asset)); };
+// Read photos again (0.26.0): the newest stored photo of each selected device goes through the vision model once more,
+// the differences are shown per field and nothing changes until "Apply corrections". The history names the photo.
+const READ_FIELDS = [["serial", "Serial"], ["tag", "Tag"], ["vendor", "Vendor"], ["model", "Model"], ["kind", "Kind"]];
+let rereadRows = [], rereadRun = 0;
+const rereadChanges = (e) => (e.row ? READ_FIELDS.filter(([f]) => e.row[f] && e.row[f] !== (e.asset[f] || "")).map(([f, label]) => ({ f, label, from: e.asset[f] || "", to: e.row[f] })) : []);
+async function rereadSelected() {
+  const picked = pickedRows(); if (!picked.length) return;
+  const run = ++rereadRun, token = session.load(), card = $("devRereadCard");
+  rereadRows = picked.map((r) => ({ asset: { ...r.asset }, state: Number(r.photoCount) ? "waiting" : "nophoto", row: null, photoId: 0, detail: "" }));
+  card.classList.remove("hidden"); paintReread(true); card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  for (const e of rereadRows) {
+    if (e.state !== "waiting") continue;
+    e.state = "reading"; paintReread(true);
+    let r = null;
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        r = await backend.rereadPhoto(token, BigInt(e.asset.id));
+        if (run !== rereadRun) return;
+        if (r.ok || r.result?.retryable?.[0] !== true || attempt === 1) break;
+        await new Promise((res) => setTimeout(res, 1200));
+      }
+    } catch (err) { r = { ok: false, detail: String(err?.message || err).slice(0, 120) }; }
+    if (run !== rereadRun) return;
+    if (r.ok) { e.row = rowFromReading(r.result, { kind: e.asset.kind }); e.photoId = Number(r.photoId); e.state = "read"; } else { e.state = "failed"; e.detail = r.detail; }
+    paintReread(true);
+  }
+  paintReread(false);
+}
+function paintReread(busy) {
+  const card = $("devRereadCard"), done = rereadRows.filter((e) => e.state !== "waiting" && e.state !== "reading").length;
+  const rows = rereadRows.map((e, i) => {
+    const changes = rereadChanges(e), low = e.row && Number(e.row.confidence) < 0.6;
+    let body;
+    if (e.state === "waiting") body = "waiting…";
+    else if (e.state === "reading") body = "reading the photo…";
+    else if (e.state === "nophoto") body = "no photo on this device — add one on the device page or scan it";
+    else if (e.state === "failed") body = `<span class="low">${esc(e.detail)}</span>`;
+    else if (e.state === "applied") body = "updated";
+    else if (!changes.length) body = "the photo confirms the stored details";
+    else body = changes.map((c) => `<div><b>${esc(c.label)}</b>: ${c.from ? esc(c.from) : "<i>empty</i>"} → <b>${esc(c.to)}</b></div>`).join("") + (low ? '<div class="low">low confidence — check the photo before applying</div>' : "");
+    const pick = e.state === "read" && changes.length ? `<input type="checkbox" data-reread="${i}"${low ? "" : " checked"} aria-label="Apply to ${esc(deviceName(e.asset))}">` : "";
+    return `<div class="reread-row"><span class="pick">${pick}</span><div class="t"><b>${esc(deviceName(e.asset))}</b><span>${esc([e.asset.tag, e.asset.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div><div class="reread-body">${body}</div></div>`;
+  }).join("");
+  card.innerHTML = `<div class="btnrow" style="justify-content:space-between;margin:0"><h3 style="margin:0">Read photos again</h3><button class="sm" type="button" data-reread-close>Close</button></div><p class="kv" role="status">${busy ? `Reading ${done} of ${rereadRows.length}… one vision call per device; the list stays usable.` : `${done} of ${rereadRows.length} read. Tick what to take over; the device history names the photo.`}</p><div class="reread-list">${rows}</div><div class="btnrow"><button class="primary sm" type="button" data-reread-apply${busy ? " disabled" : ""}>Apply corrections</button><span class="status" id="devRereadStatus" role="status"></span></div>`;
+  card.querySelector("[data-reread-close]").onclick = () => { rereadRun++; rereadRows = []; card.classList.add("hidden"); };
+  card.querySelector("[data-reread-apply]").onclick = applyReread;
+}
+async function applyReread() {
+  const boxes = [...$("devRereadCard").querySelectorAll("[data-reread]:checked")];
+  if (!boxes.length) return setStatus("devRereadStatus", "err", "nothing ticked");
+  setStatus("devRereadStatus", "", "applying…");
+  let ok = 0; const errors = [];
+  for (const b of boxes) {
+    const e = rereadRows[Number(b.dataset.reread)], a = e.asset, input = { tag: a.tag, serial: a.serial, vendor: a.vendor, model: a.model, kind: a.kind, note: a.note };
+    for (const c of rereadChanges(e)) input[c.f] = c.to;
+    let r; try { r = await backend.applyReading(session.load(), BigInt(a.id), BigInt(e.photoId), input); } catch (err) { r = { ok: false, detail: String(err?.message || err).slice(0, 120) }; }
+    if (r.ok) { ok++; Object.assign(e.asset, input); e.row = null; e.state = "applied"; } else errors.push(`${deviceName(a)}: ${r.detail}`);
+  }
+  paintReread(false);
+  setStatus("devRereadStatus", errors.length ? "err" : "ok", `${ok} updated${errors.length ? " · " + errors.join(" · ") : ""}`);
+  if (ok) loadDevices();
+}
+$("devBulkReread").onclick = rereadSelected;
 let devTimer = 0;
 $("devQ").oninput = () => { clearTimeout(devTimer); devTimer = setTimeout(loadDevices, 220); };
 $("devStatus").onchange = loadDevices;

@@ -70,7 +70,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.25.0";
+  transient let BUILD_VERSION : Text = "0.26.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -957,15 +957,25 @@ persistent actor Assets {
     log(m.email, "created " # deviceName(a) # " #" # Nat.toText(a.id));
     { ok = true; id = a.id; detail = "" };
   };
-  public shared func updateAsset(tok : Text, id : Nat, x : AssetInput) : async { ok : Bool; detail : Text } {
-    if (migrating()) return { ok = false; detail = MIGRATING };
-    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+  func editAsset(m : Me, id : Nat, x : AssetInput, detail : Text, photoId : Nat) : { ok : Bool; detail : Text } {
     let a = switch (Map.get(assets, Nat.compare, id)) { case (?a) a; case null return { ok = false; detail = "no such device" } };
     let c = cleanInput(x);
     switch (duplicateOf(c, id)) { case (?d) return { ok = false; detail = "another device carries that tag or serial: " # deviceName(d) # " (#" # Nat.toText(d.id) # ")" }; case null {} };
     Map.add(assets, Nat.compare, id, { a with tag = c.tag; serial = c.serial; vendor = c.vendor; model = c.model; kind = c.kind; note = c.note; updatedAt = now() });
-    ignore addEvent(id, m.id, "edited", "details edited", "", 0);
+    ignore addEvent(id, m.id, "edited", detail, "", photoId);
     { ok = true; detail = "" };
+  };
+  public shared func updateAsset(tok : Text, id : Nat, x : AssetInput) : async { ok : Bool; detail : Text } {
+    if (migrating()) return { ok = false; detail = MIGRATING };
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+    editAsset(m, id, x, "details edited", 0);
+  };
+  /// Take over details corrected from a re-read photo (0.26.0); the history names the photo that was read.
+  public shared func applyReading(tok : Text, id : Nat, photoId : Nat, x : AssetInput) : async { ok : Bool; detail : Text } {
+    if (migrating()) return { ok = false; detail = MIGRATING };
+    let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
+    switch (Map.get(photos, Nat.compare, photoId)) { case (?p) { if (p.assetId != id) return { ok = false; detail = "that photo belongs to another device" } }; case null return { ok = false; detail = "no such photo" } };
+    editAsset(m, id, x, "details corrected from the photo (read again with AI)", photoId);
   };
   public shared func archiveAsset(tok : Text, id : Nat, archived : Bool) : async { ok : Bool; detail : Text } {
     if (migrating()) return { ok = false; detail = MIGRATING };
@@ -1152,6 +1162,20 @@ persistent actor Assets {
     let result = await aiRead(tok, img, mime);
     if (admin(tok) == null) return noRead("Your Assets administrator access has expired. Sign in again.");
     result;
+  };
+  /// Read a stored photo again (0.26.0): the newest photo of the device goes through the same vision call as intake.
+  /// Nothing changes until applyReading. Admins only; one vision call per device.
+  public type Reread = { ok : Bool; detail : Text; photoId : Nat; result : ReadResult };
+  public shared func rereadPhoto(tok : Text, assetId : Nat) : async Reread {
+    func none(d : Text) : Reread = { ok = false; detail = d; photoId = 0; result = noRead(d) };
+    switch (admin(tok)) { case null return none("admins only"); case (?_) {} };
+    if (not Map.containsKey(assets, Nat.compare, assetId)) return none("no such device");
+    var newest : ?Photo = null;
+    for ((_, p) in Map.entries(photos)) if (p.assetId == assetId) { switch (newest) { case (?n) { if (p.at > n.at or (p.at == n.at and p.id > n.id)) newest := ?p }; case null newest := ?p } };
+    let p = switch (newest) { case (?p) p; case null return none("This device has no photo. Add one on the device page or scan it.") };
+    let result = await aiRead(tok, p.bytes, p.mime);
+    if (admin(tok) == null) return none("Your Assets administrator access has expired. Sign in again.");
+    { ok = result.ok; detail = result.detail; photoId = p.id; result };
   };
   public type Candidate = { row : AssetRow; score : Nat; why : Text };
   /// Fuzzy match of read codes against tags and serials. Scores: 100 exact · 90 after confusable folding · 75 tail/head match · 60 one edit · 50 two edits.
