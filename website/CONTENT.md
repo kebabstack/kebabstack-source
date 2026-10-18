@@ -193,3 +193,14 @@ claimed. Evidence: public `bug/README.md` and `bug/src/player-session.js`.
 Both analytics guides scope daily estimates to cookieless collection and explain
 the optional consented, site-specific browser identifier (maximum 90 days). They
 do not claim cross-device person identification, location or automatic legal compliance.
+
+## Contracts Brex review (website 0.5.7)
+
+The bilingual Contracts text describes Contracts 0.21.0: read-only card selection
+per personal/teamspace, initial previous-calendar-year import, daily reconciliation,
+optional AI suggestions, per-payment contract assignments and explicit guided field
+confirmation. Evidence: contracts/backend/brex/, contracts/dist/brex.js and the
+Brex tests in tests/security.test.mjs. Split groups require manual review of new
+payments. No live banking connection, automatic term changes, payment initiation or
+measured savings is demonstrated by the public website. Deployment is recorded
+privately and must precede publication of this capability update.

@@ -105,7 +105,7 @@ export function appSignIn({ name, hubUrl, navigate = url => { location.href = ur
 
 /**
  * Suite cookie (hub ≥ 0.40): one Hub sign-in, every tool. The Hub keeps a suite-login token in a cookie on the
- * company's parent domain (dfinity.kebabstack.com → .kebabstack.com). A tool opened without its own session reads
+ * company's parent domain (hub.example.org → .example.org). A tool opened without its own session reads
  * it and calls its backend's loginWithSuite; the Hub re-checks the person and their access to that tool. Never set
  * on a public gateway suffix (icp0.io, ic0.app, icp.net …) or a bare host: there the ticket hand-off stays.
  */
@@ -115,7 +115,7 @@ export const suiteCookie = {
     const h = String(host || "").toLowerCase().replace(/\.$/, "");
     if (!h || /^[\d.]+$/.test(h) || h.includes(":")) return "";
     const parts = h.split(".");
-    if (parts.length < 3) return ""; // "hub.company.ch" shares with nothing; "dfinity.kebabstack.com" → "kebabstack.com"
+    if (parts.length < 3) return ""; // "hub.company.ch" shares with nothing; "hub.example.org" → "kebabstack.com"
     const parent = parts.slice(1).join(".");
     if (/^(raw\.)?(icp0\.io|ic0\.app|icp\.net|icp1\.io|icp2\.io|icp-api\.io|internetcomputer\.org|localhost)$/.test(parent)) return "";
     return parent;

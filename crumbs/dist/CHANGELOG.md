@@ -1,5 +1,9 @@
 # Crumbs changelog
 
+## [0.10.0] — 2026-10-18
+
+- Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.
+
 ## [0.9.1] — 2026-10-18
 
 - Reduce report instruction cost: deduplicate compact visitor keys once per contributing visit/group and calculate acquisition dimensions/filters once per session. Preserve exact totals, attribution and existing visitor/session boundaries.

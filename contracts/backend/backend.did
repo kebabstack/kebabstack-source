@@ -67,6 +67,31 @@ type Task =
    snoozedUntil: int;
    title: text;
  };
+type Summary =
+ record {
+   ignored: nat;
+   linked: nat;
+   pending: nat;
+   split: bool;
+ };
+type Status =
+ record {
+   aiEnabled: bool;
+   cards: vec Card;
+   configured: bool;
+   enabled: bool;
+   error: text;
+   groups: nat;
+   lastSuccess: int;
+   moreCards: bool;
+   nextAt: int;
+   pages: nat;
+   payments: nat;
+   scanning: bool;
+   selected: vec text;
+   since: text;
+   testedAt: int;
+ };
 type SpaceView =
  record {
    archived: bool;
@@ -183,6 +208,12 @@ type Settings =
    tzOffsetMinutes: int;
    version: text;
  };
+type Sample =
+ record {
+   amountMinor: int;
+   date: text;
+   kind: text;
+ };
 type Rule =
  record {
    confirmed: bool;
@@ -192,6 +223,43 @@ type Rule =
    id: nat;
    kind: text;
    value: text;
+ };
+type ReviewState =
+ variant {
+   ignored;
+   linked: nat;
+   pending;
+ };
+type ReviewGroup =
+ record {
+   aiAt: int;
+   aiError: text;
+   approvedAmount: opt int;
+   autoLink: bool;
+   candidates: vec nat;
+   cardId: text;
+   classification: Classification;
+   count: nat;
+   currency: text;
+   decidedAt: int;
+   decidedBy: text;
+   descriptor: text;
+   id: nat;
+   latestAmount: int;
+   latestDate: text;
+   merchant: text;
+   reason: text;
+   revision: nat;
+   samples: vec Sample;
+   space: text;
+   state: ReviewState;
+   summary: Summary;
+   totalMinor: int;
+ };
+type Result =
+ record {
+   detail: text;
+   ok: bool;
  };
 type Reporting =
  record {
@@ -326,6 +394,23 @@ type PermissionStatus =
    model: nat;
    revision: text;
  };
+type PaymentReview =
+ record {
+   assignment: Assignment;
+   history: vec DecisionEvent;
+   id: text;
+ };
+type Payment =
+ record {
+   amountMinor: int;
+   cardId: text;
+   currency: text;
+   date: text;
+   description: text;
+   id: text;
+   kind: text;
+   merchant: text;
+ };
 type OwnedObject =
  record {
    id: text;
@@ -436,6 +521,11 @@ type FieldDef =
    required: bool;
    title: text;
  };
+type Field =
+ record {
+   name: text;
+   value: text;
+ };
 type Evidence =
  record {
    partId: text;
@@ -483,10 +573,40 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
+type DecisionResult =
+ record {
+   contractId: opt nat;
+   detail: text;
+   ok: bool;
+ };
+type DecisionEvent =
+ record {
+   after: ReviewState;
+   at: int;
+   automatic: bool;
+   before: ReviewState;
+   person: text;
+ };
+type Decision =
+ variant {
+   create: text;
+   dismiss;
+   link: nat;
+   reopen;
+ };
 type CostRevision =
  record {
    at: int;
    terms: Terms;
+ };
+type Contract__1 =
+ record {
+   fields: vec Field;
+   id: nat;
+   revision: nat;
+   status: text;
+   title: text;
+   vendor: text;
  };
 type ContractTypeInput =
  record {
@@ -593,6 +713,13 @@ type CommercialField =
    field: text;
    value: text;
  };
+type Classification =
+ variant {
+   oneTime;
+   other;
+   subscription;
+   unknown;
+ };
 type Change =
  record {
    basis: text;
@@ -612,6 +739,13 @@ type Case =
    ticket: nat;
    url: text;
  };
+type Card =
+ record {
+   id: text;
+   lastFour: text;
+   name: text;
+   status: text;
+ };
 type AuditRow =
  record {
    after: text;
@@ -622,6 +756,21 @@ type AuditRow =
    sourceId: opt nat;
    what: text;
    who: text;
+ };
+type Assignment =
+ record {
+   at: int;
+   person: text;
+   state: ReviewState;
+ };
+type Answer =
+ record {
+   before: text;
+   detail: text;
+   field: text;
+   ok: bool;
+   revision: nat;
+   value: text;
  };
 type AiTestResult =
  record {
@@ -666,6 +815,11 @@ service : {
              });
   /// Admin log (last 200 lines).
   adminLogRows: (tok: text) -> (vec LogRow) query;
+  analyzeBrexReview: (tok: text, id: nat) -> (Result);
+  answerBrexGuide: (tok: text, contractId: nat, revision: nat, field:
+   text, answer: text, useAi: bool) -> (Answer);
+  applyBrexGuide: (tok: text, contractId: nat, revision: nat, field:
+   text, value: text, replace: bool) -> (Result);
   /// Hand the review of a proposal to a colleague (staff) — they get a notification; nothing hidden opens up: the assignee must be allowed to see the contract.
   assignProposal: (tok: text, id: nat, assignee: text) ->
    (record {
@@ -678,6 +832,22 @@ service : {
       detail: text;
       ok: bool;
     });
+  brexGuide: (tok: text, contractId: nat) ->
+   (opt record {
+          contract: Contract__1;
+          question: opt Field;
+        }) query;
+  brexReviewDetail: (tok: text, id: nat, offset: nat) ->
+   (opt
+     record {
+       contracts: vec Contract__1;
+       decisions: vec DecisionEvent;
+       group: ReviewGroup;
+       next: opt nat;
+       payments: vec Payment;
+       reviews: vec PaymentReview;
+     }) query;
+  brexStatus: (tok: text) -> (opt Status) query;
   /// First run: a hub owner/admin claims administration once, while nothing is stored yet.
   claimAdmin: (tok: text) -> (record {
                                 detail: text;
@@ -689,6 +859,8 @@ service : {
       detail: text;
       ok: bool;
     });
+  configureBrex: (tok: text, selected: vec text, enabled: bool, aiEnabled:
+   bool) -> (Result);
   /// Operating state for the Connection page (staff): what the relay handed in, the oldest open job, failures, AI usage, outbox backlog.
   connectionStatus: (tok: text) ->
    (opt
@@ -743,6 +915,10 @@ service : {
       id: text;
       ok: bool;
     });
+  decideBrex: (tok: text, id: nat, revision: nat, decision: Decision,
+   autoLink: bool, classification: Classification) -> (DecisionResult);
+  decideBrexPayments: (tok: text, groupId: nat, revision: nat, ids: vec text,
+   decision: Decision) -> (DecisionResult);
   /// Decide a proposal: accept some fields (with the value as shown or corrected), reject the rest. Atomic against the contract's revision.
   /// target: the contract to apply to — the proposal's, one of its candidates, or (staff only) `newContract = true` to create a draft from it.
   decideProposal: (tok: text, id: nat, d:
@@ -791,6 +967,7 @@ service : {
           members: nat;
           name: text;
         }) query;
+  disconnectBrex: (tok: text) -> (Result);
   /// The bytes of a stored document — session-gated like everything else (no public URLs).
   documentData: (tok: text, id: nat) ->
    (opt record {
@@ -837,6 +1014,7 @@ service : {
       ok: bool;
       revision: nat;
     });
+  findBrexContracts: (tok: text, search: text) -> (vec Contract__1) query;
   /// Safe connection metadata only; no credentials or other workspaces' jobs or documents.
   getAiStatus: (tok: text) -> (opt AiStatus) query;
   /// Everything about one contract: confirmed terms, future terms, open proposals, sources, documents, tasks, history, rules.
@@ -977,6 +1155,12 @@ service : {
                 detail: text;
                 ok: bool;
               });
+  listBrexReview: (tok: text, filter: text, offset: nat, limit: nat) ->
+   (opt record {
+          next: opt nat;
+          rows: vec ReviewGroup;
+          total: nat;
+        }) query;
   listContractTypes: (tok: text) -> (vec ContractType) query;
   /// The contracts this person may see, filtered: q (title/vendor/product/ref), status, responsible id, onlyIncomplete, onlyDue (decision within 60 days).
   listContracts: (tok: text, f:
@@ -1028,6 +1212,7 @@ service : {
       detail: text;
       ok: bool;
     });
+  moreBrexCards: (tok: text) -> (Result);
   /// Deliberate transfer: source and destination owners approve through this action; related evidence follows atomically.
   moveContract: (tok: text, id: nat, revision: nat, destination: text) ->
    (record {
@@ -1096,6 +1281,7 @@ service : {
       ok: bool;
     });
   revealLicenseKey: (tok: text, id: nat) -> (opt text);
+  saveBrexToken: (tok: text, key: text) -> (Result);
   saveContractType: (tok: text, input: ContractTypeInput) ->
    (record {
       detail: text;
@@ -1232,8 +1418,10 @@ service : {
       detail: text;
       ok: bool;
     });
+  syncBrex: (tok: text) -> (Result);
   /// App administrators can test a fixed neutral prompt, using the same provider path as extraction.
   testAiConnection: (tok: text) -> (AiTestResult);
+  testBrexConnection: (tok: text) -> (Result);
   /// Today: what needs the person — proposals to decide, tasks due or overdue, contracts without a responsible person, processing failures (staff).
   today: (tok: text) ->
    (opt

@@ -29,3 +29,12 @@ data boundaries and rollout. App roles remain managed in Hub.
 ## Forms public intake
 
 See [public forms, embedding and the Desk handoff](INTAKE.md) for setup, privacy boundaries and alpha limitations. External mail is not connected.
+
+## Shared workspace controls
+
+Operational tables marked for shared controls offer **Table options** for finding
+loaded rows and choosing columns. Header buttons sort only the currently loaded
+rows; app filters, totals and exports retain their existing scope. Reset restores
+the original order. Editable grids and existing app-owned queue sorting stay with
+their workflows. Long marked selectors keep native selection and add an option
+search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).

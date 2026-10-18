@@ -54,6 +54,6 @@ fs.writeFileSync(path.join(out,'fixture.js'),source);
 let html=fs.readFileSync(path.join(out,'index.html'),'utf8').replace('<script type="module" src="./app.js"></script>','<script src="./fixture.js"></script><script type="module" src="./app.js"></script>');
 // ?demo=reread walks the reviewer to the selection bar and the read-again card (screenshots for design reviews).
 html=html.replace('</body>',`<script>if(new URLSearchParams(location.search).get('demo')==='reread'){let n=0;const t=setInterval(()=>{const pick=document.getElementById('devPickAll'),boxes=document.querySelectorAll('[data-pick-id]');if(++n>60)clearInterval(t);if(!pick||pick.classList.contains('hidden')||boxes.length<2)return;clearInterval(t);pick.click();boxes[0].click();boxes[1].click();setTimeout(()=>document.getElementById('devBulkReread').click(),150);},100);}</script></body>`);
-html=html.replace('<body>','<body><div style="background:#255946;color:#fff;text-align:center;padding:7px;font:11px system-ui">LOCAL DESIGN PREVIEW · Fictional data · Changes affect this preview only</div>');
+html=html.replace(/<body([^>]*)>/,'<body$1><div style="background:#255946;color:#fff;text-align:center;padding:7px;font:11px system-ui">LOCAL DESIGN PREVIEW · Fictional data · Changes affect this preview only</div>');
 fs.writeFileSync(path.join(out,'index.html'),html);
 console.log('Preview built in '+out+'\nServe locally: python3 -m http.server 4173 --bind 127.0.0.1 --directory '+out);

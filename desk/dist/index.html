@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="./components.css">
 <link rel="stylesheet" href="./workboard.css">
 <link rel="stylesheet" href="./queue-bulk.css">
+<script type="module" src="./workspace-ui.js"></script>
 </head>
 <body class="ks-workspace">
 
@@ -60,9 +61,9 @@
         <div class="hero-art" aria-hidden="true"><div class="hero-orbit"></div><div class="hero-tile hero-tile-back">✦</div><div class="hero-tile hero-tile-front"><svg viewBox="0 0 48 48" fill="none"><path d="M11 24a13 13 0 0 1 26 0v10a6 6 0 0 1-6 6h-6M11 24v10M37 24v10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><rect x="7" y="23" width="9" height="13" rx="4" fill="currentColor"/><rect x="32" y="23" width="9" height="13" rx="4" fill="currentColor"/><rect x="19" y="37" width="9" height="6" rx="3" fill="currentColor"/></svg></div><span class="hero-spark">+</span></div>
       </div>
       <div id="meOverview" class="personal-stats"></div>
-      <div id="meApprovals" class="card approvalbox hidden"><h3>Your approval is needed</h3><p class="kv">A quick decision will help these requests move forward.</p><div class="table-scroll"><table><thead><tr><th>Request number</th><th>Request</th><th>Requested by</th><th>Submitted</th></tr></thead><tbody id="meApprovalRows"></tbody></table></div></div>
+      <div id="meApprovals" class="card approvalbox hidden"><h3>Your approval is needed</h3><p class="kv">A quick decision will help these requests move forward.</p><div class="table-scroll"><table data-ks-table><thead><tr><th>Request number</th><th>Request</th><th>Requested by</th><th data-ks-sort="none">Submitted</th></tr></thead><tbody id="meApprovalRows"></tbody></table></div></div>
       <div class="section-heading"><div><span class="eyebrow">WE'RE ON IT</span><h3>Your requests</h3></div><span id="meStatus" class="status" role="status"></span></div>
-      <div class="card flat request-list"><div class="table-scroll"><table><thead><tr><th>Request number</th><th>How we can help</th><th>Progress</th><th>Last update</th></tr></thead><tbody id="meRows"></tbody></table></div></div>
+      <div class="card flat request-list"><div class="table-scroll"><table data-ks-table><thead><tr><th>Request number</th><th>How we can help</th><th>Progress</th><th data-ks-sort="none">Last update</th></tr></thead><tbody id="meRows"></tbody></table></div></div>
     </section>
 
     <!-- ===== new request (catalog + form) ===== -->
@@ -95,8 +96,8 @@
         <div class="seg" id="viewSeg">
           <button data-v="open" class="active">Active</button><button data-v="mine">Assigned to me</button><button data-v="unassigned">Unassigned</button><button data-v="waiting">Waiting</button><button data-v="breached">Overdue</button><button data-v="done">Completed</button><button data-v="all">All</button>
         </div>
-        <select id="fQueue" aria-label="Filter by support team"><option value="">All teams</option></select>
-        <select id="fStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="new">Received</option><option value="open">In progress</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
+        <select data-ks-search id="fQueue" aria-label="Filter by support team"><option value="">All teams</option></select>
+        <select data-ks-search id="fStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="new">Received</option><option value="open">In progress</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
         <input type="text" id="fQ" aria-label="Search requests" placeholder="Search requests, people or request numbers">
 
         <span id="qStatus" class="status" role="status"></span>
@@ -112,9 +113,9 @@
       <div class="card">
         <div class="row">
           <div><label for="anReq">Requester (e-mail)</label><input type="text" id="anReq" required list="dirList" placeholder="name or e-mail"></div>
-          <div><label for="anType">Request type</label><select id="anType"></select></div>
-          <div><label for="anPrio">Priority</label><select id="anPrio"><option>low</option><option selected>normal</option><option>high</option><option>urgent</option></select></div>
-          <div><label for="anChannel">Channel</label><select id="anChannel"><option value="agent">walk-up</option><option value="phone">phone</option><option value="chat">chat</option><option value="email">e-mail</option></select></div>
+          <div><label for="anType">Request type</label><select data-ks-search id="anType"></select></div>
+          <div><label for="anPrio">Priority</label><select data-ks-search id="anPrio"><option>low</option><option selected>normal</option><option>high</option><option>urgent</option></select></div>
+          <div><label for="anChannel">Channel</label><select data-ks-search id="anChannel"><option value="agent">walk-up</option><option value="phone">phone</option><option value="chat">chat</option><option value="email">e-mail</option></select></div>
         </div>
         <div><label for="anSubject">Subject</label><input type="text" id="anSubject" required maxlength="160"></div>
         <div id="anFields"></div>
@@ -155,7 +156,7 @@
           <div class="side">
             <div class="card flat hidden" id="tCustomer"></div>
             <div class="card flat person-context hidden" id="tPersonContext"></div>
-            <div class="card handling-card" id="tActions"><div id="tStaff"><h3>Request details</h3><label for="tState">Status</label><select id="tState"></select><div class="field-heading"><label for="tAssignee">Assigned to</label><button id="tAssignMe" class="text-button">Assign to me</button></div><select id="tAssignee"></select><label for="tPriority">Priority</label><select id="tPriority"><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><details class="routing-details"><summary>Routing &amp; target date</summary><label for="tQueue">Support team</label><div class="inline-control"><input type="text" id="tQueue" list="groupList" placeholder="Choose a team"><button id="tQueueSave" class="sm">Save team</button></div><label for="tDue">Target resolution date</label><input type="date" id="tDue"><button id="tDueSave" class="text-button">Save target date</button></details><button class="text-button" id="tAddChecklist">＋ Add a checklist</button></div></div>
+            <div class="card handling-card" id="tActions"><div id="tStaff"><h3>Request details</h3><label for="tState">Status</label><select data-ks-search id="tState"></select><div class="field-heading"><label for="tAssignee">Assigned to</label><button id="tAssignMe" class="text-button">Assign to me</button></div><select data-ks-search id="tAssignee"></select><label for="tPriority">Priority</label><select data-ks-search id="tPriority"><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><details class="routing-details"><summary>Routing &amp; target date</summary><label for="tQueue">Support team</label><div class="inline-control"><input type="text" id="tQueue" list="groupList" placeholder="Choose a team"><button id="tQueueSave" class="sm">Save team</button></div><label for="tDue">Target resolution date</label><input type="date" id="tDue"><button id="tDueSave" class="text-button">Save target date</button></details><button class="text-button" id="tAddChecklist">＋ Add a checklist</button></div></div>
             <div class="card support-card" id="tSupportCard"><span class="eyebrow">YOUR REQUEST</span><div id="tSupport"></div><p>Keep the conversation here. Your IT team has the context.</p></div>
             <div class="card flat" id="tRequesterCard"><h3>Requested by</h3><div id="tRequester" class="requester-profile"></div></div>
             <div class="card flat" id="tTasksCard"><h3>Checklist <span class="count" id="tTaskCount"></span></h3><div id="tTasks"></div><div id="tTaskAdd" class="inline-control"><input type="text" id="tTaskTitle" aria-label="New checklist item" placeholder="Add a task"><button id="tTaskAddBtn" class="sm">Add</button></div></div>
@@ -196,7 +197,7 @@
         <div class="card flat">
           <h3>Request types</h3>
           <div class="kv">What people can ask for. Each type carries its own fields, checklist, queue, approval rule and SLA.</div>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th></th><th>Type</th><th>Queue</th><th>Approval</th><th>SLA</th><th>Fields</th><th>State</th><th></th></tr></thead><tbody id="ctRows"></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th></th><th>Type</th><th>Queue</th><th>Approval</th><th>SLA</th><th>Fields</th><th>State</th><th></th></tr></thead><tbody id="ctRows"></tbody></table></div>
           <div class="btnrow"><button id="ctNew" class="primary">New type</button><button id="ctDefaults" class="sm">Restore defaults (empty catalog only)</button><span id="ctStatus" class="status" role="status"></span></div>
         </div>
         <div class="card hidden" id="ctForm">
@@ -208,15 +209,15 @@
           </div>
           <div><label for="ctDesc">Description</label><input type="text" id="ctDesc" maxlength="200"></div>
           <div class="row">
-            <div><label for="ctApproval">Approval</label><select id="ctApproval"><option value="none">none</option><option value="manager">requester's manager</option><option value="group">a hub group</option></select></div>
+            <div><label for="ctApproval">Approval</label><select data-ks-search id="ctApproval"><option value="none">none</option><option value="manager">requester's manager</option><option value="group">a hub group</option></select></div>
             <div><label for="ctApprovalGroup">Approval group</label><input type="text" id="ctApprovalGroup" list="groupList" placeholder="e.g. Security"></div>
-            <div><label for="ctPrio">Default priority</label><select id="ctPrio"><option>low</option><option selected>normal</option><option>high</option><option>urgent</option></select></div>
+            <div><label for="ctPrio">Default priority</label><select data-ks-search id="ctPrio"><option>low</option><option selected>normal</option><option>high</option><option>urgent</option></select></div>
           </div>
           <div class="row">
             <div><label for="ctRespond">Reply target (hours, 0 = none)</label><input type="number" id="ctRespond" min="0"></div>
             <div><label for="ctResolve">Resolution target (hours, 0 = none)</label><input type="number" id="ctResolve" min="0"></div>
             <div><label for="ctDueField">Due from date field (key)</label><input type="text" id="ctDueField" placeholder="startDate"></div>
-            <div><label for="ctVis">Visibility</label><select id="ctVis"><option value="all">everyone</option><option value="agents">agents only</option></select></div>
+            <div><label for="ctVis">Visibility</label><select data-ks-search id="ctVis"><option value="all">everyone</option><option value="agents">agents only</option></select></div>
           </div>
           <label>Fields</label>
           <div class="fieldrow" style="margin-top:0"><span class="cb">key</span><span class="cb">label</span><span class="cb">kind</span><span class="cb">options (| separated)</span><span class="cb">Required</span><span class="cb">Sensitive</span><span></span></div>
@@ -234,7 +235,7 @@
           <div class="kv" id="aiSourceLine" style="margin-bottom:8px">checking where the key comes from…</div>
           <div class="kv">Triage note on new requests, summaries and reply drafts for agents. Nothing AI does changes a ticket without a human click. <b>Preferred:</b> the company's key from the hub (lane <i>AI</i> for this app, set once under the hub's Settings → AI). The fields below are a <b>local fallback</b> for a desk without a hub key; the hub key wins whenever it is there. Keys never reach a browser; calls go out from this engine as single-node requests.</div>
           <div class="row">
-            <div><label for="aiProvider">Provider</label><select id="aiProvider"><option value="openai">OpenAI-compatible (chat/completions)</option><option value="anthropic">Anthropic (messages)</option></select></div>
+            <div><label for="aiProvider">Provider</label><select data-ks-search id="aiProvider"><option value="openai">OpenAI-compatible (chat/completions)</option><option value="anthropic">Anthropic (messages)</option></select></div>
             <div><label for="aiModel">Model</label><input type="text" id="aiModel" placeholder="e.g. gpt-4o-mini / claude-sonnet-4-5"></div>
           </div>
           <div><label for="aiUrl">Endpoint URL</label><input type="text" id="aiUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
@@ -253,12 +254,12 @@
         </div>
         <div class="card flat">
           <h3>Channels</h3>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Channel</th><th>Workspace</th><th>Becomes</th><th>Last event</th><th></th></tr></thead><tbody id="skRows"><tr><td colspan="5" class="kv">none yet</td></tr></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Channel</th><th>Workspace</th><th>Becomes</th><th>Last event</th><th></th></tr></thead><tbody id="skRows"><tr><td colspan="5" class="kv">none yet</td></tr></tbody></table></div>
           <div id="skAdd" style="margin-top:12px;border-top:1px solid var(--ks-rule);padding-top:10px">
             <div class="row">
-              <div><label for="skBot">Bot (from the hub)</label><select id="skBot"></select></div>
-              <div><label>Channel</label><div style="display:flex;gap:6px"><select id="skChannel" style="flex:1"><option value="">load channels first</option></select><button id="skLoad" class="sm">Load</button></div></div>
-              <div><label for="skType">Messages become</label><select id="skType"></select></div>
+              <div><label for="skBot">Bot (from the hub)</label><select data-ks-search id="skBot"></select></div>
+              <div><label>Channel</label><div style="display:flex;gap:6px"><select data-ks-search id="skChannel" style="flex:1"><option value="">load channels first</option></select><button id="skLoad" class="sm">Load</button></div></div>
+              <div><label for="skType">Messages become</label><select data-ks-search id="skType"></select></div>
             </div>
             <div class="kv" id="skChanHint" style="margin-top:6px"></div>
             <div class="btnrow"><button id="skAddBtn" class="primary sm">Add channel</button><span id="skAddStatus" class="status" role="status"></span></div>
@@ -276,8 +277,8 @@
       </div>
 
       <div class="spane" id="sp-log">
-        <div class="card flat"><h3>Notification deliveries</h3><div class="kv" id="nhSummary">Loading…</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>When</th><th>To</th><th>Title</th><th>Result</th></tr></thead><tbody id="nhRows"></tbody></table></div></div>
-        <div class="card flat"><h3>Admin log</h3><div class="kv">Settings and catalog changes. Ticket history lives on each ticket.</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div></div>
+        <div class="card flat"><h3>Notification deliveries</h3><div class="kv" id="nhSummary">Loading…</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th data-ks-sort="none">When</th><th>To</th><th>Title</th><th>Result</th></tr></thead><tbody id="nhRows"></tbody></table></div></div>
+        <div class="card flat"><h3>Admin log</h3><div class="kv">Settings and catalog changes. Ticket history lives on each ticket.</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th data-ks-sort="none">When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div></div>
       </div>
     </section>
 
@@ -351,7 +352,7 @@
         <h3>9 · Slack intake</h3>
         <p>Optional. A support channel in Slack becomes a queue: every top-level message from a person becomes a request of the type chosen for that channel (the first line is the subject, the whole message the description, the sender the requester when Slack knows their e-mail). The bot answers in the thread with the key and a link; replies in the thread land on the request as comments, and replies from desk land in the thread. A <b>✅</b> on the first message resolves the request (blocked while checklist items are open, with a note in the thread); removing it reopens. Request types with sensitive fields point people to the portal form instead of asking for details in the channel. The Slack app is configured once in the hub (token and signing secret) and assigned to desk there; desk fetches the credentials every 15 minutes and verifies every incoming event against the signing secret. Several channels, even from different workspaces, can feed one desk.</p>
         <h3>Secrets &amp; trust</h3>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Secret</th><th>Where</th><th>Scope</th></tr></thead><tbody>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Secret</th><th>Where</th><th>Scope</th></tr></thead><tbody>
           <tr><td>Session token</td><td>browser localStorage + canister</td><td>10 hours, per person; ended by sign-out, deactivation or expiry</td></tr>
           <tr><td>Hub ticket</td><td>URL fragment, removed on load</td><td>90 s, single use, only this backend can redeem it</td></tr>
           <tr><td>AI API key</td><td>canister, write-only</td><td>outbound HTTPS only; cleared with one click</td></tr>

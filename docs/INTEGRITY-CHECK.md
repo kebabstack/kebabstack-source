@@ -105,3 +105,17 @@ necessary personal ICP identity reauthentication. Do not request secrets in chat
 or renew a valid identity unnecessarily. Report fixed/retested, open, untested
 and blocked items separately, with commits, dates, test skips and publication
 status. Reused evidence must be labelled as such.
+
+## Rotating coverage, not repeated smoke-only checks
+
+Keep a private persistent matrix of module × workflow × role × state × viewport
+or load case, with actual evidence date/commit, status, risk and next action.
+Daily: prioritize new critical findings and changed consumers; additionally select
+one unverified and one longest-unverified executable case. Rotate operations
+(Hub/Kitchen/Vault), evidence (Assets/Contracts), service (Desk/Slack/on-call),
+assurance (Forms/Trust/Watch), and platform (Crumbs/SDK/MCP/website/games) across
+five weekday runs. A blocked case retains its cause and recovery condition; select
+another case rather than recording a pass. Only executed, evidenced checks advance
+the rotation. Inspect the real app that consumes a shared component; passing its
+unit tests does not certify all consumers. Revisit skipped groups before repeating
+comfortable checks. Report newly closed gaps, overdue cases and the next focus.

@@ -2,7 +2,7 @@
 
 This module publishes only the static marketing website. It is separate from
 Kitchen and the application suite. It neither upgrades the suite nor publishes
-its source. Target domain: **kebabstack.dev**. Version: **0.5.6**.
+its source. Target domain: **kebabstack.dev**. Version: **0.5.7**.
 
 ## Build and inspect
 

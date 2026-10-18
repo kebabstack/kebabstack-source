@@ -207,7 +207,7 @@ await go("#/inbox/7");
 check(on("viewSource") && /Your renewal/.test($("srcTitle").textContent) && /READY TO CHECK/.test($("srcStatus").textContent), "source head");
 check(/Sunrise Cloud/.test($("srcMeta").textContent) && /cc me@example.com/.test($("srcMeta").textContent) && $("srcMeta").querySelector('a[href="#/c/1"]'), "source meta with cc and contract link");
 const propBox = document.querySelector('#srcProposals .prop[data-p="11"]');
-check(!!propBox && document.querySelectorAll('#srcProposals .prop[data-p="11"] tbody tr').length === 3, "open proposal with three field rows");
+check(!!propBox && document.querySelectorAll('#srcProposals .prop[data-p="11"] .ks-review-field').length === 3, "open proposal with three individually labelled evidence fields");
 check(/1,650\.00/.test(propBox.textContent) && /1,500\.00/.test(propBox.textContent), "money shown as decimals (old and new)");
 check(propBox.querySelector('input[data-i="0"]').checked && propBox.querySelector('input[data-i="1"]').checked && !propBox.querySelector('input[data-i="2"]').checked, "explicit fields pre-ticked, ambiguous not");
 check(/might be counted from the invoice date/.test(propBox.textContent), "uncertainties listed");

@@ -39,8 +39,8 @@ icp canister call backend setHub '("<HUB-BACKEND-CANISTER-ID>")' -e ic
 
 ### Suite login (Assets ≥ 0.25.0, Hub ≥ 0.40.0)
 
-When Assets and the Hub run on the same parent domain (for example `assets.kebabstack.com` and
-`dfinity.kebabstack.com`), a person signed in to the Hub opens Assets without a detour: the Hub's suite cookie
+When Assets and the Hub run on the same parent domain (for example `assets.example.org` and
+`hub.example.org`), a person signed in to the Hub opens Assets without a detour: the Hub's suite cookie
 is redeemed by the Assets backend at the Hub, which re-checks the person and their Assets access. On a public
 gateway address (`…icp0.io`) the ticket hand-off through the Hub keeps working unchanged. Nothing to configure.
 
@@ -375,3 +375,12 @@ tags receive successive numbers in device-id order above the highest existing
 numeric suffix. Each repair is recorded in history. No old labels are renumbered;
 previously issued invoice snapshots remain unchanged. Test a populated upgrade
 before production; this source change alone does not alter the live register.
+
+## Shared workspace controls
+
+Operational tables marked for shared controls offer **Table options** for finding
+loaded rows and choosing columns. Header buttons sort only the currently loaded
+rows; app filters, totals and exports retain their existing scope. Reset restores
+the original order. Editable grids and existing app-owned queue sorting stay with
+their workflows. Long marked selectors keep native selection and add an option
+search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).

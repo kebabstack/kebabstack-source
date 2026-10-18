@@ -5,7 +5,7 @@ The interface follows the [shared Kebabstack standard](../design/README.md): can
 App roles are managed exclusively in [Hub → Permissions](../docs/APP-PERMISSIONS.md). Active Hub owners/admins and per-app Admins can see and manage all app content. Employees retain their own and explicitly shared content; Watch requires an explicit Viewer/Admin grant by default.
 
 
-Version **0.7.1** makes the daily workflow **upload → review → save → stay ahead of renewal**.
+Version **0.21.0** makes the daily workflow **upload → review → save → stay ahead of renewal**.
 The overview shows current annual recurring cost, upcoming decisions and unassigned licenses.
 The SaaS table brings tool, owner, license count, dates, cancellation deadline and auto-renewal
 into one view. Personal and teamspaces retain their existing access rules.
@@ -278,3 +278,84 @@ Native reads retain up to 120,000 supplementary text characters plus original pa
 request size and provider limits still apply. A stronger model cannot supply an agreement
 or referenced terms that were not provided or successfully retrieved. AI suggestions still
 need review, particularly reseller bundles, seat counts and product-specific notice clauses.
+
+## Shared workspace controls
+
+Operational tables marked for shared controls offer **Table options** for finding
+loaded rows and choosing columns. Header buttons sort only the currently loaded
+rows; app filters, totals and exports retain their existing scope. Reset restores
+the original order. Editable grids and existing app-owned queue sorting stay with
+their workflows. Long marked selectors keep native selection and add an option
+search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
+
+## Brex payment discovery (0.21.0)
+
+**Settings → Brex payments** connects a dedicated Brex token with Cards Read and
+Card transactions Read. Test access, select up to 50 visible cards and explicitly
+enable daily imports. Only personal-space owners, teamspace owners and inherited
+app admins can inspect or manage the connection and payment evidence. Editors and
+viewers do not gain financial access through contract membership. Archived spaces
+stop imports; the person who configured the connection must retain owner access.
+
+The initial range starts on 1 January of the previous calendar year (2025-01-01
+when configured in 2026). The cutoff is retained. Each completed scan schedules
+the next for 24 hours later; reconciliation rereads the range to capture delayed
+bookings. Pages, retries and IDs survive upgrades. A scan can take multiple timer
+ticks; partial progress is explicitly shown. Brex returns settled card transactions.
+This does not import bank payments, pending authorizations or receipts.
+
+**Payment review** is the central collection of all selected-card purchases,
+refunds and chargebacks, grouped by exact merchant descriptor, card and currency.
+AI classifies likely software subscriptions, one-time purchases, other expenses
+or uncertainty and proposes existing contracts. The complete list remains usable
+without AI. A single charge does not prove a one-time purchase; installments,
+usage billing and mixed-product vendors require review. Brex descriptions may
+name a processor rather than the actual vendor.
+
+Attach the group to an existing contract without changing its terms, or create a
+draft. An opt-in rule attaches future purchases only for the same group and approved
+amount while the target remains available. Changed amounts and refunds reopen review.
+Select individual payments to assign different purchases from the same vendor to
+different contracts. Individual decisions preserve prior assignments, disable the
+group rule, and leave future payments pending. Group-wide edits cannot overwrite
+split assignments. See [the Brex guide](BREX.md) for the exact workflow and limits.
+
+The guided conversation asks for missing contract details in the review flow.
+Answer using explicit values or optionally Hub AI. A before/after preview and
+explicit confirmation precede every save. Existing values require **Replace**;
+stale revisions are refused. Unknown values can be skipped. Notice-day/month
+changes clear the alternate unit and recalculate derived deadlines. New records
+stay drafts until tracking is activated in the existing contract view.
+
+Booked payments remain separate from annual recurring cost and accrual estimates.
+Linking a group does not add payment totals to contract-price reports. Currency
+amounts are in Brex minor units and are never converted or added across currencies.
+Contract exports retain their existing schema and exclude Brex credentials and
+payment evidence; payment evidence is browsable in paginated review details.
+
+### Processing, limits and operations
+
+- A dedicated token is stored server-side on the trusted Cloud Engine. It has no
+  getter/export endpoint and is never sent to AI. This is not end-to-end secrecy
+  from engine operators/controllers or snapshots. Do not use this credential
+  storage design on an untrusted public application subnet.
+- Every Brex call is GET to the fixed api.brex.com origin. Token tests prove read
+  access, not absence of additional scopes: configure read-only scopes in Brex.
+- Only selected cards are persisted or analyzed, although the upstream token
+  may read more cards. Card selection metadata is visible only to space owners.
+- AI is opt-in per connection, uses the Hub lane/model/budget, and receives only
+  merchant/currency, up to 24 payment samples and up to 200 contract titles/vendors
+  from the space. Guided interpretation sends the answer, requested field and
+  currency. Never include secrets in an answer. Unknown results remain reviewable.
+- At most 100 connections, 50 selected cards/space, 5,000 selectable cards, 50,000
+  stored payments/space and 500,000 overall. One 100-transaction page per tick,
+  at most one automated AI classification per tick, 30-second timer. Capacity
+  failures pause visibly; these caps are not throughput guarantees.
+- Disconnect removes the current token and stops imports. Existing evidence and
+  decisions are retained. Separately revoke the token in Brex and follow your
+  backup retention policy. Old snapshots may retain a formerly valid token.
+- APIs are Candid-only, scoped by existing Hub/space sessions. No new Hub or
+  central Finance permission is introduced; a suite assistant must use the same
+  owner-authorized APIs. No unrestricted cross-space AI aggregation is added.
+
+See [Brex setup](BREX.md) for setup, recovery and verification.

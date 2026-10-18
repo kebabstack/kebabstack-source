@@ -177,3 +177,28 @@ not recalled. No connector reconfiguration is needed.
 ## Operations rollout
 
 Publish with Hub 0.28 and the matching source releases through the tested suite update service. No new roles, directory lanes or Lunch changes are required. Existing records remain in place. See [Operations rollout and verification](../docs/HUB-OPERATIONS.md#release-and-verification).
+
+## Shared workspace controls
+
+Operational tables marked for shared controls offer **Table options** for finding
+loaded rows and choosing columns. Header buttons sort only the currently loaded
+rows; app filters, totals and exports retain their existing scope. Reset restores
+the original order. Editable grids and existing app-owned queue sorting stay with
+their workflows. Long marked selectors keep native selection and add an option
+search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
+
+## Brex integration 0.21.0
+
+Read [BREX.md](BREX.md). The integration runs natively in the Contracts backend;
+no new relay, cron host or public webhook is required. It targets the repository's
+trusted Cloud Engine hosting model. Configure the token in the selected space
+only after upgrading and publishing the matching frontend. No secrets belong in
+source, CLI arguments, screenshots or a support chat.
+
+Before an authorized release, build with the pinned
+compiler, compare the candidate .most against the committed baseline, run populated
+upgrade/security tests and package the identical tested executable through Kitchen.
+New payment tables are additive; original contract/space schemas are preserved.
+Include brex.js and brex.css and regenerated IDL. Do not change the committed
+stable baseline until an actual accepted release. Contracts has an independent
+version; the unchanged relay, SDK, Hub and website retain theirs.

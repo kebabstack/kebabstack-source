@@ -42,3 +42,12 @@ Install and update through **Hub → Apps** using a tested release. See [install
 ## Connected workflows
 
 Desk can show permission-checked summaries of related employee records. See [employee context and directory follow-up](../docs/LIFECYCLE.md). Watch also contributes Admin-authorized aggregate summaries to [Hub → Operations](../docs/HUB-OPERATIONS.md); its existing metric definitions are unchanged by the workspace filters.
+
+## Shared workspace controls
+
+Operational tables marked for shared controls offer **Table options** for finding
+loaded rows and choosing columns. Header buttons sort only the currently loaded
+rows; app filters, totals and exports retain their existing scope. Reset restores
+the original order. Editable grids and existing app-owned queue sorting stay with
+their workflows. Long marked selectors keep native selection and add an option
+search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).

@@ -132,7 +132,7 @@ persistent actor Desk {
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.33.0"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.34.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";

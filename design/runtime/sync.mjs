@@ -49,6 +49,11 @@ const apps=['assets','contracts','desk','forms','trust','watch','crumbs','bug','
 for(const app of apps)await emit(app+'/dist/tokens.css',css);
 const components=await read('hub/dist/components.css');
 for(const app of apps)await emit(app+'/dist/components.css',components);
+for(const name of ['workspace-ui.js','evidence-viewer.js']){
+ const source=await read('sdk/js/'+name);
+ for(const app of ['hub','assets','contracts','desk','forms','trust','watch','crumbs'])await emit(app+'/dist/'+name,source);
+ await emit('hub/dist/sdk/'+name,source);
+}
 const brand=JSON.parse(await read('design/brand/registry.json'));
 const mark=`<svg viewBox="${brand.viewBox}" width="27" height="35" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${brand.geometry}</svg>`;
 let client=await read('sdk/js/hub-client.js');

@@ -29,6 +29,9 @@ import AiDiagnostics "AiDiagnostics";
 import AiWire "AiWire";
 import DocumentVision "DocumentVision";
 import Saas "Saas";
+import BrexTypes "brex/Types";
+import BrexLogic "brex/Logic";
+import BrexApi "brex/Api";
 import Json "mo:json";
 import Sha256 "mo:sha2/Sha256";
 import Map "mo:core/Map";
@@ -49,6 +52,53 @@ import Timer "mo:core/Timer";
 import Error "mo:core/Error";
 
 persistent actor Contracts {
+
+  // Additive side tables preserve the deployed state contract. Tokens are restricted
+  // to the trusted Cloud Engine operator boundary and have no read/export API.
+  let brexState : BrexTypes.State = {
+    decisions=Map.empty(); configs=Map.empty(); payments=Map.empty(); groups=Map.empty(); groupKeys=Map.empty();
+    spaceGroups=Map.empty(); groupPayments=Map.empty(); counts=Map.empty(); var nextGroup=1;
+  };
+  let brexSplit : BrexTypes.SplitState = {defaults=Map.empty();assignments=Map.empty();history=Map.empty()};
+  func brexAccess(tok : Text) : ?BrexTypes.Access {
+    let m=me(tok) ?? (return null);
+    if(spaceRole(m.id,m.space)!=?#owner or not spaceWritable(m.id,m.space) or (m.space=="legacy" or m.space=="intake"))return null;
+    ?{space=m.space;person=m.id}
+  };
+  func brexAllowed(sid : Text, pid : Text) : Bool {
+    Hub.directoryFresh(lastDirectoryPull) and activePid(pid) and roleOf(emailOfPid(pid))!="none" and spaceRole(pid,sid)==?#owner and spaceWritable(pid,sid) and spaceAcceptsIntake(sid)
+  };
+  func brexContracts(sid : Text) : [BrexTypes.Contract] {
+    contracts.values().filter(func c = contractSpace(c.id)==sid and trashedContracts.get(c.id) == null).map(func c = {
+      id=c.id;title=c.title;vendor=c.vendor;status=c.status;revision=c.revision;
+      fields=BrexLogic.editableFields.map(func name = {name;value=currentValue(c,name)})
+    }).toArray()
+  };
+  func brexCreate(a : BrexTypes.Access, title : Text, vendor : Text) : BrexTypes.DecisionResult {
+    if(norm(title)=="" or title.size() > 200)return {ok=false;detail="Enter a title (1–200 characters).";contractId=null};
+    let id=nextContractId;nextContractId+=1;
+    let c : Contract={id;title=norm(title);vendor;product="";customerRef="";responsible=workspaceResponsible(a.space,a.person);deputy="";visibility="team";viewers=[];
+      status="draft";terms=emptyTerms();futureTerms=null;revision=1;seats=null;holders=[];tags=[];origin="brex";createdAt=now();updatedAt=now();createdBy=a.person};
+    contractSpaces.add(id,a.space);putContract(c);audit(id,a.person,"created from Brex review","",c.title,null);rebuildTasks(id);
+    {ok=true;detail="Draft created. Complete and confirm its terms.";contractId=?id}
+  };
+  func brexPatch(a : BrexTypes.Access,id : Nat,revision : Nat,field : Text,value : Text,replace : Bool) : BrexTypes.Result {
+    let c=contracts.get(id) ?? (return {ok=false;detail="Contract unavailable."});
+    if(contractSpace(id)!=a.space or trashedContracts.get(id) != null)return {ok=false;detail="Contract unavailable."};
+    if(c.revision!=revision)return {ok=false;detail="Contract changed. Reload and compare."};
+    let before=currentValue(c,field);
+    if(before!="" and before!="unknown" and not replace)return {ok=false;detail="This field already has a value. Explicitly choose Replace after comparing."};
+    let n=switch(applyField(c,field,value)){case(#err(e))return {ok=false;detail=e};case(#ok(v))v};
+    if(norm(n.title)=="")return {ok=false;detail="Title cannot be empty."};
+    switch(validTerms(n.terms)){case(?e)return {ok=false;detail=e};case null {}};
+    putContract({n with terms=recompute(n.terms);revision=c.revision+1;updatedAt=now()});
+    audit(id,a.person,"guided field: " # field,before,currentValue(n,field),null);rebuildTasks(id);
+    {ok=true;detail="Confirmed value saved."}
+  };
+  func brexAi(prompt : Text,input : Text) : async {text : Text;error : Text} {
+    let r=await aiComplete(prompt,input,1200);{text=r.text;error=r.error}
+  };
+
   // =====================================================================
   // config
   // =====================================================================
@@ -67,7 +117,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // retired 0.14.0 (mail relay removed); kept for the stable state contract, never consulted
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.19.0";
+  transient let BUILD_VERSION : Text = "0.21.0";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 
@@ -3422,6 +3472,8 @@ persistent actor Contracts {
   ignore Timer.recurringTimer<system>(#seconds 20, func() : async () { try { await runJobs() } catch (_) {} });
   // Discover AI access before the first document, without adding a request to sign-in.
   ignore Timer.recurringTimer<system>(#seconds 30, func() : async () { await refreshHubAi() });
+  include BrexApi(brexState,brexSplit,brexAccess,brexAllowed,func() : Text {let(y,_,_)=civilFromDays(todayDays());isoOf(y-1,1,1)},func(s : Text) : Bool {s!="" and validIso(s)},brexContracts,brexCreate,brexPatch,brexAi);
+  ignore Timer.recurringTimer<system>(#seconds 30, brexTick);
   transient let _firstAiTimer = Timer.setTimer<system>(#seconds 1, func() : async () { await refreshHubAi() });
 
   /// Public: who runs here (org, versions, hub) — for the sign-in page.

@@ -119,7 +119,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.40.1";
+  transient let BUILD_VERSION : Text = "0.41.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -4046,7 +4046,7 @@ persistent actor UserHub {
   };
   // ---- suite login (0.40.0): one Hub sign-in, every tool ----
   // The Hub frontend keeps a suite-login token in a cookie on the company's parent domain
-  // (e.g. .kebabstack.com). A tool opened without its own session hands that token to its
+  // (e.g. .example.org). A tool opened without its own session hands that token to its
   // backend, which redeems it here. The token can do exactly one thing: open an app session
   // in a tool the person may use. It dies with the Hub session (sign-out, expiry) and is
   // never a portal session (no requests, no tickets, no settings).

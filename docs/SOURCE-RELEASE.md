@@ -24,9 +24,9 @@ test fixtures are intentional. A private development history is not bundled.
    [recovery](OPERATIONS.md) and the external service dependencies before a pilot.
 5. Report vulnerabilities through [the private reporting channel](../SECURITY.md).
 
-`.kebab-public-source.json` records the first export's file hashes and source
-revision. It describes that snapshot, not later edits. Git commits and release
-tags identify subsequent changes. The exporter and its regression tests are
+`.kebab-public-source.json` records this reviewed snapshot's file hashes, source
+revision and retained public-source overlay. Git commits and release tags identify
+subsequent changes. The exporter and its regression tests are
 included, but a clean pattern scan is not proof that every issue has been found.
 
 ## Scope of this release
@@ -49,11 +49,16 @@ and the versioned Kitchen release workflow for deployable packages.
 
 ## Source maintenance — 18 October 2026
 
-The current source update includes Assets 0.28.0, Contracts 0.19.0, Desk 0.33.0,
-Crumbs 0.9.1, Hub 0.40.1, Kitchen 0.9.1, MCP 0.3.1 and website 0.5.6.
-Public Bug 0.20.x and legacy Bug2D 0.2.5 are preserved instead of replacing them
-with older internal game sources. Bug 0.20.2 synchronizes its bundled SDK copy;
-the reviewed standalone game shell remains independent of company navigation.
-Source publication does not deploy any installation. Pinned development tooling
-still has dependency advisories; a passing runtime dependency audit is not a
-whole-toolchain clearance. See module tests and installation guides.
+The current source update includes Contracts 0.21.0 with space-scoped, read-only
+Brex imports, per-payment assignment across contracts, daily review and guided
+completion. It also carries the integrated shared workspace UI versions: Hub
+0.41.0, Desk 0.34.0, Assets 0.29.0, Crumbs 0.10.0, Trust 0.12.0, Watch 0.12.0 and
+Forms 0.8.0. Kitchen remains 0.9.1, MCP 0.3.1 and website moves to 0.5.7.
+Public Bug 0.20.2 and legacy Bug2D 0.2.5 are preserved instead of replacing them
+with older internal game sources. Their canonical SDK copies remain synchronized;
+the standalone game shell remains independent of company navigation.
+
+The Contracts rollout and website publication are verified separately from this
+source snapshot. No real Brex token or payment record is included. Pinned development
+tooling still has dependency advisories; passing checks are not a security audit.
+See the Contracts validation receipt, module tests and installation guides.

@@ -1,5 +1,22 @@
 # Changelog — kebab-stack contracts
 
+## [0.21.0] — 2026-10-18
+
+- Assign individual Brex payments, or up to 50 selected payments, to different contracts within the same merchant/card/currency group. Existing assignments are retained, each payment has a decision history, and stale or cross-space batches are rejected atomically.
+- Split groups disable their automatic group rule and require review for future payments. Group-wide changes cannot overwrite individual decisions. Counts and review filters reflect individual payment states.
+- Preserve previously imported payments and group assignments through additive state; no contract terms are changed by assigning payment evidence.
+
+- Add optional read-only Brex integration per personal/teamspace: test card and transaction access, select cards, import from 1 January of the previous year, then reconcile daily with durable pagination and transaction-ID deduplication. No payment initiation.
+- Add the owner-only Payment review queue with original booked amounts, refunds, AI software suggestions and existing-contract candidates. Attach evidence, create a draft, ignore or reopen. Explicitly approved exact-match rules can attach future unchanged charges; changes return for review.
+- Guided contract questions let owners add missing fields or explicitly replace a compared value with revision checks. AI interpretation is optional; original contract terms never change automatically.
+- Cloud Engine hosting/controllers and snapshots remain inside the credential trust boundary. Imports and AI have explicit limits and failure states. Existing records and stable baselines are preserved.
+
+## [0.20.0] — 2026-10-18
+
+- Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.
+- Reuse the shared inert source viewer with zoom and safe cleanup. AI proposals remain editable and require explicit confirmation; original files and manual corrections are preserved.
+- Show the original beside intake review and existing-record proposals, including on narrow screens. Contract date/seat sorting uses underlying values; different currencies are not silently compared.
+
 ## [0.19.0] — 2026-10-17
 
 - Contract list bounds long cost notes and names; narrow screens show labelled cards. Notes in confirmed terms span the available width.

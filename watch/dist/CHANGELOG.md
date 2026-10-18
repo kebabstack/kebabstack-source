@@ -1,5 +1,9 @@
 # Changelog — kebab-stack watch
 
+## [0.12.0] — 2026-10-18
+
+- Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.
+
 ## [0.11.0] — 2026-10-11
 
 - Faster sign-in: the ticket login redeems at the Hub, refreshes the person's groups and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less); the directory is pulled only when the person is unknown or the cache is stale.

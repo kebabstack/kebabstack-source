@@ -226,6 +226,7 @@
 <link rel="stylesheet" href="signin.css">
 <link rel="stylesheet" href="./permissions.css">
 <link rel="stylesheet" href="./console.css"><link rel="stylesheet" href="./components.css">
+<script type="module" src="./workspace-ui.js"></script>
 </head>
 <body class="ks-workspace">
 <main id="tv"></main>
@@ -319,7 +320,7 @@ tr.muted td { color:var(--ks-fg-muted); }
   <div class="card" style="width:min(520px,92vw); margin:0">
     <h3>Your passkey is not a person yet</h3>
     <div class="kv" style="line-height:1.6">Admins sign in with a passkey; the portal and every connected app act on behalf of a <b>directory person</b>. Link this passkey to your own entry once — then the Portal switch shows the workspace as you would see it as an employee, and app tiles sign you in as that person.</div>
-    <div><label for="lmEmail">Who are you in the directory?</label><select id="lmEmail" style="width:100%"></select></div>
+    <div><label for="lmEmail">Who are you in the directory?</label><select data-ks-search id="lmEmail" style="width:100%"></select></div>
     <div id="lmEmpty" class="warnbox hidden">Nobody in the directory yet — add yourself under People (name + e-mail), then come back.</div>
     <div class="btnrow"><button id="lmLink" class="primary">Link &amp; open portal</button><button id="lmPeople" class="hidden">Go to People</button><button id="lmCancel">Cancel</button><span id="lmStatus" class="status"></span></div>
   </div>
@@ -360,7 +361,7 @@ tr.muted td { color:var(--ks-fg-muted); }
 
     <div class="wzpane" data-step="10">
       <div class="row">
-        <div><label for="oiPreset">Which app?</label><select id="oiPreset"><option value="grafana">Grafana</option><option value="gitlab">GitLab</option><option value="nextcloud">Nextcloud</option><option value="outline">Outline</option><option value="oauth2-proxy">oauth2-proxy</option><option value="other">Other software with OpenID Connect</option></select></div>
+        <div><label for="oiPreset">Which app?</label><select data-ks-search id="oiPreset"><option value="grafana">Grafana</option><option value="gitlab">GitLab</option><option value="nextcloud">Nextcloud</option><option value="outline">Outline</option><option value="oauth2-proxy">oauth2-proxy</option><option value="other">Other software with OpenID Connect</option></select></div>
         <div><label for="oiBase">Where does it run? (its address)</label><input type="text" id="oiBase" placeholder="https://grafana.acme.com"></div>
         <div><label for="oiName">Name on the menu</label><input type="text" id="oiName" placeholder="Grafana"></div>
       </div>
@@ -373,9 +374,9 @@ tr.muted td { color:var(--ks-fg-muted); }
       </div>
       <details id="oiAdvanced" style="margin:6px 0 10px"><summary class="kv" style="cursor:pointer">Advanced — type, signature, consent, note, menu address</summary>
         <div class="row" style="margin-top:8px">
-          <div><label for="oiType">Type</label><select id="oiType"><option value="confidential">Server app — gets a client secret</option><option value="public">Browser or mobile app — no secret, PKCE</option></select></div>
-          <div><label for="oiAlg">Token signature</label><select id="oiAlg"><option value="RS256">RS256 (works everywhere)</option><option value="ES256">ES256 (smaller; modern libraries)</option></select></div>
-          <div><label for="oiConsent">Ask the person</label><select id="oiConsent"><option value="once">once per app</option><option value="always">every sign-in</option></select></div>
+          <div><label for="oiType">Type</label><select data-ks-search id="oiType"><option value="confidential">Server app — gets a client secret</option><option value="public">Browser or mobile app — no secret, PKCE</option></select></div>
+          <div><label for="oiAlg">Token signature</label><select data-ks-search id="oiAlg"><option value="RS256">RS256 (works everywhere)</option><option value="ES256">ES256 (smaller; modern libraries)</option></select></div>
+          <div><label for="oiConsent">Ask the person</label><select data-ks-search id="oiConsent"><option value="once">once per app</option><option value="always">every sign-in</option></select></div>
         </div>
         <div class="row">
           <div><label for="oiNote">Note (shown on the menu)</label><input type="text" id="oiNote" placeholder="dashboards"></div>
@@ -416,7 +417,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div class="wzpane" data-step="4">
       <div class="kv" style="margin-bottom:8px;line-height:1.6">The menu entry is how people open the app — one click, signed in. Its sign-in tickets can only be redeemed by this app.</div>
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font:400 14px var(--ks-ui);margin:10px 0"><input type="checkbox" id="wzTileOn" checked="" style="width:auto"> Put it on the menu</label>
-      <div id="wzTileBox" class="row"><div><label for="wzTileName">Menu name</label><input type="text" id="wzTileName" maxlength="60"></div><div><label for="wzTileUrl">Web address</label><input type="text" id="wzTileUrl" placeholder="https://xxxxx.icp.net/"></div><div style="flex:0 0 220px"><label for="wzTileKind">Kind</label><select id="wzTileKind"><option value="app">App (signs the person in)</option><option value="link">Bookmark (plain link)</option></select></div></div>
+      <div id="wzTileBox" class="row"><div><label for="wzTileName">Menu name</label><input type="text" id="wzTileName" maxlength="60"></div><div><label for="wzTileUrl">Web address</label><input type="text" id="wzTileUrl" placeholder="https://xxxxx.icp.net/"></div><div style="flex:0 0 220px"><label for="wzTileKind">Kind</label><select data-ks-search id="wzTileKind"><option value="app">App (signs the person in)</option><option value="link">Bookmark (plain link)</option></select></div></div>
     </div>
 
     <div class="wzpane" data-step="5">
@@ -454,7 +455,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">Snapshots of <span id="bkSnapName"></span></h3><span id="bkSnapStatus" class="status"></span><button id="bkSnapClose" class="roundbtn" style="margin-left:auto" title="close">×</button></div>
     <div class="kv" id="bkSnapMeta" style="margin:6px 0 10px"></div>
     <div class="row" style="align-items:flex-end"><div><label for="bkSnapNote">Note for a new snapshot</label><input type="text" id="bkSnapNote" placeholder="before the desk upgrade…" maxlength="120"></div><div style="flex:0 0 auto"><button id="bkSnapTake" class="primary" style="margin-top:22px">Snapshot now</button></div></div>
-    <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Taken</th><th>Size</th><th>Note</th><th></th></tr></thead><tbody id="bkSnapRows"></tbody></table></div>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th data-ks-sort="none">Taken</th><th>Size</th><th>Note</th><th></th></tr></thead><tbody id="bkSnapRows"></tbody></table></div>
     <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font:400 13px var(--ks-ui);margin-top:12px"><input type="checkbox" id="bkSafety" checked="" style="width:auto"> take a safety snapshot of the current state before restoring</label>
   </div>
 </div>
@@ -462,7 +463,7 @@ tr.muted td { color:var(--ks-fg-muted); }
   <div class="card" style="width:min(520px,94vw);margin:0">
     <h3 style="margin:0 0 6px">Schedule for <span id="bkSchedName"></span></h3>
     <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font:400 14px var(--ks-ui);margin-top:10px"><input type="checkbox" id="bkSchedOn" checked="" style="width:auto"> enabled</label>
-    <div class="row"><div><label for="bkSchedMode">Plan</label><select id="bkSchedMode"><option value="daily">daily at hour (UTC)</option><option value="every">every N hours</option></select></div><div><label id="bkSchedNLabel" for="bkSchedN">Hour (0–23 UTC)</label><input type="number" id="bkSchedN" min="0" max="23" value="3"></div><div><label for="bkSchedKeep">Keep</label><input type="number" id="bkSchedKeep" min="1" max="10" value="7"></div></div>
+    <div class="row"><div><label for="bkSchedMode">Plan</label><select data-ks-search id="bkSchedMode"><option value="daily">daily at hour (UTC)</option><option value="every">every N hours</option></select></div><div><label id="bkSchedNLabel" for="bkSchedN">Hour (0–23 UTC)</label><input type="number" id="bkSchedN" min="0" max="23" value="3"></div><div><label for="bkSchedKeep">Keep</label><input type="number" id="bkSchedKeep" min="1" max="10" value="7"></div></div>
     <div class="btnrow"><button id="bkSchedSave" class="primary">Save</button><button id="bkSchedCancel">Cancel</button><span id="bkSchedStatus" class="status"></span></div>
   </div>
 </div>
@@ -501,7 +502,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0" id="askTitle">Ask for access</h3><button id="askClose" class="roundbtn" style="margin-left:auto" title="Close">×</button></div>
     <div class="kv" style="margin:8px 0 12px">Your hub admins decide and you are told by notification. Say why — it speeds things up.</div>
     <div class="row"><div style="grid-column:1 / -1"><label for="askReason">Why do you need it?</label><input type="text" id="askReason" maxlength="300" placeholder="e.g. I take over the vendor reviews from Mia"></div></div>
-    <div class="row" style="margin-top:8px"><div><label for="askHours">For how long</label><select id="askHours"><option value="4">4 hours</option><option value="24">1 day</option><option value="168" selected="">7 days</option><option value="720">30 days</option><option value="0">no end date</option></select></div><div style="flex:0 0 auto;display:flex;align-items:flex-end"><button id="askSend" class="primary sm">Send request</button></div></div>
+    <div class="row" style="margin-top:8px"><div><label for="askHours">For how long</label><select data-ks-search id="askHours"><option value="4">4 hours</option><option value="24">1 day</option><option value="168" selected="">7 days</option><option value="720">30 days</option><option value="0">no end date</option></select></div><div style="flex:0 0 auto;display:flex;align-items:flex-end"><button id="askSend" class="primary sm">Send request</button></div></div>
     <div id="askStatus" class="status" style="margin-top:10px"></div>
   </div>
 </div>
@@ -541,7 +542,7 @@ tr.muted td { color:var(--ks-fg-muted); }
       <div id="apTech" class="kvl2" style="margin-top:4px"></div>
       <div id="apTechOidc" class="hidden" style="margin-top:12px;border-top:1px solid var(--ks-rule);padding-top:12px">
         <div class="row"><div style="grid-column:1 / -1"><label for="apRedirects">Redirect URIs (one per line)</label><textarea id="apRedirects" rows="2"></textarea></div></div>
-        <div class="row"><div><label for="apAlg">Token signature</label><select id="apAlg"><option value="RS256">RS256 (works everywhere)</option><option value="ES256">ES256</option></select></div><div><label for="apConsent">Ask the person</label><select id="apConsent"><option value="once">once per app</option><option value="always">every sign-in</option></select></div><div style="flex:0 0 auto;display:flex;align-items:flex-end;gap:8px"><button id="apOidcSave" class="sm primary">Save</button><button id="apOidcToggle" class="sm">Switch off</button><button id="apOidcSecret" class="sm">New secret</button></div></div>
+        <div class="row"><div><label for="apAlg">Token signature</label><select data-ks-search id="apAlg"><option value="RS256">RS256 (works everywhere)</option><option value="ES256">ES256</option></select></div><div><label for="apConsent">Ask the person</label><select data-ks-search id="apConsent"><option value="once">once per app</option><option value="always">every sign-in</option></select></div><div style="flex:0 0 auto;display:flex;align-items:flex-end;gap:8px"><button id="apOidcSave" class="sm primary">Save</button><button id="apOidcToggle" class="sm">Switch off</button><button id="apOidcSecret" class="sm">New secret</button></div></div>
         <div id="apSecretBox" class="out hidden" style="white-space:pre-wrap;user-select:all;margin-top:8px"></div>
       </div>
       <div class="btnrow" style="margin-top:16px;border-top:1px solid var(--ks-rule);padding-top:12px"><button id="apRemove" class="sm">Remove from the hub</button><span class="kv">Sign-in through the hub and its people list stop at once; the app's own data stays where it is.</span></div>
@@ -778,7 +779,7 @@ city^=Remote"></textarea>
       <div class="card">
         <div class="row directory-filters">
           <div><label for="uSearch">Search</label><input type="search" id="uSearch" placeholder="Name or email" aria-label="Find a person"></div>
-          <div><label for="uConn">Source</label><select id="uConn"><option value="">all</option></select></div>
+          <div><label for="uConn">Source</label><select data-ks-search id="uConn"><option value="">all</option></select></div>
           <div><label>&nbsp;</label><div class="btnrow" style="margin:0"><label style="margin:0;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font:400 13px var(--ks-ui)"><input type="checkbox" id="uActive" style="width:auto"> active only</label></div></div>
         </div>
         <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table>
@@ -788,12 +789,12 @@ city^=Remote"></textarea>
         <div class="pager">
           <button id="uPrev">← Prev</button>
           <button id="uNext">Next →</button>
-          <span class="info" id="uInfo"></span><label class="page-size">Per page <select id="uLimit"><option>50</option><option>100</option></select></label>
+          <span class="info" id="uInfo"></span><label class="page-size">Per page <select data-ks-search id="uLimit"><option>50</option><option>100</option></select></label>
           <span id="bulkBar" class="hidden" style="display:flex;gap:10px;align-items:center;margin-left:auto">
             <span class="info" id="bulkInfo"></span>
             <button id="bulkKill" title="Blocks Hub access; connected apps enforce changes after their next access refresh">Lock out selected</button>
             <button id="bulkClear" title="Removes a manual lock-out; their HR / sync status applies again">Undo lock-out</button>
-            <select id="bulkKind" title="Account kind — service and secondary accounts are hidden from the directories your apps receive">
+            <select data-ks-search id="bulkKind" title="Account kind — service and secondary accounts are hidden from the directories your apps receive">
               <option value="">Set kind…</option>
               <option value="service">system account (not a person)</option>
               <option value="secondary">extra account of a person</option>
@@ -827,8 +828,8 @@ city^=Remote"></textarea>
         </div></details>
         <div class="filters group-toolbar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px">
           <input type="text" id="grSearch" placeholder="filter by name, note, member…" style="width:auto;min-width:220px">
-          <select id="grSource"><option value="">all sources</option><option value="manual">created here</option><option value="scim">synced</option></select>
-          <select id="grSort"><option value="name">sort: name</option><option value="members">sort: members ↓</option><option value="source">sort: source</option></select>
+          <select data-ks-search id="grSource"><option value="">all sources</option><option value="manual">created here</option><option value="scim">synced</option></select>
+          <select data-ks-search id="grSort"><option value="name">sort: name</option><option value="members">sort: members ↓</option><option value="source">sort: source</option></select>
           <span class="seg" style="display:inline-flex;border:1px solid var(--ks-rule-strong);border-radius:var(--ks-radius-pill);overflow:hidden;margin-left:auto"><button id="grViewCards" style="border:0;border-radius:0;padding:6px 12px" title="cards">▦ Cards</button><button id="grViewList" style="border:0;border-radius:0;padding:6px 12px" title="list">☰ List</button></span>
           <span class="kv" id="grCount"></span>
         </div>
@@ -877,7 +878,7 @@ city^=Remote"></textarea>
         <div class="kv" style="margin-bottom:8px">Only if you cannot use the sync above: the hub reads your Okta directory itself every hour. Needs an Okta admin to set up an API integration.</div>
         <div class="row">
           <div><label for="cName">Name</label><input type="text" id="cName" placeholder="Acme Okta"></div>
-          <div hidden=""><label for="cKind">Type</label><select id="cKind"><option value="okta">Okta</option></select></div>
+          <div hidden=""><label for="cKind">Type</label><select data-ks-search id="cKind"><option value="okta">Okta</option></select></div>
         </div>
         <div class="row">
           <div><label for="cBase">Base URL</label><input type="text" id="cBase" placeholder="https://acme.okta.com"></div>
@@ -893,7 +894,7 @@ city^=Remote"></textarea>
         <h3>Pull interval</h3>
         <div class="kv" style="margin-bottom:8px">How often the hub reads Okta. SCIM and event hooks update the Hub when received; suite apps enforce Hub changes within 60 seconds.</div>
         <div class="row">
-          <div><label for="sInterval">Pull interval</label><select id="sInterval">
+          <div><label for="sInterval">Pull interval</label><select data-ks-search id="sInterval">
             <option value="0">off (SCIM / event hooks only)</option>
             <option value="900">every 15 minutes</option>
             <option value="3600">hourly</option>
@@ -913,7 +914,7 @@ city^=Remote"></textarea>
       <div class="stabs" data-tabs="connectors"><button class="stab active" data-tab="apps">Connected apps</button><button class="stab update-owner" data-tab="updates">Updates</button><button class="stab update-owner" data-tab="history">History</button><button class="stab hidden" data-tab="catalogue">Add an app</button></div>
       <div class="spane active" data-pane="connectors-apps"><div class="card">
         <div class="btnrow" style="margin:0 0 12px;align-items:center"><label class="app-search"><span class="sr-only">Find an app</span><input id="appSearch" type="search" placeholder="Find an app"></label><button id="addSuiteApp" class="primary update-owner">Add app</button><button id="wzOpen">Connect existing tool</button><span id="apStatus" class="status" style="margin-left:auto"></span></div>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table class="apps"><thead><tr><th>App</th><th>Access</th><th style="white-space:nowrap">On the menu</th><th>Software</th><th></th></tr></thead><tbody id="connectorRows"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table class="apps"><thead><tr><th>App</th><th>Access</th><th style="white-space:nowrap">On the menu</th><th>Software</th><th></th></tr></thead><tbody id="connectorRows"></tbody></table></div>
         <div class="kv" style="margin-top:12px"><a href="#/permissions">Manage app roles →</a><span> · </span><a href="#/settings/oidc">External app sign-in →</a></div>
       </div></div>
       <div class="spane" data-pane="connectors-updates" id="appUpdates"></div>
@@ -930,12 +931,12 @@ city^=Remote"></textarea>
         <div class="card flat">
           <h3>Waiting for a decision</h3>
           <div class="kv" style="margin-bottom:8px">A person asked from their menu. Approve with a duration — access ends by itself — or deny with a note. The person is told either way.</div>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Who</th><th>App</th><th>Why</th><th>Asked for</th><th>When</th><th></th></tr></thead><tbody id="acReqRows"></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Who</th><th>App</th><th>Why</th><th>Asked for</th><th data-ks-sort="none">When</th><th></th></tr></thead><tbody id="acReqRows"></tbody></table></div>
           <div class="btnrow" style="margin-top:8px"><span id="acReqStatus" class="status"></span></div>
         </div>
         <div class="card flat">
           <h3>Decided lately</h3>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Who</th><th>App</th><th>Outcome</th><th>By</th><th>When</th></tr></thead><tbody id="acReqHistRows"></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Who</th><th>App</th><th>Outcome</th><th>By</th><th data-ks-sort="none">When</th></tr></thead><tbody id="acReqHistRows"></tbody></table></div>
         </div>
       </div>
       <div class="spane" data-pane="access-temporary">
@@ -944,15 +945,15 @@ city^=Remote"></textarea>
           <div class="kv" style="margin-bottom:8px">Puts the person on an app's people list or into a group and takes them off again when the time is up (checked every five minutes). Works for apps with a people-based rule; an app open to everyone needs no grant.</div>
           <div class="row" style="align-items:flex-end">
             <div><label>Person</label><div style="display:flex;gap:6px"><input type="text" id="acGrantWho" readonly="" placeholder="pick a person"><button class="sm" id="acGrantPick">Pick</button></div></div>
-            <div><label for="acGrantTarget">To</label><select id="acGrantTarget" disabled=""><option value="">pick a person first</option></select></div>
-            <div><label for="acGrantHours">For</label><select id="acGrantHours"><option value="4">4 hours</option><option value="24">1 day</option><option value="168" selected="">7 days</option><option value="720">30 days</option><option value="0">until taken away</option></select></div>
+            <div><label for="acGrantTarget">To</label><select data-ks-search id="acGrantTarget" disabled=""><option value="">pick a person first</option></select></div>
+            <div><label for="acGrantHours">For</label><select data-ks-search id="acGrantHours"><option value="4">4 hours</option><option value="24">1 day</option><option value="168" selected="">7 days</option><option value="720">30 days</option><option value="0">until taken away</option></select></div>
           </div>
           <div class="row" style="align-items:flex-end;margin-top:8px"><div style="flex:1"><label for="acGrantReason">Why (shown to the person and in the journal)</label><input type="text" id="acGrantReason" maxlength="300" placeholder="e.g. covering for Ana this week"></div><div style="flex:0 0 auto"><button id="acGrantSave" class="primary sm">Give access</button></div></div>
           <div id="acGrantStatus" class="status" style="margin-top:8px"></div>
         </div></details>
         <div class="card flat">
           <h3>In force now</h3>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Who</th><th>To</th><th>Ends</th><th>Given by</th><th>Why</th><th></th></tr></thead><tbody id="acGrantRows"></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Who</th><th>To</th><th data-ks-sort="none">Ends</th><th>Given by</th><th>Why</th><th></th></tr></thead><tbody id="acGrantRows"></tbody></table></div>
           <div class="btnrow" style="margin-top:8px"><label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font:400 13px var(--ks-ui)"><input type="checkbox" id="acGrantAll" style="width:auto"> also show ended ones</label><span id="acGrantListStatus" class="status"></span></div>
         </div>
       </div>
@@ -960,17 +961,17 @@ city^=Remote"></textarea>
         <details class="card disclosure"><summary>Start an access review</summary><div class="">
           <h3>Start a review</h3>
           <div class="kv" style="margin-bottom:8px">Freezes who may use the chosen apps today, one line per entry (person, group, role — or "everyone"). Each app's owner keeps or removes every line before the due date; without an owner the lines land with you. A removal takes effect at once. Everyone is told by notification.</div>
-          <div class="row" style="align-items:flex-end"><div><label for="acRevName">Name</label><input type="text" id="acRevName" maxlength="80" placeholder="e.g. Q3 access review"></div><div><label for="acRevDue">Due in</label><select id="acRevDue"><option value="7">7 days</option><option value="14" selected="">14 days</option><option value="30">30 days</option></select></div><div style="flex:0 0 auto;display:flex;gap:6px"><button class="sm" id="acRevAll">All apps</button><button class="sm" id="acRevNone">None</button></div></div>
+          <div class="row" style="align-items:flex-end"><div><label for="acRevName">Name</label><input type="text" id="acRevName" maxlength="80" placeholder="e.g. Q3 access review"></div><div><label for="acRevDue">Due in</label><select data-ks-search id="acRevDue"><option value="7">7 days</option><option value="14" selected="">14 days</option><option value="30">30 days</option></select></div><div style="flex:0 0 auto;display:flex;gap:6px"><button class="sm" id="acRevAll">All apps</button><button class="sm" id="acRevNone">None</button></div></div>
           <div id="acRevApps" class="lanepills" style="margin:10px 0"></div>
           <div class="btnrow"><button id="acRevStart" class="primary sm">Start review</button><span id="acRevStatus" class="status"></span></div>
         </div></details>
         <div class="card flat">
           <h3>Reviews</h3>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Name</th><th>Apps</th><th>Progress</th><th>Removed</th><th>Due</th><th>State</th><th></th></tr></thead><tbody id="acRevRows"></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Name</th><th>Apps</th><th>Progress</th><th data-ks-sort="none">Removed</th><th data-ks-sort="none">Due</th><th>State</th><th></th></tr></thead><tbody id="acRevRows"></tbody></table></div>
         </div>
         <div class="card flat hidden" id="acRevDetail">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0" id="acRevDetailTitle">Review</h3><span class="kv" id="acRevDetailMeta"></span><button class="roundbtn" id="acRevDetailClose" style="margin-left:auto" title="Close">×</button></div>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table style="margin-top:8px"><thead><tr><th>App</th><th>Entry</th><th>Reviewer</th><th>Decision</th><th></th></tr></thead><tbody id="acRevItemRows"></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table style="margin-top:8px"><thead><tr><th>App</th><th>Entry</th><th>Reviewer</th><th>Decision</th><th></th></tr></thead><tbody id="acRevItemRows"></tbody></table></div>
           <div id="acRevItemStatus" class="status" style="margin-top:8px"></div>
         </div>
       </div>
@@ -981,17 +982,17 @@ city^=Remote"></textarea>
 
       <div class="card">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0 24px;align-items:start">
-          <div><label for="owFrom">Current owner</label><select id="owFrom" style="width:100%"></select></div>
-          <div><label for="owTool">App</label><select id="owTool" style="width:100%"></select></div>
+          <div><label for="owFrom">Current owner</label><select data-ks-search id="owFrom" style="width:100%"></select></div>
+          <div><label for="owTool">App</label><select data-ks-search id="owTool" style="width:100%"></select></div>
         </div>
         <label style="text-transform:none;letter-spacing:0;font:400 13px var(--ks-ui);display:inline-flex;gap:7px;align-items:center;margin:10px 0 0;color:var(--ks-fg-secondary);cursor:pointer"><input type="checkbox" id="owOnlyInactive" checked="" style="width:auto;accent-color:var(--ks-accent)"> only people who are locked out</label>
         <div class="btnrow" style="margin-top:16px"><button id="owLoad" class="primary">Show their work</button></div>
         <span class="status" id="owStatus"></span>
       </div>
       <div class="card" id="owResults" style="display:none">
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th style="width:26px"><input type="checkbox" id="owAll" style="width:auto;accent-color:var(--ks-accent)"></th><th>Object</th><th>Kind</th><th>Details</th><th>Updated</th></tr></thead><tbody id="owRows"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th style="width:26px"><input type="checkbox" id="owAll" style="width:auto;accent-color:var(--ks-accent)"></th><th>Object</th><th>Kind</th><th>Details</th><th data-ks-sort="none">Updated</th></tr></thead><tbody id="owRows"></tbody></table></div>
         <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:16px;border-top:1px solid var(--ks-rule);padding-top:16px">
-          <div style="flex:1;min-width:280px;max-width:420px"><label style="margin-top:0" for="owTo">New owner</label><select id="owTo" style="width:100%"></select></div>
+          <div style="flex:1;min-width:280px;max-width:420px"><label style="margin-top:0" for="owTo">New owner</label><select data-ks-search id="owTo" style="width:100%"></select></div>
           <button id="owGo" class="primary" style="margin-bottom:1px">Hand over selected</button>
         </div>
         <span class="status" id="owGoStatus"></span>
@@ -1143,15 +1144,15 @@ city^=Remote"></textarea>
         <div id="bkNoVault" class="warnbox hidden" style="margin:0 0 14px">Backups are not switched on yet. Switching them on is a one-time IT task (terminal, about five minutes): send your IT person the <b>Setup (IT)</b> tab.</div>
         <div class="card flat">
           <div class="btnrow" style="margin:0 0 8px"><button id="bkRefresh" class="sm">Re-check all</button><button id="bkSnapAll" class="sm primary">Snapshot everything now</button><span id="bkStatus" class="status"></span></div>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Service</th><th>Protected</th><th>State</th><th>Snapshots</th><th>Schedule</th><th></th></tr></thead><tbody id="bkRows"></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Service</th><th>Protected</th><th>State</th><th>Snapshots</th><th>Schedule</th><th></th></tr></thead><tbody id="bkRows"></tbody></table></div>
           <div class="kv" style="margin-top:8px">Each app is one or two <i>services</i> running on your engine (technically: canisters). A snapshot pauses a service for a few seconds. Restoring puts it back exactly as it was — everything after that moment is gone, so the vault takes a safety snapshot first.</div>
         </div>
       </div>
       <div class="spane" data-pane="backups-schedules">
-        <div class="card flat"><h3>Schedules</h3><div class="kv" style="margin-bottom:6px">The vault checks every 10 minutes. Daily runs happen in the hour you pick (UTC); interval runs when the last one is old enough. “Keep” rotates the oldest out (platform limit 10 per service).</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Service</th><th>Plan</th><th>Keep</th><th>Last run</th><th>Result</th><th></th></tr></thead><tbody id="bkSchedRows"></tbody></table></div></div>
+        <div class="card flat"><h3>Schedules</h3><div class="kv" style="margin-bottom:6px">The vault checks every 10 minutes. Daily runs happen in the hour you pick (UTC); interval runs when the last one is old enough. “Keep” rotates the oldest out (platform limit 10 per service).</div><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Service</th><th>Plan</th><th>Keep</th><th>Last run</th><th>Result</th><th></th></tr></thead><tbody id="bkSchedRows"></tbody></table></div></div>
       </div>
       <div class="spane" data-pane="backups-journal">
-        <div class="card flat"><h3>Backup activity</h3><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>When</th><th>Who</th><th>What</th><th></th></tr></thead><tbody id="bkJournalRows"></tbody></table></div></div>
+        <div class="card flat"><h3>Backup activity</h3><div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th data-ks-sort="none">When</th><th>Who</th><th>What</th><th></th></tr></thead><tbody id="bkJournalRows"></tbody></table></div></div>
       </div>
       <div class="spane" data-pane="backups-setup">
         <div class="kv" style="margin:0 0 12px"><b>For the IT person.</b> Three steps in a terminal, once. Afterwards owners run backups from the other tabs without touching a terminal again.</div>
@@ -1221,7 +1222,7 @@ icp canister call backend setHub '("<span id="bkHubId"></span>")' -e ic</div>
         <h3>AI for your apps <span class="pill" id="aiState">off</span></h3>
         <div class="kv" style="margin-bottom:10px">Configure one provider for apps with AI access. <a href="#/apps">Choose which apps may use it</a>. Each app sends its own requests to this provider.</div>
         <div class="row">
-          <div><label for="aiProvider">Provider</label><select id="aiProvider"><option value="openai">OpenAI-compatible (chat/completions)</option><option value="anthropic">Anthropic</option></select></div>
+          <div><label for="aiProvider">Provider</label><select data-ks-search id="aiProvider"><option value="openai">OpenAI-compatible (chat/completions)</option><option value="anthropic">Anthropic</option></select></div>
           <div><label for="aiUrl">API address</label><input type="text" id="aiUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
         </div>
         <div class="row" style="margin-top:8px">
@@ -1238,11 +1239,11 @@ icp canister call backend setHub '("<span id="bkHubId"></span>")' -e ic</div>
         <h3>Personal assistants <span class="pill off" id="asstState">off</span></h3>
         <div class="kv" style="margin-bottom:8px">Let people connect personal AI assistants with their own app permissions. Switching this off revokes existing assistant sessions; turning it back on requires reconnecting.</div>
         <div class="btnrow" style="margin:0 0 10px"><button id="asstToggle">Switch off</button><span id="asstStatus" class="status"></span></div>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Person</th><th>Assistant</th><th>Connected</th><th>Last used</th><th>Uses</th><th>Until</th><th></th></tr></thead><tbody id="asstRows"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Person</th><th>Assistant</th><th data-ks-sort="none">Connected</th><th data-ks-sort="none">Last used</th><th>Uses</th><th data-ks-sort="none">Until</th><th></th></tr></thead><tbody id="asstRows"></tbody></table></div>
       </div>
       <div class="card flat">
         <h3>Who uses it</h3>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>App</th><th>Lane AI</th><th>Calls reported</th><th>Key fetched</th></tr></thead><tbody id="aiApps"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>App</th><th>Lane AI</th><th>Calls reported</th><th>Key fetched</th></tr></thead><tbody id="aiApps"></tbody></table></div>
         <div class="kv" style="margin-top:6px">Grant or take away the lane per app under Apps → Edit → Data sharing. Apps report their calls in batches; the count is indicative.</div>
       </div>
       </div>
@@ -1252,11 +1253,11 @@ icp canister call backend setHub '("<span id="bkHubId"></span>")' -e ic</div>
         <div class="kv" style="margin-bottom:10px">Hub notifications appear in the bell. Add Slack to offer direct messages as well; people control their own preference.</div>
 
         <div class="row">
-          <div><label for="skEnabled">Delivery</label><select id="skEnabled"><option value="off">disabled</option><option value="on">enabled</option></select></div>
+          <div><label for="skEnabled">Delivery</label><select data-ks-search id="skEnabled"><option value="off">disabled</option><option value="on">enabled</option></select></div>
           <div><label for="skTestEmail">Test DM recipient (for the Test buttons)</label><input type="text" id="skTestEmail" placeholder="you@example.com"></div>
           <div><div class="btnrow"><span id="skStatus" class="status"></span></div></div>
         </div>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table style="margin-top:8px"><thead><tr><th>Bot</th><th>Workspace</th><th>Token</th><th>Signing secret</th><th>Status</th><th></th></tr></thead><tbody id="skBots"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table style="margin-top:8px"><thead><tr><th>Bot</th><th>Workspace</th><th>Token</th><th>Signing secret</th><th>Status</th><th></th></tr></thead><tbody id="skBots"></tbody></table></div>
         <details class="card disclosure"><summary>Connect a Slack workspace</summary><div><div class="row" style="margin-top:14px">
           <div><label for="skbName">Name (label)</label><input type="text" id="skbName" placeholder="Acme"></div>
           <div><label for="skbToken">Bot token (xoxb-…)</label><input type="password" id="skbToken" spellcheck="false"></div>
@@ -1270,7 +1271,7 @@ icp canister call backend setHub '("<span id="bkHubId"></span>")' -e ic</div>
         </div>
         <div style="margin-top:14px">
           <div class="kv" style="margin-bottom:6px">Latest deliveries (newest first):</div>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>When</th><th>To</th><th>App</th><th>Title</th><th>Slack</th></tr></thead><tbody id="skLog"></tbody></table></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th data-ks-sort="none">When</th><th>To</th><th>App</th><th>Title</th><th>Slack</th></tr></thead><tbody id="skLog"></tbody></table></div>
         </div>
       </div>
       </div><!-- /spane notify -->
@@ -1297,10 +1298,10 @@ icp canister call backend setHub '("<span id="bkHubId"></span>")' -e ic</div>
         <h3>Company single sign-on (optional)</h3>
         <div class="kv" style="margin-bottom:8px">By default people sign in with the key on their device (passkey) — nothing to set up. If your company already signs in through Okta or Google, add it here and people get a "Sign in with Okta / Google" button on the menu. Setting this up is an IT task.</div>
         <div class="kv">Technically: OIDC. Redirect URI to register at the provider: <code id="redirectUriHint"></code></div>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Client ID</th><th>Status</th><th></th></tr></thead><tbody id="ssoRows"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Client ID</th><th>Status</th><th></th></tr></thead><tbody id="ssoRows"></tbody></table></div>
         <details class="card disclosure"><summary>Add a sign-in provider</summary><div><div class="row" style="margin-top:14px">
           <div><label for="spName">Name (button label)</label><input type="text" id="spName" placeholder="Acme Okta"></div>
-          <div><label for="spKind">Type</label><select id="spKind"><option value="okta">Okta (SPA app, PKCE)</option><option value="google">Google (web client)</option></select></div>
+          <div><label for="spKind">Type</label><select data-ks-search id="spKind"><option value="okta">Okta (SPA app, PKCE)</option><option value="google">Google (web client)</option></select></div>
         </div><div class="row">
           <div><label for="spIssuer">Issuer (Okta only)</label><input type="text" id="spIssuer" placeholder="https://acme.okta.com"></div>
           <div><label for="spCid">Client ID</label><input type="text" id="spCid" placeholder="0oa… / …apps.googleusercontent.com"></div>
@@ -1316,12 +1317,12 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
       <div class="card">
         <h3>Who runs this hub</h3>
         <div class="kv" style="margin-bottom:6px">Assign global roles in <a href="#/people">People</a>. Owners manage permissions and recovery; admins manage day-to-day operations; helpdesk staff support sign-in and lock-outs. Global owners and admins inherit Admin in Assets, Contracts, Desk, Forms, Trust and Watch. Helpdesk app roles are assigned separately.</div>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Person</th><th>E-mail</th><th>Role</th><th>Status</th></tr></thead><tbody id="prRows"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Person</th><th>E-mail</th><th>Role</th><th>Status</th></tr></thead><tbody id="prRows"></tbody></table></div>
       </div>
       <details class="card disclosure hidden" id="legacyAdminsCard"><summary>Recovery access</summary><div class="">
         <h3>Older recovery keys</h3>
         <div class="kv" style="margin-bottom:6px">These keys still grant Hub access. Before removing one, link its holder to a person and verify their intended Hub role. Keep a working owner or controller recovery path.</div>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Label</th><th>Key id (principal)</th><th>Role</th><th></th></tr></thead><tbody id="aRows"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Label</th><th>Key id (principal)</th><th>Role</th><th></th></tr></thead><tbody id="aRows"></tbody></table></div>
         <span id="aStatus" class="status hidden"></span><input type="hidden" id="aName"><input type="hidden" id="aPr"><button id="aAdd" class="hidden"></button>
       </div></details>
       </div><!-- /spane admins -->
@@ -1372,7 +1373,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.40.1"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.41.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -2093,7 +2094,7 @@ const ROLE_OPTS = ["", "helpdesk", "admin", "owner"];
 function roleCell(u) {
   const role = u.role || "";
   if (window._role !== "owner") return role ? `<span class="pill on">${esc(role)}</span>` : '<span class="kv">member</span>';
-  return `<select data-role-email="${esc(u.email)}" style="padding:3px 8px;font-size:12px" title="hub role of this person">${ROLE_OPTS.map((r) => `<option value="${r}"${r === role ? " selected" : ""}>${r || "member"}</option>`).join("")}</select>`;
+  return `<select data-ks-search data-role-email="${esc(u.email)}" style="padding:3px 8px;font-size:12px" title="hub role of this person">${ROLE_OPTS.map((r) => `<option value="${r}"${r === role ? " selected" : ""}>${r || "member"}</option>`).join("")}</select>`;
 }
 // ---------- bulk selection ----------
 const uSelected = new Set();
@@ -3897,7 +3898,7 @@ async function acLoadRequests() {
     <td style="max-width:260px">${r.reason ? esc(r.reason) : '<span class="kv">—</span>'}</td>
     <td>${esc(HOURS_WORD(r.wantedHours))}</td>
     <td class="kv">${esc(relTime(r.at))}</td>
-    <td style="white-space:nowrap"><select class="sm" data-req-hours="${r.id}" style="width:auto;display:inline-block;margin-right:4px">${[["4", "4 h"], ["24", "1 day"], ["168", "7 days"], ["720", "30 days"], ["0", "no end date"]].map(([v, t]) => `<option value="${v}" ${String(Number(r.wantedHours)) === v ? "selected" : ""}>${t}</option>`).join("")}${[4, 24, 168, 720, 0].includes(Number(r.wantedHours)) ? "" : `<option value="${Number(r.wantedHours)}" selected>${esc(HOURS_WORD(r.wantedHours))} (as asked)</option>`}</select><button class="sm primary" data-req-approve="${r.id}">Approve</button> <button class="sm" data-req-deny="${r.id}">Deny</button></td>
+    <td style="white-space:nowrap"><select data-ks-search class="sm" data-req-hours="${r.id}" style="width:auto;display:inline-block;margin-right:4px">${[["4", "4 h"], ["24", "1 day"], ["168", "7 days"], ["720", "30 days"], ["0", "no end date"]].map(([v, t]) => `<option value="${v}" ${String(Number(r.wantedHours)) === v ? "selected" : ""}>${t}</option>`).join("")}${[4, 24, 168, 720, 0].includes(Number(r.wantedHours)) ? "" : `<option value="${Number(r.wantedHours)}" selected>${esc(HOURS_WORD(r.wantedHours))} (as asked)</option>`}</select><button class="sm primary" data-req-approve="${r.id}">Approve</button> <button class="sm" data-req-deny="${r.id}">Deny</button></td>
   </tr>`).join("") : '<tr><td colspan="6" class="kv">Nothing waiting. People ask from their menu (Request access) — you will see it here and in your bell.</td></tr>';
   const hist = all.filter((r) => r.state !== "open").slice(0, 40);
   $("acReqHistRows").innerHTML = hist.length ? hist.map((r) => `<tr><td>${esc(nameOf(r.email))}</td><td>${esc(r.appName)}</td><td><span class="pill ${r.state === "approved" ? "on" : "off"}">${esc(r.state)}</span>${r.note ? ` <span class="kv">${esc(r.note)}</span>` : ""}</td><td class="kv">${esc(nameOf(r.decidedBy))}</td><td class="kv">${esc(relTime(r.decidedAt))}</td></tr>`).join("") : '<tr><td colspan="5" class="kv">No decisions yet.</td></tr>';
@@ -4071,7 +4072,7 @@ async function refreshSettings() {
   } catch (e) { console.error(e); }
   $("legacyAdminsCard").classList.toggle("hidden", admins.length === 0);
   $("aRows").innerHTML = admins.map((a, i) => `<tr><td>${esc(a.name)}</td><td class="mono">${esc(a.principal)}</td><td>
-    <select data-roleadmin="${i}" style="padding:4px"><option value="owner"${a.role === "owner" ? " selected" : ""}>owner</option><option value="admin"${a.role === "admin" ? " selected" : ""}>admin</option><option value="helpdesk"${a.role === "helpdesk" ? " selected" : ""}>helpdesk</option></select>
+    <select data-ks-search data-roleadmin="${i}" style="padding:4px"><option value="owner"${a.role === "owner" ? " selected" : ""}>owner</option><option value="admin"${a.role === "admin" ? " selected" : ""}>admin</option><option value="helpdesk"${a.role === "helpdesk" ? " selected" : ""}>helpdesk</option></select>
   </td><td><button data-rmadmin="${i}">Remove</button></td></tr>`).join("") || '<tr><td colspan="4" class="kv">none — all staff are people with roles</td></tr>';
   $("aRows").querySelectorAll("[data-rmadmin]").forEach((b) => (b.onclick = () => rmAdmin(admins[Number(b.dataset.rmadmin)].principal))); // F13: no string args in onclick
   $("aRows").querySelectorAll("[data-roleadmin]").forEach((sel) => (sel.onchange = async () => {

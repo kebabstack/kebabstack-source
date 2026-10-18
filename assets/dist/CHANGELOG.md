@@ -1,5 +1,10 @@
 # Changelog — kebab-stack assets
 
+## [0.29.0] — 2026-10-18
+
+- Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.
+- Reuse the shared inert source viewer with zoom and safe cleanup. AI proposals remain editable and require explicit confirmation; original files and manual corrections are preserved.
+
 ## [0.28.0] — 2026-10-15
 
 - Allocate every new device tag centrally, including single/photo/bulk registration, CSV, MDM, Apple and sample data. Persist the sequence, allocate without an await, and never reuse numbers after sample removal or archive.

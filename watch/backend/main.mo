@@ -57,7 +57,7 @@ persistent actor Watch {
   var monitoringSince : Int = 0; // first completed run
   var trustedOperators : [Text] = []; // 0.3.0 — operators whose new addresses are learned, not alerted
   var lastReportMonth : Text = ""; // 0.3.0 — "YYYY-MM" the monthly report is up to
-  transient let BUILD_VERSION : Text = "0.11.0";
+  transient let BUILD_VERSION : Text = "0.12.0";
   transient let LEARN_NS : Int = 48 * 3_600_000_000_000; // learning period after a domain is added
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * 3_600_000_000_000;

@@ -1,5 +1,9 @@
 # Monorepo changes
 
+## [0.3.0] — 2026-10-18
+
+- Add shared workspace table/form and source-viewer regression coverage, canonical distribution checks and rotating daily review guidance.
+
 ## [0.2.6] — 2026-10-18
 
 - Extend the daily integrity workflow with interactive visual coverage, safe public-source publication and website evidence checks. Keep private reports outside public distribution.

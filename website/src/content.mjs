@@ -93,13 +93,13 @@ export const content = {
         category: "Software & Verträge",
         icon: "document",
         title: "Die nächste Verlängerung im Blick.",
-        text: "Verträge hochladen, optionale KI-Vorschläge prüfen und Kosten, Zuständigkeiten sowie Entscheidungsfristen festhalten. Damit Entscheidungen rechtzeitig vorbereitet sind.",
+        text: "Verträge und tatsächliche Softwarezahlungen zusammen prüfen: Brex-Karten pro Space auswählen, täglich importieren und einzelne Abbuchungen passenden Verträgen zuordnen. Ein geführter Dialog hilft, fehlende Vertragsdaten zu ergänzen.",
         features: [
           "SaaS-Übersicht und Lizenzzuordnungen",
           "Verlängerungen und Kündigungsfristen",
-          "Berichte mit getrennten Währungssummen",
+          "Brex-Prüfliste mit Einzelzuordnung und optionaler KI",
         ],
-        note: "Zuordnung dokumentiert Lizenzen; sie bucht keine Anbieter-Seats.",
+        note: "Brex nur mit Leserechten. KI-Vorschläge und geänderte Vertragswerte benötigen Bestätigung; keine Zahlungen oder Anbieterbuchungen.",
       },
       {
         id: "forms",
@@ -481,13 +481,13 @@ export const content = {
         category: "Software & contracts",
         icon: "document",
         title: "Stay ahead of the next renewal.",
-        text: "Upload contracts, review optional AI suggestions and record costs, owners and decision dates. Give the team time to make a considered decision.",
+        text: "Review contracts alongside actual software payments: select Brex cards per space, import daily and assign individual charges to the right agreements. A guided conversation helps complete missing contract details.",
         features: [
           "SaaS overview and licence allocations",
           "Renewals and cancellation deadlines",
-          "Reports with separate currency totals",
+          "Brex payment review with individual assignments and optional AI",
         ],
-        note: "Allocations record licences; they do not provision vendor seats.",
+        note: "Brex uses read permissions only. AI suggestions and changed terms require confirmation; no payments or vendor provisioning.",
       },
       {
         id: "forms",

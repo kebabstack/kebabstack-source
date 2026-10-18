@@ -2999,9 +2999,190 @@ test('contracts: current populated upgrade preserves agreements, source bytes an
   const doc=(await app.getSource(adminTok,source.sourceId))[0].documents[0].id;
   await pic.upgradeCanister({upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]},sender:controller,canisterId:f.appId,wasm:candidateWasm('contracts')});
   await settled(pic);f.hub.setPrincipal(owner);const ticket=await f.hub.mintAppTicket('',f.connector.tileId);const token=(await app.loginWithTicket(ticket.ticket))[0].token;const scoped=(await app.openSpace(token,f.spaceId)).token;
-  assert.equal((await app.info()).version,'0.19.0');
+  assert.equal((await app.info()).version,'0.21.0');
   const kept=(await app.getContract(scoped,created.id))[0];assert.equal(kept.contract.terms.amountMinor[0],TERMS.amountMinor[0]);assert.equal(kept.documents[0].id,doc);
   assert.deepEqual(Buffer.from((await app.documentData(scoped,doc))[0].bytes),bytes);
   assert.deepEqual(await app.documentData('invalid-session',doc),[]);
+
+ }finally{await pic.tearDown();}
+});
+
+// Brex integration: only synthetic provider data and isolated local canisters.
+const brexCard=(id='card-it')=>({id,card_name:'IT card',last_four:'4242',status:'ACTIVE'});
+const brexPayment=(id,over={})=>({id,card_id:'card-it',description:'Sunrise Cloud',merchant:{raw_descriptor:'Sunrise Cloud',mcc:'5734',country:'CHE'},amount:{amount:1990,currency:'CHF'},posted_at_date:'2026-09-10',initiated_at_date:'2026-09-10',type:'PURCHASE',...over});
+async function brexFixture(pic,options={}){
+ await pic.setTime(new Date('2026-10-18T12:00:00Z'));
+ const f=await contractsFixture(pic,options);f.deferred=pic.createDeferredActor(f.idlFactory,f.appId);return f;
+}
+async function connectBrexFixture(pic,f,token=f.adminTok){
+ assert.equal((await f.app.saveBrexToken(token,'synthetic-brex-read-token')).ok,true);
+ const done=await f.deferred.testBrexConnection(token);
+ const cards=await pendingContractsAi(pic);assert.match(cards.url,/^https:\/\/api\.brex\.com\/v2\/cards/);assert.equal(cards.httpMethod??cards.method,'GET');
+ await respondContractsAi(pic,cards,{items:[brexCard(),brexCard('card-private')],next_cursor:null});
+ const tx=await pendingContractsAi(pic);assert.match(tx.url,/transactions\/card\/primary/);await respondContractsAi(pic,tx,{items:[],next_cursor:null});
+ assert.equal((await done()).ok,true);
+ assert.equal((await f.app.configureBrex(token,['card-it'],true,false)).ok,true);
+}
+async function importBrexFixture(pic,f,items,cursor=null,token=f.adminTok){
+ const done=await f.deferred.syncBrex(token),req=await pendingContractsAi(pic);
+ assert.match(req.url,/posted_at_start=2025-01-01T00%3A00%3A00Z/);
+ await respondContractsAi(pic,req,{items,next_cursor:cursor});return done();
+}
+test('brex: tested connection, space isolation, idempotent payments, assignment and explicit guided overwrite',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const f=await brexFixture(pic,{ai:false}),{app,adminTok,memberTok,memberRoot}=f;
+  assert.deepEqual(await app.brexStatus(memberTok),[],'editor cannot inspect payment integration');
+  assert.equal((await app.saveBrexToken(memberTok,'synthetic-brex-read-token')).ok,false);
+  await connectBrexFixture(pic,f);
+  assert.equal((await app.configureBrex(adminTok,['forged-card'],true,false)).ok,false);
+  const secretFree=JSON.stringify((await app.brexStatus(adminTok))[0],(_,v)=>typeof v==='bigint'?String(v):v);assert.ok(!secretFree.includes('synthetic-brex-read-token'));
+  assert.equal((await importBrexFixture(pic,f,[brexPayment('p1'),brexPayment('p2'),brexPayment('private',{card_id:'card-private'}),brexPayment('old',{posted_at_date:'2024-12-31'})],'page 2/+')).ok,true);
+  assert.equal((await importBrexFixture(pic,f,[brexPayment('p1'),brexPayment('p3',{type:'REFUND',amount:{amount:-1990,currency:'CHF'}})])).ok,true);
+  const list=(await app.listBrexReview(adminTok,'all',0n,50n))[0];assert.equal(list.total,1n);let g=list.rows[0];assert.equal(g.count,3n);assert.equal(g.totalMinor,1990n);
+  assert.equal((await app.brexStatus(adminTok))[0].payments,3n);assert.equal((await app.brexStatus(adminTok))[0].scanning,false);
+  assert.deepEqual(await app.brexReviewDetail(memberRoot,g.id,0n),[],'personal space cannot read another space group');
+  assert.equal((await app.decideBrex(memberTok,g.id,g.revision,{dismiss:null},false,{other:null})).ok,false);
+  const existing=await app.createContract(adminTok,cinput());assert.equal(existing.ok,true);
+  let c=(await app.brexGuide(adminTok,existing.id))[0].contract;
+  assert.equal((await app.setTerms(adminTok,c.id,c.revision,TERMS,'fixture')).ok,true);c=(await app.brexGuide(adminTok,c.id))[0].contract;
+  const decision=await app.decideBrex(adminTok,g.id,g.revision,{link:c.id},true,{subscription:null});assert.equal(decision.ok,true);
+  assert.equal((await app.brexGuide(adminTok,c.id))[0].contract.revision,c.revision,'attachment never changes terms');
+  const answer=await app.answerBrexGuide(adminTok,c.id,c.revision,'product','Enterprise',false);assert.equal(answer.ok,true);assert.equal(answer.before,'Team');
+  assert.equal((await app.applyBrexGuide(adminTok,c.id,c.revision,'product',answer.value,false)).ok,false,'existing value needs explicit overwrite');
+  assert.equal((await app.applyBrexGuide(adminTok,c.id,c.revision,'product',answer.value,true)).ok,true);
+  assert.equal((await app.applyBrexGuide(adminTok,c.id,c.revision,'vendor','Overwrite stale',true)).ok,false,'stale revision refused');
+  assert.equal((await app.answerBrexGuide(adminTok,c.id,c.revision+1n,'licenseKey','secret',false)).ok,false,'secret fields excluded');
+  assert.equal((await app.decideBrex(adminTok,g.id,g.revision,{create:'Duplicate'},false,{unknown:null})).ok,false,'replayed decision cannot duplicate a draft');
+  assert.equal((await app.disconnectBrex(adminTok)).ok,true);assert.equal((await app.brexStatus(adminTok))[0].configured,false);assert.equal((await app.brexStatus(adminTok))[0].payments,3n);
+  const exported=JSON.stringify((await app.exportAll(adminTok))[0],(_,v)=>typeof v==='bigint'?String(v):v);assert.ok(!exported.includes('synthetic-brex-read-token'));
+ }finally{await pic.tearDown();}
+});
+test('brex: late responses cannot restore disconnected credentials or cross changed space configuration',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{const f=await brexFixture(pic,{ai:false});await f.app.saveBrexToken(f.adminTok,'synthetic-brex-read-token');
+  const done=await f.deferred.testBrexConnection(f.adminTok),req=await pendingContractsAi(pic);
+  assert.equal((await f.app.testBrexConnection(f.adminTok)).ok,false,'concurrent test rejected');
+  await f.app.disconnectBrex(f.adminTok);await respondContractsAi(pic,req,{items:[brexCard()],next_cursor:null});assert.equal((await done()).ok,false);
+  assert.equal((await f.app.brexStatus(f.adminTok))[0].configured,false);
+  await connectBrexFixture(pic,f);const importing=await f.deferred.syncBrex(f.adminTok),r=await pendingContractsAi(pic);
+  await f.app.configureBrex(f.adminTok,['card-private'],true,false);await respondContractsAi(pic,r,{items:[brexPayment('late')],next_cursor:null});assert.equal((await importing()).ok,false);
+  assert.equal((await f.app.brexStatus(f.adminTok))[0].payments,0n);
+ }finally{await pic.tearDown();}
+});
+test('brex: populated previous-version upgrade retains contract terms and installs an empty disconnected integration', {skip:!process.env.KEBAB_BREX_BASELINE_WASM},async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{const f=await brexFixture(pic,{ai:false,appOptions:{wasm:process.env.KEBAB_BREX_BASELINE_WASM}});const r=await f.app.createContract(f.adminTok,cinput());assert.equal(r.ok,true);await f.app.setTerms(f.adminTok,r.id,1n,TERMS,'before upgrade');
+  await pic.upgradeCanister({sender:controller,canisterId:f.appId,wasm:candidateWasm('contracts'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});await settled(pic);
+  const root=await f.login(owner),tok=(await f.app.openSpace(root,f.spaceId)).token;
+  const c=(await f.app.brexGuide(tok,r.id))[0].contract;assert.equal(c.title,'Sunrise Cloud — Team plan');assert.equal(c.fields.find(x=>x.name==='amountMinor').value,'150000');assert.equal(c.fields.find(x=>x.name==='renewalDate').value,'2027-01-01');
+  assert.equal((await f.app.brexStatus(tok))[0].configured,false);assert.equal((await f.app.brexStatus(tok))[0].payments,0n);
+  await connectBrexFixture(pic,f,tok);assert.equal((await importBrexFixture(pic,f,[brexPayment('after-upgrade')],null,tok)).ok,true);
+ }finally{await pic.tearDown();}
+});
+test('brex: AI suggestions cannot write contracts; guided interpretation is previewed and stale replies are refused',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{const f=await brexFixture(pic),{app,adminTok}=f;await connectBrexFixture(pic,f);await importBrexFixture(pic,f,[brexPayment('ai1')]);
+  const existing=await app.createContract(adminTok,cinput()),privateRecord=await app.createContract(f.memberRoot,cinput({vendor:'Private supplier'}));
+  let status=(await app.brexStatus(adminTok))[0];await app.configureBrex(adminTok,status.selected,false,true);
+  const g=(await app.listBrexReview(adminTok,'pending',0n,10n))[0].rows[0];const classify=await f.deferred.analyzeBrexReview(adminTok,g.id),req=await pendingContractsAi(pic);
+  const body=JSON.parse(Buffer.from(req.body).toString());assert.ok(!JSON.stringify(body).includes('synthetic-brex-read-token'));assert.ok(!JSON.stringify(body).includes('Private supplier'));
+  await respondContractsAi(pic,req,{choices:[{message:{content:JSON.stringify({classification:'subscription',reason:'Likely software; confirm plan',candidates:[Number(existing.id),Number(privateRecord.id),999999]})}}]});assert.equal((await classify()).ok,true);
+  const d=(await app.brexReviewDetail(adminTok,g.id,0n))[0];assert.deepEqual(d.group.candidates,[existing.id]);assert.deepEqual(d.group.state,{pending:null});assert.equal((await app.brexGuide(adminTok,existing.id))[0].contract.revision,1n);
+  const interpretation=await f.deferred.answerBrexGuide(adminTok,existing.id,1n,'interval','jaehrlich',true),r=await pendingContractsAi(pic);
+  await respondContractsAi(pic,r,{choices:[{message:{content:'{"value":"year","explanation":"Annual billing"}'}}]});const answer=await interpretation();assert.equal(answer.value,'year');assert.equal((await app.brexGuide(adminTok,existing.id))[0].contract.revision,1n,'AI only previews');
+  assert.equal((await app.applyBrexGuide(adminTok,existing.id,1n,'interval',answer.value,false)).ok,true);
+  const late=await f.deferred.answerBrexGuide(adminTok,existing.id,2n,'product','Business plan',true),lateReq=await pendingContractsAi(pic);
+  assert.equal((await app.applyBrexGuide(adminTok,existing.id,2n,'product','Human edit',true)).ok,true);
+  await respondContractsAi(pic,lateReq,{choices:[{message:{content:'{"value":"Business","explanation":"Plan"}'}}]});assert.equal((await late()).ok,false,'late AI cannot replace a newer human decision');
+ }finally{await pic.tearDown();}
+});
+test('brex: 10000 payments across 1000 merchants reconcile without duplicates and review pagination retains exact totals',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{const f=await brexFixture(pic,{ai:false});await connectBrexFixture(pic,f);
+  for(let page=0;page<100;page++){
+   const rows=Array.from({length:100},(_,i)=>{const n=page*100+i;return brexPayment('bulk-'+n,{description:'Software Vendor '+(n%1000),merchant:{raw_descriptor:'Software Vendor '+(n%1000)},amount:{amount:100,currency:'USD'}});});
+   assert.equal((await importBrexFixture(pic,f,rows,page===99?null:'page-'+(page+1))).ok,true);
+  }
+  const status=(await f.app.brexStatus(f.adminTok))[0];assert.equal(status.payments,10000n);assert.equal(status.groups,1000n);assert.equal(status.scanning,false);
+  const seen=new Set();let offset=0n,total=0n;
+  for(;;){const page=(await f.app.listBrexReview(f.adminTok,'all',offset,100n))[0];assert.equal(page.total,1000n);for(const g of page.rows){assert.ok(!seen.has(String(g.id)));seen.add(String(g.id));assert.equal(g.count,10n);assert.equal(g.totalMinor,1000n);total+=g.count;}if(!page.next.length)break;offset=page.next[0];}
+  assert.equal(total,10000n);assert.equal(seen.size,1000);
+  assert.equal((await f.app.syncBrex(f.adminTok)).ok,false,'daily schedule prevents premature rescans');
+  await f.app.configureBrex(f.adminTok,['card-it'],true,false);assert.equal((await importBrexFixture(pic,f,[brexPayment('bulk-0',{description:'Software Vendor 0',merchant:{raw_descriptor:'Software Vendor 0'},amount:{amount:100,currency:'USD'}})])).ok,true);assert.equal((await f.app.brexStatus(f.adminTok))[0].payments,10000n);
+ }finally{await pic.tearDown();}
+});
+test('brex: daily timer preserves approved matches and reopens changed amounts; failed pages retry without losing evidence',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{const f=await brexFixture(pic,{ai:false});await connectBrexFixture(pic,f);await importBrexFixture(pic,f,[brexPayment('initial')]);
+  const c=await f.app.createContract(f.adminTok,cinput());let g=(await f.app.listBrexReview(f.adminTok,'all',0n,10n))[0].rows[0];
+  assert.equal((await f.app.decideBrex(f.adminTok,g.id,g.revision,{link:c.id},true,{subscription:null})).ok,true);
+  await pic.advanceTime(86401000);await pic.tick(12);await pic.advanceTime(31000);
+  let req=await pendingContractsAi(pic);assert.match(req.url,/api.brex.com/);
+  await respondContractsAi(pic,req,{items:[brexPayment('initial'),brexPayment('daily',{posted_at_date:'2026-10-19'})],next_cursor:null});await pic.tick(10);
+  const root=await f.login(owner);f.adminTok=(await f.app.openSpace(root,f.spaceId)).token;
+  g=(await f.app.listBrexReview(f.adminTok,'all',0n,10n))[0].rows[0];assert.equal(g.count,2n);assert.deepEqual(g.state,{linked:c.id});
+  assert.equal((await f.app.brexGuide(f.adminTok,c.id))[0].contract.revision,1n,'automatic payment linking preserves contract terms');
+  await f.app.configureBrex(f.adminTok,['card-it'],true,false);
+  await importBrexFixture(pic,f,[brexPayment('changed',{posted_at_date:'2026-10-20',amount:{amount:2990,currency:'CHF'}})]);
+  g=(await f.app.listBrexReview(f.adminTok,'all',0n,10n))[0].rows[0];assert.deepEqual(g.state,{pending:null});
+  const detail=(await f.app.brexReviewDetail(f.adminTok,g.id,0n))[0];assert.ok(detail.decisions.some(e=>e.automatic));
+  await f.app.configureBrex(f.adminTok,['card-it'],true,false);
+  const finish=await f.deferred.syncBrex(f.adminTok);req=await pendingContractsAi(pic);
+  await pic.mockPendingHttpsOutcall({requestId:req.requestId,subnetId:req.subnetId,response:{type:'success',statusCode:429,headers:[],body:Buffer.from('rate limited')}});
+  assert.equal((await finish()).ok,false);assert.equal((await f.app.syncBrex(f.adminTok)).ok,false,'retry backoff enforced');
+  assert.equal((await f.app.brexStatus(f.adminTok))[0].payments,3n);
+  await pic.advanceTime(900001);await pic.tick(12);await pic.advanceTime(31000);req=await pendingContractsAi(pic);await respondContractsAi(pic,req,{items:[brexPayment('changed',{amount:{amount:2990,currency:'CHF'}})],next_cursor:null});await pic.tick(10);
+  assert.equal((await f.app.brexStatus(f.adminTok))[0].error,'');assert.equal((await f.app.brexStatus(f.adminTok))[0].payments,3n);
+ }finally{await pic.tearDown();}
+});
+test('brex: populated integration upgrade retains evidence and decisions; archived space stops pending writes',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{const f=await brexFixture(pic,{ai:false});await connectBrexFixture(pic,f);await importBrexFixture(pic,f,[brexPayment('kept')]);
+  let g=(await f.app.listBrexReview(f.adminTok,'all',0n,10n))[0].rows[0];const c=await f.app.createContract(f.adminTok,cinput());
+  await f.app.decideBrex(f.adminTok,g.id,g.revision,{link:c.id},true,{subscription:null});
+  await pic.upgradeCanister({sender:controller,canisterId:f.appId,wasm:candidateWasm('contracts'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});await settled(pic);
+  const root=await f.login(owner);f.adminTok=(await f.app.openSpace(root,f.spaceId)).token;
+  assert.equal((await f.app.brexStatus(f.adminTok))[0].configured,true);const d=(await f.app.brexReviewDetail(f.adminTok,g.id,0n))[0];assert.equal(d.payments[0].id,'kept');assert.deepEqual(d.group.state,{linked:c.id});assert.equal(d.decisions.length,1);
+  await f.app.configureBrex(f.adminTok,['card-it'],true,false);const finish=await f.deferred.syncBrex(f.adminTok),req=await pendingContractsAi(pic);
+  const archived=await f.app.updateSpace(f.adminTok,2n,'Test team','Archived during import',[{pid:f.adminId,role:{owner:null}},{pid:f.memberId,role:{editor:null}}],true);assert.equal(archived.ok,true,archived.detail);
+  await respondContractsAi(pic,req,{items:[brexPayment('must-not-write')],next_cursor:null});assert.equal((await finish()).ok,false);assert.deepEqual(await f.app.brexStatus(f.adminTok),[]);
+  assert.equal((await f.app.updateSpace(f.adminTok,3n,'Test team','Restored',[{pid:f.adminId,role:{owner:null}},{pid:f.memberId,role:{editor:null}}],false)).ok,true);
+  assert.equal((await f.app.brexStatus(f.adminTok))[0].payments,1n,'late response did not enter the archived space');
+ }finally{await pic.tearDown();}
+});
+test('brex: individual payments split across contracts atomically, survive upgrade and isolate future imports',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{const f=await brexFixture(pic,{ai:false,appOptions:process.env.KEBAB_BREX_SPLIT_BASELINE?{wasm:process.env.KEBAB_BREX_SPLIT_BASELINE}:{}});
+  await connectBrexFixture(pic,f);await importBrexFixture(pic,f,[brexPayment('split-a'),brexPayment('split-b'),brexPayment('split-c'),brexPayment('other-group',{merchant:{raw_descriptor:'Other vendor'}})]);
+  const a=await f.app.createContract(f.adminTok,cinput()),b=await f.app.createContract(f.adminTok,cinput({title:'Same vendor — add-on'})),privateC=await f.app.createContract(f.memberRoot,cinput());
+  let g={id:1n,revision:3n};
+  await f.app.decideBrex(f.adminTok,g.id,g.revision,{link:a.id},true,{subscription:null});
+  if(process.env.KEBAB_BREX_SPLIT_BASELINE){await pic.upgradeCanister({sender:controller,canisterId:f.appId,wasm:candidateWasm('contracts'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});await settled(pic);const root=await f.login(owner);f.adminTok=(await f.app.openSpace(root,f.spaceId)).token;}
+  let d=(await f.app.brexReviewDetail(f.adminTok,g.id,0n))[0];g=d.group;
+  assert.equal((await f.app.decideBrexPayments(f.memberTok,g.id,g.revision,['split-b'],{link:b.id})).ok,false);
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,g.revision,['split-b','other-group'],{link:b.id})).ok,false,'mixed-group batch rejected atomically');
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,g.revision,['split-b'],{link:privateC.id})).ok,false);
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,g.revision,['split-b','split-b'],{link:b.id})).ok,false);
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,g.revision,['split-b'],{link:b.id})).ok,true);
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,g.revision,['split-c'],{link:b.id})).ok,false,'stale review rejected');
+  d=(await f.app.brexReviewDetail(f.adminTok,g.id,0n))[0];assert.equal(d.group.summary.split,true);assert.equal(d.group.summary.pending,0n);assert.equal(d.group.autoLink,false);
+  const target=id=>d.reviews.find(r=>r.id===id).assignment.state;assert.deepEqual(target('split-a'),{linked:a.id});assert.deepEqual(target('split-b'),{linked:b.id});assert.deepEqual(target('split-c'),{linked:a.id});
+  assert.equal((await f.app.decideBrex(f.adminTok,g.id,d.group.revision,{link:a.id},true,{subscription:null})).ok,false,'bulk action cannot erase split decisions');
+  await f.app.configureBrex(f.adminTok,['card-it'],true,false);await importBrexFixture(pic,f,[brexPayment('split-new')]);
+  d=(await f.app.brexReviewDetail(f.adminTok,g.id,0n))[0];assert.deepEqual(target('split-new'),{pending:null});assert.deepEqual(target('split-b'),{linked:b.id});assert.equal(d.group.summary.pending,1n);
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,d.group.revision,['split-new'],{dismiss:null})).ok,true);
+  await pic.upgradeCanister({sender:controller,canisterId:f.appId,wasm:candidateWasm('contracts'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});await settled(pic);
+  const root=await f.login(owner);f.adminTok=(await f.app.openSpace(root,f.spaceId)).token;d=(await f.app.brexReviewDetail(f.adminTok,g.id,0n))[0];assert.deepEqual(target('split-b'),{linked:b.id});assert.deepEqual(target('split-new'),{ignored:null});assert.equal(d.reviews.find(r=>r.id==='split-b').history.length,1);
+  assert.equal((await f.app.brexGuide(f.adminTok,a.id))[0].contract.revision,1n);assert.equal((await f.app.brexGuide(f.adminTok,b.id))[0].contract.revision,1n);
+  assert.ok(!(await f.app.listBrexReview(f.adminTok,'pending',0n,50n))[0].rows.some(row=>row.id===g.id),'fully reviewed split groups leave the pending queue');
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,d.group.revision,[],{dismiss:null})).ok,false);
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,d.group.revision,Array.from({length:51},(_,i)=>'selection-'+i),{dismiss:null})).ok,false);
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,d.group.revision,['split-new'],{create:'Must reopen first'})).ok,false);
+  assert.equal((await f.app.decideBrexPayments(f.adminTok,g.id,d.group.revision,['split-new'],{reopen:null})).ok,true);
+  d=(await f.app.brexReviewDetail(f.adminTok,g.id,0n))[0];
+  const draft=await f.app.decideBrexPayments(f.adminTok,g.id,d.group.revision,['split-new'],{create:'Separate product'});assert.equal(draft.ok,true);
+  d=(await f.app.brexReviewDetail(f.adminTok,g.id,0n))[0];assert.deepEqual(target('split-new'),{linked:draft.contractId[0]});assert.deepEqual(target('split-b'),{linked:b.id});assert.equal(d.reviews.find(r=>r.id==='split-new').history.length,3);
+
  }finally{await pic.tearDown();}
 });

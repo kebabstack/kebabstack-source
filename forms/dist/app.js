@@ -223,7 +223,7 @@ $("impCancel").onclick = () => $("importModal").classList.remove("on");
 $("impCopyPrompt").onclick = () => {
   const p = `Convert the attached form (PDF, document or screenshot) into this plain-text outline format, and output ONLY the outline:
 
-# <form title>
+# <form data-ks-form title>
 <question text> [type] [required]
 - <option>
 - <option>
@@ -697,7 +697,7 @@ function renderSubs() {
     `<span style="flex:1"></span><button class="linkbtn" id="csvBtn">EXPORT CSV</button><button class="linkbtn" id="reloadSubs">RELOAD</button></div>`;
   if (!list.length) html += `<div class="empty">No submissions ${subFilter === "all" ? "yet — share the public link once the form is open." : "with this status."}</div>`;
   else {
-    html += `<div style="overflow-x:auto"><table class="subtable"><thead><tr><th>#</th><th>Submitted</th><th>Respondent</th><th>Status</th><th>Rating</th><th>Assignee</th><th>Notes</th></tr></thead><tbody>` +
+    html += `<div style="overflow-x:auto"><table data-ks-table class="subtable"><thead><tr><th>#</th><th data-ks-sort="none">Submitted</th><th>Respondent</th><th>Status</th><th>Rating</th><th>Assignee</th><th>Notes</th></tr></thead><tbody>` +
       list.map((s) => {
         const av = avgRating(s);
         return `<tr class="rowlink" data-id="${s.id}">

@@ -122,3 +122,12 @@ Settings → Tracking script links the [capability comparison](dist/consent.html
 Settings → Tracking script offers cookieless, cookieless after consent, and cookie after consent. The selection generates code only: replace the old website embed with the new one. Consent modes require the visitor's approval before analytics. The included panel has equal Allow/Reject controls, a privacy notice link and a persistent withdrawal button. Alternatively disable that panel and connect the CMP as described in [consent setup](dist/consent.html). Publish the correct notice URL and test accept/reject/withdrawal on an isolated site ID before deployment. Default cookieless embeds remain unchanged.
 
 Collector diagnostics distinguish accepted (committed canister receipt), queued-at-collector (durable Node queue), ignored, invalid-receipt and failures. Retries preserve IDs and use bounded backoff; 408/425/429/5xx do not delete pending events. The in-memory queue holds at most 100 events; dropped counts make overflow/rejection visible locally. No durable browser queue is introduced. Previously installed copies of tracker.js need updating if self-hosted; CDN/browser caches can delay adoption.
+
+## Shared workspace controls
+
+Operational tables marked for shared controls offer **Table options** for finding
+loaded rows and choosing columns. Header buttons sort only the currently loaded
+rows; app filters, totals and exports retain their existing scope. Reset restores
+the original order. Editable grids and existing app-owned queue sorting stay with
+their workflows. Long marked selectors keep native selection and add an option
+search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).

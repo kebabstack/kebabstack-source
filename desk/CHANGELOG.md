@@ -1,5 +1,9 @@
 # Changelog — kebab-stack desk
 
+## [0.34.0] — 2026-10-18
+
+- Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.
+
 ## [0.33.0] — 2026-10-16
 
 - Slack completion detection: with AI assistance enabled, an explicit completed-work comment from Desk staff can resolve the request. The model must quote evidence; ambiguous statements keep the current status. Permissions and request revision are checked after the model returns, and the normal checklist, approval and offboarding gates still apply. The activity records the decision and Slack receives the status update.

@@ -1,12 +1,16 @@
 # Changelog — kebab-stack hub
 
+## [0.41.0] — 2026-10-18
+
+- Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.
+
 ## [0.40.1] — 2026-10-18
 
 - Regenerate the browser installer interface from compiled Candid so the existing owner-only installation-file method is represented correctly. No permissions or stable-state change.
 
 ## [0.40.0] — 2026-10-11
 
-- **One Hub sign-in, every tool.** After signing in, the Hub keeps a suite-login token in a cookie on the company's parent domain (dfinity.kebabstack.com → `.kebabstack.com`). A tool on that domain opened without its own session hands the token to its backend, which redeems it at the Hub (`redeemSuiteLogin`, connector canisters only): no detour through the Hub page, no ticket, one call. The token can only open app sessions in tools the person may use; it dies with the Hub session (sign-out, expiry). New portal calls `mintSuiteLogin` and `revokeSuiteLogin`; the SDK adds `suiteCookie` (browser) and `redeemSuiteLogin`/`deriveToken` (Motoko). Tools on a public gateway address (icp0.io, ic0.app, icp.net) keep the ticket hand-off; the cookie is never set there.
+- **One Hub sign-in, every tool.** After signing in, the Hub keeps a suite-login token in a cookie on the company's parent domain (hub.example.org → `.example.org`). A tool on that domain opened without its own session hands the token to its backend, which redeems it at the Hub (`redeemSuiteLogin`, connector canisters only): no detour through the Hub page, no ticket, one call. The token can only open app sessions in tools the person may use; it dies with the Hub session (sign-out, expiry). New portal calls `mintSuiteLogin` and `revokeSuiteLogin`; the SDK adds `suiteCookie` (browser) and `redeemSuiteLogin`/`deriveToken` (Motoko). Tools on a public gateway address (icp0.io, ic0.app, icp.net) keep the ticket hand-off; the cookie is never set there.
 - Sign-in tokens (session, app ticket, suite token, suite login) derive from a per-hub secret seed, a counter and the time instead of a management-canister random call per token: one consensus round less on every sign-in and hand-off. The seed itself comes from `raw_rand` once. Existing sessions and tickets stay valid.
 - Sign-out in the Hub revokes the suite login and clears the cookie; `ssoLogout` revokes it server-side.
 

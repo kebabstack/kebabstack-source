@@ -269,3 +269,12 @@ Settings → AI → AI assistance controls triage, title summaries, completion d
 Image jobs survive upgrades. Up to five attempts use increasing delays (1–4 minutes); inspect ticket activity and Settings → Slack for errors. After fixing scopes or availability, use Attachments → Retry image sync. PNG, JPEG, GIF and WebP are supported; each stored image is at most 1.5 MB, with 20 attachments per ticket and the existing global storage cap. Large Slack images use available previews; old placeholders and non-image files require manual handling. Deleting a Slack file does not erase Desk's stored copy, or vice versa. Include both systems in retention procedures.
 
 Release validation must include real local Hub/Desk Wasm with mocked Slack/AI boundaries, a populated upgrade, the Desk frontend smokes, and the stable compatibility check against the committed baseline. A live Slack round-trip still requires a configured workspace and authorized test messages; local protocol tests do not certify workspace permissions.
+
+## Shared workspace controls
+
+Operational tables marked for shared controls offer **Table options** for finding
+loaded rows and choosing columns. Header buttons sort only the currently loaded
+rows; app filters, totals and exports retain their existing scope. Reset restores
+the original order. Editable grids and existing app-owned queue sorting stay with
+their workflows. Long marked selectors keep native selection and add an option
+search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).

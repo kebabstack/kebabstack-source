@@ -2,7 +2,7 @@
 
 Everything an app needs to become a layer on the skewer: single sign-on
 through the hub, the people directory, bounded access revocation, notifications.
-Two files, no framework.
+Small browser modules, no framework.
 
 | Piece | For | What it gives you |
 |---|---|---|
@@ -220,3 +220,9 @@ adding per-app links. Older Hubs omit the optional field and keep the link hidde
 Console entry still requires the linked passkey; the role hint and suite token
 never authorize administrative API calls. The Hub's own console sets the Hub-only
 `hideConsole` option to avoid a redundant link to the current screen.
+
+## Tables, forms and AI evidence
+
+Use the [shared workspace controls](WORKSPACE-UI.md) for operational tables,
+form validation and original-document review. The browser components are served
+beside the SDK; they do not change the Motoko SDK, Candid or permission contract.

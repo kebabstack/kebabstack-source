@@ -198,6 +198,7 @@ a:hover{color:var(--ks-accent)}
 </style>
 <link rel="stylesheet" href="./signin.css">
 <link rel="stylesheet" href="./components.css">
+<script type="module" src="./workspace-ui.js"></script>
 </head>
 <body class="ks-workspace">
 
@@ -295,7 +296,7 @@ a:hover{color:var(--ks-accent)}
         <div class="kv">An open sample form with three submissions to try the review pipeline. Removable in one click.</div>
         <div class="btnrow"><button id="sSeed" class="pill outline sm">ADD SAMPLE FORM</button><button id="sUnseed" class="pill outline sm">REMOVE SAMPLE FORM</button><span id="sSeedStatus" class="status"></span></div>
       </div>
-      <div class="scard"><h3>Admin log</h3><table class="plain"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div>
+      <div class="scard"><h3>Admin log</h3><table data-ks-table class="plain"><thead><tr><th data-ks-sort="none">When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div>
     </div>
   </section>
 

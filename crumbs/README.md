@@ -55,3 +55,12 @@ node crumbs/test/preview.mjs
 ```
 
 The preview at `http://127.0.0.1:8792` uses explicitly labelled sample data; it is not deployed or included in release assets. Root `npm run check` builds and checks the whole suite, including Crumbs. See the suite release workflow before deployment.
+
+## Shared workspace controls
+
+Operational tables marked for shared controls offer **Table options** for finding
+loaded rows and choosing columns. Header buttons sort only the currently loaded
+rows; app filters, totals and exports retain their existing scope. Reset restores
+the original order. Editable grids and existing app-owned queue sorting stay with
+their workflows. Long marked selectors keep native selection and add an option
+search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).

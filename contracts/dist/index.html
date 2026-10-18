@@ -146,6 +146,9 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 <link rel="stylesheet" href="./saas.css">
 <link rel="stylesheet" href="./signin.css">
 <link rel="stylesheet" href="./components.css">
+<script type="module" src="./workspace-ui.js"></script>
+
+<link rel="stylesheet" href="brex.css">
 </head>
 <body class="ks-workspace">
 
@@ -174,7 +177,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 <div id="layout">
   <div id="topbar"></div>
   <div class="spacebar"><div class="in">
-    <div class="spacecontrols"><label class="spaceselect">Workspace<select id="spaceSelect" aria-label="Current workspace"></select></label>
+    <div class="spacecontrols"><label class="spaceselect">Workspace<select data-ks-search id="spaceSelect" aria-label="Current workspace"></select></label>
     <span class="spaceaccess" id="spaceAccess"></span><button class="pill outline sm" id="spaceManage">Manage workspace</button><button class="pill primary sm" id="spaceCreate">+ Teamspace</button></div>
   </div></div>
   <div class="mainnav"><div class="in">
@@ -182,6 +185,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
     <button data-nav="tasks"><svg class="nav-icon nav-icon-todo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>To do<span class="n hidden" id="nToday"></span></button>
     <button data-nav="contracts"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Contracts</button>
     <button data-nav="keys"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="m11 11 9 9m-5-5 3-3m-1 5 3-3"/></svg>License keys</button>
+    <button data-nav="payments"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>Payment review</button>
     <button data-nav="inbox"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4zM4 14h5l2 3h2l2-3h5M12 5v7m-3-3 3 3 3-3"/></svg>Inbox<span class="n hidden" id="nInbox"></span></button>
     <button data-nav="settings" id="navConn"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg>Settings</button>
 
@@ -264,7 +268,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
       </div>
       <div class="filters">
         <input aria-label="Search contracts" type="search" id="cQ" placeholder="Search title, vendor, product, reference…" autocomplete="off">
-        <select id="cType" aria-label="Filter by contract type"><option value="">Any type</option></select><select id="cStatus" aria-label="Filter by contract status"><option value="">Any status</option><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
+        <select data-ks-search id="cType" aria-label="Filter by contract type"><option value="">Any type</option></select><select data-ks-search id="cStatus" aria-label="Filter by contract status"><option value="">Any status</option><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
         <label class="ck"><input type="checkbox" id="cDue"> decision within 60 days</label>
         <label class="ck"><input type="checkbox" id="cIncomplete"> missing terms</label>
         <label class="ck"><input type="checkbox" id="cArchived"> include archived</label>
@@ -363,7 +367,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
         <div class="scard">
           <h3>Import from a spreadsheet</h3>
           <div class="kv">Export your sheet as CSV, paste it here (or pick the file), then say which column means what. You get a preview of every row before anything is written. Rows that match an existing contract (vendor + product + reference) are skipped, never overwritten. Amounts may be written the way your sheet writes them (1,500.00 · 1.500,00 · 1'500.50).</div>
-          <div class="row"><div class="w2"><label>CSV</label><textarea id="imCsv" rows="6" spellcheck="false" style="font-family:var(--ks-mono);font-size:12px" placeholder="Vendor;Product;Amount;Currency;Interval;Renews;Notice months;Owner e-mail"></textarea></div><div><label>Or a file</label><input type="file" id="imFile" accept=".csv,text/csv"><label>Delimiter</label><select id="imDelim"><option value="">detect</option><option value=",">comma</option><option value=";">semicolon</option><option value="&#9;">tab</option></select><label>Batch label</label><input type="text" id="imBatch" placeholder="sheet 2026-09"></div></div>
+          <div class="row"><div class="w2"><label>CSV</label><textarea id="imCsv" rows="6" spellcheck="false" style="font-family:var(--ks-mono);font-size:12px" placeholder="Vendor;Product;Amount;Currency;Interval;Renews;Notice months;Owner e-mail"></textarea></div><div><label>Or a file</label><input type="file" id="imFile" accept=".csv,text/csv"><label>Delimiter</label><select data-ks-search id="imDelim"><option value="">detect</option><option value=",">comma</option><option value=";">semicolon</option><option value="&#9;">tab</option></select><label>Batch label</label><input type="text" id="imBatch" placeholder="sheet 2026-09"></div></div>
           <div class="btnrow"><button class="pill outline sm" id="imHeaders">READ COLUMNS</button><span id="imStatus" class="status"></span></div>
           <div id="imMap" style="margin-top:12px"></div>
           <div class="btnrow"><button class="pill outline sm hidden" id="imPreview">Preview</button><button class="pill primary sm hidden" id="imCommit" disabled>Import</button></div>
@@ -377,7 +381,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
           <div class="btnrow"><button class="pill outline sm" id="exCsv">Export CSV</button><button class="pill outline sm" id="exAll">DOWNLOAD WORKSPACE JSON</button><span id="exStatus" class="status"></span></div>
         </div>
       </div>
-      <div id="cnLog" class="hidden"><div class="scard"><h3>Admin log</h3><div class="tblwrap"><table class="plain"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div></div></div>
+      <div id="cnLog" class="hidden"><div class="scard"><h3>Admin log</h3><div class="tblwrap"><table data-ks-table class="plain"><thead><tr><th data-ks-sort="none">When</th><th>Who</th><th>What</th></tr></thead><tbody id="logRows"></tbody></table></div></div></div>
     </div>
   </section>
 
@@ -412,7 +416,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 <div class="drawer" id="editDrawer">
   <div class="dhead"><b style="font-family:var(--ks-ui);font-size:15px" id="edTitle">Contract</b><span style="flex:1"></span><button class="linkbtn" id="edClose">Close</button></div>
   <div class="dbody">
-    <div id="edTypeRow"><label>Contract type</label><select id="edType"></select></div>
+    <div id="edTypeRow"><label>Contract type</label><select data-ks-search id="edType"></select></div>
     <label>Title</label><input type="text" id="edTitleIn" maxlength="200">
     <div class="row"><div><label>Counterparty / vendor</label><input type="text" id="edVendor" maxlength="200"></div><div><label>Agreement / product / plan</label><input type="text" id="edProduct" maxlength="200"></div></div>
     <label>Reference (as written on the agreement)</label><input type="text" id="edRef" maxlength="120">
@@ -423,7 +427,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
     <div class="pick"><input type="text" id="edDepIn" placeholder="Search the directory, or type group:name" autocomplete="off"><div class="list hidden" id="edDepList"></div></div>
     <div class="chips" id="edDepChip"></div>
     <label>Who may see it</label>
-    <select id="edVis"><option value="team">Workspace — all members of this space</option><option value="restricted">Restricted — named people and space owners</option></select>
+    <select data-ks-search id="edVis"><option value="team">Workspace — all members of this space</option><option value="restricted">Restricted — named people and space owners</option></select>
     <label>Viewers</label>
     <div class="pick"><input type="text" id="edViewIn" placeholder="Add a viewer…" autocomplete="off"><div class="list hidden" id="edViewList"></div></div>
     <div class="chips" id="edViewChips"></div>
@@ -437,10 +441,10 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
   <div class="dhead"><b style="font-family:var(--ks-ui);font-size:15px" id="tdTitle">Terms</b><span style="flex:1"></span><button class="linkbtn" id="tdClose">Close</button></div>
   <div class="dbody">
     <div class="kv" id="tdHint">What you know for sure. Leave a field empty when you do not know — the record will show it as missing rather than guess.</div>
-    <div class="row"><div><label>Amount</label><input type="text" id="tdAmount" placeholder="1500.00" inputmode="decimal"></div><div><label>Currency</label><input type="text" id="tdCurrency" maxlength="3" placeholder="EUR"></div><div><label>Tax basis</label><select id="tdTax"><option value="unknown">unknown</option><option value="net">net</option><option value="gross">gross</option></select></div></div>
-    <div class="row"><div><label>Billed</label><select id="tdInterval"><option value="">unknown</option><option value="month">monthly</option><option value="quarter">quarterly</option><option value="year">yearly</option><option value="once">once</option><option value="other">other</option><option value="none">no payment</option></select></div><div><label>Quantity (units)</label><input type="number" id="tdQty" min="0"></div><div><label>Unit price</label><input type="text" id="tdUnit" placeholder="12.50" inputmode="decimal"></div></div>
+    <div class="row"><div><label>Amount</label><input type="text" id="tdAmount" placeholder="1500.00" inputmode="decimal"></div><div><label>Currency</label><input type="text" id="tdCurrency" maxlength="3" placeholder="EUR"></div><div><label>Tax basis</label><select data-ks-search id="tdTax"><option value="unknown">unknown</option><option value="net">net</option><option value="gross">gross</option></select></div></div>
+    <div class="row"><div><label>Billed</label><select data-ks-search id="tdInterval"><option value="">unknown</option><option value="month">monthly</option><option value="quarter">quarterly</option><option value="year">yearly</option><option value="once">once</option><option value="other">other</option><option value="none">no payment</option></select></div><div><label>Quantity (units)</label><input type="number" id="tdQty" min="0"></div><div><label>Unit price</label><input type="text" id="tdUnit" placeholder="12.50" inputmode="decimal"></div></div>
     <div class="row"><div><label>Start</label><input type="date" id="tdStart"></div><div><label>End</label><input type="date" id="tdEnd"></div></div>
-    <div class="row"><div><label>Renewal</label><select id="tdRenewal"><option value="">unknown</option><option value="auto">renews automatically</option><option value="manual">renews only if we act</option><option value="none">does not renew</option><option value="indefinite">no fixed expiry</option></select></div><div><label>Renewal date</label><input type="date" id="tdRenewalDate"></div></div>
+    <div class="row"><div><label>Renewal</label><select data-ks-search id="tdRenewal"><option value="">unknown</option><option value="auto">renews automatically</option><option value="manual">renews only if we act</option><option value="none">does not renew</option><option value="indefinite">no fixed expiry</option></select></div><div><label>Renewal date</label><input type="date" id="tdRenewalDate"></div></div>
     <div class="row"><div><label>Notice period — months</label><input type="number" id="tdNoticeM" min="0" max="60"></div><div><label>… or days</label><input type="number" id="tdNoticeD" min="0" max="3660"></div><div><label>Last cancellation date (if stated)</label><input type="date" id="tdNoticeDate"></div></div>
     <label>Note</label><textarea id="tdNote" rows="3" maxlength="4000"></textarea>
     <label>Why (goes into the history)</label><input type="text" id="tdWhy" maxlength="300" placeholder="e.g. from the signed order form">
@@ -462,7 +466,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 <div class="modal" id="statusModal"><div class="mbox">
   <div class="tt">CHANGE THE CONTRACT STATUS</div>
   <div class="kv">Your decision, not the AI's. "End confirmed" needs an end date on the record; "ended" is for a date that has passed.</div>
-  <label>New status</label><select id="stSel"><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
+  <label>New status</label><select data-ks-search id="stSel"><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
   <label>Why (history)</label><input type="text" id="stNote" maxlength="300">
   <div class="ta"><button class="pill primary sm" id="stSave">Save</button><button class="pill outline sm" id="stCancel">Cancel</button><span id="stStatus" class="status"></span></div>
 </div></div>
@@ -479,7 +483,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 
 <div class="modal" id="doneModal"><div class="mbox">
   <div class="tt" id="dnTitle">DONE</div>
-  <div id="dnDecision"><label>What was decided?</label><select id="dnSel"><option value="continue">Continue — keep the contract</option><option value="cancel">Cancel — start the cancellation</option><option value="">Just mark it done</option></select></div>
+  <div id="dnDecision"><label>What was decided?</label><select data-ks-search id="dnSel"><option value="continue">Continue — keep the contract</option><option value="cancel">Cancel — start the cancellation</option><option value="">Just mark it done</option></select></div>
   <label>Note (history)</label><input type="text" id="dnNote" maxlength="300">
   <div class="ta"><button class="pill primary sm" id="dnSave">Save</button><button class="pill outline sm" id="dnCancel">Cancel</button><span id="dnStatus" class="status"></span></div>
 </div></div>
@@ -487,7 +491,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 <div class="modal" id="snoozeModal"><div class="mbox">
   <div class="tt">REMIND ME LATER</div>
   <div class="kv">Only when this shows up again changes — the deadline itself does not move.</div>
-  <label>Show again in</label><select id="snSel"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
+  <label>Show again in</label><select data-ks-search id="snSel"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
   <div class="ta"><button class="pill primary sm" id="snSave">SNOOZE</button><button class="pill outline sm" id="snCancel">Cancel</button><span id="snStatus" class="status"></span></div>
 </div></div>
 

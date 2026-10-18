@@ -1,0 +1,20 @@
+// Local-only visual review of real app components with the frontend smoke's fictional data.
+import fs from 'node:fs';
+import path from 'node:path';
+import {Resvg} from '@resvg/resvg-js';
+const root=path.resolve(import.meta.dirname,'../..'), out=path.join(root,'.contracts-preview');
+fs.mkdirSync(out,{recursive:true});fs.cpSync(path.join(root,'contracts/dist'),out,{recursive:true});
+fs.copyFileSync(path.join(root,'contracts/test/agent-bundle.stub.js'),path.join(out,'agent-bundle.js'));
+let source=fs.readFileSync(path.join(root,'contracts/test/smoke.mjs'),'utf8');
+source=source.slice(source.indexOf('const now ='),source.indexOf('const dom ='));
+source=source.replace('process.argv[2] || "admin"','new URLSearchParams(location.search).get("role") || "admin"');
+source=source.replaceAll('Me Myself','Demo Admin').replace('Price rises to 1,650.00 EUR from January 2027','Price rises to 1,650.00 EUR from January 2028');
+const photo=new Resvg(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="800" height="1000" fill="white"/><g font-family="Arial" fill="#222"><text x="50" y="65" font-size="18">FICTIONAL SAMPLE · NOT A REAL AGREEMENT</text><text x="50" y="140" font-size="32">Sunrise Cloud · Team plan</text><text x="50" y="220" font-size="22">Renewal notice</text><text x="50" y="290" font-size="22">Annual subscription: EUR 1,650.00</text><text x="50" y="340" font-size="22">Renewal date: 1 January 2028</text><text x="50" y="390" font-size="22">Notice: two months before renewal.</text><text x="50" y="460" font-size="18">Review the effective date before accepting.</text><text x="50" y="920" font-size="16">Local UI fixture. No production data or AI request.</text></g></svg>`).render().asPng().toString('base64');
+source=source.replaceAll('name: "renewal.pdf", mime: "application/pdf"','name: "Fictional renewal notice", mime: "image/png"');
+source=source.replace('new Uint8Array([0x25, 0x50, 0x44, 0x46])',`Uint8Array.from(atob('${photo}'),c=>c.charCodeAt(0))`);
+source+='\nlocalStorage.setItem("ks-contracts-session","local-preview");\n';
+fs.writeFileSync(path.join(out,'fixture.js'),source);
+let html=fs.readFileSync(path.join(out,'index.html'),'utf8').replace('<script type="module" src="./app.js"></script>','<script src="./fixture.js"></script><script type="module" src="./app.js"></script>');
+html=html.replace(/<body([^>]*)>/,'<body$1><p role="note">LOCAL PREVIEW · Fictional sample data only · No production connection</p>');
+fs.writeFileSync(path.join(out,'index.html'),html);
+console.log('Local fixture built in '+out);

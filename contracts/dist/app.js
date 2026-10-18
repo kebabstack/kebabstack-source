@@ -1,6 +1,7 @@
 import {renderVendorTerms} from "./vendor-terms.js";
 import {mountDocumentPreview} from "./document-preview.js";
 import {renderAssignments} from "./license-assignment.js";
+import {renderBrex} from "./brex.js";
 import {renderSaas} from "./saas-workspace.js";
 import { analysisPending, proposalIds, watchAnalysis, analysisFeedback, busyButton } from "./analysis-progress.js";
 import { commercialFields, renderCommercialDetails } from "./commercial-details.js";
@@ -150,6 +151,9 @@ async function routeView() {
   }
   if(h === "#/tasks"){setNav("tasks");return enterToday();}
   if(h === "#/contracts/advanced"){setNav("contracts");return enterContracts();}
+  if(h === "#/settings/brex"){setNav("settings");return enterBrex("settings");}
+  if((m=h.match(/^#\/payments\/guide\/(\d+)$/))){setNav("payments");return enterBrex("guide",m[1]);}
+  if((m=h.match(/^#\/payments(?:\/(\d+))?$/))){setNav("payments");return enterBrex("review",m[1]||null);}
   if(h === "#/settings") {setNav("settings");return enterSaas("settings");}
   if(h === "#/reports") {setNav("today");return enterSaas("reports");}
   if((m=h.match(/^#\/keys(?:\/(new|\d+))?$/))){setNav("keys");return enterSaas("keys",m[1]||null);}
@@ -167,6 +171,7 @@ async function routeView() {
   if (h.startsWith("#/docs")) { setNav("docs"); show("viewDocs"); return; }
   setNav("today"); return enterSaas("overview");
 }
+async function enterBrex(page,id=null){show("viewSaas");return renderBrex($("saasBody"),{api:backend,token:hubTok,stale:viewGuard("brex"),space:currentSpace,me,toast},page,id);}
 async function enterSaas(page,id=null){show("viewSaas");return renderSaas($("saasBody"),{api:backend,token:hubTok,stale:viewGuard("saas"),space:currentSpace,me,canWrite:isStaff(),isAdmin:isAdmin(),listTypes:()=>loadTypes(true),spaces,openSpace:(id)=>chooseSpace(id),download,toast},page,id);}
 async function route() {
   closeDocumentPreview(); closeDocumentPreview = () => {};
@@ -464,7 +469,7 @@ async function loadInbox() {
   try { rows = await backend.listSources(hubTok, ibStatus, []); } catch (e) { if (staleView()) return; $("ibList").innerHTML = `<div class="empty">Could not load: ${esc(String(e).slice(0, 160))}</div>`; return; }
   if (staleView()) return;
   if (!rows.length) { $("ibList").innerHTML = `<div class="empty">${ibStatus === "" ? "Nothing waits here. Upload a document (PDF, image or text) or paste text." : "Nothing with this status."}</div>`; return; }
-  $("ibList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Document</th><th>From</th><th>Saved as</th><th>Files</th><th>Suggestions</th><th>Status</th><th>Received</th></tr></thead><tbody>` +
+  $("ibList").innerHTML = `<div class="tblwrap"><table data-ks-table class="plain"><thead><tr><th>Document</th><th>From</th><th>Saved as</th><th>Files</th><th>Suggestions</th><th>Status</th><th data-ks-sort="none">Received</th></tr></thead><tbody>` +
     rows.map((s) => `<tr class="rowlink" data-s="${s.id}"><td><b style="font-weight:500">${esc(s.subject || "(no subject)")}</b>${s.note ? `<div class="kv">${esc(s.note)}</div>` : ""}<div class="kv mono">${esc(s.kind)}${s.handedInByName ? " · by " + esc(s.handedInByName) : ""} · <a href="#/inbox/${s.id}">details</a></div></td><td>${esc(s.fromName || s.fromAddr)}${s.fromName ? `<div class="kv mono">${esc(s.fromAddr)}</div>` : ""}</td><td>${s.contractId.length ? `<a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : '<span class="muted">—</span>'}</td><td class="num">${N(s.documents) || ""}</td><td class="num">${N(s.proposals) || ""}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("") + `</tbody></table></div>`;
   $("ibList").querySelectorAll("tr[data-s]").forEach((r) => { r.onclick = (e) => { if (e.target.closest("a")) return; const src = rows.find(s => String(s.id) === r.dataset.s); location.hash = src?.contractId.length ? "#/c/" + src.contractId[0] : (N(src?.proposals) && src?.status === "review" ? "#/inbox/" : "#/intake/") + r.dataset.s; }; });
 }
@@ -517,6 +522,7 @@ async function enterIntake(id, analysis = null, opts = {}) {
   let monitor;
   const render = (view, outcome = null) => {
     monitor?.stop();
+    closeDocumentPreview();
     const ui = renderIntakeReview(body, {view, spaces, currentSpace, types:typesForReview, presetTarget:intakeTargets.get(String(id))||null, saveTo:async d=>{const r=await backend.fileToContract(token,BigInt(id),d.contractId,d.revision,d.fields,d.note||"");if(stale())return r;if(r.ok){curSrc=null;intakeTargets.delete(String(id));toast("Document attached and record updated");location.hash="#/c/"+r.contractId;}return r;}, canEdit:isStaff(), canTransfer:spaceRoleName()==="owner", stale, api:backend, token, me,
       remove:()=>trashItem("source",BigInt(id),view.source.subject),
       retry:async()=>{const r=await backend.reprocessSource(token,BigInt(id));if(stale())return r;if(r.ok)startWatch({...view,source:{...view.source,status:"received",note:""}},{requested:true,baseline:proposalIds(monitor?.latest()||view)});return r;},
@@ -528,6 +534,7 @@ async function enterIntake(id, analysis = null, opts = {}) {
       save:async input=>{const r=await backend.createContractFromSource(token,BigInt(id),input);if(stale())return r;if(r.ok){curSrc=null;toast("Saved — opening the record"); if(input.destination!==currentSpace.id){const opened=await chooseSpace(input.destination,false);if(!opened){toast("Saved in the destination workspace. Open it to view your contract.");return r;}}location.hash=r.contractId?"#/c/"+r.contractId:"#/contracts";}return r;}
     });
     if(!ui)return;
+    closeDocumentPreview=ui.dispose;
     if(outcome)analysisFeedback(ui.progress,{phase:outcome,title:outcome==='ready'?'AI reading complete':'Analysis needs your review',detail:outcome==='ready'?'The latest suggestions are shown below. Check them before saving.':view.source.note||'No new suggestions were returned. You can complete the details or try again.'});
     const startWatch=(initial,options=analysis||{})=>{
       monitor?.stop();ui.setAnalysing(true);
@@ -584,6 +591,7 @@ async function enterSource(id, tabName, analysis = null) {
   $("srcMeta").innerHTML = `From <b>${esc(s.fromName || s.fromAddr)}</b>${s.fromName ? ` &lt;${esc(s.fromAddr)}&gt;` : ""}${v.to.length ? " · to " + esc(v.to.join(", ")) : ""}${v.cc.length ? " · cc " + esc(v.cc.join(", ")) : ""}${s.sentAt ? " · sent " + esc(s.sentAt.slice(0, 16).replace("T", " ")) : ""} · received ${fmtD(s.receivedAt)} · ${esc(s.kind)}${s.handedInByName ? " by " + esc(s.handedInByName) : ""}${s.contractId.length ? ` · saved as <a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : ""}${s.note ? `<div>${esc(s.note)}</div>` : ""}`;
   const openProps = v.proposals.filter((p) => p.status === "open");
   $("srcPropCount").textContent = openProps.length ? `(${openProps.length})` : ""; $("srcDocCount").textContent = v.documents.length ? `(${v.documents.length})` : "";
+  $("rProposals").classList.remove("ks-review-layout","ks-review-sticky");
   // proposals
   await renderProposals($("srcProposals"), v.proposals, { candidates: v.candidates, source: s, onDone: () => enterSource(id, tabName) });
   if (staleView()) return;
@@ -622,7 +630,7 @@ async function enterSource(id, tabName, analysis = null) {
   }
 }
 function docTable(docs) {
-  return `<div class="tblwrap"><table class="plain"><thead><tr><th>File</th><th>Type</th><th>Size</th><th>Read</th><th></th></tr></thead><tbody>` + docs.map((d) => `<tr><td>${esc(d.name)}${d.link ? `<div class="kv mono">${esc(d.link)}</div>` : ""}</td><td class="mono">${esc(d.mime)}</td><td class="num">${(N(d.size) / 1000).toFixed(0)} KB</td><td>${esc(d.status === "stored" ? (d.hasText ? "text extracted" : "stored") : d.status)}</td><td style="white-space:nowrap">${N(d.size) ? `<button class="linkbtn" data-dl="${d.id}">Download</button>` : ""} ${d.hasText ? `<button class="linkbtn" data-txt="${d.id}">TEXT</button>` : ""}</td></tr>`).join("") + `</tbody></table></div>`;
+  return `<div class="tblwrap"><table data-ks-table class="plain"><thead><tr><th>File</th><th>Type</th><th>Size</th><th>Read</th><th></th></tr></thead><tbody>` + docs.map((d) => `<tr><td>${esc(d.name)}${d.link ? `<div class="kv mono">${esc(d.link)}</div>` : ""}</td><td class="mono">${esc(d.mime)}</td><td class="num">${(N(d.size) / 1000).toFixed(0)} KB</td><td>${esc(d.status === "stored" ? (d.hasText ? "text extracted" : "stored") : d.status)}</td><td style="white-space:nowrap">${N(d.size) ? `<button class="linkbtn" data-dl="${d.id}">Download</button>` : ""} ${d.hasText ? `<button class="linkbtn" data-txt="${d.id}">TEXT</button>` : ""}</td></tr>`).join("") + `</tbody></table></div>`;
 }
 function wireDocs(root) {
   root.querySelectorAll('[data-dl]').forEach(b=>{b.onclick=async()=>{
@@ -678,7 +686,7 @@ async function renderProposals(root, proposals, ctx) {
       const oldShown = isMoney ? toDec(c.oldValue) : c.oldValue;
       const ev = c.evidence.map((e) => `<q>${esc(e.quote)}</q>${e.partId && e.partId !== "body" ? `<span class="kv mono">${esc(e.partId)}</span>` : ""}`).join("");
       const accept = c.basis === "explicit" || c.basis === "derived";
-      return `<tr><td><input type="checkbox" aria-label="Confirm ${esc(FIELD_LBL[c.field] || c.field)}" data-i="${i}" ${accept ? "checked" : ""}></td><td><b style="font-weight:500">${esc(FIELD_LBL[c.field] || c.field)}</b><div class="basis ${esc(c.basis)}">${esc(c.basis)}</div></td><td>${oldShown ? esc(oldShown) : '<span class="muted">—</span>'}</td><td><input type="text" aria-label="Proposed ${esc(FIELD_LBL[c.field] || c.field)}" data-v="${i}" data-orig="${esc(c.newValue)}" data-field="${esc(c.field)}" value="${esc(shown)}"></td><td class="ev">${ev || '<span class="muted">no quote</span>'}</td></tr>`;
+      return `<fieldset class="ks-review-field"><legend><label><input type="checkbox" aria-label="Confirm ${esc(FIELD_LBL[c.field] || c.field)}" data-i="${i}" ${accept ? "checked" : ""}> ${esc(FIELD_LBL[c.field] || c.field)}</label></legend><span class="basis ${esc(c.basis)}">${esc(c.basis)}</span><p class="kv">Current: ${oldShown ? esc(oldShown) : 'Not recorded'}</p><label>Proposed value<input type="text" aria-label="Proposed ${esc(FIELD_LBL[c.field] || c.field)}" data-v="${i}" data-orig="${esc(c.newValue)}" data-field="${esc(c.field)}" value="${esc(shown)}"></label><div class="ev"><strong>Evidence</strong><div>${ev || 'No quote recorded'}</div></div></fieldset>`;
     }).join("");
     h += `<div class="prop" data-p="${p.id}">
       <div class="ph"><div class="t">${esc(p.summary || KIND_LBL[p.kind] || "Suggestion")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · from <a href="#/inbox/${p.sourceId}">${esc(p.sourceSubject || "document #" + p.sourceId)}</a> · ${fmtD(p.createdAt)}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}${p.snoozedUntil ? " · snoozed until " + fmtDate(p.snoozedUntil) : ""}</small></div>${tag("open", "TO CHECK")}</div>
@@ -688,7 +696,7 @@ async function renderProposals(root, proposals, ctx) {
           <span data-other class="hidden pick" style="min-width:240px"><input type="text" data-other-in placeholder="Search contracts…" autocomplete="off"><div class="list hidden" data-other-list></div></span><span data-other-chip></span>
           ${p.candidates.length > 1 ? `<span class="kv">${p.candidates.length} contracts matched — pick the right one</span>` : ""}
         </div>
-        <div class="tblwrap"><table class="plain"><thead><tr><th></th><th>Field</th><th>Today</th><th>Proposed (edit to correct)</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div class="ks-review-fields">${rows}</div>
         ${p.uncertainties.length ? `<div class="unc">The AI was unsure about:<ul>${p.uncertainties.map((u) => `<li>${esc(u)}</li>`).join("")}</ul></div>` : ""}
         <div class="btnrow"><input type="text" data-note placeholder="Note for the history (optional)" style="flex:1;min-width:200px;padding:8px 12px;font-size:13.5px"><button class="pill primary sm" data-confirm>Save selected changes</button><button class="pill outline sm" data-reject>Decline</button>${isStaff() ? `<button class="linkbtn" data-assign>HAND TO…</button>` : ""}<button class="linkbtn" data-snooze>LATER</button><span class="status" data-status></span></div>
       </div></div>`;
@@ -757,7 +765,7 @@ async function loadContracts() {
   try { rows = await backend.listContracts(hubTok, { q: $("cQ").value.trim(), status: $("cStatus").value, responsible: "", onlyIncomplete: $("cIncomplete").checked, onlyDue: $("cDue").checked, includeArchived: $("cArchived").checked, typeId: $("cType").value ? [BigInt($("cType").value)] : [] }); } catch (e) { if (staleView()) return; $("cList").innerHTML = `<div class="empty">Could not load: ${esc(String(e).slice(0, 160))}</div>`; return; }
   if (staleView()) return;
   if (!rows.length) { $("cList").innerHTML = `<div class="empty">${$("cQ").value || $("cStatus").value || $("cDue").checked || $("cIncomplete").checked ? "No contract matches these filters." : "No contracts yet. Create one, import your sheet under Workspace tools → Import, or upload the first document."}</div>`; return; }
-  $("cList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Contract</th><th>Type</th><th>Status</th><th>Amount</th><th>Cancel by</th><th>Decide by</th><th>Responsible</th><th>Seats</th><th>Open</th></tr></thead><tbody>` + rows.map((c) => {
+  $("cList").innerHTML = `<div class="tblwrap"><table data-ks-table class="plain"><thead><tr><th>Contract</th><th>Type</th><th>Status</th><th data-ks-sort="none">Amount</th><th data-ks-sort="none">Cancel by</th><th>Decide by</th><th>Responsible</th><th>Seats</th><th>Open</th></tr></thead><tbody>` + rows.map((c) => {
     const dd = c.daysToDecide.length ? N(c.daysToDecide[0]) : null;
     return `<tr class="rowlink" data-c="${c.id}"><td><b style="font-weight:500">${esc(c.title)}</b><div class="kv">${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}${c.complete ? "" : ' · <span style="color:var(--ks-accent)">terms incomplete</span>'}</div></td><td>${esc(c.typeIcon)} ${esc(c.typeName)}${c.listFields.length ? `<div class="kv">${c.listFields.map(([k, v]) => esc(k) + ": " + esc(v)).join(" · ")}</div>` : ""}</td><td>${tag(c.status, CSTATUS_LBL[c.status] || c.status)}</td><td class="num">${esc(c.amount)}${c.interval ? `<div class="kv">${esc(INTERVAL_LBL[c.interval] || c.interval)}</div>` : ""}</td><td class="mono">${fmtDay(c.noticeDate)}</td><td class="mono">${fmtDay(c.decideBy)}${dd !== null ? `<div class="kv" ${dd <= 14 ? 'style="color:var(--ks-accent)"' : ""}>${esc(days(dd))}</div>` : ""}</td><td>${esc(c.responsibleName || (c.responsible ? c.responsible : "—"))}</td><td class="num">${c.seats.length ? `${N(c.holders)}/${N(c.seats[0])}${c.unusedSeats.length && N(c.unusedSeats[0]) > 0 ? `<div class="kv">${N(c.unusedSeats[0])} unused</div>` : ""}` : ""}</td><td class="num">${N(c.openProposals) ? `${N(c.openProposals)} proposal${N(c.openProposals) === 1 ? "" : "s"}` : ""}${N(c.openTasks) ? `<div>${N(c.openTasks)} task${N(c.openTasks) === 1 ? "" : "s"}</div>` : ""}</td></tr>`;
   }).join("") + `</tbody></table></div>`;
@@ -845,10 +853,16 @@ async function enterRecord(id, tabName) {
   closeDocumentPreview();
   const previewToken=hubTok;
   closeDocumentPreview=mountDocumentPreview(previewHost,{documents:tabName==='terms'?r.documents:[],load:async did=>opt(await backend.documentData(previewToken,did)),stale:staleView});
+  $("rProposals").classList.remove("ks-review-layout","ks-review-sticky");
   // proposals
   await renderProposals($("rProposals"), r.proposals, { candidates: [], onDone: () => enterRecord(id, tabName) });
   if (staleView()) return;
-  if (r.canEdit) { const d = document.createElement("div"); d.className = "btnrow"; d.innerHTML = `<button class="pill outline sm" id="rPropose">PROPOSE A CHANGE</button>`; $("rProposals").prepend(d); $("rPropose").onclick = () => openPropose(); }
+  if(tabName==='proposals' && r.documents.length){
+    const host=$('rProposals'), fields=document.createElement('div'), original=document.createElement('section');
+    fields.append(...host.childNodes);host.replaceChildren(original,fields);host.classList.add('ks-review-layout','ks-review-sticky');
+    closeDocumentPreview=mountDocumentPreview(original,{documents:r.documents,load:async did=>opt(await backend.documentData(previewToken,did)),stale:staleView});
+  }
+  if (r.canEdit) { const d = document.createElement("div"); d.className = "btnrow ks-review-actions"; d.innerHTML = `<button class="pill outline sm" id="rPropose">PROPOSE A CHANGE</button>`; $("rProposals").prepend(d); $("rPropose").onclick = () => openPropose(); }
   // tasks
   const openTasks = r.tasks.filter((x) => !N(x.doneAt)), doneTasks = r.tasks.filter((x) => N(x.doneAt));
   if (staleView()) return;
@@ -856,8 +870,8 @@ async function enterRecord(id, tabName) {
   wireItems($("rTasks"));
   const at = $("rAddTask"); if (at) at.onclick = () => openTask();
   // messages + rules
-  $("rMessages").innerHTML = (r.sources.length ? `<div class="tblwrap"><table class="plain"><thead><tr><th>Document</th><th>From</th><th>Status</th><th>Received</th></tr></thead><tbody>${r.sources.map((s) => `<tr class="rowlink" data-s="${s.id}"><td>${esc(s.subject || "(no subject)")}</td><td>${esc(s.fromName || s.fromAddr)}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No document is attached to this contract yet. Use + Add document under Documents.</div>`) +
-    (isStaff() ? `<div class="dsec">Matching rules</div><div class="kv" style="margin-bottom:8px">Mail that matches one of these is filed here without asking.</div>${r.rules.length ? `<table class="plain"><tbody>${r.rules.map((ru) => `<tr><td>${esc(RULE_LBL[ru.kind] || ru.kind)}</td><td class="mono">${esc(ru.value)}</td><td>${ru.confirmed ? "confirmed" : "learned"}</td><td style="text-align:right"><button class="linkbtn" data-rmrule="${ru.id}">Remove</button></td></tr>`).join("")}</tbody></table>` : `<div class="kv muted">none yet — linking a document can remember its sender domain or reference</div>`}<div class="btnrow"><input type="text" id="rRuleVal" placeholder="billing@vendor.example · vendor.example · SC-4471 · a subject fragment" style="flex:1;min-width:220px"><select id="rRuleKind"><option value="senderAddress">sender address</option><option value="senderDomain">sender domain</option><option value="customerRef">customer reference</option><option value="subjectContains">subject contains</option></select><button class="linkbtn" id="rRuleAdd">ADD RULE</button></div>` : "");
+  $("rMessages").innerHTML = (r.sources.length ? `<div class="tblwrap"><table data-ks-table class="plain"><thead><tr><th>Document</th><th>From</th><th>Status</th><th data-ks-sort="none">Received</th></tr></thead><tbody>${r.sources.map((s) => `<tr class="rowlink" data-s="${s.id}"><td>${esc(s.subject || "(no subject)")}</td><td>${esc(s.fromName || s.fromAddr)}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No document is attached to this contract yet. Use + Add document under Documents.</div>`) +
+    (isStaff() ? `<div class="dsec">Matching rules</div><div class="kv" style="margin-bottom:8px">Mail that matches one of these is filed here without asking.</div>${r.rules.length ? `<table data-ks-table class="plain"><tbody>${r.rules.map((ru) => `<tr><td>${esc(RULE_LBL[ru.kind] || ru.kind)}</td><td class="mono">${esc(ru.value)}</td><td>${ru.confirmed ? "confirmed" : "learned"}</td><td style="text-align:right"><button class="linkbtn" data-rmrule="${ru.id}">Remove</button></td></tr>`).join("")}</tbody></table>` : `<div class="kv muted">none yet — linking a document can remember its sender domain or reference</div>`}<div class="btnrow"><input type="text" id="rRuleVal" placeholder="billing@vendor.example · vendor.example · SC-4471 · a subject fragment" style="flex:1;min-width:220px"><select id="rRuleKind"><option value="senderAddress">sender address</option><option value="senderDomain">sender domain</option><option value="customerRef">customer reference</option><option value="subjectContains">subject contains</option></select><button class="linkbtn" id="rRuleAdd">ADD RULE</button></div>` : "");
   $("rMessages").querySelectorAll("tr[data-s]").forEach((row) => { row.onclick = () => { location.hash = "#/inbox/" + row.dataset.s; }; });
   $("rMessages").querySelectorAll("[data-rmrule]").forEach((b) => { b.onclick = async () => { const x = await backend.removeRule(hubTok, BigInt(b.dataset.rmrule)); toast(x.ok ? "Rule removed" : x.detail); if (x.ok) enterRecord(id, tabName); }; });
   const ra = $("rRuleAdd"); if (ra) ra.onclick = async () => { const v = $("rRuleVal").value.trim(); if (!v) return; const x = await backend.addRule(hubTok, $("rRuleKind").value, v, c.id); toast(x.ok ? "Rule added" : x.detail); if (x.ok) enterRecord(id, tabName); };
@@ -887,7 +901,7 @@ async function enterRecord(id, tabName) {
   await renderAssignments(groupHost,{api:backend,token:viewToken,record:r,stale:staleView,done:()=>enterRecord(id,tabName)});
   if(staleView())return;
   // history
-  $("rHistory").innerHTML = r.audit.length ? `<div class="tblwrap"><table class="plain"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Before</th><th>After</th></tr></thead><tbody>${r.audit.map((a) => `<tr><td class="mono">${fmtD(a.at)}</td><td>${esc(a.who)}</td><td>${esc(a.what)}${a.sourceId.length ? ` · <a href="#/inbox/${a.sourceId[0]}">source</a>` : ""}</td><td class="kv">${esc(a.before)}</td><td class="kv">${esc(a.after)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No history yet.</div>`;
+  $("rHistory").innerHTML = r.audit.length ? `<div class="tblwrap"><table data-ks-table class="plain"><thead><tr><th data-ks-sort="none">When</th><th>Who</th><th>What</th><th>Before</th><th>After</th></tr></thead><tbody>${r.audit.map((a) => `<tr><td class="mono">${fmtD(a.at)}</td><td>${esc(a.who)}</td><td>${esc(a.what)}${a.sourceId.length ? ` · <a href="#/inbox/${a.sourceId[0]}">source</a>` : ""}</td><td class="kv">${esc(a.before)}</td><td class="kv">${esc(a.after)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No history yet.</div>`;
   document.getElementById("rMoveSpace")?.remove();
   if (r.canEdit && (currentSpace?.role?.owner !== undefined || (currentSpace?.kind === "legacy" && c.responsible === me.id)) && spaces.some(s => s.id !== me.space && !s.archived && Object.keys(s.role)[0] === "owner")) {
     const button = document.createElement("button"); button.id = "rMoveSpace"; button.className = "linkbtn"; button.textContent = "MOVE TO WORKSPACE…";
@@ -1112,8 +1126,8 @@ async function loadConnStatus() {
       <div class="tstat"><div class="v" ${N(s.outboxFailed) ? 'style="color:var(--ks-accent)"' : ""}>${N(s.outboxPending)}<span class="kv">${N(s.outboxFailed) ? ` · ${N(s.outboxFailed)} failed` : ""}</span></div><div class="l">reminders queued</div></div>
     </div>
     <div class="scard"><h3>How documents get here</h3><div class="kvgrid">${[["Intake", "Uploads and pasted text by signed-in members"], ["AI", s.aiSource ? "Hub access available; model test separate" : me.aiChecked === false ? "checking the Hub…" : "not available"], ["Directory refresh", fmtD(s.lastDirectoryPull)], ["Files stored", (N(s.blobBytes) / 1e6).toFixed(1) + " MB of 400 MB"], ["Oldest open job", s.oldestOpenJobAt ? fmtD(s.oldestOpenJobAt) : "—"]].map(([k, v]) => `<div><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div><p class="kv" style="margin-top:16px"><a href="#/connection/ai">AI connection and model test →</a></p></div>
-    ${jobs.length ? `<div class="scard"><h3>Processing queue</h3><div class="tblwrap"><table class="plain"><thead><tr><th>Step</th><th>Document</th><th>Attempts</th><th>Next try</th><th>Last error</th></tr></thead><tbody>${jobs.slice(0, 50).map((j) => `<tr><td class="mono">${esc(j.step)}</td><td><a href="#/inbox/${j.ref}">#${j.ref}</a></td><td class="num">${N(j.attempts)}</td><td class="mono">${fmtD(j.nextAt)}</td><td class="kv">${esc(j.lastError)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
-    ${s.outboxFailures.length ? `<div class="scard"><h3>Reminders that could not be delivered</h3><div class="kv">The hub did not accept these. Retry once the hub is reachable again.</div><table class="plain"><tbody>${s.outboxFailures.map((f) => `<tr><td>${esc(f.title)}</td><td class="num">${N(f.attempts)} tries</td><td class="kv">${esc(f.lastError)}</td><td style="text-align:right"><button class="linkbtn" data-retry="${f.id}">RETRY</button></td></tr>`).join("")}</tbody></table></div>` : ""}`;
+    ${jobs.length ? `<div class="scard"><h3>Processing queue</h3><div class="tblwrap"><table data-ks-table class="plain"><thead><tr><th>Step</th><th>Document</th><th>Attempts</th><th data-ks-sort="none">Next try</th><th>Last error</th></tr></thead><tbody>${jobs.slice(0, 50).map((j) => `<tr><td class="mono">${esc(j.step)}</td><td><a href="#/inbox/${j.ref}">#${j.ref}</a></td><td class="num">${N(j.attempts)}</td><td class="mono">${fmtD(j.nextAt)}</td><td class="kv">${esc(j.lastError)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
+    ${s.outboxFailures.length ? `<div class="scard"><h3>Reminders that could not be delivered</h3><div class="kv">The hub did not accept these. Retry once the hub is reachable again.</div><table data-ks-table class="plain"><tbody>${s.outboxFailures.map((f) => `<tr><td>${esc(f.title)}</td><td class="num">${N(f.attempts)} tries</td><td class="kv">${esc(f.lastError)}</td><td style="text-align:right"><button class="linkbtn" data-retry="${f.id}">RETRY</button></td></tr>`).join("")}</tbody></table></div>` : ""}`;
   $("cnStatus").querySelectorAll("[data-retry]").forEach((b) => { b.onclick = async () => { const r = await backend.retryNotification(hubTok, BigInt(b.dataset.retry)); toast(r.ok ? "Retried" : r.detail); loadConnStatus(); }; });
 }
 let settings = null;
@@ -1148,7 +1162,7 @@ $("imHeaders").onclick = () => {
   imDelim = $("imDelim").value || ([";", ",", "\t"].sort((a, b) => first.split(b).length - first.split(a).length)[0]);
   const headers = first.split(imDelim).map((h) => h.trim().replace(/^"|"$/g, ""));
   const used = new Set();
-  $("imMap").innerHTML = `<table class="plain"><thead><tr><th>Column in your sheet</th><th>Means</th></tr></thead><tbody>${headers.map((h, i) => { let g = "ignore"; for (const [re, f] of GUESS) if (re.test(h) && !used.has(f)) { g = f; break; } if (g !== "ignore") used.add(g); return `<tr><td>${esc(h) || `<span class="muted">(column ${i + 1})</span>`}</td><td><select data-h="${esc(h)}">${IMPORT_FIELDS.map((f) => `<option value="${f}" ${f === g ? "selected" : ""}>${esc(IMPORT_LBL[f])}</option>`).join("")}</select></td></tr>`; }).join("")}</tbody></table>`;
+  $("imMap").innerHTML = `<table data-ks-table class="plain"><thead><tr><th>Column in your sheet</th><th>Means</th></tr></thead><tbody>${headers.map((h, i) => { let g = "ignore"; for (const [re, f] of GUESS) if (re.test(h) && !used.has(f)) { g = f; break; } if (g !== "ignore") used.add(g); return `<tr><td>${esc(h) || `<span class="muted">(column ${i + 1})</span>`}</td><td><select data-h="${esc(h)}">${IMPORT_FIELDS.map((f) => `<option value="${f}" ${f === g ? "selected" : ""}>${esc(IMPORT_LBL[f])}</option>`).join("")}</select></td></tr>`; }).join("")}</tbody></table>`;
   $("imPreview").classList.remove("hidden"); $("imCommit").classList.remove("hidden"); $("imCommit").disabled = true; $("imReport").innerHTML = "";
   setStatus("imStatus", "ok", `${headers.length} columns · delimiter ${imDelim === "\t" ? "tab" : JSON.stringify(imDelim)}`);
 };
@@ -1158,7 +1172,7 @@ $("imPreview").onclick = async () => {
   const r = await backend.importPreview(hubTok, $("imCsv").value, imDelim, imMapping());
   if (!r.ok) { setStatus("imStatus", "err", r.detail); $("imCommit").disabled = true; return; }
   const good = r.rows.filter((x) => x.ok && !x.exists.length).length, skip = r.rows.filter((x) => x.exists.length).length, bad = r.rows.filter((x) => !x.ok).length;
-  $("imReport").innerHTML = `<div class="kv" style="margin-bottom:8px"><b>${good}</b> would be created · <b>${skip}</b> already exist (skipped) · <b>${bad}</b> with problems${r.unmapped.length ? ` · unmapped: ${esc(r.unmapped.join(", "))}` : ""}</div><div class="tblwrap" style="max-height:320px;overflow:auto"><table class="plain"><thead><tr><th>Line</th><th>Contract</th><th>Result</th></tr></thead><tbody>${r.rows.map((x) => `<tr><td class="num">${N(x.line)}</td><td>${esc(x.title || x.vendor)}</td><td class="kv">${x.exists.length ? `exists as <a href="#/c/${x.exists[0]}">#${x.exists[0]}</a> — skipped` : x.ok ? "ok" : `<span style="color:var(--ks-accent)">${esc(x.problems.join("; "))}</span>`}</td></tr>`).join("")}</tbody></table></div>`;
+  $("imReport").innerHTML = `<div class="kv" style="margin-bottom:8px"><b>${good}</b> would be created · <b>${skip}</b> already exist (skipped) · <b>${bad}</b> with problems${r.unmapped.length ? ` · unmapped: ${esc(r.unmapped.join(", "))}` : ""}</div><div class="tblwrap" style="max-height:320px;overflow:auto"><table data-ks-table class="plain"><thead><tr><th>Line</th><th>Contract</th><th>Result</th></tr></thead><tbody>${r.rows.map((x) => `<tr><td class="num">${N(x.line)}</td><td>${esc(x.title || x.vendor)}</td><td class="kv">${x.exists.length ? `exists as <a href="#/c/${x.exists[0]}">#${x.exists[0]}</a> — skipped` : x.ok ? "ok" : `<span style="color:var(--ks-accent)">${esc(x.problems.join("; "))}</span>`}</td></tr>`).join("")}</tbody></table></div>`;
   $("imCommit").disabled = good === 0; setStatus("imStatus", good ? "ok" : "err", good ? "preview ready — nothing written yet" : "nothing to import");
 };
 $("imCommit").onclick = () => confirmBox("Write the rows that passed the preview? Existing contracts are never overwritten.", async () => {
