@@ -244,7 +244,7 @@ persistent actor Kitchen {
     pantryOverride := if (norm(id) == "") "" else (switch (principalSafe(id)) { case null return { ok = false; detail = "not a canister id" }; case (?p) Principal.toText(p) });
     { ok = true; detail = "" };
   };
-  transient let BUILD_VERSION : Text = "0.8.3";
+  transient let BUILD_VERSION : Text = "0.9.1";
   public shared func info() : async { hubId : Text; pantryId : Text; me : Text; version : Text; installed : Nat } {
     { hubId; pantryId = pantryId<system>(); me = Principal.toText(me()); version = BUILD_VERSION; installed = Map.size(installed) };
   };
@@ -1122,6 +1122,30 @@ persistent actor Kitchen {
   /// Register canisters that were deployed by hand as an installed recipe, so
   /// the kitchen can update them from now on. Requires the kitchen to be a
   /// controller of both (add-controller once, like for the vault).
+  /// 0.9.0 · installation files: a Hub owner places one file under /.well-known/ on an installed app's frontend
+  /// (custom-domain ownership `ic-domains`, deployment metadata). The Kitchen is the only principal that may write
+  /// there; nothing else on the frontend changes, release updates keep these keys, shared recipes never carry them.
+  public shared ({ caller }) func setInstallationFile(recipeId : Text, key : Text, contentType : Text, content : Blob) : async { ok : Bool; detail : Text } {
+    if (not (await isOwner(caller, true))) return { ok = false; detail = "Hub owners only" };
+    let inst = switch (Map.get(installed, Text.compare, recipeId)) { case (?i) i; case null return { ok = false; detail = "No installed app with id " # recipeId } };
+    if (inst.frontend == "") return { ok = false; detail = "This app has no frontend canister" };
+    if (not Text.startsWith(key, #text "/.well-known/") or not Release.validKey(key) or key.size() > 120) return { ok = false; detail = "Installation files live under /.well-known/ only" };
+    if (contentType != "text/plain" and contentType != "application/json") return { ok = false; detail = "Content type must be text/plain or application/json" };
+    if (content.size() == 0 or content.size() > 65_536) return { ok = false; detail = "Installation files are between 1 byte and 64 KB" };
+    for ((_, j) in Map.entries(jobs)) if (j.state == "running") return { ok = false; detail = "Wait for the running update to finish" };
+    let target = Principal.fromText(inst.frontend);
+    let file : Release.Prepared = { key; contentType; content; hash = Release.digest(content); gzip = null };
+    let who = Principal.toText(caller);
+    try {
+      let staged = await* Release.stage(target, me(), [file]);
+      try { await* Release.commit(staged); await* Release.verify(staged); await* Release.cleanup(staged) } catch (e) { await* Release.cleanup(staged); throw e };
+      log(who, "installation file " # key # " written for " # recipeId # " (" # Nat.toText(content.size()) # " bytes)", true);
+      { ok = true; detail = key # " published on " # inst.frontend };
+    } catch (e) {
+      log(who, "installation file " # key # " for " # recipeId # " failed: " # Error.message(e), false);
+      { ok = false; detail = Error.message(e) };
+    };
+  };
   public shared ({ caller }) func adopt(recipeId : Text, backend : Text, frontend : Text, version : Text) : async { ok : Bool; detail : Text } {
     if (not (await isOwner(caller, true))) return { ok = false; detail = "owners only" };
     let r = switch (recipeById(await loadRecipes<system>(), recipeId)) { case (?r) r; case null return { ok = false; detail = "no such recipe" } };

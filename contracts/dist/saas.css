@@ -13,3 +13,51 @@
 
 /* Keep financial figures readable on narrow phones; never split the amount across cards. */
 @media(max-width:480px){.saas-stats{grid-template-columns:1fr}.saas-stat>strong{overflow-wrap:normal;word-break:normal}}
+
+/* contract type tag in the portfolio table (0.13.0) */
+.saas-type{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--ks-surface-muted,rgba(0,0,0,.05));font-size:12px;white-space:nowrap;color:var(--ks-text-muted,inherit)}
+.saas-toolbar select#saasType{max-width:220px}
+.saas-types{margin-top:16px}
+
+/* 0.18.0 · one headline in the reporting currency, discounts, rate settings */
+.saas-stat-lines{display:grid;gap:4px;margin:10px 0 6px;font-size:13px}
+.saas-stat-lines div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.saas-stat-lines em{font-style:normal;opacity:.75;font-size:12px}
+.saas-stat.spending .saas-stat-lines span:last-child{opacity:.85;text-align:right}
+.saas-discount{display:block;color:var(--ks-indicator-teal);font-size:12px}
+.saas-reporting label{display:flex;align-items:center;gap:8px;margin:8px 0}
+.saas-reporting input{max-width:120px}
+
+/* Keep prose out of financial columns' non-wrapping constraints. */
+.saas-table-contracts{table-layout:fixed;min-width:840px}
+.saas-table-contracts th:first-child{width:26%}
+.saas-table-contracts th:nth-child(2){width:11%}
+.saas-table-contracts th:nth-child(3){width:8%}
+.saas-table-contracts th:nth-child(4){width:17%}
+.saas-table-contracts th:nth-child(5){width:14%}
+.saas-table-contracts th:nth-child(6){width:13%}
+.saas-table-contracts th:nth-child(7){width:11%}
+.saas-table-contracts .saas-discount{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.saas-table .cost small{white-space:normal;overflow-wrap:anywhere}
+.saas-table-contracts .saas-tool{min-width:0;max-width:none;align-items:flex-start}
+.saas-table-contracts td{padding:16px 12px;overflow-wrap:anywhere;vertical-align:top}
+.saas-table-contracts .saas-tool>span:last-child{min-width:0}
+.saas-table-contracts .saas-tool strong{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.saas-table-contracts .renewal-chip,.saas-table-contracts .saas-status{white-space:normal}
+.kvgrid>.kv-wide{grid-column:1/-1;max-width:85ch;white-space:pre-wrap}
+@media(max-width:800px){
+ .saas-table-contracts,.saas-table-contracts tbody{display:block;min-width:0;width:100%}
+ .saas-table-contracts thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .saas-table-contracts tr{display:grid;grid-template-columns:1fr 1fr;padding:16px;gap:12px;border-top:1px solid var(--ks-rule)}
+ .saas-table-contracts td{display:block;padding:0;border:0;min-width:0}
+ .saas-table-contracts td:first-child{grid-column:1/-1}
+ .saas-table-contracts td:before{display:block;font-size:11px;color:var(--ks-fg-secondary);margin-bottom:4px}
+ .saas-table-contracts td:nth-child(2):before{content:'Owner'}
+ .saas-table-contracts td:nth-child(3):before{content:'Seats'}
+ .saas-table-contracts td:nth-child(4):before{content:'Annual cost'}
+ .saas-table-contracts td:nth-child(5):before{content:'Contract period'}
+ .saas-table-contracts td:nth-child(6):before{content:'Cancel by'}
+ .saas-table-contracts td:nth-child(7):before{content:'Auto-renewal'}
+ .saas-table-contracts .cost{white-space:normal}
+ .saas-toolbar{flex-wrap:wrap}.saas-toolbar input,.saas-toolbar select{min-width:0;max-width:100%;flex:1 1 180px}
+}

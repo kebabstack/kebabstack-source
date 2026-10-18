@@ -23,6 +23,7 @@ module {
       case "" "all";
       case "path" e.path;
       case "hostname" e.hostname;
+      case "trackingMode" if(e.visitor.startsWith(#text "c:"))"cookie" else "cookieless";
       case "source" e.source;
       case "channel" Channels.channel(e.source, e.medium);
       case "aiSource" Channels.ai(e.source);
@@ -50,7 +51,7 @@ module {
     };
   };
   public func validDimension(d : Text, site : T.Site) : Bool {
-    if (["", "channel", "aiSource", "minute", "path", "hostname", "source", "medium", "campaign", "content", "term", "country", "region", "city", "device", "browser", "os", "event", "day", "hour", "entryPath", "exitPath"].values().any(func x = x == d)) return true;
+    if (["", "trackingMode", "channel", "aiSource", "minute", "path", "hostname", "source", "medium", "campaign", "content", "term", "country", "region", "city", "device", "browser", "os", "event", "day", "hour", "entryPath", "exitPath"].values().any(func x = x == d)) return true;
     site.allowedProperties.values().any(func p = d == "prop:" # p);
   };
   public func matches(e : T.Event, filters : [T.Filter]) : Bool {
@@ -73,6 +74,8 @@ module {
   type Session = {
     id : Nat;
     visitor : Text;
+    // Query-local ordinal preserves the same visitor across sessions without repeatedly comparing long hashes.
+    visitorKey : Nat;
     first : T.Event;
     var last : Int;
     var views : Nat;
@@ -87,14 +90,16 @@ module {
     for (e in events.values()) {
       let previous = latest.get(e.visitor);
       if (e.kind == #engagement) {
-        switch previous { case null continue; case (?s) { if (e.at - s.last >= 1800) continue } };
+        switch previous { case null continue; case (?s) { if (e.at - s.last >= 1800 or e.at / 86400 != s.last / 86400) continue } };
       };
       let s = switch previous {
         case (?s) {
-          if (e.at - s.last < 1800) s else {
-            let s : Session = {
+          if (e.at - s.last < 1800 and e.at / 86400 == s.last / 86400) s else {
+            let visitorKey = s.visitorKey;
+            let nextSession : Session = {
               id = out.size();
               visitor = e.visitor;
+              visitorKey;
               first = e;
               var last = e.at;
               var views = 0;
@@ -103,15 +108,16 @@ module {
               var exitPath = "";
               items = List.empty();
             };
-            out.add(s);
-            latest.add(e.visitor, s);
-            s;
+            out.add(nextSession);
+            latest.add(e.visitor, nextSession);
+            nextSession;
           };
         };
         case null {
           let s : Session = {
             id = out.size();
             visitor = e.visitor;
+            visitorKey = latest.size();
             first = e;
             var last = e.at;
             var views = 0;
@@ -133,6 +139,9 @@ module {
     };
     out.toArray();
   };
+  func fixedSessionDimension(d : Text) : Bool {
+    ["entryPath", "exitPath", "channel", "aiSource", "source", "medium", "campaign", "content", "term"].values().any(func x = x == d);
+  };
   func sessionDimension(e : T.Event, s : Session, d : Text) : Text {
     if (d == "entryPath") return s.entryPath;
     if (d == "exitPath") return s.exitPath;
@@ -153,7 +162,7 @@ module {
     ["visitors","sources","pages","entry_pages","exit_pages","custom_events","locations","devices","browsers","operating_systems"].values().any(func t = d == "import:" # t);
   };
   type Acc = {
-    visitors : Set.Set<Text>;
+    visitors : Set.Set<Nat>;
     visits : Set.Set<Nat>;
     var views : Nat;
     var events : Nat;
@@ -178,8 +187,8 @@ module {
   };
   func add(a : Acc, e : T.Event, s : Session) {
     if (e.kind != #engagement) {
-      a.visitors.add(e.visitor);
       if (not a.visits.contains(s.id)) {
+        a.visitors.add(s.visitorKey);
         a.visits.add(s.id);
         if (s.views <= 1 and not s.engaged) a.bounces += 1;
         a.duration += (s.last - s.first.at).toNat();
@@ -217,13 +226,20 @@ module {
     };
     let total = empty();
     let groups = Map.empty<Text, Acc>();
-    for (s in sessions(events).values()) for (e in s.items.values()) {
-      if (e.at < r.from or e.at >= r.until or not sessionMatches(e, s, r.filters)) continue;
-      add(total, e, s);
-      if (r.dimension != "") {
-        let v = sessionDimension(e, s, r.dimension);
-        let g = groups.get(v) ??{ let a = empty(); groups.add(v, a); a };
-        add(g, e, s);
+    let fixedDimension = fixedSessionDimension(r.dimension);
+    let fixedFilters = r.filters.filter(func f = fixedSessionDimension(f.dimension));
+    let eventFilters = r.filters.filter(func f = not fixedSessionDimension(f.dimension));
+    for (s in sessions(events).values()) {
+      if (not sessionMatches(s.first, s, fixedFilters)) continue;
+      let fixedValue = if (fixedDimension) sessionDimension(s.first, s, r.dimension) else "";
+      for (e in s.items.values()) {
+        if (e.at < r.from or e.at >= r.until or not sessionMatches(e, s, eventFilters)) continue;
+        add(total, e, s);
+        if (r.dimension != "") {
+          let v = if (fixedDimension) fixedValue else if (r.dimension == "day") dayBucket(r, e.at) else sessionDimension(e, s, r.dimension);
+          let g = groups.get(v) ??{ let a = empty(); groups.add(v, a); a };
+          add(g, e, s);
+        };
       };
     };
     let all : [T.Row] = groups.entries().map(func(v, a) { { value = v; metrics = freeze(a) } }).toArray();
@@ -235,10 +251,46 @@ module {
       truncated = sorted.size() > r.limit;
     });
   };
+  /// Day bucket: the latest supplied local-midnight instant at or before the event, else the UTC day.
+  func dayBucket(r : T.ReportRequest, at : Int) : Text {
+    switch (r.dayStarts) {
+      case (?starts) {
+        if (starts.size() == 0) return ((at / 86400) * 86400).toText();
+        var lo = 0; var hi = starts.size();
+        while (lo + 1 < hi) { let mid = (lo + hi) / 2; if (starts[mid] <= at) lo := mid else hi := mid };
+        if (starts[lo] <= at) starts[lo].toText() else ((at / 86400) * 86400).toText();
+      };
+      case null ((at / 86400) * 86400).toText();
+    };
+  };
+  /// Goal completions per group of the requested dimension (0.7.0): the question "which source brought the sign-ups".
+  public func goalRows(db : T.Store, r : T.ReportRequest, goal : T.Goal) : T.Result<[{value : Text; visitors : Nat; completions : Nat}]> {
+    if (goal.site != r.site) return #err(#invalid("Goal belongs to a different website"));
+    if (r.dimension == "") return #err(#invalid("Choose a dimension to group by"));
+    let events = switch (load(db, r)) { case (#ok e) e; case (#err e) return #err(e) };
+    let groups = Map.empty<Text, { visitors : Set.Set<Nat>; var completions : Nat }>();
+    let scrollVisits = Set.empty<Nat>();
+    for (s in sessions(events).values()) for (e in s.items.values()) {
+      if (e.at < r.from or not sessionMatches(e, s, r.filters)) continue;
+      let hit = switch (goal.kind) {
+        case (#page) e.kind == #pageview and e.path == goal.value;
+        case (#event) e.kind == #event and e.name == goal.value;
+        case (#scroll threshold) e.kind == #engagement and e.path == goal.value and e.scrollDepth >= threshold and not scrollVisits.contains(s.id);
+      };
+      if (hit) {
+        switch (goal.kind) { case (#scroll _) scrollVisits.add(s.id); case _ {} };
+        let v = if (r.dimension == "day") dayBucket(r, e.at) else sessionDimension(e, s, r.dimension);
+        let g = groups.get(v) ?? { let g = { visitors = Set.empty<Nat>(); var completions = 0 }; groups.add(v, g); g };
+        g.visitors.add(s.visitorKey); g.completions += 1;
+      };
+    };
+    let rows = groups.entries().map(func(v, g) = { value = v; visitors = g.visitors.size(); completions = g.completions }).toArray();
+    #ok(rows.sort(func(a, b) = if (a.visitors == b.visitors) Text.compare(a.value, b.value) else Nat.compare(b.visitors, a.visitors)).values().take(r.limit).toArray());
+  };
   public func goalReport(db : T.Store, r : T.ReportRequest, goal : T.Goal) : T.Result<{visitors : Nat; completions : Nat; revenue : [(Text,Int)]}> {
     if(goal.site != r.site) return #err(#invalid("Goal belongs to a different website"));
     let events = switch(load(db,r)) {case (#ok e) e; case (#err e) return #err(e)};
-    let visitors = Set.empty<Text>(); let scrollVisits = Set.empty<Nat>(); let revenue = Map.empty<Text,Int>(); var completions = 0;
+    let visitors = Set.empty<Nat>(); let scrollVisits = Set.empty<Nat>(); let revenue = Map.empty<Text,Int>(); var completions = 0;
     for(s in sessions(events).values()) for(e in s.items.values()) {
       if(e.at < r.from or not sessionMatches(e,s,r.filters)) continue;
       let hit = switch(goal.kind) {
@@ -246,7 +298,7 @@ module {
         case (#event) e.kind == #event and e.name == goal.value;
         case (#scroll threshold) e.kind == #engagement and e.path == goal.value and e.scrollDepth >= threshold and not scrollVisits.contains(s.id);
       };
-      if(hit) {visitors.add(e.visitor); completions += 1; switch(goal.kind){case (#scroll _) scrollVisits.add(s.id);case _ {}}; if(e.revenueMinor != 0 and e.currency != "") revenue.add(e.currency,(revenue.get(e.currency) ?? 0)+e.revenueMinor)};
+      if(hit) {visitors.add(s.visitorKey); completions += 1; switch(goal.kind){case (#scroll _) scrollVisits.add(s.id);case _ {}}; if(e.revenueMinor != 0 and e.currency != "") revenue.add(e.currency,(revenue.get(e.currency) ?? 0)+e.revenueMinor)};
     };
     #ok({visitors=visitors.size();completions;revenue=revenue.toArray()});
   };
@@ -256,14 +308,14 @@ module {
       case (#ok e) e;
       case (#err e) return #err(e);
     };
-    let counts = Array.tabulate<Set.Set<Text>>(steps.size(), func _ = Set.empty());
+    let counts = Array.tabulate<Set.Set<Nat>>(steps.size(), func _ = Set.empty());
     for (s in sessions(events).values()) {
       var pos = 0;
       for (e in s.items.values()) {
         if (e.at < r.from or not sessionMatches(e, s, r.filters) or pos >= steps.size()) continue;
         let step = steps[pos];
         if ((step.kind == #page and e.kind == #pageview and e.path == step.value) or (step.kind == #event and e.kind == #event and e.name == step.value)) {
-          counts[pos].add(s.visitor);
+          counts[pos].add(s.visitorKey);
           pos += 1;
         };
       };

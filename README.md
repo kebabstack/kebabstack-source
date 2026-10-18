@@ -48,14 +48,14 @@ chosen operators, jurisdictions, controllers and external data flows.
 | [Desk](desk/README.md) | Internal and customer support, connected offboarding, project workflows, on-call schedules, incident response, service status and scoped HR/Finance reports | alpha |
 | [Assets](assets/README.md) | Device inventory, MDM/Apple imports, assignment history and hardware sales; employee offers and external magic-link dealrooms with invoices | alpha |
 | [Watch](watch/README.md) | DNS/domain monitoring, posture and expiry evidence; optional notifications | alpha |
-| [Crumbs](crumbs/README.md) | Cookieless analytics, AI/campaign sources, scroll goals, revenue, multi-site reports and optional guided Google integrations; native collection with optional Node ingress | alpha pilot |
+| [Crumbs](crumbs/README.md) | Cookieless analytics with optional consented browser recognition, AI/campaign sources, scroll goals, revenue, multi-site reports and optional guided Google integrations; native collection with optional Node ingress | alpha pilot |
 | [Vault](vault/README.md) | Per-canister snapshots, schedules and restore | alpha |
 | [Kitchen](kitchen/README.md) | Verified releases in Hub → Apps | alpha |
 | [SDK](sdk/README.md) | Motoko and browser contracts for another app | alpha |
 | [Forms](forms/README.md) | Form builder with anonymous public links; review pipeline (received → in review → accepted/declined) with ratings, assignees, notes, insights and CSV; sharing, import, 90-day trash | alpha |
 | [Trust](trust/README.md) | Device posture from a read-only osquery agent: enrolment, checks and scores, per-person view, plain-language questions; owners from Assets | alpha |
 | [Bug](bug/README.md) | Ship the Bug — 2D/3D switch, shared profiles, guest play, optional local names or Internet Identity and separate opt-in leaderboards | alpha |
-| [Contracts](contracts/README.md) | Upload → AI review → SaaS overview; owners, seats, renewals, scoped license keys and 90-day reminders; USD/CHF/EUR costs and management reports without currency conversion; email relay configured separately | alpha |
+| [Contracts](contracts/README.md) | Upload → AI review → SaaS overview; owners, seats, renewals, scoped license keys and 90-day reminders; USD/CHF/EUR costs and management reports without currency conversion; document upload and browser PDF extraction | alpha |
 | [kebab-mcp](kebab-mcp/README.md) | Your apps from your AI assistant: an MCP server that signs into every app as the person through the hub (one-time code → personal token, live Candid, curated tools) | alpha |
 
 Hub, Desk, Assets, Watch, Crumbs, Trust, Forms, Bug, Contracts and Kitchen each have a backend and a static frontend

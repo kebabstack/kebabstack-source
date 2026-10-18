@@ -1,6 +1,6 @@
 {
   "name": "kebab-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "kebab-stack for your AI assistant: an MCP server that signs into your company's apps as you (via the hub) and lets the assistant read and act with your rights",
   "license": "MIT",
   "type": "module",
@@ -24,7 +24,7 @@
     "@dfinity/agent": "^2.4.1",
     "@dfinity/candid": "^2.4.1",
     "@dfinity/principal": "^2.4.1",
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "zod": "^3.25.0"
   }
 }

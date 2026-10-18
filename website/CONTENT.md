@@ -177,3 +177,19 @@ The Hub explorer instead explains central access, supported by
   claimed; the linked operator guide states the actual timing and limits.
 - Minute refresh and unavailable-source handling describe the real app. The
   public illustration is static and never simulates changing live data.
+
+## 18 October 2026: Crumbs mode clarification
+
+Website 0.5.6 reflects Crumbs 0.9.1: cookieless by default, optional consented
+browser recognition with revocation and installation guidance. Evidence:
+`crumbs/README.md`, `crumbs/dist/consent.html`, `crumbs/dist/consent.js`. This
+website still configures cookieless collection; its privacy notice is unchanged.
+No persistent person identification or legal-compliance guarantee is claimed.
+
+The standalone game description is reconciled with public Bug 0.20.1 and its
+reviewed optional player-name/Internet Identity flow. Company Hub sign-in is not
+claimed. Evidence: public `bug/README.md` and `bug/src/player-session.js`.
+
+Both analytics guides scope daily estimates to cookieless collection and explain
+the optional consented, site-specific browser identifier (maximum 90 days). They
+do not claim cross-device person identification, location or automatic legal compliance.

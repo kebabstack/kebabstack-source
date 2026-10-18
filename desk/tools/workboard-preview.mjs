@@ -1,5 +1,6 @@
 /** Local-only integration preview. All records are synthetic; no production credentials. */
 import {createServer} from 'node:http';
+import {Resvg} from '@resvg/resvg-js';
 import {readFile} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 import {fork} from 'node:child_process';
@@ -27,8 +28,13 @@ if(process.env.KEBAB_PREVIEW_BULK==='1'){
   if(i%2===0)await d.setDue(x.tokens.owner,created.id,[BigInt(Date.parse('2026-10-02T00:00:00Z'))*1000000n]);
  }
 }
-const serialize=v=>JSON.stringify(v,(_,x)=>typeof x==='bigint'?{$bigint:String(x)}:x),parse=s=>JSON.parse(s,(_,v)=>v&&typeof v==='object'&&Object.keys(v).length===1&&typeof v.$bigint==='string'?BigInt(v.$bigint):v);
-const allowed=new Set(['internalQueuePage','bulkInternalTickets','setDue','getAutoAssignment','saveAutoAssignment','autoAssignmentHealth','saveWorkTaskWithSubtasks','getTicket','personOverview','personContextSources','personContext','offboardingHardware','profilePictures','listTickets','myTickets','myApprovals','stats','lifecycleHealth','setStatus','assign','whoami','agents','directory','catalog','workboardHome','saveWorkboardPreferences','workboardProject','saveWorkProject','archiveWorkProject','workboardTasks','workboardTask','saveWorkTask','archiveWorkTask','workboardTickets','workboardSources','workboardSales','linkWorkItem']);
+if(process.env.KEBAB_PREVIEW_IMAGES==='1'){
+ const png=new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700"><rect width="1200" height="700" fill="#f5f5f5"/><rect x="80" y="100" width="1040" height="500" rx="20" fill="white" stroke="#444"/><text x="140" y="220" font-size="44" font-family="sans-serif" fill="#222">Synthetic support screenshot</text><text x="140" y="320" font-size="32" font-family="sans-serif" fill="#222">TablePlus subscription has expired.</text><text x="140" y="430" font-size="26" font-family="sans-serif" fill="#555">Example data for image synchronization testing.</text></svg>').render().asPng();
+ unwrap(await d.addFile(x.tokens.owner,x.ticketId,'Synthetic screenshot.png','image/png',png));
+ console.log('Image preview ticket: '+origin+'/#/t/'+x.ticketId);
+}
+const serialize=v=>JSON.stringify(v,(_,x)=>typeof x==='bigint'?{$bigint:String(x)}:x instanceof Uint8Array?Array.from(x):x),parse=s=>JSON.parse(s,(_,v)=>v&&typeof v==='object'&&Object.keys(v).length===1&&typeof v.$bigint==='string'?BigInt(v.$bigint):v);
+const allowed=new Set(['fileData','retrySlackImages','internalQueuePage','bulkInternalTickets','setDue','getAutoAssignment','saveAutoAssignment','autoAssignmentHealth','saveWorkTaskWithSubtasks','getTicket','personOverview','personContextSources','personContext','offboardingHardware','profilePictures','listTickets','myTickets','myApprovals','stats','lifecycleHealth','setStatus','assign','whoami','agents','directory','catalog','workboardHome','saveWorkboardPreferences','workboardProject','saveWorkProject','archiveWorkProject','workboardTasks','workboardTask','saveWorkTask','archiveWorkTask','workboardTickets','workboardSources','workboardSales','linkWorkItem']);
 const proxy=`export const HttpAgent={create:async()=>({})};export const Actor={createActor:()=>new Proxy({}, {get:(_,method)=>async(...args)=>{const response=await fetch('/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method,args},(_,v)=>typeof v==='bigint'?{$bigint:String(v)}:v)});if(!response.ok)throw Error('Local preview request failed');return JSON.parse(await response.text(),(_,v)=>v&&typeof v==='object'&&Object.keys(v).length===1&&typeof v.$bigint==='string'?BigInt(v.$bigint):v);}})};`;
 const root=resolve('desk/dist'),mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.md':'text/plain'};
 const http=createServer(async(req,res)=>{try{

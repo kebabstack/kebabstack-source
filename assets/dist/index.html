@@ -11,8 +11,7 @@
   /* mobile-first: a top bar, a tab row, one column. The phone is the primary device for this app. */
   #layout { display: none; min-height: 100vh; flex-direction: column; }
   #layout.on { display: flex; }
-  .tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--ks-rule); overflow-x: auto; scrollbar-width: none; background: var(--ks-bg); }
-  .tabs::-webkit-scrollbar { display: none; }
+  .tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--ks-rule); flex-wrap: wrap; background: var(--ks-bg); } /* every tab reachable on a phone (0.24.0) */
   .tab { background: transparent; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 12px 14px 12px; cursor: pointer; font: 500 13.5px var(--ks-ui); color: var(--ks-fg-secondary); letter-spacing: 0; text-transform: none; border-radius: 0; white-space: nowrap; }
   .tab.active { color: var(--ks-fg); border-bottom-color: var(--ks-accent); }
   .tab .n { margin-left: 6px; font: 500 10.5px var(--ks-mono); color: var(--ks-fg-muted); }
@@ -46,7 +45,7 @@
   .pill { display: inline-block; padding: 1px 9px; border-radius: var(--ks-radius-pill); font: 500 11px var(--ks-mono); letter-spacing: .04em; background: var(--ks-bg-sunk); border: 1px solid var(--ks-rule); color: var(--ks-fg-secondary); }
   .pill.on { border-color: var(--ks-indicator-teal); color: var(--ks-indicator-teal); background: transparent; }
   .pill.off { border-color: var(--ks-accent); color: var(--ks-accent); background: transparent; }
-  .pill.warn { border-color: #d98a1e; color: #b8700f; background: transparent; }
+  .pill.warn { border-color: var(--ks-indicator-rust); color: var(--ks-indicator-rust); background: transparent; }
   .pill.s-in_stock { border-color: var(--ks-indicator-teal); color: var(--ks-indicator-teal); }
   .pill.s-assigned { border-color: var(--ks-fg); color: var(--ks-fg); }
   .pill.s-loaned { border-color: #d98a1e; color: #b8700f; }
@@ -107,6 +106,16 @@
   .dev .t { flex: 1; min-width: 0; }
   .dev .t b { display: block; font: 500 15px var(--ks-ui); color: var(--ks-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dev .t span { font: 400 12px var(--ks-mono); color: var(--ks-fg-secondary); }
+  .dev .t .hw { display: block; font: 400 12.5px var(--ks-ui); color: var(--ks-fg-secondary); margin-top: 2px; }
+  .stat.attention { border-color: var(--ks-indicator-rust); } .stat.attention .n { color: var(--ks-indicator-rust); }
+  .att { padding: 12px 0; border-top: 1px solid var(--ks-rule); } .att:first-child { border-top: 0; } .att .dev { padding: 0 0 6px; border-top: 0; } .att .btnrow { margin-top: 8px; }
+  .att-why { font: 400 13.5px/1.5 var(--ks-ui); color: var(--ks-fg-secondary); } .att-why b { color: var(--ks-fg); }
+  .mdm-note { margin-top: 6px; }
+  .mdm-preview { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; padding: 8px 10px; background: var(--ks-bg-sunk); border-radius: var(--ks-radius-input); font: 400 12px/1.5 var(--ks-mono); max-height: 320px; overflow: auto; }
+  .device-head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; } .device-head > div:first-child { flex: 1; min-width: 200px; } .device-head .btnrow { margin: 0; }
+  .side-box { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-card); }
+  .more-menu { position: relative; display: inline-block; } .more-menu summary { list-style: none; cursor: pointer; padding: 6px 12px; border: 1px solid var(--ks-rule-strong); border-radius: var(--ks-radius-pill); font: 600 10px var(--ks-ui); letter-spacing: .06em; text-transform: uppercase; } .more-menu summary::-webkit-details-marker { display: none; } .more-menu[open] summary { border-color: var(--ks-accent); color: var(--ks-accent); } .more-menu .menu { position: absolute; right: 0; top: 36px; z-index: 5; background: var(--ks-bg-card); border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-card); padding: 6px; display: grid; gap: 4px; min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,.08); } .more-menu .menu button { width: 100%; text-align: left; }
+  .location-kv { display: flex; align-items: center; gap: 6px; }
   .dev .r { text-align: right; flex-shrink: 0; }
   .dev .r .kv { display: block; font-size: 11.5px; margin-top: 3px; white-space: nowrap; }
   .stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -155,8 +164,9 @@
   .stepline { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
   input[type=number], input[type=date], input[type=password] { padding: 10px 12px; border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-input); font: 400 15px var(--ks-ui); background: var(--ks-bg-card); color: var(--ks-fg); width: 100%; }
 </style>
-<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./finance.css"><link rel="stylesheet" href="./signin.css">
+<link rel="stylesheet" href="./assets.css"><link rel="stylesheet" href="./finance.css"><link rel="stylesheet" href="./labels.css"><link rel="stylesheet" href="./bulk.css"><link rel="stylesheet" href="./signin.css">
 <link rel="stylesheet" href="./components.css">
+<link rel="stylesheet" href="./photo-workflow.css">
 </head>
 <body class="ks-workspace">
 
@@ -197,7 +207,7 @@
         <button class="bigcam" id="camBtn"><span class="ic"><svg width="44" height="44" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="4" y="8" width="24" height="19" rx="4"></rect><path d="m10 8 2-4h8l2 4"></path><circle cx="16" cy="17" r="5"></circle></svg></span><span>Take a photo</span><span class="sub">Capture the serial or inventory sticker</span></button>
         <input type="file" id="camFile" accept="image/*" capture="environment" class="hidden">
         <input type="file" id="galFile" accept="image/*" class="hidden">
-        <div class="altrow"><button id="galBtn" class="sm">Choose from photos</button><button id="handBtn" class="sm">Find or add manually</button></div>
+        <div class="altrow"><button id="galBtn" class="sm">Choose from photos</button><button id="handBtn" class="sm">Find or add manually</button><a class="sm" id="bulkLink" href="#/bulk">Register many from photos ↗</a></div>
       </div>
       <div id="ik1" class="hidden">
         <div class="steps"><span class="step on" id="st1">1 · photo</span><span class="step" id="st2">2 · which device</span><span class="step" id="st3">3 · what happened</span></div>
@@ -217,10 +227,13 @@
         </div>
         <div class="card flat hidden" id="ikNewCard">
           <h3>New device</h3>
-          <div class="row"><div><label for="nTag">Tag (sticker)</label><input type="text" id="nTag" placeholder="INV-0042"></div><div><label for="nSerial">Serial</label><input type="text" id="nSerial" placeholder="as printed"></div></div>
+          <p class="kv">Serial, vendor and model come from the photo when it could be read; correct anything here. The inventory tag is assigned automatically when saved and cannot be changed.</p>
+          <div class="row"><div><label for="nSerial">Serial</label><input type="text" id="nSerial" placeholder="as printed"></div><div><label for="nTag">Inventory tag (automatic)</label><input type="text" id="nTag" readonly placeholder="Assigned when saved"></div></div>
           <div class="row"><div><label for="nVendor">Vendor</label><input type="text" id="nVendor" placeholder="Apple"></div><div><label for="nModel">Model</label><input type="text" id="nModel" placeholder="MacBook Pro 14&quot;"></div><div><label for="nKind">Kind</label><select id="nKind"><option value="laptop">laptop</option><option value="phone">phone</option><option value="tablet">tablet</option><option value="monitor">monitor</option><option value="accessory">accessory</option><option value="other">other</option></select></div></div>
           <div><label for="nNote">Note</label><input type="text" id="nNote" placeholder="optional"></div>
-          <div class="btnrow"><button id="ikUseNew" class="primary sm">Use this new device</button><span id="newStatus" class="status" role="status"></span></div>
+          <h3 style="margin-top:16px">Who or where? <span class="kv">(optional)</span></h3>
+          <div class="row"><div class="pick" style="margin:0"><label for="nTo">Hand out to</label><input type="text" id="nTo" placeholder="start typing a name…" autocomplete="off"><div class="list hidden" id="nToList"></div></div><div><label for="nLocation">Location</label><select id="nLocation"><option value="">—</option></select><p class="kv" id="nLocationHint"></p><label class="check" style="margin-top:6px"><input type="checkbox" id="nDeployed"><span>Deployed there (in use, no personal owner)</span></label></div></div>
+          <div class="btnrow"><button id="ikRegister" class="primary">Register device &amp; show label</button><span id="newStatus" class="status" role="status"></span></div>
         </div>
       </div>
       <div id="ik2" class="hidden">
@@ -240,6 +253,7 @@
       </div>
       <div id="ik3" class="hidden">
         <div class="card done"><div class="big">🍢</div><h3 id="doneTitle">Saved</h3><div class="kv" id="doneSub"></div><div class="btnrow" style="justify-content:center"><button id="doneNext" class="primary">Next photo</button><button id="doneOpen" class="sm">Open the device</button></div></div>
+        <div class="card flat hidden" id="ikLabelCard"></div>
       </div>
       <div class="card flat" id="recentCard">
         <h3>Recent activity</h3>
@@ -247,13 +261,18 @@
       </div>
     </section>
 
+    <section class="view" id="v-bulk"><p class="eyebrow">CAPTURE &amp; UPDATE</p><h2>Add assets from photos</h2><p class="lead">Choose label photos → review the readings → save your assets. For Dell, use the Service Tag.</p><div id="bulkRoot"></div></section>
+
     <!-- ===== devices ===== -->
-    <section class="view" id="v-devices"><div class="page-heading"><div><p class="eyebrow">YOUR INVENTORY</p><h2 id="devTitle">Devices</h2><p class="lead" id="devLead">Find a device, see who has it, and keep its next move clear.</p></div><a id="devScan" class="hidden" href="#/intake">Scan a device ↗</a></div>
+    <section class="view" id="v-devices"><div class="page-heading"><div><p class="eyebrow">YOUR INVENTORY</p><h2 id="devTitle">Devices</h2><p class="lead" id="devLead">Find a device, see who has it, and keep its next move clear.</p></div><div class="btnrow" style="margin:0;align-items:center"><button id="devLabels" class="sm hidden" type="button">Print labels</button><a id="devScan" class="hidden" href="#/bulk">Add from photos</a></div></div>
 
 
       <div class="stats" id="stats" aria-label="Inventory status"></div>
-      <div class="filters"><input type="search" id="devQ" placeholder="search tag, serial, model, person…" aria-label="Search devices"><select id="devStatus" aria-label="Device status"><option value="">all statuses</option><option value="offboarding" hidden>offboarding · outstanding hardware</option><option value="preparing">with IT · preparing</option><option value="in_stock">in stock</option><option value="assigned">assigned</option><option value="loaned">loaned</option><option value="sold">sold</option><option value="scrapped">scrapped</option><option value="lost">lost</option><option value="unknown">unknown</option></select><button id="devAdd" class="sm primary">Add device</button></div>
-      <div class="card flat"><div id="devRows"><div class="empty">loading…</div></div></div>
+      <div class="filters"><input type="search" id="devQ" placeholder="search tag, serial, model, person…" aria-label="Search devices"><select id="devStatus" aria-label="Device status"><option value="">all statuses</option><option value="offboarding" hidden>offboarding · outstanding hardware</option><option value="attention" hidden>needs attention</option><option value="preparing">with IT · preparing</option><option value="in_stock">in stock</option><option value="deployed">deployed</option><option value="assigned">assigned</option><option value="loaned">loaned</option><option value="sold">sold</option><option value="scrapped">scrapped</option><option value="lost">lost</option><option value="unknown">unknown</option></select><button id="devAdd" class="sm primary">Add device</button></div>
+      <div class="card flat hidden" id="devLabelCard"></div>
+      <div class="card flat hidden" id="devRereadCard"></div>
+      <div class="bulkbar hidden" id="devBulk"><strong id="devBulkCount">0 selected</strong><select id="devBulkLocation" aria-label="Location"><option value="">—</option></select><button id="devBulkDeploy" class="primary sm" type="button">Deploy at location</button><button id="devBulkMove" class="sm" type="button">Set location only</button><button id="devBulkStock" class="sm" type="button">Back to stock</button><button id="devBulkLabels" class="sm hidden" type="button">Print labels</button><button id="devBulkReread" class="sm hidden" type="button">Read photos again</button><button id="devBulkClear" class="sm" type="button">Clear</button><span class="status" id="devBulkStatus" role="status"></span></div>
+      <div class="card flat"><div class="dev-tools"><button id="devPickAll" class="sm" type="button">Select</button></div><div id="devRows"><div class="empty">loading…</div></div></div>
     </section>
 
     <!-- ===== one device ===== -->
@@ -266,17 +285,19 @@
     </section>
     <section class="view" id="v-device">
       <a href="#/devices" id="dBack" class="kv" style="display:inline-block;margin-bottom:8px">‹ Devices</a>
-      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:200px"><h2 id="dName">–</h2><div id="dPills"></div></div><div class="btnrow" style="margin:0" id="dActions"></div></div>
+      <div class="device-head"><div><h2 id="dName">–</h2><div id="dPills"></div></div><div class="btnrow" id="dActions"></div></div>
       <div class="card flat" style="margin-top:14px">
         <div class="kvl" id="dKv"></div>
-        <div id="dMdm" class="hidden" style="margin-top:10px;padding:10px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)"></div>
-        <div id="dAbm" class="hidden" style="margin-top:10px;padding:10px 12px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card)"></div>
-        <div class="photos" id="dPhotos"></div>
-        <div class="btnrow" id="dAdminRow"><button id="dEdit" class="sm">Edit details</button><button id="dPhotoBtn" class="sm">Add photo</button><input type="file" id="dPhotoFile" accept="image/*" class="hidden"><button id="dArchive" class="sm">Archive</button><span id="dStatus" class="status" role="status"></span></div>
+        <div id="dMdm" class="hidden side-box"></div>
+        <div id="dAbm" class="hidden side-box"></div>
+        <section class="device-photo-section"><h3>Label photos</h3><div class="photos" id="dPhotos"></div><div id="dPhotoTools"><p class="kv" id="dPhotoHint"></p><div class="btnrow"><button id="dReread" class="primary" type="button">Read photo again with AI</button><button id="dPhotoBtn" type="button">Add photo</button><input type="file" id="dPhotoFile" accept="image/*" class="hidden"></div></div></section>
+        <div class="btnrow" id="dAdminRow"><label class="kv location-kv" for="dLocationSel">Location <select id="dLocationSel" class="sm"><option value="">—</option></select></label><button id="dPlace" class="sm hidden" type="button">Mark deployed here</button><button id="dEdit" class="sm">Edit details</button><details class="more-menu"><summary aria-label="More actions">More</summary><div class="menu"><button id="dArchive" class="sm" type="button">Archive</button></div></details><span id="dStatus" class="status" role="status"></span></div>
       </div>
+      <div class="card flat hidden" id="dRereadCard"></div>
+      <div class="card flat hidden" id="dLabelCard"></div>
       <div class="card flat hidden" id="dEditCard">
         <h3>Edit</h3>
-        <div class="row"><div><label for="eTag">Tag</label><input type="text" id="eTag"></div><div><label for="eSerial">Serial</label><input type="text" id="eSerial"></div></div>
+        <div class="row"><div><label for="eTag">Tag (fixed)</label><input type="text" id="eTag" readonly></div><div><label for="eSerial">Serial</label><input type="text" id="eSerial"></div></div>
         <div class="row"><div><label for="eVendor">Vendor</label><input type="text" id="eVendor"></div><div><label for="eModel">Model</label><input type="text" id="eModel"></div><div><label for="eKind">Kind</label><select id="eKind"><option value="laptop">laptop</option><option value="phone">phone</option><option value="tablet">tablet</option><option value="monitor">monitor</option><option value="accessory">accessory</option><option value="other">other</option></select></div></div>
         <div><label for="eNote">Note</label><input type="text" id="eNote"></div>
         <div class="btnrow"><button id="eSave" class="primary sm">Save</button><button id="eCancel" class="sm">Cancel</button><span id="eStatus" class="status" role="status"></span></div>
@@ -364,14 +385,14 @@
       <p class="lead">Bring in your inventory or download a copy. Existing serials and tags are matched.</p>
       <div class="card">
         <h3>Import CSV</h3>
-        <div class="kv">Header row with any of: <code>tag</code>, <code>serial</code>, <code>vendor</code>, <code>model</code>, <code>kind</code>, <code>status</code>, <code>assignee</code> (e-mail), <code>holder</code>, <code>note</code>. Other columns are ignored. Up to 5 000 rows per file.</div>
+        <p class="kv">A serial column is required. Existing serials update their devices; new devices receive consecutive automatic inventory tags in CSV row order. Imported tag values are ignored and existing inventory tags never change. Optional columns: vendor, model, kind, status, assignee (email), holder and note. Up to 5,000 rows.</p>
         <div class="btnrow"><button id="impPick" class="sm">Choose file</button><input type="file" id="impFile" accept=".csv,text/csv" class="hidden"><span class="kv" id="impName"></span></div>
         <textarea id="impText" placeholder="…or paste CSV here"></textarea>
         <div class="btnrow"><button id="impRun" class="primary sm">Import</button><span id="impStatus" class="status" role="status"></span></div>
       </div>
       <div class="card flat">
         <h3>Export CSV</h3>
-        <div class="kv">Every device that is not archived, with assignee and last update.</div>
+        <div class="kv">Every device that is not archived, with assignee, last update, location and the hardware the MDM reported (processor, cores, memory, storage).</div>
         <div class="btnrow"><button id="expRun" class="sm">Download CSV</button><span id="expStatus" class="status" role="status"></span></div>
       </div>
     </section>
@@ -396,10 +417,17 @@
         <h3>Hub connection</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p>
         <div class="kv">Active Hub owners and admins have Admin access. Other app roles are assigned under Hub → Permissions. Employees see their own and explicitly shared content.</div>
         <div class="row"><div><label for="sAppUrl">App address (deep links in notifications)</label><input type="text" id="sAppUrl" placeholder="https://…"><p class="kv" id="sAppUrlHint"></p></div></div>
-        <div class="row"><div><label for="sPrefix">Tag prefix</label><input type="text" id="sPrefix" placeholder="INV-"></div><div><label for="sOrg">Company name</label><input type="text" id="sOrg"></div></div>
+        <div class="row"><div><label for="sOrg">Company name</label><input type="text" id="sOrg"></div></div>
 
         <div class="btnrow"><button id="sSave" class="primary sm">Save</button><span id="sStatus" class="status" role="status"></span></div>
         <div class="kv" id="sMeta" style="margin-top:10px"></div>
+      </div><div class="card flat">
+        <h3>Register devices</h3>
+        <p class="kv">Locations are offered when a device is registered or edited: offices, floors, desks, rooms, departments, whatever helps you find it. One per line.</p>
+        <div><label for="sLocations">Locations</label><textarea id="sLocations" rows="5" placeholder="Zürich office · 3rd floor&#10;Storage room&#10;Desk 12"></textarea></div>
+        <div class="row"><div><label for="sTagPrefix">Automatic tag prefix <span class="kv">(optional)</span></label><input type="text" id="sTagPrefix" placeholder="DFN-" maxlength="10"></div><div><label for="sTagDigits">Digits</label><input type="number" id="sTagDigits" min="3" max="10" value="6"></div></div>
+        <p class="kv" id="sTagNext"></p>
+        <div class="btnrow"><button id="sRegSave" class="primary sm">Save</button><span id="sRegStatus" class="status" role="status"></span></div>
       </div></div><div class="settings-group hidden" id="settings-connections"><div class="card">
         <h3>Reading photos <span class="pill" id="sAiPill">…</span></h3>
         <div class="kv" id="sAiLine"></div>
@@ -484,4 +512,5 @@
 <script type="module" src="./app.js"></script>
 
 
+<div id="labelPrint" aria-hidden="true"></div>
 </body></html>

@@ -5,7 +5,8 @@ export function unwrap(result) {
 export function reportRequest(body){
   if(!body||typeof body.site!=='string')throw new TypeError('site is required');
   const from=Number(body.from),until=Number(body.until);if(!Number.isSafeInteger(from)||!Number.isSafeInteger(until))throw new TypeError('from/until must be integer Unix seconds');
-  return {site:body.site,from:BigInt(from),until:BigInt(until),filters:body.filters??[],dimension:body.dimension??'',limit:BigInt(body.limit??100)};
+  const dayStarts=Array.isArray(body.dayStarts)?[body.dayStarts.map(n=>BigInt(n)).filter(n=>n>=0n)]:[];
+  return {site:body.site,from:BigInt(from),until:BigInt(until),filters:body.filters??[],dimension:body.dimension??'',limit:BigInt(body.limit??100),dayStarts};
 }
 export async function api(actor,method,path,token,body,search) {
   if(!token)throw Object.assign(new Error('Bearer token required'),{status:401});

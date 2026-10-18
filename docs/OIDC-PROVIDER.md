@@ -111,7 +111,7 @@ for every other secret in the hub (documented under Security).
 
 ## Signing algorithm — decision 2026-09-03
 
-Compatibility target: whatever today's OIDC modules in common SaaS accept. That is
+Compatibility requirement: whatever today's OIDC modules in common SaaS accept. That is
 **RS256**: OpenID Connect Core § 15.1 makes RS256 mandatory for providers,
 every relying-party library supports it, and ES256 still trips real software
 (oauth2-proxy refused ES256 id_tokens until a config flag was added, issue

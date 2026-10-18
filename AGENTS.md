@@ -78,3 +78,21 @@ as well as appearance. Existing apps are migrated through the
 `npm run runtime:sync` and `npm run runtime:check` and do not introduce local
 app palette overrides. Run `npm run design:build` and `npm run design:check` for
 standard changes. Keep source, generated docs, versions and changelogs aligned.
+
+## Mandatory stack integrity and meaningful bug checks
+
+The operator requires stack-wide integrity checks with every change, not just the edited app.
+Follow `docs/INTEGRITY-CHECK.md`. Before editing, trace affected producers, consumers and generated
+outputs. After editing, reconcile APIs/Candid/IDL/SDK types, integrations and permissions,
+operator and served documentation, examples, versions/changelogs, shared runtime/branding,
+release recipes and deployment provenance. Update all affected surfaces in the same change.
+Run the suite integrity gates and targeted end-to-end regressions; a module build alone is
+not completion. Record failures, skipped checks and independent legacy versions explicitly.
+
+For a general bug check, inventory every module and assess incomplete workflows, stale claims,
+load/cardinality limits, privacy/authorization, retries/concurrency and populated upgrades.
+Use realistic large datasets and actual packaged executables; small happy-path fixtures do
+not establish capacity. Reproduce reported defects before fixing them where possible.
+Do not call a stack healthy merely because the existing tests pass. Distinguish tested local
+behavior, inspected source and verified live behavior. Never promise absence of all bugs.
+Production changes still require explicit authorization for that deployment.

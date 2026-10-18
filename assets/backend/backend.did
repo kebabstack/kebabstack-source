@@ -43,7 +43,6 @@ type Settings =
    orgName: text;
    peopleCount: nat;
    photoBytes: nat;
-   tagPrefix: text;
    trustId: text;
    trustLastPull: int;
  };
@@ -135,6 +134,20 @@ type Sale =
    vatRateBp: nat;
    waiverVersion: nat;
    wiped: bool;
+ };
+type Reread =
+ record {
+   detail: text;
+   ok: bool;
+   photoId: nat;
+   result: ReadResult;
+ };
+type RegisterOptions =
+ record {
+   digits: nat;
+   locations: vec text;
+   nextTag: text;
+   prefix: text;
  };
 type ReadResult =
  record {
@@ -292,6 +305,12 @@ type LegacyGrant =
    role: text;
    source: text;
  };
+type LabelLayoutView =
+ record {
+   fields: vec text;
+   note: text;
+   size: text;
+ };
 type Item =
  record {
    detail: text;
@@ -340,6 +359,18 @@ type InvoiceData =
    vatRateBp: nat;
    waiverText: text;
    waiverVersion: nat;
+ };
+type Hardware =
+ record {
+   cores: nat;
+   encrypted: text;
+   fetchedAt: int;
+   memoryGb: nat;
+   modelId: text;
+   processor: text;
+   source: text;
+   storageFreeGb: nat;
+   storageGb: nat;
  };
 type HandoverView =
  record {
@@ -549,15 +580,19 @@ type Billing =
  };
 type AssetRow =
  record {
+   abmCapacity: text;
    asset: Asset;
    assigneeEmail: text;
    assigneeName: text;
    createdByName: text;
+   hardware: opt Hardware;
    lastAt: int;
    lastEvent: text;
+   location: text;
    mdm: text;
    mdmMismatch: bool;
    mdmUser: text;
+   mdmUserName: text;
    photoCount: nat;
  };
 type AssetInput =
@@ -707,6 +742,12 @@ service : {
       ok: bool;
     });
   adminLogRows: (tok: text) -> (vec LogRow) query;
+  /// Take over details corrected from a re-read photo (0.26.0); the history names the photo that was read.
+  applyReading: (tok: text, id: nat, photoId: nat, x: AssetInput) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   archiveAsset: (tok: text, id: nat, archived: bool) ->
    (record {
       detail: text;
@@ -718,6 +759,15 @@ service : {
       detail: text;
       docId: nat;
       ok: bool;
+    });
+  /// Several devices at once: put them at a location and mark them deployed (in use there, nobody's personal device)
+  /// or back in stock. Devices held by a person, sold, scrapped or lost are skipped and counted.
+  bulkPlace: (tok: text, ids: vec nat, location: text, status: text) ->
+   (record {
+      changed: nat;
+      detail: text;
+      ok: bool;
+      skipped: nat;
     });
   /// Admins: cancel. Before the invoice: the sale just ends. After: a numbered credit note is created (the invoice number stays used — ranges are gapless) and the device goes back to stock unless it was already paid.
   cancelSale: (tok: text, id: nat, reason: text) ->
@@ -869,6 +919,8 @@ service : {
        assigneeName: text;
        createdByName: text;
        events: vec Event;
+       hardware: opt Hardware;
+       location: text;
        mdm: opt MdmMeta;
        mdmMismatch: bool;
        photos: vec PhotoMeta;
@@ -876,6 +928,8 @@ service : {
   /// Admins: the billing settings (the company as creditor, VAT, number range, payment terms, pricing rule, hand-over terms).
   getBilling: (tok: text) -> (opt Billing) query;
   getDeal: (id: nat, key: text) -> (opt DealView) query;
+  getLabelLayout: (tok: text) -> (opt LabelLayoutView) query;
+  getLocations: (tok: text) -> (vec text) query;
   /// One sale with everything the pages need — admins, or the buyer for their own.
   getSale: (tok: text, id: nat) -> (opt SaleView) query;
   getSettings: (tok: text) -> (opt Settings) query;
@@ -903,7 +957,7 @@ service : {
   /// secrets and technical evidence stay in Assets. This never writes a sale.
   hub_workboardSales: (viewer: text, viewerRole: text, filter:
    SalesFilter) -> (Page) query;
-  /// Columns (header row, any order, case-insensitive): tag, serial, vendor, model, kind, status, assignee, holder, note. Unknown columns are ignored; a device already known by serial or tag is updated, not duplicated.
+  /// Columns (header row, any order, case-insensitive): tag, serial, vendor, model, kind, status, assignee, holder, note. Unknown columns are ignored; a device already known by serial is updated; imported tags are ignored.
   importCsv: (tok: text, "text": text) ->
    (record {
       created: nat;
@@ -955,6 +1009,16 @@ service : {
   listMdm: (tok: text) -> (vec MdmView) query;
   /// Admins: the sales, newest first; status "" = everything, else that status, "open" = draft/offered/accepted/issued.
   listSales: (tok: text, status: text) -> (vec SaleView) query;
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {
@@ -966,6 +1030,13 @@ service : {
      });
   /// Admins: the money arrived (finance says so) — a note for the record; the books stay with finance.
   markPaid: (tok: text, id: nat, note: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// What Iru reports for one device: the section names and the hardware/battery-related sections verbatim
+  /// (admins, read-only, nothing stored). Used to wire further fields against the real answer rather than a guess.
+  mdmDetailsPreview: (tok: text, assetId: nat) ->
    (record {
       detail: text;
       ok: bool;
@@ -1009,6 +1080,29 @@ service : {
                                ok: bool;
                                state: AiState;
                              });
+  /// Read one device's hardware from Iru now (admins). Jamf and Intune hardware arrives with the list sync.
+  refreshHardware: (tok: text, assetId: nat) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  /// One step for a new device: details (serial, vendor, model from the photo or typed), an automatic tag
+  /// assigned only by the backend, optionally the person who gets it or the place it sits, and the photo as evidence.
+  registerDevice: (tok: text, args:
+   record {
+     assignee: text;
+     create: AssetInput;
+     location: text;
+     mime: text;
+     photo: opt blob;
+     status: text;
+   }) -> (record {
+            assetId: nat;
+            detail: text;
+            ok: bool;
+            tag: text;
+          });
+  registerOptions: (tok: text) -> (opt RegisterOptions) query;
   /// Admins: remove the connection and what it reported; devices already in the register stay.
   removeAbm: (tok: text, id: nat) -> (record {
                                         detail: text;
@@ -1026,6 +1120,7 @@ service : {
                                                detail: text;
                                                ok: bool;
                                              });
+  rereadPhoto: (tok: text, assetId: nat) -> (Reread);
   revokeDealLink: (tok: text, id: nat) -> (record {
                                              detail: text;
                                              ok: bool;
@@ -1091,12 +1186,27 @@ service : {
       detail: text;
       ok: bool;
     });
+  setAssetLocation: (tok: text, id: nat, location: text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// Admins: save the billing settings. The IBAN must pass the mod-97 check; a changed hand-over text bumps its version (open offers are re-offered on that text).
   setBilling: (tok: text, b: Billing) -> (record {
                                             detail: text;
                                             ok: bool;
                                           });
   setHub: (id: text) -> (bool);
+  setLabelLayout: (tok: text, layout: LabelLayoutView) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setLocations: (tok: text, list: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
   /// Admins: what the company paid for a device (basis of the price proposal); null price clears it.
   setPurchase: (tok: text, assetId: nat, priceMinor: opt nat, currency:
    text, date: text, note: text) -> (record {
@@ -1114,11 +1224,17 @@ service : {
      adminGroup: text;
      appUrl: text;
      orgName: text;
-     tagPrefix: text;
    }) -> (record {
             detail: text;
             ok: bool;
           });
+  setTagScheme: (tok: text, scheme: record {
+                                      digits: nat;
+                                      prefix: text;
+                                    }) -> (record {
+                                             detail: text;
+                                             ok: bool;
+                                           });
   /// Which trust app may ask "who has which serial?" — its backend canister id (Trust → Settings shows it). "" switches the export off.
   setTrustCanister: (tok: text, id: text) ->
    (record {

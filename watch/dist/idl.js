@@ -48,6 +48,7 @@ export const idlFactory = ({ IDL }) => {
     listDomains: IDL.Func([IDL.Text], [IDL.Vec(DomainRow)], ["query"]),
     listReports: IDL.Func([IDL.Text], [IDL.Vec(Report)], ["query"]),
     listRuns: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(Run)], ["query"]),
+    loginWithSuite: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     recentEvents: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(IDL.Record({ domain: IDL.Text, event: Event }))], ["query"]),
     removeDomain: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),

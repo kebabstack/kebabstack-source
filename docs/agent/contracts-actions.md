@@ -18,8 +18,7 @@ for every record, source, document, rule, task, proposal, diagnostic and export 
 shared workspace selection; tokens are bound to one space and share the original login expiry.
 `createSpace(rootToken, name, description)` creates a teamspace. `getSpace(scopedToken)` returns its
 member list; `updateSpace(scopedToken, revision, name, description, members, archived)` is owner-only
-and requires an active owner. `setSpaceRelay(scopedToken, principal, enabled)` lets an owner bind a
-previously operator-trusted relay identity to exactly one space. Sender addresses never choose scope.
+and requires an active owner. `deleteSpace(scopedToken, revision)` removes an empty teamspace (0.13.1).
 `moveContract(scopedToken, id, revision, destinationSpaceId)` moves a record and its evidence only
 when the person owns both spaces (or is responsible for that legacy record). A move changes access:
 show the actual source/destination membership and obtain the person’s instruction before doing it.
@@ -86,11 +85,11 @@ show the actual source/destination membership and obtain the person’s instruct
 senderDomain | customerRef | subjectContains`), `setSourceStatus(tok, id, "ignored" | "review",
 note)`, `reprocessSource(tok, id)` asks the AI again, `addRule` / `removeRule` / `listRules`.
 A saved message is handed in with `intakeBegin(tok, meta) → intakeChunk(tok, id, index, bytes) →
-intakeCommit(tok, id)` (kind `eml` or `manual`; the relay uses kind `relay` with no token).
+intakeCommit(tok, id)` (kind `eml` or `manual`; a session is required — the mail relay was removed in 0.14.0).
 
 ## Admin
 
-`getSettings` / `setSettings` / `setAdminEmails` / `setRelayPrincipals`, `connectionStatus` (staff),
+`getSettings` / `setSettings` / `setAdminEmails`, `connectionStatus` (staff), `setRenewalPolicy` (workspace owners: marks, recipients, on/off; drives deadline, typed-date and task reminders of that workspace),
 `retryNotification`, `importPreview` / `importCommit` (staff; mapping header → field, `ignore` for
 the rest), `exportAll` (current workspace, visible data, versioned JSON, no files), `seedDemo` / `removeDemo`, `adminLogRows`.
 
@@ -111,7 +110,7 @@ Old records stay under `legacy`; captured former admin/editor IDs and existing e
 retained until records are deliberately moved. Never enumerate another workspace by guessing IDs.
 JSON `exportAll` is now a **visible-data export for the current workspace**, schema 2 with `spaceId`;
 it is not a global admin dump, includes no document bytes, and is not a complete restore package.
-Intake chunks/commit require the same person and scope as intakeBegin, or the same bound relay caller.
+Intake chunks/commit require the same person and scope as intakeBegin.
 An archived space is read-only. Hub deactivation follows the existing maximum 60-second directory lease.
 `interval = none` explicitly means no payment, and forbids a nonzero amount. `renewalRule = indefinite`
 means no fixed expiry and forbids an end/renewal date. Never infer either from missing source text.

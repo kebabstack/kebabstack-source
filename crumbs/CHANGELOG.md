@@ -1,5 +1,32 @@
 # Crumbs changelog
 
+## [0.9.1] — 2026-10-18
+
+- Reduce report instruction cost: deduplicate compact visitor keys once per contributing visit/group and calculate acquisition dimensions/filters once per session. Preserve exact totals, attribution and existing visitor/session boundaries.
+- Replace raw replica/request dumps with short actionable errors; failed reports do not show stale totals.
+- Link a cookie/cookieless capability comparison and API examples directly from Tracking script settings. Explain consent, browser recognition, missing geography and unimplemented features.
+- Correct the normalized event export OpenAPI schema and TypeScript cookie input/export declarations. Document tracking-mode filters, date buckets and REST versus Candid-only coverage.
+
+## [0.9.0] — 2026-10-18
+
+- Optional consent-gated first-party cookie IDs (fixed maximum 90 days) alongside unchanged cookieless defaults. Equal Allow/Reject panel, persistent preferences/withdrawal, CMP integration guide and generated setup snippets; GPC/DNT remain authoritative.
+- Tracking-mode breakdown/filter separates daily cookieless estimates from consented browser IDs. Report guidance distinguishes measured pageviews, visitor estimates, missing data and native geography limits.
+- Fix duplicate pageviews from repeated resume/consent callbacks and missed navigations when redaction maps different URLs to the same path. Validate durable receipts before removing queued events, bound request sizes, expose drops and back off on transient failures.
+- Optional Node collector honors DNT, rejects conflicting retries and commits batches atomically when its local queue approaches capacity.
+- Clarify empty duration/bounce values, keep current reports usable if comparison fails, and improve narrow layout and reduced-motion behavior.
+
+## [0.8.0] — 2026-10-11
+
+- Faster sign-in: the ticket login makes one Hub call and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less); the directory is pulled only when the person is unknown or the cache is stale.
+- Suite login: opened on the company domain with the Hub's suite cookie (Hub ≥ 0.40.0), Crumbs signs in through `loginWithSuite` without a detour through the Hub page. Sign out in Crumbs clears the cookie; the Hub re-checks the person and their Crumbs access on every redemption. No analytics or permission changes.
+
+## [0.7.0] — 2026-10-10
+
+- Reports open on the last seven days in the website's own time zone: daily buckets follow local midnights, the time zone is editable per website and shown next to the dates, and the last website, period and acquisition goal are remembered per browser. Eight metric cards compare to the previous period; the chart labels its axis, draws the previous period and lists its values.
+- Acquisition answers "which source brought the sign-ups": conversions and rate per channel, source, campaign or page for a chosen goal (new `goalRows` query). Quick goals save with one click; goal values suggest existing paths and events; funnels save from the builder and run again from a list. Managers share a read-only report link in one step.
+- Settings: adding a website asks only for the domain (name, time zone and retention default), Tracking script shows whether the first pageviews arrive, People & access adds a person with one click and explains ineligible people, API keys warn two weeks before expiry and default their names. History appears only once imports exist; website selection, All websites and Add website live in one picker.
+- Entry/exit, direct and unknown values read the same everywhere; countries show flag and name. No collection, authorization or data-model changes; `dayStarts` is optional in report requests and existing API clients keep UTC days.
+
 ## [0.6.2] — 2026-09-29
 
 - Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.

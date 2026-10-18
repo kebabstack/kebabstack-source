@@ -1,5 +1,13 @@
 # Changelog — kebab-stack kitchen
 
+## [0.9.1] — 2026-10-18
+
+- Regenerate the browser installer interface from compiled Candid so the existing owner-only installation-file method is represented correctly. No permissions or stable-state change.
+
+## [0.9.0] — 2026-10-11
+
+- `setInstallationFile(recipeId, key, contentType, content)`: a Hub owner places one file under `/.well-known/` on an installed app's frontend, for example the custom-domain ownership file `ic-domains` or deployment metadata. The Kitchen stages, commits and verifies it with the same atomic asset path as a release; nothing else on the frontend changes, release updates keep these keys, shared recipes never carry them. Refused while an update job runs, for keys outside `/.well-known/`, for files over 64 KB and for anyone but Hub owners.
+
 ## [0.8.3] — 2026-09-22
 
 - Apply shared controls/tokens to the first-install bootstrap. Reject packages with stale shared runtime or design reference copies. Installer behavior and deployment settings remain unchanged.

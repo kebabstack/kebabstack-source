@@ -18,9 +18,15 @@ export async function readPdfText(bytes) {
     for (let i = 1; i <= doc.numPages && text.length < 60000; i++) {
       const page = await doc.getPage(i);
       const content = await page.getTextContent();
-      text += readingOrder(content.items) + '\n';
+      text += '[Page '+i+']\n'+readingOrder(content.items) + '\n';
+      // Link annotations often contain the actual terms URL while visible text only says 'Terms'.
+      const links=(await page.getAnnotations()).map(a=>a.url).filter(u=>typeof u==='string'&&/^https:\/\//i.test(u));
+      for(const url of [...new Set(links)].slice(0,30))text+='Linked URL: '+url.slice(0,1000)+'\n';
       page.cleanup();
     }
     return text.slice(0,60000);
   } finally { await doc.loadingTask.destroy(); }
 }
+
+// Shared pinned PDF parser for the local, inert canvas preview.
+export const openPdf = bytes => getDocumentProxy(bytes.slice(), { isEvalSupported: false, useSystemFonts: true });

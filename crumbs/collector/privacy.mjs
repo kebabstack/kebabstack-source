@@ -32,6 +32,8 @@ export function browser(ua) {
 }
 export const isBot=ua=>/bot\b|spider|crawler|HeadlessChrome|curl\/|wget\/|python-requests/i.test(ua);
 export function normalize(input,site,{ip,ua,salt,now,geo={}}) {
+  const cookie=input.cookieId??'';
+  if(typeof cookie!=='string'||(input.cookieConsent!==undefined&&typeof input.cookieConsent!=='boolean')||(cookie&&(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(cookie)||input.cookieConsent!==true)))throw new TypeError('Cookie identity requires explicit consent and a random UUID');
   const url=new URL(input.url??input.u);
   if(!['https:','http:'].includes(url.protocol)||url.hostname!==site.domain||url.username||url.password) throw new TypeError('URL does not match the registered website');
   if(geo.isHostingProvider===true)return null;
@@ -53,7 +55,7 @@ export function normalize(input,site,{ip,ua,salt,now,geo={}}) {
   if(revenue>0&&!currency)throw new TypeError('Revenue requires a currency');
   const name=kind==='event'?cleanText(input.name??input.n??''):'';if(kind==='event'&&!name)throw new TypeError('Event name is required');
   const id=input.id??randomUUID();if(!identifier(id))throw new TypeError('Invalid event id');
-  return {id,site:site.id,visitor:createHmac('sha256',salt).update(JSON.stringify([site.id,ip,ua])).digest('hex'),at:now,order:0,
+  return {id,site:site.id,visitor:cookie?'c:'+createHmac('sha256','crumbs-cookie-v1').update(JSON.stringify([site.id,cookie])).digest('hex'):createHmac('sha256',salt).update(JSON.stringify([site.id,ip,ua])).digest('hex'),at:now,order:0,
     kind:{[kind]:null},path,hostname:url.hostname,source,medium:campaign('utm_medium'),campaign:campaign('utm_campaign'),content:campaign('utm_content'),term:campaign('utm_term'),
     country:/^[A-Z]{2}$/.test(geo.country??'')?geo.country:'',region:cleanText(geo.region??''),city:cleanText(geo.city??''),...browser(ua),name,
     props:Object.entries(props).map(([k,v])=>[k,cleanText(String(v))]),interactive:input.interactive!==false,

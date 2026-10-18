@@ -1,7 +1,7 @@
 # Assets 0.10 — UX-Review und Umsetzung
 
-Historische UX-Entscheidungen vom 17. September 2026. Den aktuellen Stand und
-betriebliche Grenzen beschreiben [README](README.md) und [Installationsanleitung](INSTALL.md).
+Historischer Reviewstand: 17. September 2026. Der Review beschreibt die damalige
+Umsetzung; aktuelle Installations- und Prüfgrenzen stehen in README.md und INSTALL.md.
 
 ## Leitentscheidung
 

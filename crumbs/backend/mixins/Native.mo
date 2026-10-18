@@ -2,6 +2,7 @@ import T "../types";
 import H "../lib/HttpUtil";
 import E "../lib/NativeEvent";
 import Hash "../lib/NativeHash";
+import V "../lib/Validation";
 import Ingest "../lib/Ingest";
 import Analytics "../lib/Analytics";
 import Rest "../lib/NativeRest";
@@ -67,12 +68,15 @@ mixin(db:T.Store,native:T.NativeState,self:()->Principal) {
         let site=if(id!="")db.sites.get(id) ?? (return failure(#notFound)) else db.sites.values().find(func s=s.domain==domain) ?? (return failure(#notFound));
         if(not site.enabled)return failure(#invalid("Site is paused"));
         switch(H.header(req.headers,"origin")){case (?origin){let o=H.url(origin) ?? (return failure(#invalid("Invalid Origin")));if(o.hostname!=site.domain)return failure(#invalid("Origin does not match the website"))};case null {}};
-        order+=1;let visitor=Hash.hmac(native.salt,H.serialize(#array([#string(site.id),#string(ip),#string(ua)])));
+        if(not H.textFields(raw,["cookieId"]) or not H.boolFields(raw,["cookieConsent"]))return failure(#invalid("Invalid cookie consent fields"));
+        let cookie=H.str(raw,"cookieId","");
+        if(cookie!="" and (not H.bool(raw,"cookieConsent",false) or not V.cookieId(cookie)))return failure(#invalid("Cookie identity requires explicit consent and a random UUID"));
+        order+=1;let visitor=if(cookie=="")Hash.hmac(native.salt,H.serialize(#array([#string(site.id),#string(ip),#string(ua)]))) else "c:"#Hash.hmac("crumbs-cookie-v1".encodeUtf8(),H.serialize(#array([#string(site.id),#string(cookie)])));
         let normalized=switch(E.normalize(raw,site,ua,visitor,now,order)){case (#err(e))return failure(e);case (#ok(null)){ignored+=1;continue};case (#ok(?e))e};
         let key=site.id#":"#normalized.id;
         let old=switch(pending.get(key)){case (?e)?e;case null switch(db.eventIds.get(key)){case (?k)db.events.get(k);case null null}};
         // Retries retain the first timestamp/order/visitor, including across midnight or IP changes.
-        let event=switch old {case (?e){let retried={normalized with at=e.at;order=e.order;visitor=e.visitor};if(retried!=e)return failure(#conflict("Event id already used with different data"));e};case null normalized};
+        let event=switch old {case (?e){if((e.visitor.startsWith(#text "c:") or normalized.visitor.startsWith(#text "c:")) and e.visitor!=normalized.visitor)return failure(#conflict("Cookie identity changed for an existing event"));let retried={normalized with at=e.at;order=e.order;visitor=e.visitor};if(retried!=e)return failure(#conflict("Event id already used with different data"));e};case null normalized};
         pending.add(key,event);events.add(event)
       };
       if(events.size()==0)return accepted(0,0,ignored);

@@ -42,7 +42,7 @@ RECIPES = [
                 {"file": "/deal.js", "from": "__BACKEND_CANISTER_ID__", "to": "${backend}"}],
          post=[{"method": "setHub", "arg": "${hubId}"}], tile={"kind": "app", "note": "devices · who has what"}),
     dict(id="crumbs", name="Crumbs", kind="app", icon="", app="crumbs",
-         description="Cookieless website analytics: visitors, sources, goals and a documented API. Requires the first-party collector.",
+         description="Website analytics with native canister collection, cookieless estimates and optional consented browser recognition.",
          patch=[{"file": "/app.js", "from": "__BACKEND_CANISTER_ID__", "to": "${backend}"},
                 {"file": "/shared.js", "from": "__BACKEND_CANISTER_ID__", "to": "${backend}"},
                 {"file": "/app.js", "from": "__HUB_URL__", "to": "${hubUrl}"}],

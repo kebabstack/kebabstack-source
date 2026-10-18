@@ -1,11 +1,14 @@
+import {renderVendorTerms} from "./vendor-terms.js";
+import {mountDocumentPreview} from "./document-preview.js";
 import {renderAssignments} from "./license-assignment.js";
 import {renderSaas} from "./saas-workspace.js";
 import { analysisPending, proposalIds, watchAnalysis, analysisFeedback, busyButton } from "./analysis-progress.js";
 import { commercialFields, renderCommercialDetails } from "./commercial-details.js";
+import { renderTypeFields } from "./type-fields.js";
 import { uploadDocument } from "./document-upload.js";
 import { renderIntakeReview } from "./intake-review.js";
 import { idlFactory } from "./idl.js";
-import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory } from "./hub-client.js";
+import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory, suiteCookie } from "./hub-client.js";
 
 // deploy-time constants (INSTALL.md: sed the placeholders; the kitchen patches them on install)
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
@@ -20,7 +23,7 @@ const opt = (o) => (o && o.length ? o[0] : null); // candid opt unwrap
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtD = (ns) => { if (!ns) return "—"; const d = new Date(Number(BigInt(ns) / 1000000n)); return d.toLocaleDateString("en-CH", { day: "2-digit", month: "short", year: "numeric" }) + " " + d.toLocaleTimeString("en-CH", { hour: "2-digit", minute: "2-digit" }); };
 const fmtDay = (iso) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || "")) return iso || "—"; return new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }); };
-const fmtDate = (ns) => ns ? new Date(Number(BigInt(ns) / 1000000n)).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "No messages yet";
+const fmtDate = (ns) => ns ? new Date(Number(BigInt(ns) / 1000000n)).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Nothing yet";
 const N = (x) => (typeof x === "bigint" ? Number(x) : Number(x ?? 0));
 const toDec = (minorText) => { const s = String(minorText ?? "").trim(); if (!/^-?\d+$/.test(s)) return s; const neg = s.startsWith("-"); const d = s.replace("-", "").padStart(3, "0"); return (neg ? "-" : "") + d.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + d.slice(-2); };
 const money = (minor, cur) => (minor === null || minor === undefined ? "" : toDec(String(minor)) + (cur ? " " + cur : ""));
@@ -29,10 +32,14 @@ const FIELD_LBL = { recordType: "Document type", title: "Title", vendor: "Vendor
 const INTERVAL_LBL = { "": "unknown", month: "monthly", quarter: "quarterly", year: "yearly", once: "once", other: "other", none: "no payment" };
 const RENEWAL_LBL = { "": "unknown", auto: "renews automatically", manual: "renews only if we act", none: "does not renew", indefinite: "no fixed expiry" };
 const CSTATUS_LBL = { draft: "DRAFT", active: "ACTIVE", cancelling: "CANCELLING", endConfirmed: "END CONFIRMED", ended: "ENDED", archived: "ARCHIVED" };
-const SSTATUS_LBL = { received: "RECEIVED", processing: "PROCESSING", review: "READY FOR REVIEW", filed: "FILED", ignored: "IGNORED", failed: "FAILED" };
+const SSTATUS_LBL = { received: "READING", processing: "READING", review: "READY TO CHECK", filed: "SAVED", ignored: "IGNORED", failed: "NEEDS A LOOK" };
+const DECIDED_LBL = { confirmed: "saved", rejected: "declined", superseded: "replaced" };
 const RULE_LBL = { senderAddress: "sender address", senderDomain: "sender domain", customerRef: "customer reference", subjectContains: "subject contains" };
 const KIND_LBL = { offer: "offer", negotiation: "negotiation", order_confirmation: "order confirmation", invoice: "invoice", renewal_notice: "renewal notice", price_change: "price change", cancellation_request: "cancellation request", cancellation_confirmation: "cancellation confirmation", amendment: "amendment", signature_request: "awaiting signature", execution_reported: "signing reported — unverified", other: "other", unclear: "unclear" };
 for (const [key,label] of commercialFields) FIELD_LBL[key]=label;
+FIELD_LBL.contractType = "Contract type";
+let contractTypesCache = [];
+async function loadTypes(force = false) { if (contractTypesCache.length && !force) return contractTypesCache; try { contractTypesCache = await backend.listContractTypes(hubTok); } catch (_) { contractTypesCache = []; } for (const t of contractTypesCache) for (const f of t.fields) FIELD_LBL["type:" + f.key] = `${f.title} (${t.name})`; return contractTypesCache; }
 const tag = (st, lbl) => `<span class="tag ${esc(st)}"><span class="dot"></span>${esc(lbl || st)}</span>`;
 const days = (d) => (d === null || d === undefined ? "" : (N(d) < 0 ? `${-N(d)} days ago` : N(d) === 0 ? "today" : `in ${N(d)} days`));
 let toastT = null;
@@ -58,6 +65,7 @@ const hexOf = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padSta
 let backend = null, hubActor = null, topbar = null, me = null, info = null;
 let hubTok = "", spaces = [], currentSpace = null, switchingSpace = false;
 let routeEpoch = 0;
+let closeDocumentPreview = () => {};
 const readVersions = new Map();
 function viewGuard(key) {
   const token = hubTok, epoch = routeEpoch, hash = location.hash, version = (readVersions.get(key) || 0) + 1;
@@ -104,6 +112,8 @@ async function refreshMe() {
   return true;
 }
 function signOut() {
+  closeDocumentPreview(); closeDocumentPreview = () => {};
+  suiteCookie.clear(); // leaving this tool also stops the automatic suite sign-in until the Hub is opened again
   routeEpoch++;
   const t = session.load(); session.clear();
   if (t) backend.signOut(t).catch(() => {});
@@ -138,12 +148,14 @@ async function routeView() {
     if (!(await chooseSpace(m[1], false))) return;
     history.replaceState(null, "", "#/" + m[2]); return route();
   }
-  if(h === "#/tasks"){setNav("today");return enterToday();}
+  if(h === "#/tasks"){setNav("tasks");return enterToday();}
   if(h === "#/contracts/advanced"){setNav("contracts");return enterContracts();}
   if(h === "#/settings") {setNav("settings");return enterSaas("settings");}
   if(h === "#/reports") {setNav("today");return enterSaas("reports");}
   if((m=h.match(/^#\/keys(?:\/(new|\d+))?$/))){setNav("keys");return enterSaas("keys",m[1]||null);}
   if (h === "#/add") { setNav("contracts"); return enterIntake(); }
+  if (h === "#/add/manual") { setNav("contracts"); await enterIntake(); if (isStaff()) openEdit(null); return; }
+  if ((m = h.match(/^#\/c\/(\d+)\/add$/))) { setNav("contracts"); return enterIntake(null, null, { target: Number(m[1]) }); }
   if ((m = h.match(/^#\/intake\/(\d+)$/))) { setNav("inbox"); return enterIntake(Number(m[1])); }
   if (h.startsWith("#/space")) { setNav(""); return enterSpace(); }
   if ((m = h.match(/^#\/inbox\/(\d+)(?:\/(\w+))?/))) { setNav("inbox"); return enterSource(Number(m[1]), m[2] || "proposals"); }
@@ -152,12 +164,12 @@ async function routeView() {
   if ((m = h.match(/^#\/c\/(\d+)(?:\/(\w+))?/))) { setNav("contracts"); return enterRecord(Number(m[1]), m[2] || "terms"); }
   if (h.startsWith("#/contracts")) { setNav("contracts"); return enterSaas("subscriptions",h === "#/contracts/due"?"soon":null); }
   if ((m = h.match(/^#\/connection(?:\/(\w+))?/))) { setNav("connection"); return enterConn(m[1] || "status"); }
-  if (h === "#/mail-setup") { setNav("docs"); show("viewMailSetup"); return; }
   if (h.startsWith("#/docs")) { setNav("docs"); show("viewDocs"); return; }
   setNav("today"); return enterSaas("overview");
 }
-async function enterSaas(page,id=null){show("viewSaas");return renderSaas($("saasBody"),{api:backend,token:hubTok,stale:viewGuard("saas"),space:currentSpace,me,canWrite:isStaff(),download,toast},page,id);}
+async function enterSaas(page,id=null){show("viewSaas");return renderSaas($("saasBody"),{api:backend,token:hubTok,stale:viewGuard("saas"),space:currentSpace,me,canWrite:isStaff(),isAdmin:isAdmin(),listTypes:()=>loadTypes(true),spaces,openSpace:(id)=>chooseSpace(id),download,toast},page,id);}
 async function route() {
+  closeDocumentPreview(); closeDocumentPreview = () => {};
   const token = hubTok, hash = location.hash;
   try { return await routeView(); }
   catch (_) {
@@ -181,6 +193,12 @@ async function boot() {
     const r = opt(await backend.loginWithTicket(ticket));
     if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else setStatus("loginStatus", "err", "the hub ticket was not accepted — try again from the hub");
   }
+  else if (!session.load() && suiteCookie.read()) {
+    // Suite login: the Hub's cookie on the company domain signs in without a round trip through the Hub.
+    setStatus("loginStatus", "", "signing in…");
+    let r = null; try { r = opt(await backend.loginWithSuite(suiteCookie.read())); } catch (e) {}
+    if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else { suiteCookie.clear(); setStatus("loginStatus", "", ""); }
+  }
   if (session.load() && (await refreshMe())) {
     await loadSpaces();
     let preferred = ""; try { preferred = localStorage.getItem("ks-contracts-space") || ""; } catch (_) {}
@@ -193,10 +211,16 @@ async function boot() {
 async function loadSpaces() {
   spaces = await backend.listSpaces(session.load());
   if (me?.space) currentSpace = spaces.find(s => s.id === me.space) || null;
-  $("spaceSelect").innerHTML = spaces.map(s => `<option value="${esc(s.id)}">${s.kind === "personal" ? "◉ " : "▦ "}${esc(s.name)}${s.archived ? " · archived" : ""}</option>`).join("");
+  // The selector shows what is mine (personal, my teamspaces) and what is shared; everything an app admin can open by role only lives under Settings → All workspaces.
+  const optionOf = (s) => `<option value="${esc(s.id)}">${s.kind === "personal" ? "◉ " : "▦ "}${esc(s.name)}${s.archived ? " · archived" : ""}</option>`;
+  const groupOf = (label, list) => list.length ? `<optgroup label="${label}">${list.map(optionOf).join("")}</optgroup>` : "";
+  const mine = spaces.filter(s => s.member !== false && (s.kind === "personal" || s.kind === "team"));
+  const shared = spaces.filter(s => s.member !== false && (s.kind === "intake" || s.kind === "legacy"));
+  const byRole = currentSpace && spaces.find(s => s.id === currentSpace.id && s.member === false);
+  $("spaceSelect").innerHTML = groupOf("My workspaces", mine) + groupOf("Shared", shared) + (byRole ? groupOf("Opened as app admin", [byRole]) : "");
   if (currentSpace) $("spaceSelect").value = currentSpace.id;
   $("spaceAccess").textContent = currentSpace?.archived ? "Archived · read-only" : currentSpace?.kind === "personal" ? "Owner and app admins" : currentSpace?.kind === "intake" ? "App admins (Hub)" : ({owner:"Space owner",editor:"Can edit",viewer:"Read-only"}[spaceRoleName()] || "Read-only");
-  $("spaceManage").textContent = currentSpace?.kind === "team" ? "Members & settings" : currentSpace?.kind === "intake" ? "Access & mail setup" : "About this space";
+  $("spaceManage").textContent = currentSpace?.kind === "team" ? "Members & settings" : currentSpace?.kind === "intake" ? "Who has access" : "About this space";
 }
 async function chooseSpace(id, navigate = true) {
   if (!id || switchingSpace) return false;
@@ -255,8 +279,8 @@ async function enterSpace() {
   if (currentSpace?.kind === "intake") {
     const v = opt(await backend.getSpace(viewToken)); if (staleView()) return;
     if (!v) { box.innerHTML = '<div class="empty">This space is no longer available.</div>'; return; }
-    box.innerHTML = `<div class="scard"><h3>Access follows your Hub roles</h3><p class="spacehelp">Hub-assigned app admins can review this inbox and file documents. Everyone may submit by email; this does not give them access. Admins assigned to Contracts in Hub also have access.</p><div class="spacepeople">${v.members.map(m => `<div class="spacemember"><span>${esc(m.name || m.pid)}</span><span class="spacehelp">App admin (Hub)</span></div>`).join("")}</div><p class="spacehelp">Manage these roles in the Hub. Role and account changes take effect within the Hub’s 60-second access lease. Employees keep workspace membership rules; app admins can access all workspaces.</p></div><div class="scard"><h3>Connect the shared email inbox</h3><p class="spacehelp">Follow the <a href="#/mail-setup">Google Workspace mail setup guide</a>. First trust the relay’s public principal in <a href="#/connection/relay">Workspace tools → Mail setup</a>, then connect it here. Email addresses and subjects cannot choose another workspace.</p><div class="btnrow"><input id="spRelay" aria-label="Trusted relay principal" placeholder="Trusted relay principal"><button class="pill outline sm" id="spRelayConnect">Connect relay</button><button class="linkbtn" id="spRelayDisconnect">Disconnect</button></div><div class="status" id="spRelayStatus" role="status"></div></div>`;
-    bindSpaceRelay(viewToken, staleView); return;
+    box.innerHTML = `<div class="scard"><h3>Access follows your Hub roles</h3><p class="spacehelp">Hub-assigned app admins can review this inbox and file documents. Admins assigned to Contracts in Hub also have access.</p><div class="spacepeople">${v.members.map(m => `<div class="spacemember"><span>${esc(m.name || m.pid)}</span><span class="spacehelp">App admin (Hub)</span></div>`).join("")}</div><p class="spacehelp">Manage these roles in the Hub. Role and account changes take effect within the Hub’s 60-second access lease. Employees keep workspace membership rules; app admins can access all workspaces.</p></div>`;
+    return;
   }
   if (currentSpace?.kind !== "team") {
     box.innerHTML = `<div class="scard"><h3>${currentSpace?.kind === "personal" ? "Your own contract store" : "Your existing contracts"}</h3><p class="spacehelp">${currentSpace?.kind === "personal" ? "Keep your own agreements, licences and subscriptions here. Your account and Hub-assigned app admins can open this workspace. To collaborate, create a teamspace and add its members." : "Existing content stays in place. App admins have access; employees need explicit responsibility or record access."}</p><p class="spacehelp">AI suggestions always need your review. This is access control inside Kebabstack; documents are not end-to-end encrypted. Your organisation’s hosting operators and configured AI service remain part of the processing environment.</p></div>`;
@@ -266,13 +290,22 @@ async function enterSpace() {
   if (staleView()) return;
   if (!v) { box.innerHTML = '<div class="empty">This space is no longer available.</div>'; return; }
   const owner = spaceRoleName() === "owner"; let members = v.members.map(x => ({...x}));
-  box.innerHTML = `<div class="scard"><div class="spacefields"><label>Name<input id="spName" maxlength="80" value="${esc(v.space.name)}" ${owner ? "" : "disabled"}></label><label>Description<textarea id="spDescription" maxlength="500" ${owner ? "" : "disabled"}>${esc(v.space.description)}</textarea></label></div><div class="dsec">Members</div><p class="spacehelp">Owners manage membership. Editors manage records and incoming documents. Viewers can read and export. Removing someone ends access to this space immediately.</p><div id="spMembers" class="spacepeople"></div>${owner ? `<div class="pick"><input id="spPerson" placeholder="Add a colleague from the Hub" autocomplete="off"><div id="spPersonList" class="list hidden"></div></div><label class="spacehelp"><input type="checkbox" id="spArchived" ${v.space.archived ? "checked" : ""}> Archive this space (keep its contents readable)</label><div class="btnrow"><button id="spSave" class="pill primary">SAVE SPACE</button><span class="status" id="spStatus"></span></div><div class="dsec">Mail intake</div><p class="spacehelp">Use a separate relay identity for this workspace. The operator first trusts it under Workspace tools → Relay; you then authorize it here. Sender names and email subjects never choose a workspace.</p><div class="btnrow"><input id="spRelay" placeholder="Trusted relay principal"><button class="pill outline sm" id="spRelayConnect">CONNECT RELAY</button><button class="linkbtn" id="spRelayDisconnect">DISCONNECT</button></div><div class="status" id="spRelayStatus"></div>` : ""}</div>`;
+  box.innerHTML = `<div class="scard"><div class="spacefields"><label>Name<input id="spName" maxlength="80" value="${esc(v.space.name)}" ${owner ? "" : "disabled"}></label><label>Description<textarea id="spDescription" maxlength="500" ${owner ? "" : "disabled"}>${esc(v.space.description)}</textarea></label></div><div class="dsec">Members</div><p class="spacehelp">Owners manage membership. Editors manage records and incoming documents. Viewers can read and export. Removing someone ends access to this space immediately.</p><div id="spMembers" class="spacepeople"></div>${owner ? `<div class="pick"><input id="spPerson" placeholder="Add a colleague from the Hub" autocomplete="off"><div id="spPersonList" class="list hidden"></div></div><label class="spacehelp"><input type="checkbox" id="spArchived" ${v.space.archived ? "checked" : ""}> Archive this space (keep its contents readable)</label><div class="btnrow"><button id="spSave" class="pill primary">SAVE SPACE</button><span class="status" id="spStatus"></span></div>` : ""}</div>`;
   function renderMembers() {
     $("spMembers").innerHTML = members.map((m,i) => `<div class="spacemember"><span>${esc(m.name || m.pid)}${m.active === false ? " · inactive" : ""}</span><select data-role="${i}" aria-label="Role for ${esc(m.name || m.pid)}" ${owner ? "" : "disabled"}>${["owner","editor","viewer"].map(r => `<option value="${r}" ${Object.keys(m.role)[0] === r ? "selected" : ""}>${r}</option>`).join("")}</select>${owner ? `<button class="linkbtn" data-remove="${i}">Remove</button>` : ""}</div>`).join("");
     box.querySelectorAll("[data-role]").forEach(el => el.onchange = () => { members[Number(el.dataset.role)].role = {[el.value]:null}; });
     box.querySelectorAll("[data-remove]").forEach(el => el.onclick = () => { members.splice(Number(el.dataset.remove),1); renderMembers(); });
   }
   renderMembers(); if (!owner) return;
+  { const items = Number(currentSpace?.items ?? 0); const danger = document.createElement("div"); danger.className = "scard";
+    danger.innerHTML = `<h3>Delete this teamspace</h3><p class="spacehelp">${items ? `It still holds ${items} record${items === 1 ? "" : "s"} (including its trash). Move or delete them first.` : "It is empty. Deleting removes its settings and membership."}</p><div class="btnrow"><button class="pill outline sm" id="spDelete" ${items ? "disabled" : ""}>DELETE TEAMSPACE</button><span class="status" id="spDeleteStatus"></span></div>`;
+    box.append(danger);
+    $("spDelete").onclick = () => confirmBox(`Delete the teamspace “${v.space.name}”? This cannot be undone.`, async () => {
+      try { const r = await backend.deleteSpace(token, v.space.revision); if (!r.ok) { setStatus("spDeleteStatus", "err", r.detail); return; } }
+      catch (_) { setStatus("spDeleteStatus", "err", "Could not delete. Reload and try again."); return; }
+      hubTok = session.load(); await loadSpaces(); await refreshMe(); await chooseSpace(spaces.find(s => s.kind === "personal" && s.member !== false)?.id); toast("Teamspace deleted");
+    });
+  }
   attachPicker("spPerson", "spPersonList", p => { members.push({pid:p.id,name:p.displayName,role:{editor:null},active:true}); renderMembers(); }, () => members.map(m => m.pid));
   $("spSave").onclick = async () => {
     $("spSave").disabled = true;
@@ -285,23 +318,11 @@ async function enterSpace() {
     } catch (_) { setStatus("spStatus", "err", "Could not save. Reload and try again."); }
     finally { if ($("spSave")) $("spSave").disabled = false; }
   };
-  bindSpaceRelay(token, staleView);
-}
-function bindSpaceRelay(token, staleView) {
-  let saving = false;
-  for (const [id, enabled] of [["spRelayConnect", true],["spRelayDisconnect",false]]) $(id).onclick = async () => {
-    if (saving || staleView()) return;
-    saving = true; $("spRelayConnect").disabled = $("spRelayDisconnect").disabled = true;
-    try {
-      const r = await backend.setSpaceRelay(token, $("spRelay").value.trim(), enabled);
-      if (!staleView()) setStatus("spRelayStatus", r.ok ? "ok" : "err", r.ok ? (enabled ? "Relay connected to this workspace" : "Relay disconnected") : r.detail);
-    } catch (_) { if (!staleView()) setStatus("spRelayStatus", "err", "Connection could not be saved. Please retry."); }
-    finally { saving = false; if (!staleView()) $("spRelayConnect").disabled = $("spRelayDisconnect").disabled = false; }
-  };
 }
 
 /* ============================== pickers (hub directory · contracts) ============================== */
 // people: onPick({ id, email, displayName }) — ids are hub person ids, the only thing the backend stores
+function attachPickerEl(input, list, onPick) { const id = "tfp-" + Math.random().toString(36).slice(2); input.id = id; list.id = id + "-list"; return attachPicker(id, list.id, onPick); }
 function attachPicker(inputId, listId, onPick, exclude) {
   const input = $(inputId), list = $(listId);
   let timer = 0;
@@ -326,7 +347,7 @@ function attachContractPicker(inputId, listId, onPick) {
     const q = input.value.trim();
     if (q.length < 1) { list.classList.add("hidden"); return; }
     let rows = [];
-    try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false }); } catch (_) {}
+    try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] }); } catch (_) {}
     list.innerHTML = rows.slice(0, 12).map((r) => `<div data-cid="${r.id}" data-name="${esc(r.title)}">${esc(r.title)}<small>${esc(r.vendor)}${r.product ? " · " + esc(r.product) : ""} · ${esc(CSTATUS_LBL[r.status] || r.status)}</small></div>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">no contract matches</div>';
     list.classList.remove("hidden");
   }, 180); };
@@ -390,12 +411,12 @@ async function enterToday() {
   $("nInbox").textContent = N(t.inboxOpen); $("nInbox").classList.toggle("hidden", !N(t.inboxOpen));
   $("tContext").textContent = currentSpace?.kind === "personal" ? "Personal workspace. Its owner and Hub-assigned app admins can access its agreements and documents." : currentSpace?.kind === "intake" ? "Incoming documents for Hub-assigned app admins. Review the facts, then choose where each agreement belongs." : `Everything below belongs to ${currentSpace?.name || "this workspace"}. Shared with this team’s members${currentSpace?.archived ? " · archived, read-only" : ""}.`;
   const stat = (value, label, note, href, cls = "") => `<a class="tstat ${cls}" href="${href}"><div class="l">${label}</div><div class="v${typeof value === "string" ? " date-value" : ""}">${esc(value)}</div><div class="stat-note">${note}</div></a>`;
-  $("tStats").innerHTML = stat(N(t.contracts), "Contracts", "View your contract library →", "#/contracts") + stat(N(t.dueSoon), "Upcoming decisions", "Within the next 60 days", "#/contracts/due", N(t.dueSoon) ? "is-action" : "") + stat(N(t.inboxOpen), "Inbox to review", "Open documents & messages →", "#/inbox", N(t.inboxOpen) ? "is-action" : "") + stat(fmtDate(t.lastReceivedAt), "Latest arrival", "In this workspace", "#/inbox");
+  $("tStats").innerHTML = stat(N(t.contracts), "Contracts", "View your contract library →", "#/contracts") + stat(N(t.dueSoon), "Upcoming decisions", "Within the next 60 days", "#/contracts/due", N(t.dueSoon) ? "is-action" : "") + stat(N(t.inboxOpen), "Inbox to review", "Open documents →", "#/inbox", N(t.inboxOpen) ? "is-action" : "") + stat(fmtDate(t.lastReceivedAt), "Latest arrival", "In this workspace", "#/inbox");
   const waiting = N(t.inboxOpen) > 0;
-  $("tNext").innerHTML = `<div class="next-step"><span class="step-icon" aria-hidden="true">${waiting ? "⇥" : "▤"}</span><div class="step-copy"><h3>${waiting ? `${N(t.inboxOpen)} incoming item${N(t.inboxOpen) === 1 ? " is" : "s are"} waiting.` : N(t.contracts) ? "Your agreements, organised." : "Start with one agreement."}</h3><p>${waiting ? "Open the inbox to review suggested details, read the source and decide where it belongs." : N(t.contracts) ? "Add new documents to keep the record up to date. Upcoming tasks and decisions appear below." : "Upload a document or saved email, then review its details. Complete any missing details on the review page, then save it with its original."}</p></div><a class="pill ${waiting ? "primary" : "outline"} sm" href="${waiting ? "#/inbox" : "#/contracts"}">${waiting ? "Review inbox →" : "Open contracts →"}</a></div>`;
+  $("tNext").innerHTML = `<div class="next-step"><span class="step-icon" aria-hidden="true">${waiting ? "⇥" : "▤"}</span><div class="step-copy"><h3>${waiting ? `${N(t.inboxOpen)} incoming item${N(t.inboxOpen) === 1 ? " is" : "s are"} waiting.` : N(t.contracts) ? "Your agreements, organised." : "Start with one agreement."}</h3><p>${waiting ? "Open the inbox to review suggested details, read the source and decide where it belongs." : N(t.contracts) ? "Add new documents to keep the record up to date. Upcoming tasks and decisions appear below." : "Upload a document, then review its details. Complete any missing details on the review page, then save it with its original."}</p></div><a class="pill ${waiting ? "primary" : "outline"} sm" href="${waiting ? "#/inbox" : "#/contracts"}">${waiting ? "Review inbox →" : "Open contracts →"}</a></div>`;
   let h = "";
-  h += `<div class="dsec">Proposals to decide (${t.proposals.length})</div>`;
-  h += t.proposals.length ? t.proposals.map(propItem).join("") : `<div class="empty">No proposals need a decision right now.${me.aiOn || me.aiChecked === false || !isStaff() ? "" : " AI access could not be confirmed — see the notice above."}</div>`;
+  h += `<div class="dsec">Suggested changes to check (${t.proposals.length})</div>`;
+  h += t.proposals.length ? t.proposals.map(propItem).join("") : `<div class="empty">No suggested changes to check.${me.aiOn || me.aiChecked === false || !isStaff() ? "" : " AI access could not be confirmed — see the notice above."}</div>`;
   h += `<div class="dsec">Tasks due (${t.tasks.length})</div>`;
   h += t.tasks.length ? t.tasks.map(taskItem).join("") : `<div class="empty">No tasks are due. Saved deadlines appear here 30 days ahead.</div>`;
   if (isStaff() && t.unassigned.length) { h += `<div class="dsec">Contracts without a responsible person (${t.unassigned.length})</div>` + t.unassigned.map((c) => `<div class="item link" data-c="${c.id}"><div class="ttl">${esc(c.title)}<small>${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}</small></div>${tag(c.status, CSTATUS_LBL[c.status])}<span class="meta">open the record to assign</span></div>`).join(""); }
@@ -405,7 +426,7 @@ async function enterToday() {
 }
 function propItem(p) {
   const where = p.contractId.length ? esc(p.contractTitle) : p.candidates.length ? `${p.candidates.length} possible contracts` : "no contract yet";
-  return `<div class="item link" data-s="${p.sourceId}"><div class="ttl">${esc(p.summary || p.sourceSubject || "Proposal")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · ${where} · ${p.changes.length} field${p.changes.length === 1 ? "" : "s"}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}</small></div>${tag("open", "OPEN")}<span class="meta">${fmtD(p.createdAt)}</span><button class="linkbtn" data-s="${p.sourceId}">REVIEW</button></div>`;
+  return `<div class="item link" data-s="${p.sourceId}"><div class="ttl">${esc(p.summary || p.sourceSubject || "Suggestion")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · ${where} · ${p.changes.length} field${p.changes.length === 1 ? "" : "s"}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}</small></div>${tag("open", "TO CHECK")}<span class="meta">${fmtD(p.createdAt)}</span><button class="linkbtn" data-s="${p.sourceId}">REVIEW</button></div>`;
 }
 function taskItem(t) {
   const dl = t.daysLeft.length ? N(t.daysLeft[0]) : null;
@@ -442,12 +463,12 @@ async function loadInbox() {
   let rows = [];
   try { rows = await backend.listSources(hubTok, ibStatus, []); } catch (e) { if (staleView()) return; $("ibList").innerHTML = `<div class="empty">Could not load: ${esc(String(e).slice(0, 160))}</div>`; return; }
   if (staleView()) return;
-  if (!rows.length) { $("ibList").innerHTML = `<div class="empty">${ibStatus === "" ? "Nothing waits here. Put the contracts address in CC, forward a thread, or upload a saved .eml file." : "No messages with this status."}</div>`; return; }
-  $("ibList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Message</th><th>From</th><th>Contract</th><th>Files</th><th>Proposals</th><th>Status</th><th>Received</th></tr></thead><tbody>` +
-    rows.map((s) => `<tr class="rowlink" data-s="${s.id}"><td><b style="font-weight:500">${esc(s.subject || "(no subject)")}</b>${s.note ? `<div class="kv">${esc(s.note)}</div>` : ""}<div class="kv mono">${esc(s.kind)}${s.handedInByName ? " · by " + esc(s.handedInByName) : ""}</div></td><td>${esc(s.fromName || s.fromAddr)}${s.fromName ? `<div class="kv mono">${esc(s.fromAddr)}</div>` : ""}</td><td>${s.contractId.length ? `<a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : '<span class="muted">—</span>'}</td><td class="num">${N(s.documents) || ""}</td><td class="num">${N(s.proposals) || ""}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("") + `</tbody></table></div>`;
-  $("ibList").querySelectorAll("tr[data-s]").forEach((r) => { r.onclick = (e) => { if (e.target.closest("a")) return; location.hash = (rows.find(s => String(s.id) === r.dataset.s)?.contractId.length ? "#/inbox/" : "#/intake/") + r.dataset.s; }; });
+  if (!rows.length) { $("ibList").innerHTML = `<div class="empty">${ibStatus === "" ? "Nothing waits here. Upload a document (PDF, image or text) or paste text." : "Nothing with this status."}</div>`; return; }
+  $("ibList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Document</th><th>From</th><th>Saved as</th><th>Files</th><th>Suggestions</th><th>Status</th><th>Received</th></tr></thead><tbody>` +
+    rows.map((s) => `<tr class="rowlink" data-s="${s.id}"><td><b style="font-weight:500">${esc(s.subject || "(no subject)")}</b>${s.note ? `<div class="kv">${esc(s.note)}</div>` : ""}<div class="kv mono">${esc(s.kind)}${s.handedInByName ? " · by " + esc(s.handedInByName) : ""} · <a href="#/inbox/${s.id}">details</a></div></td><td>${esc(s.fromName || s.fromAddr)}${s.fromName ? `<div class="kv mono">${esc(s.fromAddr)}</div>` : ""}</td><td>${s.contractId.length ? `<a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : '<span class="muted">—</span>'}</td><td class="num">${N(s.documents) || ""}</td><td class="num">${N(s.proposals) || ""}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("") + `</tbody></table></div>`;
+  $("ibList").querySelectorAll("tr[data-s]").forEach((r) => { r.onclick = (e) => { if (e.target.closest("a")) return; const src = rows.find(s => String(s.id) === r.dataset.s); location.hash = src?.contractId.length ? "#/c/" + src.contractId[0] : (N(src?.proposals) && src?.status === "review" ? "#/inbox/" : "#/intake/") + r.dataset.s; }; });
 }
-// .eml upload — parsed in the browser, handed in through the same intake lane as the relay
+// .eml upload — parsed in the browser, handed in through the intake lane
 $("ibEml").onchange = async () => { const files = [...$("ibEml").files]; $("ibEml").value = ""; if (files.length) await uploadEml(files); };
 async function uploadEml(files) {
   const token = hubTok, stale = viewGuard("uploadEml"), box = $("ibUpload"), lines = [];
@@ -464,6 +485,8 @@ async function uploadEml(files) {
   if(!stale()) loadInbox();
 }
 let uploadingDocument = false;
+const intakeTargets = new Map(); // source id -> contract id when the upload started from a record
+let pendingUploadTarget = null;
 async function beginDocumentUpload(file) {
   if (!file || uploadingDocument || !isStaff()) return;
   uploadingDocument = true;
@@ -471,31 +494,38 @@ async function beginDocumentUpload(file) {
   body.innerHTML = '<div class="intake-progress" role="status"><span class="reading-orbit" aria-hidden="true">▤</span><h3>Reading your document…</h3><p>The original will stay attached to the contract.</p></div>';
   try {
     const r = await uploadDocument(file, backend, token, text => { if(!stale()) body.querySelector("h3").textContent=text; }, stale);
+    if (pendingUploadTarget) { intakeTargets.set(String(r.sourceId), pendingUploadTarget); pendingUploadTarget = null; }
     if(!stale()) location.hash = "#/intake/" + r.sourceId;
   } catch(e) { if(!stale()) { body.innerHTML=`<div class="empty"><strong>Upload not completed</strong>${esc(e.message)}<div class="btnrow"><button id="uploadRetry" class="pill primary">Choose a file</button></div></div>`; $("uploadRetry").onclick=()=>$("intakeFile").click(); } }
   finally { uploadingDocument = false; }
 }
 $("intakeFile").onchange = () => { const file = $("intakeFile").files[0]; $("intakeFile").value=""; beginDocumentUpload(file); };
-async function enterIntake(id, analysis = null) {
+async function enterIntake(id, analysis = null, opts = {}) {
   const token = hubTok, stale = viewGuard("intakeView"), body = $("intakeBody");
-  show("viewIntake"); $("intakeTitle").textContent = id ? "Review your document" : "Add a document";
+  pendingUploadTarget = opts.target || null;
+  show("viewIntake"); $("intakeTitle").textContent = id ? "Review your document" : opts.target ? "Add a document to " + (cur && N(cur.contract.id) === opts.target ? cur.contract.title : "contract #" + opts.target) : "Add a document";
   $("intakeSubtitle").textContent = id ? "Your original and its details, together. Check, complete and save." : "Start with the document. AI helps you fill in the details.";
   if(!id) {
-    body.innerHTML=`<div class="upload-landing"><span class="upload-mark" aria-hidden="true">▤</span><h3>From document to useful details.</h3><p>Drop a contract, receipt, invoice or purchase screenshot here. AI reads the original pages and prepares the details for you.</p><button id="chooseContract" class="pill primary" ${isStaff()?"":"disabled"}>Choose a document</button><p class="kv">PDF, text, saved email (.eml), PNG, JPEG, GIF or WebP · below 1.4 MB for AI · 1.5 MB storage limit<br>Scanned PDFs and screenshots are read with AI vision. Nothing is filed until you confirm.</p><div class="intake-steps"><span>01 · Upload original</span><span>02 · Review AI details</span><span>03 · Save to your space</span></div></div>`;
+    body.innerHTML=`<div class="upload-landing"><span class="upload-mark" aria-hidden="true">▤</span><h3>From document to useful details.</h3><p>Drop a contract, receipt, invoice or purchase screenshot here. AI reads the original pages and prepares the details for you.</p><button id="chooseContract" class="pill primary" ${isStaff()?"":"disabled"}>Choose a document</button>${opts.target||!isStaff()?"":`<p class="kv" style="margin-top:14px"><button type="button" class="linkbtn" id="manualContract">No document at hand? Enter the details by hand</button></p>`}<p class="kv">PDF, text, PNG, JPEG, GIF or WebP · below 1.4 MB for AI · 1.5 MB storage limit<br>Scanned PDFs and screenshots are read with AI vision. Nothing is filed until you confirm.</p><div class="intake-steps"><span>01 · Upload original</span><span>02 · Review AI details</span><span>03 · Save to your space</span></div></div>`;
     $("chooseContract").onclick=()=>$("intakeFile").click();
-    const drop=body.firstElementChild; drop.ondragover=e=>{e.preventDefault();drop.classList.add("dragover");};drop.ondragleave=()=>drop.classList.remove("dragover");drop.ondrop=e=>{e.preventDefault();drop.classList.remove("dragover"); if(e.dataTransfer.files.length!==1){toast("Add one document or saved email at a time.");return;}beginDocumentUpload(e.dataTransfer.files[0]);};
+    const manual=$("manualContract");if(manual)manual.onclick=()=>openEdit(null);
+    const drop=body.firstElementChild; drop.ondragover=e=>{e.preventDefault();drop.classList.add("dragover");};drop.ondragleave=()=>drop.classList.remove("dragover");drop.ondrop=e=>{e.preventDefault();drop.classList.remove("dragover"); if(e.dataTransfer.files.length!==1){toast("Add one document at a time.");return;}beginDocumentUpload(e.dataTransfer.files[0]);};
     return;
   }
   body.innerHTML='<div class="intake-progress" role="status"><span class="reading-orbit" aria-hidden="true">▤</span><h3>Opening the original…</h3></div>';
+  let typesForReview=await loadTypes();
   let monitor;
   const render = (view, outcome = null) => {
     monitor?.stop();
-    const ui = renderIntakeReview(body, {view, spaces, currentSpace, canEdit:isStaff(), canTransfer:spaceRoleName()==="owner", stale, api:backend, token, me,
+    const ui = renderIntakeReview(body, {view, spaces, currentSpace, types:typesForReview, presetTarget:intakeTargets.get(String(id))||null, saveTo:async d=>{const r=await backend.fileToContract(token,BigInt(id),d.contractId,d.revision,d.fields,d.note||"");if(stale())return r;if(r.ok){curSrc=null;intakeTargets.delete(String(id));toast("Document attached and record updated");location.hash="#/c/"+r.contractId;}return r;}, canEdit:isStaff(), canTransfer:spaceRoleName()==="owner", stale, api:backend, token, me,
       remove:()=>trashItem("source",BigInt(id),view.source.subject),
       retry:async()=>{const r=await backend.reprocessSource(token,BigInt(id));if(stale())return r;if(r.ok)startWatch({...view,source:{...view.source,status:"received",note:""}},{requested:true,baseline:proposalIds(monitor?.latest()||view)});return r;},
+      retryAs:async(typeId)=>{const r=await backend.reprocessSourceAs(token,BigInt(id),typeId);if(stale())return r;if(r.ok)startWatch({...view,source:{...view.source,status:"received",note:""}},{requested:true,baseline:proposalIds(monitor?.latest()||view)});return r;},
+      createType:isAdmin()?async(input)=>{const r=await backend.saveContractType(hubTok,input);if(r.ok&&!stale())typesForReview=await loadTypes(true);return r;}:null,
+      rerender:()=>{if(!stale())render(monitor?.latest()||view);},
       download:async did=>{const d=opt(await backend.documentData(token,did));if(!stale()&&d) download(d.name,d.bytes instanceof Uint8Array?d.bytes:new Uint8Array(d.bytes),d.mime);},
       move:async destination=>{const r=await backend.moveIncomingSource(token,BigInt(id),destination);if(stale())return r;if(r.ok){curSrc=null;toast("Document moved for review");if(await chooseSpace(destination,false)){location.hash="#/intake/"+id;await enterIntake(id);}else toast("Open the destination inbox to continue reviewing.");}return r;},
-      save:async input=>{const r=await backend.createContractFromSource(token,BigInt(id),input);if(stale())return r;if(r.ok){curSrc=null;toast("Contract and original saved"); if(input.destination!==currentSpace.id){const opened=await chooseSpace(input.destination,false);if(!opened){toast("Saved in the destination workspace. Open it to view your contract.");return r;}}location.hash="#/contracts";}return r;}
+      save:async input=>{const r=await backend.createContractFromSource(token,BigInt(id),input);if(stale())return r;if(r.ok){curSrc=null;toast("Saved — opening the record"); if(input.destination!==currentSpace.id){const opened=await chooseSpace(input.destination,false);if(!opened){toast("Saved in the destination workspace. Open it to view your contract.");return r;}}location.hash=r.contractId?"#/c/"+r.contractId:"#/contracts";}return r;}
     });
     if(!ui)return;
     if(outcome)analysisFeedback(ui.progress,{phase:outcome,title:outcome==='ready'?'AI reading complete':'Analysis needs your review',detail:outcome==='ready'?'The latest suggestions are shown below. Check them before saving.':view.source.note||'No new suggestions were returned. You can complete the details or try again.'});
@@ -522,11 +552,11 @@ $("ibPaste").onclick = () => { ["pmFrom", "pmSubject", "pmText"].forEach((i) => 
 $("pmCancel").onclick = () => $("pasteModal").classList.remove("on");
 $("pmSend").onclick = () => withAction($("pmSend"), "pmStatus", async (token) => {
   const text = $("pmText").value.trim(); if (!text) { setStatus("pmStatus", "err", "paste the text"); return; }
-  const meta = { kind: "manual", mailbox: "", providerId: "", messageId: "", inReplyTo: "", references: "", fromAddr: $("pmFrom").value.trim(), fromName: "", to: [], cc: [], subject: $("pmSubject").value.trim() || "(pasted message)", sentAt: $("pmDate").value ? $("pmDate").value + "T00:00:00Z" : "", text: text.slice(0, 190000), html: "", attachments: [] };
+  const meta = { kind: "manual", mailbox: "", providerId: "", messageId: "", inReplyTo: "", references: "", fromAddr: $("pmFrom").value.trim(), fromName: "", to: [], cc: [], subject: $("pmSubject").value.trim() || "(pasted text)", sentAt: $("pmDate").value ? $("pmDate").value + "T00:00:00Z" : "", text: text.slice(0, 190000), html: "", attachments: [] };
   const b = await backend.intakeBegin(token, meta); if (!b.ok) { setStatus("pmStatus", "err", b.detail); return; }
   const c = await backend.intakeCommit(token, b.id); if (!c.ok) { setStatus("pmStatus", "err", c.detail); return; }
   if (token !== hubTok) return;
-  $("pasteModal").classList.remove("on"); toast("Handed in — " + (c.status || "")); location.hash = "#/inbox/" + c.sourceId;
+  $("pasteModal").classList.remove("on"); toast("Handed in — " + (c.status || "")); location.hash = "#/intake/" + c.sourceId;
 });
 
 /* ============================== one message (source) ============================== */
@@ -545,26 +575,29 @@ async function enterSource(id, tabName, analysis = null) {
   let v = null;
   try { v = opt(await backend.getSource(hubTok, BigInt(id))); } catch (e) { if (staleView()) return; $("srcTitle").textContent = "Could not load"; $("srcMeta").textContent = String(e).slice(0, 160); return; }
   if (staleView()) return;
-  if (!v) { $("srcTitle").textContent = "No such message — or not yours to see"; return; }
+  if (!v) { $("srcTitle").textContent = "No such document — or not yours to see"; return; }
   curSrc = v; const s = v.source;
+  // A new document (no contract, no suggestion aimed at an existing one) is reviewed and saved in one step.
+  if (!s.contractId.length && isStaff() && s.status !== "ignored") { location.hash = "#/intake/" + id; return; }
   $("srcTitle").textContent = s.subject || "(no subject)"; $("srcDelete").classList.toggle("hidden",!isStaff()); $("srcDelete").onclick=()=>trashItem("source",s.id,s.subject);
   $("srcStatus").innerHTML = tag(s.status, SSTATUS_LBL[s.status] || s.status);
-  $("srcMeta").innerHTML = `From <b>${esc(s.fromName || s.fromAddr)}</b>${s.fromName ? ` &lt;${esc(s.fromAddr)}&gt;` : ""}${v.to.length ? " · to " + esc(v.to.join(", ")) : ""}${v.cc.length ? " · cc " + esc(v.cc.join(", ")) : ""}${s.sentAt ? " · sent " + esc(s.sentAt.slice(0, 16).replace("T", " ")) : ""} · received ${fmtD(s.receivedAt)} · ${esc(s.kind)}${s.handedInByName ? " by " + esc(s.handedInByName) : ""}${s.contractId.length ? ` · filed to <a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : ""}${s.note ? `<div>${esc(s.note)}</div>` : ""}`;
+  $("srcMeta").innerHTML = `From <b>${esc(s.fromName || s.fromAddr)}</b>${s.fromName ? ` &lt;${esc(s.fromAddr)}&gt;` : ""}${v.to.length ? " · to " + esc(v.to.join(", ")) : ""}${v.cc.length ? " · cc " + esc(v.cc.join(", ")) : ""}${s.sentAt ? " · sent " + esc(s.sentAt.slice(0, 16).replace("T", " ")) : ""} · received ${fmtD(s.receivedAt)} · ${esc(s.kind)}${s.handedInByName ? " by " + esc(s.handedInByName) : ""}${s.contractId.length ? ` · saved as <a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>` : ""}${s.note ? `<div>${esc(s.note)}</div>` : ""}`;
   const openProps = v.proposals.filter((p) => p.status === "open");
   $("srcPropCount").textContent = openProps.length ? `(${openProps.length})` : ""; $("srcDocCount").textContent = v.documents.length ? `(${v.documents.length})` : "";
   // proposals
   await renderProposals($("srcProposals"), v.proposals, { candidates: v.candidates, source: s, onDone: () => enterSource(id, tabName) });
   if (staleView()) return;
-  if (!s.contractId.length && isStaff()) $("srcProposals").insertAdjacentHTML("afterbegin", `<div class="source-guide"><a class="pill primary" href="#/intake/${s.id}">Review & file document</a> Complete missing details and choose the destination in one step.</div>`);
+  if (!s.contractId.length && isStaff()) $("srcProposals").insertAdjacentHTML("afterbegin", `<div class="source-guide"><a class="pill primary" href="#/intake/${s.id}">Save as a new contract</a> Check the details and save the record in one step, or confirm the suggested changes to an existing contract below.</div>`);
+  if (s.contractId.length && !openProps.length) $("srcProposals").insertAdjacentHTML("afterbegin", `<div class="source-guide"><strong>Saved as <a href="#/c/${s.contractId[0]}">${esc(s.contractTitle)}</a>.</strong> Everything below is history: what the AI read and what was saved.</div>`);
   // message
-  $("srcMessage").innerHTML = `${v.forwardComment ? `<div class="dsec">Forwarder's comment</div><div class="msgtext">${esc(v.forwardComment)}</div>` : ""}<div class="dsec">Message text</div><div class="msgtext">${esc(v.text || "(no text — see the documents)")}</div>${v.messageId ? `<div class="kv mono" style="margin-top:8px">message id ${esc(v.messageId)}</div>` : ""}`;
+  $("srcMessage").innerHTML = `${v.forwardComment ? `<div class="dsec">Comment</div><div class="msgtext">${esc(v.forwardComment)}</div>` : ""}<div class="dsec">Source text</div><div class="msgtext">${esc(v.text || "(no text — see the documents)")}</div>${v.messageId ? `<div class="kv mono" style="margin-top:8px">message id ${esc(v.messageId)}</div>` : ""}`;
   // documents
   if (staleView()) return;
-  $("srcDocuments").innerHTML = v.documents.length ? docTable(v.documents) : `<div class="empty">No files came with this message.</div>`;
+  $("srcDocuments").innerHTML = v.documents.length ? docTable(v.documents) : `<div class="empty">No files with this item.</div>`;
   wireDocs($("srcDocuments"));
   // filing (staff)
-  $("srcFiling").innerHTML = isStaff() ? `<div class="scard"><h3>Where does this belong?</h3><div class="kv">Filing links the message to a contract without changing any terms. Confirm proposals under the first tab to change terms. Ignore takes a message out of the review queue. Delete moves it to Trash, where you can restore it.</div>
-    <div class="btnrow"><button class="pill primary sm" id="sfLink">Choose existing contract</button><button class="pill outline sm" id="sfCreate">Create a contract</button>${s.status === "ignored" ? `<button class="pill outline sm" id="sfBack">Return to review</button>` : `<button class="pill outline sm" id="sfIgnore">Ignore item</button>`}${me.aiOn ? `<button class="pill outline sm" id="sfRerun">Read again with AI</button>` : ""}<span id="sfStatus" class="status"></span></div></div>` : `<div class="notice soft">Workspace owners and editors can file messages and set matching rules.</div>`;
+  $("srcFiling").innerHTML = isStaff() ? `<div class="scard"><h3>Options</h3><div class="kv">Link attaches this document to an existing contract without changing its terms. Save as new creates a contract from it. Ignore takes it out of the queue; Delete moves it to Trash.</div>
+    <div class="btnrow"><button class="pill primary sm" id="sfLink">Link to an existing contract</button><button class="pill outline sm" id="sfCreate">Save as a new contract</button>${s.status === "ignored" ? `<button class="pill outline sm" id="sfBack">Back to review</button>` : `<button class="pill outline sm" id="sfIgnore">Ignore</button>`}${me.aiOn ? `<button class="pill outline sm" id="sfRerun">Read again with AI</button>` : ""}<span id="sfStatus" class="status"></span></div></div>` : `<div class="notice soft">Workspace owners and editors can file messages and set matching rules.</div>`;
   let progress=$("sourceAnalysisProgress");if(!progress){progress=document.createElement("div");progress.id="sourceAnalysisProgress";$("srcMeta").after(progress);}progress.hidden=true;progress.replaceChildren();
   if(analysisPending(v)||analysis?.requested){
     const rerun=$("sfRerun");if(rerun)rerun.disabled=true;
@@ -577,7 +610,7 @@ async function enterSource(id, tabName, analysis = null) {
   if (isStaff()) {
     $("sfLink").onclick = () => openLink(s);
     $("sfCreate").onclick = () => { location.hash = "#/intake/" + s.id; };
-    const ig = $("sfIgnore"); if (ig) ig.onclick = () => confirmBox("Ignore this message? It stays here under Ignored.", async () => { const r = await backend.setSourceStatus(hubTok, s.id, "ignored", ""); toast(r.ok ? "Ignored" : r.detail); if (r.ok) enterSource(id, tabName); });
+    const ig = $("sfIgnore"); if (ig) ig.onclick = () => confirmBox("Ignore this document? It stays under Ignored.", async () => { const r = await backend.setSourceStatus(hubTok, s.id, "ignored", ""); toast(r.ok ? "Ignored" : r.detail); if (r.ok) enterSource(id, tabName); });
     const bk = $("sfBack"); if (bk) bk.onclick = async () => { const r = await backend.setSourceStatus(hubTok, s.id, "review", ""); toast(r.ok ? "Back in review" : r.detail); if (r.ok) enterSource(id, tabName); };
     const rr = $("sfRerun"); if (rr) rr.onclick = async () => {
       if(rr.disabled)return;const restore=busyButton(rr,"Starting analysis…");
@@ -592,8 +625,18 @@ function docTable(docs) {
   return `<div class="tblwrap"><table class="plain"><thead><tr><th>File</th><th>Type</th><th>Size</th><th>Read</th><th></th></tr></thead><tbody>` + docs.map((d) => `<tr><td>${esc(d.name)}${d.link ? `<div class="kv mono">${esc(d.link)}</div>` : ""}</td><td class="mono">${esc(d.mime)}</td><td class="num">${(N(d.size) / 1000).toFixed(0)} KB</td><td>${esc(d.status === "stored" ? (d.hasText ? "text extracted" : "stored") : d.status)}</td><td style="white-space:nowrap">${N(d.size) ? `<button class="linkbtn" data-dl="${d.id}">Download</button>` : ""} ${d.hasText ? `<button class="linkbtn" data-txt="${d.id}">TEXT</button>` : ""}</td></tr>`).join("") + `</tbody></table></div>`;
 }
 function wireDocs(root) {
-  root.querySelectorAll("[data-dl]").forEach((b) => { b.onclick = async () => { const d = opt(await backend.documentData(hubTok, BigInt(b.dataset.dl))); if (!d) { toast("Not available"); return; } const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([d.bytes instanceof Uint8Array ? d.bytes : new Uint8Array(d.bytes)], { type: d.mime })); a.download = d.name || "document"; document.body.appendChild(a); a.click(); a.remove(); }; });
-  root.querySelectorAll("[data-txt]").forEach((b) => { b.onclick = async () => { const t = opt(await backend.documentText(hubTok, BigInt(b.dataset.txt))); $("txTitle").textContent = "WHAT THE AI READ"; $("txBody").textContent = t || "(no text)"; $("textModal").classList.add("on"); }; });
+  root.querySelectorAll('[data-dl]').forEach(b=>{b.onclick=async()=>{
+    const token=hubTok,epoch=routeEpoch;const reset=busyButton(b,'Opening…');
+    try{const d=opt(await backend.documentData(token,BigInt(b.dataset.dl)));if(token!==hubTok||epoch!==routeEpoch)return;
+      if(!d){toast('Not available');return;}download(d.name||'document',d.bytes instanceof Uint8Array?d.bytes:new Uint8Array(d.bytes),d.mime);
+    }catch(_){if(token===hubTok&&epoch===routeEpoch)toast('Could not download the original. Try again.');}finally{reset();}
+  };});
+  root.querySelectorAll('[data-txt]').forEach(b=>{b.onclick=async()=>{
+    const token=hubTok,epoch=routeEpoch;
+    try{const t=opt(await backend.documentText(token,BigInt(b.dataset.txt)));if(token!==hubTok||epoch!==routeEpoch)return;
+      $('txTitle').textContent='EXTRACTED TEXT · AI ALSO RECEIVES SUPPORTED ORIGINALS';$('txBody').textContent=t||'(no extracted text)';$('textModal').classList.add('on');
+    }catch(_){if(token===hubTok&&epoch===routeEpoch)toast('Could not open the extracted text.');}
+  };});
 }
 $("txClose").onclick = () => $("textModal").classList.remove("on");
 // filing modal
@@ -622,7 +665,7 @@ async function renderProposals(root, proposals, ctx) {
     const refresh = root.querySelector("[data-source-refresh]"); if (refresh) refresh.onclick = ctx.onDone;
     return;
   }
-  let h = open.length ? `<div class="source-guide"><strong>Review, then confirm.</strong>Check the source evidence and edit anything that needs correcting. Only selected fields are saved. An offer creates a draft; it does not become an accepted agreement automatically.</div>` : "";
+  let h = open.length ? `<div class="source-guide"><strong>Suggested changes.</strong> Check them against the source, correct what is wrong, save what applies. Only ticked fields are written. An offer creates a draft; nothing becomes an accepted agreement by itself.</div>` : "";
   for (const p of open) {
     const targets = [];
     if (p.contractId.length) targets.push({ id: N(p.contractId[0]), title: p.contractTitle, rev: N(p.currentRevision) });
@@ -638,7 +681,7 @@ async function renderProposals(root, proposals, ctx) {
       return `<tr><td><input type="checkbox" aria-label="Confirm ${esc(FIELD_LBL[c.field] || c.field)}" data-i="${i}" ${accept ? "checked" : ""}></td><td><b style="font-weight:500">${esc(FIELD_LBL[c.field] || c.field)}</b><div class="basis ${esc(c.basis)}">${esc(c.basis)}</div></td><td>${oldShown ? esc(oldShown) : '<span class="muted">—</span>'}</td><td><input type="text" aria-label="Proposed ${esc(FIELD_LBL[c.field] || c.field)}" data-v="${i}" data-orig="${esc(c.newValue)}" data-field="${esc(c.field)}" value="${esc(shown)}"></td><td class="ev">${ev || '<span class="muted">no quote</span>'}</td></tr>`;
     }).join("");
     h += `<div class="prop" data-p="${p.id}">
-      <div class="ph"><div class="t">${esc(p.summary || KIND_LBL[p.kind] || "Proposal")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · from <a href="#/inbox/${p.sourceId}">${esc(p.sourceSubject || "message #" + p.sourceId)}</a> · ${fmtD(p.createdAt)}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}${p.snoozedUntil ? " · snoozed until " + fmtDate(p.snoozedUntil) : ""}</small></div>${tag("open", "OPEN")}</div>
+      <div class="ph"><div class="t">${esc(p.summary || KIND_LBL[p.kind] || "Suggestion")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · from <a href="#/inbox/${p.sourceId}">${esc(p.sourceSubject || "document #" + p.sourceId)}</a> · ${fmtD(p.createdAt)}${p.assigneeName ? " · for " + esc(p.assigneeName) : ""}${p.snoozedUntil ? " · snoozed until " + fmtDate(p.snoozedUntil) : ""}</small></div>${tag("open", "TO CHECK")}</div>
       <div class="pb">
         <div class="target">Applies to
           ${targets.length ? `<select data-target>${targets.map((t) => `<option value="${t.id}" data-rev="${t.rev}">${esc(t.title)}</option>`).join("")}${isStaff() ? `<option value="other">another contract…</option><option value="new">a new contract (draft)</option>` : ""}</select>` : isStaff() ? `<select data-target><option value="new">a new contract (draft)</option><option value="other">an existing contract…</option></select>` : `<span class="muted">no contract could be matched — an editor files it</span>`}
@@ -647,10 +690,10 @@ async function renderProposals(root, proposals, ctx) {
         </div>
         <div class="tblwrap"><table class="plain"><thead><tr><th></th><th>Field</th><th>Today</th><th>Proposed (edit to correct)</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>
         ${p.uncertainties.length ? `<div class="unc">The AI was unsure about:<ul>${p.uncertainties.map((u) => `<li>${esc(u)}</li>`).join("")}</ul></div>` : ""}
-        <div class="btnrow"><input type="text" data-note placeholder="Note for the history (optional)" style="flex:1;min-width:200px;padding:8px 12px;font-size:13.5px"><button class="pill primary sm" data-confirm>Save selected changes</button><button class="pill outline sm" data-reject>Reject proposal</button>${isStaff() ? `<button class="linkbtn" data-assign>HAND TO…</button>` : ""}<button class="linkbtn" data-snooze>LATER</button><span class="status" data-status></span></div>
+        <div class="btnrow"><input type="text" data-note placeholder="Note for the history (optional)" style="flex:1;min-width:200px;padding:8px 12px;font-size:13.5px"><button class="pill primary sm" data-confirm>Save selected changes</button><button class="pill outline sm" data-reject>Decline</button>${isStaff() ? `<button class="linkbtn" data-assign>HAND TO…</button>` : ""}<button class="linkbtn" data-snooze>LATER</button><span class="status" data-status></span></div>
       </div></div>`;
   }
-  if (done.length) h += `<div class="dsec">Decided (${done.length})</div>` + done.map((p) => `<div class="item"><div class="ttl" style="font-size:15px">${esc(p.summary || KIND_LBL[p.kind] || "Proposal")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · ${p.changes.length} field${p.changes.length === 1 ? "" : "s"} · ${esc(p.status)} by ${esc(p.decidedByName || "—")} ${fmtD(p.decidedAt)}${p.note ? " · " + esc(p.note) : ""}${p.contractId.length ? ` · <a href="#/c/${p.contractId[0]}">${esc(p.contractTitle)}</a>` : ""}</small></div>${tag(p.status, p.status.toUpperCase())}</div>`).join("");
+  if (done.length) h += `<div class="dsec">History (${done.length})</div>` + done.map((p) => `<div class="item"><div class="ttl" style="font-size:15px">${esc(p.summary || KIND_LBL[p.kind] || "Suggestion")}<small>${esc(KIND_LBL[p.kind] || p.kind)} · ${p.changes.length} field${p.changes.length === 1 ? "" : "s"} · ${esc(DECIDED_LBL[p.status] || p.status)} by ${esc(p.decidedByName || "—")} ${fmtD(p.decidedAt)}${p.note ? " · " + esc(p.note) : ""}${p.contractId.length ? ` · <a href="#/c/${p.contractId[0]}">${esc(p.contractTitle)}</a>` : ""}</small></div>${tag(p.status, p.status.toUpperCase())}</div>`).join("");
   if (staleView()) return;
   root.innerHTML = h;
   if (!isStaff()) {
@@ -665,7 +708,7 @@ async function renderProposals(root, proposals, ctx) {
     if (other) {
       const inp = other.querySelector("[data-other-in]"), list = other.querySelector("[data-other-list]"), chipEl = box.querySelector("[data-other-chip]");
       let timer = 0;
-      inp.oninput = () => { clearTimeout(timer); timer = setTimeout(async () => { const q = inp.value.trim(); if (!q) { list.classList.add("hidden"); return; } let rows = []; try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false }); } catch (_) {} list.innerHTML = rows.slice(0, 12).map((r) => `<div data-cid="${r.id}" data-name="${esc(r.title)}">${esc(r.title)}<small>${esc(r.vendor)} · ${esc(CSTATUS_LBL[r.status] || r.status)}</small></div>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">no contract matches</div>'; list.classList.remove("hidden"); }, 180); };
+      inp.oninput = () => { clearTimeout(timer); timer = setTimeout(async () => { const q = inp.value.trim(); if (!q) { list.classList.add("hidden"); return; } let rows = []; try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] }); } catch (_) {} list.innerHTML = rows.slice(0, 12).map((r) => `<div data-cid="${r.id}" data-name="${esc(r.title)}">${esc(r.title)}<small>${esc(r.vendor)} · ${esc(CSTATUS_LBL[r.status] || r.status)}</small></div>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">no contract matches</div>'; list.classList.remove("hidden"); }, 180); };
       list.onclick = (e) => { const d = e.target.closest("[data-cid]"); if (!d) return; otherPicked = Number(d.dataset.cid); chipEl.innerHTML = `<span class="chipp">${esc(d.dataset.name)}</span>`; inp.value = ""; list.classList.add("hidden"); };
       inp.onblur = () => setTimeout(() => list.classList.add("hidden"), 200);
     }
@@ -689,7 +732,7 @@ async function renderProposals(root, proposals, ctx) {
       if (newContract && acceptAll) location.hash = "#/c/" + r.contractId; else ctx.onDone();
     };
     box.querySelector("[data-confirm]").onclick = () => withAction(box.querySelector("[data-confirm]"), null, () => decide(true));
-    box.querySelector("[data-reject]").onclick = () => confirmBox("Reject the whole proposal? The message stays, the contract does not change.", () => decide(false));
+    box.querySelector("[data-reject]").onclick = () => confirmBox("Decline all suggested changes? The document stays, the contract does not change.", () => decide(false));
     const as = box.querySelector("[data-assign]"); if (as) as.onclick = () => pickPerson("HAND THIS PROPOSAL TO", async (person) => { const r = await backend.assignProposal(hubTok, pid, person.id); if (r.ok) { toast("Handed to " + person.displayName); ctx.onDone(); } return r; });
     box.querySelector("[data-snooze]").onclick = () => snooze(async (d) => { const r = await backend.snoozeProposal(hubTok, pid, BigInt(d)); if (r.ok) { toast("Snoozed — the deadlines do not move"); ctx.onDone(); } return r; });
   });
@@ -708,14 +751,15 @@ let cTimer = 0;
 function enterContracts() { show("viewContracts"); return loadContracts(); }
 async function loadContracts() {
   const viewToken = hubTok, staleView = viewGuard("loadContracts");
+  const types = await loadTypes(); if (staleView()) return; const sel = $("cType"); if (sel.options.length !== types.length + 1) { const keep = sel.value; sel.innerHTML = '<option value="">Any type</option>' + types.map((t) => `<option value="${t.id}">${esc(t.icon)} ${esc(t.name)}</option>`).join(""); sel.value = keep; }
   $("cList").innerHTML = `<div class="empty">Loading…</div>`;
   let rows = [];
-  try { rows = await backend.listContracts(hubTok, { q: $("cQ").value.trim(), status: $("cStatus").value, responsible: "", onlyIncomplete: $("cIncomplete").checked, onlyDue: $("cDue").checked, includeArchived: $("cArchived").checked }); } catch (e) { if (staleView()) return; $("cList").innerHTML = `<div class="empty">Could not load: ${esc(String(e).slice(0, 160))}</div>`; return; }
+  try { rows = await backend.listContracts(hubTok, { q: $("cQ").value.trim(), status: $("cStatus").value, responsible: "", onlyIncomplete: $("cIncomplete").checked, onlyDue: $("cDue").checked, includeArchived: $("cArchived").checked, typeId: $("cType").value ? [BigInt($("cType").value)] : [] }); } catch (e) { if (staleView()) return; $("cList").innerHTML = `<div class="empty">Could not load: ${esc(String(e).slice(0, 160))}</div>`; return; }
   if (staleView()) return;
-  if (!rows.length) { $("cList").innerHTML = `<div class="empty">${$("cQ").value || $("cStatus").value || $("cDue").checked || $("cIncomplete").checked ? "No contract matches these filters." : "No contracts yet. Create one, import your sheet under Workspace tools → Import, or let the first message create a draft."}</div>`; return; }
-  $("cList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Contract</th><th>Status</th><th>Amount</th><th>Cancel by</th><th>Decide by</th><th>Responsible</th><th>Seats</th><th>Open</th></tr></thead><tbody>` + rows.map((c) => {
+  if (!rows.length) { $("cList").innerHTML = `<div class="empty">${$("cQ").value || $("cStatus").value || $("cDue").checked || $("cIncomplete").checked ? "No contract matches these filters." : "No contracts yet. Create one, import your sheet under Workspace tools → Import, or upload the first document."}</div>`; return; }
+  $("cList").innerHTML = `<div class="tblwrap"><table class="plain"><thead><tr><th>Contract</th><th>Type</th><th>Status</th><th>Amount</th><th>Cancel by</th><th>Decide by</th><th>Responsible</th><th>Seats</th><th>Open</th></tr></thead><tbody>` + rows.map((c) => {
     const dd = c.daysToDecide.length ? N(c.daysToDecide[0]) : null;
-    return `<tr class="rowlink" data-c="${c.id}"><td><b style="font-weight:500">${esc(c.title)}</b><div class="kv">${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}${c.complete ? "" : ' · <span style="color:var(--ks-accent)">terms incomplete</span>'}</div></td><td>${tag(c.status, CSTATUS_LBL[c.status] || c.status)}</td><td class="num">${esc(c.amount)}${c.interval ? `<div class="kv">${esc(INTERVAL_LBL[c.interval] || c.interval)}</div>` : ""}</td><td class="mono">${fmtDay(c.noticeDate)}</td><td class="mono">${fmtDay(c.decideBy)}${dd !== null ? `<div class="kv" ${dd <= 14 ? 'style="color:var(--ks-accent)"' : ""}>${esc(days(dd))}</div>` : ""}</td><td>${esc(c.responsibleName || (c.responsible ? c.responsible : "—"))}</td><td class="num">${c.seats.length ? `${N(c.holders)}/${N(c.seats[0])}${c.unusedSeats.length && N(c.unusedSeats[0]) > 0 ? `<div class="kv">${N(c.unusedSeats[0])} unused</div>` : ""}` : ""}</td><td class="num">${N(c.openProposals) ? `${N(c.openProposals)} proposal${N(c.openProposals) === 1 ? "" : "s"}` : ""}${N(c.openTasks) ? `<div>${N(c.openTasks)} task${N(c.openTasks) === 1 ? "" : "s"}</div>` : ""}</td></tr>`;
+    return `<tr class="rowlink" data-c="${c.id}"><td><b style="font-weight:500">${esc(c.title)}</b><div class="kv">${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}${c.complete ? "" : ' · <span style="color:var(--ks-accent)">terms incomplete</span>'}</div></td><td>${esc(c.typeIcon)} ${esc(c.typeName)}${c.listFields.length ? `<div class="kv">${c.listFields.map(([k, v]) => esc(k) + ": " + esc(v)).join(" · ")}</div>` : ""}</td><td>${tag(c.status, CSTATUS_LBL[c.status] || c.status)}</td><td class="num">${esc(c.amount)}${c.interval ? `<div class="kv">${esc(INTERVAL_LBL[c.interval] || c.interval)}</div>` : ""}</td><td class="mono">${fmtDay(c.noticeDate)}</td><td class="mono">${fmtDay(c.decideBy)}${dd !== null ? `<div class="kv" ${dd <= 14 ? 'style="color:var(--ks-accent)"' : ""}>${esc(days(dd))}</div>` : ""}</td><td>${esc(c.responsibleName || (c.responsible ? c.responsible : "—"))}</td><td class="num">${c.seats.length ? `${N(c.holders)}/${N(c.seats[0])}${c.unusedSeats.length && N(c.unusedSeats[0]) > 0 ? `<div class="kv">${N(c.unusedSeats[0])} unused</div>` : ""}` : ""}</td><td class="num">${N(c.openProposals) ? `${N(c.openProposals)} proposal${N(c.openProposals) === 1 ? "" : "s"}` : ""}${N(c.openTasks) ? `<div>${N(c.openTasks)} task${N(c.openTasks) === 1 ? "" : "s"}</div>` : ""}</td></tr>`;
   }).join("") + `</tbody></table></div>`;
   $("cList").querySelectorAll("tr[data-c]").forEach((r) => { r.onclick = () => { location.hash = "#/c/" + r.dataset.c; }; });
 }
@@ -726,12 +770,14 @@ $("cNew").onclick = () => { if (isStaff()) location.hash = "#/add"; };
 /* ============================== the record ============================== */
 const REC_TABS = ["terms", "proposals", "tasks", "messages", "documents", "seats", "history"];
 let cur = null; // Record
+$('rActions').addEventListener('keydown',e=>{if(e.key==='Escape'){$('rActions').open=false;$('rActions').querySelector('summary').focus();}});
+$('rActionMenu').addEventListener('click',e=>{if(e.target.closest('button'))$('rActions').open=false;});
 $("rBack").onclick = () => { location.hash = "#/contracts"; };
 $("viewRecord").querySelectorAll(".tabs button").forEach((b) => { b.onclick = () => { if (cur) location.hash = `#/c/${cur.contract.id}/${b.dataset.tab}`; }; });
 async function enterRecord(id, tabName) {
   const viewToken = hubTok, staleView = viewGuard("enterRecord");
   show("viewRecord");
-  $("rDelete").classList.add("hidden");
+  $("rDelete").classList.add("hidden"); $("rActions").classList.add("hidden"); $("rActions").open=false;
   if (!REC_TABS.includes(tabName)) tabName = "terms";
   showTab("viewRecord", "r", tabName, REC_TABS);
   if (!cur || N(cur.contract.id) !== id) { cur = null; $("rTitle").textContent = "Loading…"; $("rSub").textContent = ""; $("rStatusTag").innerHTML = ""; REC_TABS.forEach((t) => { $("r" + t[0].toUpperCase() + t.slice(1)).innerHTML = ""; }); }
@@ -739,20 +785,20 @@ async function enterRecord(id, tabName) {
   try { r = opt(await backend.getContract(hubTok, BigInt(id))); } catch (e) { if (staleView()) return; $("rTitle").textContent = "Could not load"; $("rSub").textContent = String(e).slice(0, 160); return; }
   if (staleView()) return;
   if (!r) { $("rTitle").textContent = "No such contract — or not yours to see"; $("rEdit").classList.add("hidden"); $("rSetStatus").classList.add("hidden"); return; }
-  cur = r; const c = r.contract, t = c.terms;
+  cur = r; const c = r.contract, t = c.terms; $("rActions").classList.toggle("hidden",!r.canEdit);
   if(c.tags.includes("document-type:license-key") && tabName === "terms"){setNav("keys");return enterSaas("keys",String(c.id));}
   $("rTitle").textContent = c.title; $("rStatusTag").innerHTML = tag(c.status, CSTATUS_LBL[c.status] || c.status);
   $("rSub").innerHTML = `${esc(c.tags.find(t=>t.startsWith("document-type:"))?.slice(14)||"contract")} · ${esc(c.vendor)}${c.product ? " · " + esc(c.product) : ""}${c.customerRef ? ` · ref <span class="mono">${esc(c.customerRef)}</span>` : ""} · responsible <b>${esc(r.responsibleName || "nobody")}</b>${c.deputy ? " · deputy " + esc(r.deputyName || c.deputy) : ""} · ${esc(c.visibility)}${c.tags.length ? " · " + c.tags.filter(t=>!t.startsWith("document-type:")).map(esc).join(", ") : ""} · revision ${N(c.revision)}${c.origin ? ` · <span class="mono">${esc(c.origin)}</span>` : ""}`;
   $("rDelete").classList.toggle("hidden",!r.canEdit); $("rDelete").onclick=()=>trashItem("contract",c.id,c.title); $("rEdit").classList.toggle("hidden", !r.canEdit); $("rSetStatus").classList.toggle("hidden", !r.canEdit);
-  $("rSub").innerHTML = `${esc(c.vendor)} · Owner: <b>${esc(r.responsibleName||"Not assigned")}</b>`;
+  $("rSub").innerHTML = `${esc(r.contractType.icon)} ${esc(r.contractType.name)} · ${esc(c.vendor)} · Owner: <b>${esc(r.responsibleName||"Not assigned")}</b>`;
   const recordTabs=$("viewRecord").querySelector('.tabs');
   recordTabs.querySelectorAll('button').forEach(b=>{b.hidden=!['terms','seats','documents',tabName].includes(b.dataset.tab);if(b.dataset.tab==='terms')b.firstChild.textContent='Overview';if(b.dataset.tab==='seats')b.firstChild.textContent='People & licenses';});
   recordTabs.querySelector('[data-record-more]')?.remove();
-  const more=document.createElement('select');more.dataset.recordMore='';more.setAttribute('aria-label','More contract details');more.innerHTML='<option value="">Activity & more</option><option value="proposals">AI suggestions</option><option value="tasks">Tasks & decisions</option><option value="messages">Email history</option><option value="history">Audit history</option>';more.onchange=()=>{if(more.value)location.hash=`#/c/${c.id}/${more.value}`;};recordTabs.append(more);
+  const more=document.createElement('select');more.dataset.recordMore='';more.setAttribute('aria-label','More contract details');more.innerHTML='<option value="">Activity & more</option><option value="proposals">AI suggestions</option><option value="tasks">Tasks & decisions</option><option value="messages">Source history</option><option value="history">Audit history</option>';more.onchange=()=>{if(more.value)location.hash=`#/c/${c.id}/${more.value}`;};recordTabs.append(more);
   const openP = r.proposals.filter((p) => p.status === "open").length, openT = r.tasks.filter((x) => !N(x.doneAt)).length;
   $("rPropCount").textContent = openP ? `(${openP})` : ""; $("rTaskCount").textContent = openT ? `(${openT})` : ""; $("rSrcCount").textContent = r.sources.length ? `(${r.sources.length})` : ""; $("rDocCount").textContent = r.documents.length ? `(${r.documents.length})` : "";
   // terms
-  const kv = (k, v, unk) => `<div><div class="k">${k}</div><div class="v${v ? "" : " unk"}">${v ? esc(v) : unk || "unknown"}</div></div>`;
+  const kv = (k, v, unk) => `<div class="${/Note|details/i.test(k) ? "kv-wide" : ""}"><div class="k">${k}</div><div class="v${v ? "" : " unk"}">${v ? esc(v) : unk || "unknown"}</div></div>`;
   const noticeRule = t.noticeMonths.length ? `${N(t.noticeMonths[0])} months before` : t.noticeDays.length ? `${N(t.noticeDays[0])} days before` : "";
   const missing = [];
   if (!t.amountMinor.length && t.interval !== "none") missing.push("amount"); if (!t.interval) missing.push("billing interval"); if (!t.renewalDate && !t.end && t.renewalRule !== "indefinite") missing.push("renewal or end date"); if (!t.noticeDate && !noticeRule && t.renewalRule !== "none" && t.renewalRule !== "indefinite") missing.push("notice rule");
@@ -764,17 +810,41 @@ async function enterRecord(id, tabName) {
       <div class="deadline">${dl("Last cancellation date", t.noticeDate)}${dl("Decide by (internal)", t.decideBy)}${dl("Renews / ends", t.renewalDate || t.end)}</div></div>
     <div class="scard"><h3 style="display:flex;align-items:center;gap:12px">Future terms<span style="flex:1"></span>${r.canEdit ? `<button class="linkbtn" id="rEditFuture">${c.futureTerms.length ? "EDIT" : "ADD"}</button>` : ""}</h3>${c.futureTerms.length ? (() => { const f = c.futureTerms[0]; return `<div class="kvgrid">${kv("Amount", money(f.amountMinor.length ? f.amountMinor[0] : null, f.currency))}${kv("Billed", INTERVAL_LBL[f.interval] || f.interval)}${kv("From", f.start)}${kv("Renewal", RENEWAL_LBL[f.renewalRule] || f.renewalRule)}${kv("Note", f.note, "—")}</div>`; })() : `<div class="kv">An agreed change that starts later — a new price from January, say. Confirmed terms stay as they are until then.</div>`}</div>`;
   if(c.tags.some(tag=>['document-type:receipt','document-type:invoice'].includes(tag))){
-    $('rTerms').innerHTML='<div class="scard"><h3>Document details</h3><div class="kvgrid">'+kv('Supplier',c.vendor)+kv('Product or service',c.product)+kv('Document total',money(t.amountMinor.length?t.amountMinor[0]:null,t.currency))+kv('Tax basis',t.taxBasis==='unknown'?'':t.taxBasis)+(t.interval?kv('Billing frequency shown',INTERVAL_LBL[t.interval]||t.interval):'')+kv('Notes and payment details',t.note,'Not stated')+'</div>'+(r.canEdit?'<div class="btnrow"><button class="pill outline sm" id="rEditTerms">Edit details</button></div>':'')+'</div><div class="notice soft">This record keeps the billing document. It does not itself create renewal obligations or verify payment. The original is available in Documents.</div>';
+    $('rTerms').innerHTML='<div class="scard"><h3>Document details</h3><div class="kvgrid">'+kv('Supplier',c.vendor)+kv('Product or service',c.product)+kv('Document total',money(t.amountMinor.length?t.amountMinor[0]:null,t.currency))+kv('Tax basis',t.taxBasis==='unknown'?'':t.taxBasis)+(t.interval?kv('Billing frequency shown',INTERVAL_LBL[t.interval]||t.interval):'')+kv('Notes and payment details',t.note,'Not stated')+'</div>'+(r.canEdit?'<div class="btnrow"><button class="pill outline sm" id="rEditTerms">Edit details</button><button class="pill primary sm" id="rTrackAsContract">Track as subscription</button><span class="status" id="rTrackStatus"></span></div>':'')+'</div><div class="notice soft">This record keeps the billing document. It does not itself create renewal obligations or verify payment. The original is available in Documents.</div>';
   }
+  const typeHost=document.createElement('section');typeHost.className='scard type-details';$('rTerms').append(typeHost);
+  const typeNames={};for(const f of r.contractType.fields)if(f.kind==='person'){const v=(r.typeValues.find(([k])=>k===f.key)||[])[1];if(v)typeNames[v]=r.holderNames.find(h=>h[0]===v)?.[1]||r.viewerNames.find(h=>h[0]===v)?.[1]||(v===c.responsible?r.responsibleName:v===c.deputy?r.deputyName:'');}
+  const typesForRecord=await loadTypes();if(staleView())return;
+  renderTypeFields(typeHost,{record:r,types:typesForRecord,names:typeNames,save:values=>backend.setTypeValues(hubTok,c.id,c.revision,values),setType:typeId=>backend.setContractType(hubTok,c.id,c.revision,typeId),pickPerson:(input,list)=>{attachPickerEl(input,list,(p)=>{input.value=p.displayName;input.dataset.pid=p.id;});},done:()=>enterRecord(id,tabName),stale:staleView});
   const commercialHost=document.createElement('section');commercialHost.className='scard commercial-details';$('rTerms').append(commercialHost);
   const commercialToken=hubTok;
   renderCommercialDetails(commercialHost,{record:r,save:fields=>backend.setCommercialDetails(commercialToken,c.id,c.revision,fields),done:()=>enterRecord(id,tabName),stale:staleView});
   const et = $("rEditTerms"); if (et) et.onclick = () => openTerms(false);
+  const tr = $("rTrackAsContract"); if (tr) tr.onclick = async () => { tr.disabled = true; setStatus("rTrackStatus", "", "switching…"); try { const tags = c.tags.filter((t) => !t.startsWith("document-type:")).concat(["document-type:subscription"]); const res = await backend.updateContract(hubTok, c.id, c.revision, { title: c.title, vendor: c.vendor, product: c.product, customerRef: c.customerRef, responsible: c.responsible, deputy: c.deputy, visibility: c.visibility, viewers: c.viewers, seats: c.seats, holders: c.holders, tags }); if (staleView()) return; if (!res.ok) { setStatus("rTrackStatus", "err", res.detail); tr.disabled = false; return; } toast("Now tracked as a subscription — check the terms"); enterRecord(id, tabName); } catch (_) { if (!staleView()) { setStatus("rTrackStatus", "err", "Could not switch. Reload and retry."); tr.disabled = false; } } };
   const ef = $("rEditFuture"); if (ef) ef.onclick = () => openTerms(true);
   if(tabName==='terms'){
     const cards=[...$('rTerms').querySelectorAll(':scope > .scard')];
-    for(const card of cards.slice(1)){const details=document.createElement('details');details.className='scard';const title=card.querySelector('h3')?.textContent||'More details';details.innerHTML='<summary>'+esc(title.replace(/ADD|EDIT/g,''))+'</summary>';card.replaceWith(details);details.append(card);}
+    for(const card of cards.slice(1)){const details=document.createElement('details');details.className='scard';const title=card.querySelector('h3')?.textContent||'More details';details.innerHTML='<summary>'+esc(title.replace(/ADD|EDIT/g,''))+'</summary>';details.open=card.classList.contains('type-details')&&!!card.querySelector('.kvgrid');card.replaceWith(details);details.append(card);}
   }
+  if(r.canEdit && r.sources.length && me.aiOn){
+    const termsHost=document.createElement('section');termsHost.className='scard';
+    termsHost.innerHTML='<h3>Linked vendor conditions</h3><p class="kv">Check current public terms separately from your signed agreement. Nothing changes until you review and save.</p><label>Source document <select data-terms-source>'+r.sources.map(s=>`<option value="${s.id}">${esc(s.subject||'Document '+s.id)}</option>`).join('')+'</select></label><div class="vendor-terms-panel"></div>';
+    $('rTerms').append(termsHost);
+    let checkVersion=0;const termsToken=hubTok;
+    const drawTerms=()=>{const version=++checkVersion;renderVendorTerms(termsHost.querySelector('.vendor-terms-panel'),{api:backend,token:termsToken,sourceId:BigInt(termsHost.querySelector('select').value),stale:()=>staleView()||version!==checkVersion,onUse:s=>{
+      openTerms(false);$('tdRenewal').value=s.renewalRule;$('tdNoticeD').value=s.noticeDays?.[0]??'';$('tdNoticeM').value=s.noticeMonths?.[0]??'';
+      $('tdNoticeDate').value='';
+      $('tdWhy').value='Reviewed public vendor terms: '+s.url+' (retrieved '+new Date(Number(s.checkedAt)/1e6).toISOString()+'). '+s.quote;
+      $('tdHint').textContent='Supplementary current web terms. Confirm that they apply to this agreement before saving; check any existing cancellation date.';
+    }});};
+    termsHost.querySelector('select').onchange=drawTerms;drawTerms();
+  }
+  const previewHost=document.createElement('section');
+  const recordFields=document.createElement('div');recordFields.className='record-fields';
+  recordFields.append(...$('rTerms').childNodes);$('rTerms').append(recordFields,previewHost);
+  closeDocumentPreview();
+  const previewToken=hubTok;
+  closeDocumentPreview=mountDocumentPreview(previewHost,{documents:tabName==='terms'?r.documents:[],load:async did=>opt(await backend.documentData(previewToken,did)),stale:staleView});
   // proposals
   await renderProposals($("rProposals"), r.proposals, { candidates: [], onDone: () => enterRecord(id, tabName) });
   if (staleView()) return;
@@ -786,14 +856,23 @@ async function enterRecord(id, tabName) {
   wireItems($("rTasks"));
   const at = $("rAddTask"); if (at) at.onclick = () => openTask();
   // messages + rules
-  $("rMessages").innerHTML = (r.sources.length ? `<div class="tblwrap"><table class="plain"><thead><tr><th>Message</th><th>From</th><th>Status</th><th>Received</th></tr></thead><tbody>${r.sources.map((s) => `<tr class="rowlink" data-s="${s.id}"><td>${esc(s.subject || "(no subject)")}</td><td>${esc(s.fromName || s.fromAddr)}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No message is filed to this contract yet. Put the contracts address in CC when you write to the vendor.</div>`) +
-    (isStaff() ? `<div class="dsec">Matching rules</div><div class="kv" style="margin-bottom:8px">Mail that matches one of these is filed here without asking.</div>${r.rules.length ? `<table class="plain"><tbody>${r.rules.map((ru) => `<tr><td>${esc(RULE_LBL[ru.kind] || ru.kind)}</td><td class="mono">${esc(ru.value)}</td><td>${ru.confirmed ? "confirmed" : "learned"}</td><td style="text-align:right"><button class="linkbtn" data-rmrule="${ru.id}">Remove</button></td></tr>`).join("")}</tbody></table>` : `<div class="kv muted">none yet — the FILE dialog on a message can remember its sender</div>`}<div class="btnrow"><input type="text" id="rRuleVal" placeholder="billing@vendor.example · vendor.example · SC-4471 · a subject fragment" style="flex:1;min-width:220px"><select id="rRuleKind"><option value="senderAddress">sender address</option><option value="senderDomain">sender domain</option><option value="customerRef">customer reference</option><option value="subjectContains">subject contains</option></select><button class="linkbtn" id="rRuleAdd">ADD RULE</button></div>` : "");
+  $("rMessages").innerHTML = (r.sources.length ? `<div class="tblwrap"><table class="plain"><thead><tr><th>Document</th><th>From</th><th>Status</th><th>Received</th></tr></thead><tbody>${r.sources.map((s) => `<tr class="rowlink" data-s="${s.id}"><td>${esc(s.subject || "(no subject)")}</td><td>${esc(s.fromName || s.fromAddr)}</td><td>${tag(s.status, SSTATUS_LBL[s.status] || s.status)}</td><td class="mono">${fmtD(s.receivedAt)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No document is attached to this contract yet. Use + Add document under Documents.</div>`) +
+    (isStaff() ? `<div class="dsec">Matching rules</div><div class="kv" style="margin-bottom:8px">Mail that matches one of these is filed here without asking.</div>${r.rules.length ? `<table class="plain"><tbody>${r.rules.map((ru) => `<tr><td>${esc(RULE_LBL[ru.kind] || ru.kind)}</td><td class="mono">${esc(ru.value)}</td><td>${ru.confirmed ? "confirmed" : "learned"}</td><td style="text-align:right"><button class="linkbtn" data-rmrule="${ru.id}">Remove</button></td></tr>`).join("")}</tbody></table>` : `<div class="kv muted">none yet — linking a document can remember its sender domain or reference</div>`}<div class="btnrow"><input type="text" id="rRuleVal" placeholder="billing@vendor.example · vendor.example · SC-4471 · a subject fragment" style="flex:1;min-width:220px"><select id="rRuleKind"><option value="senderAddress">sender address</option><option value="senderDomain">sender domain</option><option value="customerRef">customer reference</option><option value="subjectContains">subject contains</option></select><button class="linkbtn" id="rRuleAdd">ADD RULE</button></div>` : "");
   $("rMessages").querySelectorAll("tr[data-s]").forEach((row) => { row.onclick = () => { location.hash = "#/inbox/" + row.dataset.s; }; });
   $("rMessages").querySelectorAll("[data-rmrule]").forEach((b) => { b.onclick = async () => { const x = await backend.removeRule(hubTok, BigInt(b.dataset.rmrule)); toast(x.ok ? "Rule removed" : x.detail); if (x.ok) enterRecord(id, tabName); }; });
   const ra = $("rRuleAdd"); if (ra) ra.onclick = async () => { const v = $("rRuleVal").value.trim(); if (!v) return; const x = await backend.addRule(hubTok, $("rRuleKind").value, v, c.id); toast(x.ok ? "Rule added" : x.detail); if (x.ok) enterRecord(id, tabName); };
   // documents
-  $("rDocuments").innerHTML = r.documents.length ? docTable(r.documents) : `<div class="empty">No files yet — attachments of filed messages appear here.</div>`;
+  const rereadable = r.sources.filter((s) => !["received", "extracting"].includes(s.status));
+  $("rDocuments").innerHTML = (r.canEdit ? `<div class="btnrow" style="margin-bottom:12px"><a class="pill primary sm" href="#/c/${c.id}/add">+ Add document</a>${me.aiOn && isStaff() && rereadable.length ? `<button type="button" class="pill outline sm" id="rReread">Read documents again with AI</button>` : ""}<span class="kv">Attach another original (amendment, renewal letter, invoice). The AI reads it and you confirm what changes.${me.aiOn && isStaff() && rereadable.length ? " Reading again re-checks every linked document for terms, discounts and list prices; it suggests, never overwrites." : ""}</span></div>` : "") + (r.documents.length ? docTable(r.documents) : `<div class="empty">No files yet. Add the signed contract, amendments or invoices here.</div>`);
   wireDocs($("rDocuments"));
+  const reread = $("rReread"); if (reread) reread.onclick = async () => {
+    reread.disabled = true; reread.textContent = "Reading…";
+    let queued = 0, problem = "";
+    for (const s of rereadable) { try { const x = await backend.reprocessSource(hubTok, BigInt(s.id)); if (x.ok) queued++; else problem = x.detail; } catch (e) { problem = String(e.message || e); } }
+    if (staleView()) return;
+    toast(queued ? `${queued} document${queued === 1 ? "" : "s"} queued for reading — suggested changes appear on this record` : problem || "Nothing to read");
+    enterRecord(id, tabName);
+  };
   // seats
   const active = N(r.row.holders), seats = c.seats.length ? N(c.seats[0]) : null;
   $("rSeats").innerHTML = `<div class="tgrid"><div class="tstat"><div class="v">${seats === null ? "—" : seats}</div><div class="l">seats bought</div></div><div class="tstat"><div class="v">${active}</div><div class="l">active holders</div></div><div class="tstat"><div class="v">${seats === null ? "—" : Math.max(0, seats - active)}</div><div class="l">unused</div></div><div class="tstat"><div class="v">${r.holderNames.filter(h=>!h[2]).length}</div><div class="l">holders who left</div></div></div>
@@ -808,11 +887,11 @@ async function enterRecord(id, tabName) {
   await renderAssignments(groupHost,{api:backend,token:viewToken,record:r,stale:staleView,done:()=>enterRecord(id,tabName)});
   if(staleView())return;
   // history
-  $("rHistory").innerHTML = r.audit.length ? `<div class="tblwrap"><table class="plain"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Before</th><th>After</th></tr></thead><tbody>${r.audit.map((a) => `<tr><td class="mono">${fmtD(a.at)}</td><td>${esc(a.who)}</td><td>${esc(a.what)}${a.sourceId.length ? ` · <a href="#/inbox/${a.sourceId[0]}">message</a>` : ""}</td><td class="kv">${esc(a.before)}</td><td class="kv">${esc(a.after)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No history yet.</div>`;
+  $("rHistory").innerHTML = r.audit.length ? `<div class="tblwrap"><table class="plain"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Before</th><th>After</th></tr></thead><tbody>${r.audit.map((a) => `<tr><td class="mono">${fmtD(a.at)}</td><td>${esc(a.who)}</td><td>${esc(a.what)}${a.sourceId.length ? ` · <a href="#/inbox/${a.sourceId[0]}">source</a>` : ""}</td><td class="kv">${esc(a.before)}</td><td class="kv">${esc(a.after)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No history yet.</div>`;
   document.getElementById("rMoveSpace")?.remove();
   if (r.canEdit && (currentSpace?.role?.owner !== undefined || (currentSpace?.kind === "legacy" && c.responsible === me.id)) && spaces.some(s => s.id !== me.space && !s.archived && Object.keys(s.role)[0] === "owner")) {
     const button = document.createElement("button"); button.id = "rMoveSpace"; button.className = "linkbtn"; button.textContent = "MOVE TO WORKSPACE…";
-    $("rSub").appendChild(button);
+    $("rActionMenu").appendChild(button);
     button.onclick = () => {
       const destinations = spaces.filter(s => s.id !== me.space && !s.archived && Object.keys(s.role)[0] === "owner");
       $("cmText").textContent = "Move this contract and its related documents? Members of the destination workspace will gain access under its rules.";
@@ -884,6 +963,7 @@ function openEdit(rec) {
   $("edTitleIn").value = ed.input.title; $("edVendor").value = ed.input.vendor; $("edProduct").value = ed.input.product; $("edRef").value = ed.input.customerRef; $("edVis").value = ed.input.visibility; $("edSeats").value = ed.input.seats.length ? N(ed.input.seats[0]) : ""; $("edTags").value = ed.input.tags.join(", ");
   $("edRespChip").innerHTML = ed.input.responsible ? chip(ed.names[ed.input.responsible] || ed.input.responsible, ed.input.responsible) : ""; $("edDepChip").innerHTML = ed.input.deputy ? chip(ed.names[ed.input.deputy] || ed.input.deputy, ed.input.deputy) : ""; renderViewers();
   ["edRespIn", "edDepIn", "edViewIn"].forEach((i) => { $(i).value = ""; }); $("edRespIn").disabled = !isStaff() || currentSpace?.kind === "personal"; $("edDepIn").disabled = currentSpace?.kind === "personal"; $("edViewIn").disabled = currentSpace?.kind === "personal"; setStatus("edStatus", "", "");
+  loadTypes().then((types) => { const sel = $("edType"); sel.innerHTML = types.filter((t) => t.enabled).map((t) => `<option value="${t.id}">${esc(t.icon)} ${esc(t.name)}</option>`).join(""); sel.value = rec ? String(rec.contractType.id) : String(types[0]?.id || 1); $("edTypeRow").classList.toggle("hidden", !!rec); });
   $("editDrawer").classList.add("on"); $("edTitleIn").focus();
 }
 $("rEdit").onclick = () => openEdit(cur);
@@ -899,7 +979,7 @@ $("edSave").onclick = () => withAction($("edSave"), "edStatus", async (token) =>
   const r = ed.id === null ? await backend.createContract(token, input) : await backend.updateContract(token, ed.id, ed.revision, input);
   if (token !== hubTok) return;
   if (!r.ok) { setStatus("edStatus", "err", r.detail); return; }
-  if (wasNew) { editor.id = r.id; editor.revision = r.revision || 1n; }
+  if (wasNew) { editor.id = r.id; editor.revision = r.revision || 1n; const chosen = $("edType").value; if (chosen && String(contractTypesCache[0]?.id) !== chosen) { const t = await backend.setContractType(token, r.id, 1n, BigInt(chosen)); if (t.ok) editor.revision = t.revision; } }
   if (editor.sourceId) {
     const linked = await backend.linkSource(token, editor.sourceId, [editor.id], []);
     if (token !== hubTok) return;
@@ -947,16 +1027,16 @@ $("tdSave").onclick = async () => {
 $("tdClear").onclick = async () => { const c = cur.contract; const r = await backend.setFutureTerms(hubTok, c.id, c.revision, []); if (!r.ok) { setStatus("tdStatus", "err", r.detail); return; } $("termsDrawer").classList.remove("on"); toast("Future terms cleared"); cur = null; route(); };
 
 /* ============================== connection (staff) ============================== */
-const CN_TABS = ["status", "ai", "relay", "settings", "import", "export", "log"];
+const CN_TABS = ["status", "ai", "settings", "import", "export", "log"];
 $("viewConn").querySelectorAll(".tabs button").forEach((b) => { b.onclick = () => { location.hash = "#/connection/" + b.dataset.tab; }; });
 async function enterConn(tabName) {
   show("viewConn");
   if (!isStaff() && !isAdmin() && tabName !== "ai") tabName = "export";
-  if (!CN_TABS.includes(tabName) || (!isAdmin() && ["relay", "settings", "log"].includes(tabName)) || (tabName === "import" && !isStaff())) tabName = "status";
+  if (!CN_TABS.includes(tabName) || (!isAdmin() && ["settings", "log"].includes(tabName)) || (tabName === "import" && !isStaff())) tabName = "status";
   showTab("viewConn", "cn", tabName, CN_TABS);
   if (tabName === "status") await loadConnStatus();
   if (tabName === "ai") await loadAiStatus();
-  if ((tabName === "relay" || tabName === "settings") && isAdmin()) await loadSettings();
+  if (tabName === "settings" && isAdmin()) await loadSettings();
   if (tabName === "log" && isAdmin()) { const rows = await backend.adminLogRows(hubTok); $("logRows").innerHTML = rows.map((l) => `<tr><td class="mono">${fmtD(l.at)}</td><td>${esc(l.who)}</td><td>${esc(l.what)}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">nothing yet</td></tr>`; }
 }
 let aiPanelState = null;
@@ -1024,15 +1104,15 @@ async function loadConnStatus() {
   if (!s) { $("cnStatus").innerHTML = `<div class="empty">Space owners and editors see intake diagnostics. You can export the records available to you.</div>`; return; }
   const jobs = s.jobs.filter((j) => !N(j.doneAt));
   $("cnStatus").innerHTML = `<div class="tgrid">
-      <div class="tstat"><div class="v">${s.lastReceivedAt ? fmtDate(s.lastReceivedAt) : "—"}</div><div class="l">last message</div></div>
-      <div class="tstat"><div class="v">${N(s.sourcesToday)}</div><div class="l">messages today</div></div>
+      <div class="tstat"><div class="v">${s.lastReceivedAt ? fmtDate(s.lastReceivedAt) : "—"}</div><div class="l">last document</div></div>
+      <div class="tstat"><div class="v">${N(s.sourcesToday)}</div><div class="l">documents today</div></div>
       <div class="tstat"><div class="v">${N(s.openJobs)}</div><div class="l">in processing</div></div>
       <div class="tstat"><div class="v" ${N(s.failedJobs) + N(s.failedSources) ? 'style="color:var(--ks-accent)"' : ""}>${N(s.failedJobs) + N(s.failedSources)}</div><div class="l">failed</div></div>
       <div class="tstat"><div class="v">${N(s.aiCallsToday)}<span class="kv">/${N(s.aiDailyBudget)}</span></div><div class="l">AI reads today</div></div>
       <div class="tstat"><div class="v" ${N(s.outboxFailed) ? 'style="color:var(--ks-accent)"' : ""}>${N(s.outboxPending)}<span class="kv">${N(s.outboxFailed) ? ` · ${N(s.outboxFailed)} failed` : ""}</span></div><div class="l">reminders queued</div></div>
     </div>
-    <div class="scard"><h3>How mail gets here</h3><div class="kvgrid">${[["Contracts address", s.mailboxAddress || "not set — Relay tab"], ["Relay identities", N(s.relayCount) ? `${N(s.relayCount)} trusted` : "none — only .eml uploads work"], ["AI", s.aiSource ? "Hub access available; model test separate" : me.aiChecked === false ? "checking the Hub…" : "not available"], ["Directory refresh", fmtD(s.lastDirectoryPull)], ["Files stored", (N(s.blobBytes) / 1e6).toFixed(1) + " MB of 400 MB"], ["Oldest open job", s.oldestOpenJobAt ? fmtD(s.oldestOpenJobAt) : "—"]].map(([k, v]) => `<div><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div><p class="kv" style="margin-top:16px"><a href="#/connection/ai">AI connection and model test →</a></p></div>
-    ${jobs.length ? `<div class="scard"><h3>Processing queue</h3><div class="tblwrap"><table class="plain"><thead><tr><th>Step</th><th>Message</th><th>Attempts</th><th>Next try</th><th>Last error</th></tr></thead><tbody>${jobs.slice(0, 50).map((j) => `<tr><td class="mono">${esc(j.step)}</td><td><a href="#/inbox/${j.ref}">#${j.ref}</a></td><td class="num">${N(j.attempts)}</td><td class="mono">${fmtD(j.nextAt)}</td><td class="kv">${esc(j.lastError)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
+    <div class="scard"><h3>How documents get here</h3><div class="kvgrid">${[["Intake", "Uploads and pasted text by signed-in members"], ["AI", s.aiSource ? "Hub access available; model test separate" : me.aiChecked === false ? "checking the Hub…" : "not available"], ["Directory refresh", fmtD(s.lastDirectoryPull)], ["Files stored", (N(s.blobBytes) / 1e6).toFixed(1) + " MB of 400 MB"], ["Oldest open job", s.oldestOpenJobAt ? fmtD(s.oldestOpenJobAt) : "—"]].map(([k, v]) => `<div><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div><p class="kv" style="margin-top:16px"><a href="#/connection/ai">AI connection and model test →</a></p></div>
+    ${jobs.length ? `<div class="scard"><h3>Processing queue</h3><div class="tblwrap"><table class="plain"><thead><tr><th>Step</th><th>Document</th><th>Attempts</th><th>Next try</th><th>Last error</th></tr></thead><tbody>${jobs.slice(0, 50).map((j) => `<tr><td class="mono">${esc(j.step)}</td><td><a href="#/inbox/${j.ref}">#${j.ref}</a></td><td class="num">${N(j.attempts)}</td><td class="mono">${fmtD(j.nextAt)}</td><td class="kv">${esc(j.lastError)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
     ${s.outboxFailures.length ? `<div class="scard"><h3>Reminders that could not be delivered</h3><div class="kv">The hub did not accept these. Retry once the hub is reachable again.</div><table class="plain"><tbody>${s.outboxFailures.map((f) => `<tr><td>${esc(f.title)}</td><td class="num">${N(f.attempts)} tries</td><td class="kv">${esc(f.lastError)}</td><td style="text-align:right"><button class="linkbtn" data-retry="${f.id}">RETRY</button></td></tr>`).join("")}</tbody></table></div>` : ""}`;
   $("cnStatus").querySelectorAll("[data-retry]").forEach((b) => { b.onclick = async () => { const r = await backend.retryNotification(hubTok, BigInt(b.dataset.retry)); toast(r.ok ? "Retried" : r.detail); loadConnStatus(); }; });
 }
@@ -1041,25 +1121,18 @@ async function loadSettings() {
   const staleView = viewGuard("loadSettings");
   const s = opt(await backend.getSettings(hubTok)); if (staleView() || !s) return;
   settings = s;
-  $("rlMailbox").value = s.mailboxAddress; $("rlPrincipals").value = s.relayPrincipals.join("\n");
   $("sOrg").value = s.orgName; $("sAppUrl").value = s.appUrl;
-  $("sLead").value = N(s.leadDays); $("sReminders").value = s.reminderDays.map(N).join(", "); $("sTz").value = s.tzName; $("sTzOff").value = N(s.tzOffsetMinutes); $("sAiBudget").value = N(s.aiDailyBudget);
-  $("sMeta").innerHTML = `contracts ${esc(s.version)} · ${N(s.contracts)} contracts · ${N(s.sources)} messages · ${N(s.openProposals)} open proposals · ${N(s.openTasks)} open tasks · ${N(s.peopleCount)} people in the directory (refreshed ${fmtD(s.lastDirectoryPull)}) · ${N(s.adminCount)} admins · AI ${esc(s.aiSource || (me.aiChecked === false ? "checking" : "not available"))} (${N(s.aiCallsToday)}/${N(s.aiDailyBudget)} today) · hub <span class="mono">${esc(s.hubId || "not set")}</span>`;
+  $("sLead").value = N(s.leadDays); $("sTz").value = s.tzName; $("sTzOff").value = N(s.tzOffsetMinutes); $("sAiBudget").value = N(s.aiDailyBudget);
+  $("sMeta").innerHTML = `contracts ${esc(s.version)} · ${N(s.contracts)} contracts · ${N(s.sources)} documents · ${N(s.openProposals)} open proposals · ${N(s.openTasks)} open tasks · ${N(s.peopleCount)} people in the directory (refreshed ${fmtD(s.lastDirectoryPull)}) · ${N(s.adminCount)} admins · AI ${esc(s.aiSource || (me.aiChecked === false ? "checking" : "not available"))} (${N(s.aiCallsToday)}/${N(s.aiDailyBudget)} today) · hub <span class="mono">${esc(s.hubId || "not set")}</span>`;
 }
-function settingsArgs() { return { orgName: $("sOrg").value.trim(), appUrl: $("sAppUrl").value.trim(), editorGroup: "", adminGroup: "", mailboxAddress: $("rlMailbox").value.trim(), tzName: $("sTz").value.trim(), tzOffsetMinutes: BigInt(Number($("sTzOff").value) || 0), leadDays: BigInt(Math.max(0, Number($("sLead").value) || 0)), reminderDays: $("sReminders").value.split(",").map((x) => Number(x.trim())).filter((x) => x > 0).map(BigInt), aiDailyBudget: BigInt(Math.max(0, Number($("sAiBudget").value) || 0)) }; }
+function settingsArgs() { return { orgName: $("sOrg").value.trim(), appUrl: $("sAppUrl").value.trim(), editorGroup: "", adminGroup: "", tzName: $("sTz").value.trim(), tzOffsetMinutes: BigInt(Number($("sTzOff").value) || 0), leadDays: BigInt(Math.max(0, Number($("sLead").value) || 0)), aiDailyBudget: BigInt(Math.max(0, Number($("sAiBudget").value) || 0)) }; }
 $("sSave").onclick = async () => {
   setStatus("sStatus", "", "saving…");
   const r = await backend.setSettings(hubTok, settingsArgs()); if (!r.ok) { setStatus("sStatus", "err", r.detail); return; }
   setStatus("sStatus", "ok", "saved"); await loadSettings(); await refreshMe();
 };
-$("rlSave").onclick = async () => {
-  setStatus("rlStatus", "", "saving…");
-  const r = await backend.setSettings(hubTok, settingsArgs()); if (!r.ok) { setStatus("rlStatus", "err", r.detail); return; }
-  const p = await backend.setRelayPrincipals(hubTok, $("rlPrincipals").value.split(/\s+/).map((x) => x.trim()).filter(Boolean)); if (!p.ok) { setStatus("rlStatus", "err", p.detail); return; }
-  setStatus("rlStatus", "ok", "saved"); await loadSettings();
-};
 $("sSeed").onclick = async () => { const r = await backend.seedDemo(hubTok); setStatus("sSeedStatus", r.ok ? "ok" : "err", r.ok ? "sample data added" : r.detail); loadSettings(); };
-$("sUnseed").onclick = () => confirmBox("Remove the sample data? Contracts, messages and proposals marked as samples go away.", async () => { const r = await backend.removeDemo(hubTok); setStatus("sSeedStatus", r.ok ? "ok" : "err", r.ok ? "sample data removed" : r.detail); loadSettings(); });
+$("sUnseed").onclick = () => confirmBox("Remove the sample data? Contracts, documents and suggestions marked as samples go away.", async () => { const r = await backend.removeDemo(hubTok); setStatus("sSeedStatus", r.ok ? "ok" : "err", r.ok ? "sample data removed" : r.detail); loadSettings(); });
 // export
 $("exCsv").onclick = () => exportCsv("exStatus");
 $("exAll").onclick = async () => { try { const d = opt(await backend.exportAll(hubTok)); if (!d) { setStatus("exStatus", "err", "This workspace is not available"); return; } download(`contracts-export-${new Date().toISOString().slice(0, 10)}.json`, jsonSafe(d), "application/json"); setStatus("exStatus", "ok", "downloaded"); } catch (e) { setStatus("exStatus", "err", String(e).slice(0, 120)); } };

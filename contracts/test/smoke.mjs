@@ -14,11 +14,20 @@ const role = mode;
 const staff = role !== "member";
 const ME = "p_00000000000000ee", ANA = "p_00000000000000a1";
 const terms = (o = {}) => ({ amountMinor: [150000n], currency: "EUR", taxBasis: "net", interval: "year", quantity: [], unitMinor: [], start: "2025-01-01", end: "", renewalRule: "auto", renewalDate: "2027-01-01", noticeDays: [], noticeMonths: [3n], noticeDate: "2026-10-01", decideBy: "2026-09-17", note: "", ...o });
+const fd=(key,title,kind,options=[],required=false,inList=true,remind=false)=>({key,title,kind,options,required,inList,remind});
+const ctypes=()=>[
+  {id:1n,name:"SaaS / Subscription",icon:"☁️",description:"Software used per seat or per plan; renewals, seats and license holders.",fields:[fd("pricingModel","Pricing model","select",["per seat","flat","usage based","tiered"]),fd("plan","Plan","text"),fd("adminUrl","Admin console","text",[],false,false)],hasSeats:true,enabled:true,builtin:true},
+  {id:2n,name:"Datacenter / Colocation",icon:"🏢",description:"Racks, power, connectivity and access at a hosting site.",fields:[fd("site","Site / address","text",[],true),fd("rackUnits","Racks or rack units","number"),fd("powerKw","Power (kW)","number"),fd("accessContact","Access contact","person",[],false,false),fd("supportHotline","Support hotline","text",[],false,false)],hasSeats:false,enabled:true,builtin:true},
+  {id:3n,name:"Telecom / Connectivity",icon:"📡",description:"Lines, mobile plans and internet access.",fields:[fd("serviceId","Service / line id","text"),fd("bandwidth","Bandwidth","text")],hasSeats:false,enabled:true,builtin:true},
+  {id:7n,name:"Other",icon:"📄",description:"Anything else; the shared core fields only.",fields:[],hasSeats:false,enabled:true,builtin:true},
+  {id:8n,name:"Insurance",icon:"🛡️",description:"Policies and cover.",fields:[fd("policyNo","Policy number","text",[],true),fd("coverAmount","Cover amount","amount")],hasSeats:false,enabled:true,builtin:false},
+];
+const typeOf=(id)=>ctypes().find(t=>t.id===id)||ctypes()[0];
 const contract = (o = {}) => ({ id: 1n, title: "Sunrise Cloud — Team plan", vendor: "Sunrise Cloud", product: "Team", customerRef: "SC-4471", responsible: ME, deputy: "", visibility: "team", viewers: [ANA], status: "active", terms: terms(), futureTerms: [], revision: 3n, seats: [25n], holders: [ME, ANA, "p_0000000000000099"], tags: ["saas"], origin: "import:sheet", createdAt: now, updatedAt: now, createdBy: ME, ...o });
-const crow = (o = {}) => ({ id: 1n, title: "Sunrise Cloud — Team plan", vendor: "Sunrise Cloud", product: "Team", status: "active", responsible: ME, responsibleName: "Me Myself", amount: "1,500.00 EUR", interval: "year", renewalDate: "2027-01-01", end: "", noticeDate: "2026-10-01", decideBy: "2026-09-17", daysToDecide: [11n], seats: [25n], holders: 2n, unusedSeats: [23n], openProposals: 1n, openTasks: 1n, complete: true, updatedAt: now, ...o });
+const crow = (o = {}) => ({ id: 1n, title: "Sunrise Cloud — Team plan", vendor: "Sunrise Cloud", product: "Team", status: "active", responsible: ME, responsibleName: "Me Myself", amount: "1,500.00 EUR", interval: "year", renewalDate: "2027-01-01", end: "", noticeDate: "2026-10-01", decideBy: "2026-09-17", daysToDecide: [11n], seats: [25n], holders: 2n, unusedSeats: [23n], openProposals: 1n, openTasks: 1n, complete: true, updatedAt: now, typeId: 1n, typeName: "SaaS / Subscription", typeIcon: "☁️", listFields: [["Pricing model","per seat"],["Plan","Team"]], ...o });
 const srow = (o = {}) => ({ id: 7n, kind: "relay", subject: "Your renewal — Team plan", fromAddr: "billing@sunrise-cloud.example", fromName: "Sunrise Cloud", sentAt: "2026-09-01T08:00:00Z", receivedAt: now, status: "review", contractId: [1n], contractTitle: "Sunrise Cloud — Team plan", documents: 1n, proposals: 1n, note: "", handedInByName: "", ...o });
 const change = (field, oldValue, newValue, basis = "explicit") => ({ field, oldValue, newValue, basis, evidence: [{ partId: "body", quote: `… ${field} is now ${newValue} …` }] });
-const prop = (o = {}) => ({ id: 11n, sourceId: 7n, sourceSubject: "Your renewal — Team plan", kind: "renewal_notice", contractId: [1n], contractTitle: "Sunrise Cloud — Team plan", candidates: [], baseRevision: 3n, currentRevision: 3n, changes: [change("amountMinor", "150000", "165000"), change("renewalDate", "2027-01-01", "2028-01-01"), change("noticeMonths", "3", "2", "ambiguous")], uncertainties: ["the notice period might be counted from the invoice date"], summary: "Price rises to 1,650.00 EUR from January 2027", status: "open", assignee: "", assigneeName: "", snoozedUntil: 0n, decidedBy: "", decidedByName: "", decidedAt: 0n, note: "", createdAt: now, ...o });
+const prop = (o = {}) => ({ id: 11n, sourceId: 7n, sourceSubject: "Your renewal — Team plan", kind: "renewal_notice", contractId: [1n], contractTitle: "Sunrise Cloud — Team plan", candidates: [], baseRevision: 3n, currentRevision: 3n, changes: [change("amountMinor", "150000", "165000"), change("renewalDate", "2027-01-01", "2028-01-01"), change("noticeMonths", "3", "2", "ambiguous")], uncertainties: ["the notice period might be counted from the invoice date"], typeProposal: [], summary: "Price rises to 1,650.00 EUR from January 2027", status: "open", assignee: "", assigneeName: "", snoozedUntil: 0n, decidedBy: "", decidedByName: "", decidedAt: 0n, note: "", createdAt: now, ...o });
 const task = (o = {}) => ({ id: 21n, contractId: 1n, contractTitle: "Sunrise Cloud — Team plan", kind: "decide", title: "Decide: continue or cancel Sunrise Cloud — Team plan", dueOn: "2026-09-17", daysLeft: [11n], assignee: ME, assigneeName: "Me Myself", auto: true, snoozedUntil: 0n, doneAt: 0n, overdue: false, ...o });
 const doc = (o = {}) => ({ id: 31n, sourceId: 7n, name: "renewal.pdf", mime: "application/pdf", size: 48000n, hash: "ab".repeat(32), status: "stored", hasText: true, link: "", createdAt: now, ...o });
 const J = (v) => JSON.stringify(v, (_, x) => (typeof x === "bigint" ? x.toString() + "n" : x));
@@ -43,7 +52,10 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "markNotificationsRead": return 1n;
     case "portalApps": return [{ id: 1n, name: "contracts", url: "https://contracts.test/", note: "", kind: "app", connectorId: 1n, hidden: false, hasIcon: false }];
     case "myAvatarPortal": case "getCompanyLogo": case "tileIcon": return [];
-    case "listSpaces": return [{id:"team:1",name:"People & Operations",description:"Team agreements",kind:"team",role:{[staff ? 'owner' : 'viewer']:null},archived:false,revision:1n},...(role === "admin" ? [{id:"intake",name:"Contract intake",description:"Shared incoming documents",kind:"intake",role:{owner:null},archived:false,revision:0n}] : [])];
+    case "listSpaces": return [{id:"team:1",name:"People & Operations",description:"Team agreements",kind:"team",role:{[staff ? 'owner' : 'viewer']:null},archived:false,revision:1n,email:"",items:3n,member:true},{id:"personal:"+ME,name:"Personal",description:"Your personal workspace",kind:"personal",role:{owner:null},archived:false,revision:0n,email:"me@example.com",items:0n,member:true},...(role === "admin" ? [{id:"intake",name:"Contract intake",description:"Shared incoming documents",kind:"intake",role:{owner:null},archived:false,revision:0n,email:"",items:2n,member:true},{id:"personal:"+ANA,name:"Personal · Ana Ruiz",description:"Visible to this person and app admins",kind:"personal",role:{owner:null},archived:false,revision:0n,email:"ana@example.com",items:2n,member:false},{id:"team:7",name:"Finance",description:"",kind:"team",role:{owner:null},archived:false,revision:2n,email:"",items:0n,member:false}] : [])];
+    case "deleteSpace": return {ok:true,detail:""};
+    case "reprocessSourceAs": return {ok:true,detail:""};
+    case "fileToContract": return {ok:true,contractId:1n,revision:5n,detail:"2 field(s) updated"};
     case "openSpace": fixtureSpace=a[1];return {ok:true,token:"scoped-token",detail:""};
     case "getSpace": return [{space:{id:"team:1",name:"People & Operations",description:"Team agreements",revision:1n,archived:false,members:[{pid:ME,role:{owner:null}}]},members:[{pid:ME,name:"Me Myself",active:true,role:{owner:null}}]}];
     case "whoami": return [{ id: ME, email: "me@example.com", displayName: "Me Myself", role, space:fixtureSpace, spaceRole:[{[staff ? "owner" : "viewer"]:null}], roleSource: role === "admin" ? "hub owner" : role === "editor" ? "group contracts-editors" : "directory member", orgName: "Acme", hubId: "aaaaa-aa", needsClaim: false, aiOn: mode !== "editor" }];
@@ -51,15 +63,18 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "today": return [{ contracts: 6n, dueSoon: 2n, inboxOpen: 3n, lastReceivedAt: now, aiOn: mode !== "editor", proposals: [prop()], tasks: [task(), task({ id: 22n, kind: "review", title: "Check the notice clause", dueOn: "2026-09-01", daysLeft: [-5n], overdue: true, auto: false })], unassigned: staff ? [crow({ id: 5n, title: "Watchtower (offer)", vendor: "Watchtower", responsible: "", responsibleName: "", status: "draft" })] : [], failed: staff ? [srow({ id: 9n, status: "failed", subject: "Scan of the framework agreement", note: "no text could be read", contractId: [], contractTitle: "" })] : [] }];
     case "listSources": return a[1] === "filed" ? [srow({ id: 8n, status: "filed", subject: "Invoice 2026-08", kind: "relay" })] : [srow(), srow({ id: 9n, status: "failed", subject: "Scan of the framework agreement", note: "no text could be read", contractId: [], contractTitle: "", documents: 1n, proposals: 0n })];
     case "getSource": if(a[1]===12n) return [{source:srow({id:12n,subject:"Sunrise Cloud licence agreement",contractId:[],contractTitle:""}),text:"Annual licence for EUR 480.00. Signing has not been confirmed.",forwardComment:"",to:[],cc:[],messageId:"upload12",documents:[doc()],proposals:[prop({id:12n,sourceId:12n,contractId:[],candidates:[],summary:"Annual licence offer; execution not confirmed",changes:[change("vendor","","Sunrise Cloud"),change("amountMinor","","48000"),change("currency","","EUR"),change("interval","","year")],uncertainties:["No evidence of signing in the supplied text."]})],candidates:[]}]; return a[1] === 7n ? [{ source: { ...srow(), mailbox: "subscriptions@acme.example", providerId: "", messageId: "<r1@sunrise>", inReplyTo: "", references: "", to: ["subscriptions@acme.example"], cc: ["me@example.com"], forwardComment: "", hash: "cd".repeat(32), textBlob: [1n], htmlBlob: [], handedInBy: "" }, to: ["subscriptions@acme.example"], cc: ["me@example.com"], messageId: "<r1@sunrise>", forwardComment: "FYI — the new price", text: "Dear customer, your Team plan renews on 2028-01-01 at EUR 1,650.00 per year. Notice period two months.", documents: [doc()], proposals: [prop(), prop({ id: 10n, status: "confirmed", decidedBy: ME, decidedByName: "Me Myself", decidedAt: now, changes: [change("seats", "20", "25")], summary: "Seats raised to 25", kind: "order_confirmation" })], candidates: [crow({ id: 2n, title: "Sunrise Cloud — Storage add-on", product: "Storage" })] }] : [];
-    case "portfolio": return [{rows:[{contract:contract(),canEdit:staff,ownerName:"Me Myself",groups:[],assigned:2n,hasKey:false,commercial:[],history:[]}],policy:{enabled:true,owner:true,spaceOwners:true,hubAdmins:true,groups:[],days:[90n,60n,30n,7n]},directoryAt:now,canManage:staff,people:12n}];
+    case "portfolio": return [{rows:[{contract:contract(),canEdit:staff,ownerName:"Me Myself",groups:[],assigned:2n,hasKey:false,commercial:[],history:[],typeId:1n,typeName:"SaaS / Subscription",typeIcon:"☁️",hasSeats:true,listFields:[["Pricing model","per seat"],["Plan","Team"]]},{contract:contract({id:3n,title:"Rack 12 — Zurich colocation",vendor:"Colo AG",product:"Rack 12",seats:[],holders:[],terms:terms({amountMinor:[240000n],interval:"month",noticeMonths:[6n],noticeDate:"2026-07-01",decideBy:"",renewalDate:"2027-01-01"})}),canEdit:staff,ownerName:"Me Myself",groups:[],assigned:0n,hasKey:false,commercial:[],history:[],typeId:2n,typeName:"Datacenter / Colocation",typeIcon:"🏢",hasSeats:false,listFields:[["Site / address","Zurich West"],["Racks or rack units","12 U"]]}],policy:{enabled:true,owner:true,spaceOwners:true,hubAdmins:true,groups:[],days:[90n,60n,30n,7n]},directoryAt:now,canManage:staff,people:12n}];
+    case "listContractTypes": return ctypes();
+    case "saveContractType": return {ok:true,id:a[1].id?.[0]??9n,detail:""};
+    case "deleteContractType": case "setContractType": case "setTypeValues": return {ok:true,revision:5n,detail:""};
     case "directoryGroups": return [{name:"IT",members:2n}];
     case "vendorTermsStatus": return [{url:"",checkedAt:now,status:"unavailable",detail:"Vendor terms not recorded",quote:"",renewalRule:"",noticeDays:[],noticeMonths:[]}];
     case "licenseAssignment": return [{groups:[],people:[]}];
     case "listContracts": return a[1].q === "zzz" ? [] : [crow(), crow({ id: 2n, title: "Sunrise Cloud — Storage add-on", product: "Storage", complete: false, daysToDecide: [], decideBy: "", noticeDate: "", openProposals: 0n, openTasks: 0n, seats: [], unusedSeats: [] }), crow({ id: 3n, title: "Rocket Mail", vendor: "Rocket Mail", product: "", status: "cancelling", daysToDecide: [-2n] })];
-    case "getContract": return a[1] === 1n || a[1] === 2n || a[1] === 9n ? [{ contract: contract(a[1] === 2n ? { id: 2n, title: "Sunrise Cloud — Storage add-on", revision: 1n, terms: terms({ amountMinor: [], noticeMonths: [], noticeDate: "", decideBy: "" }) } : {}), row: crow(), responsibleName: "Me Myself", deputyName: "", viewerNames: [[ANA, "Ana Ruiz"]], holderNames: [[ME, "Me Myself", true], [ANA, "Ana Ruiz", true], ["p_0000000000000099", "Old Colleague", false]], proposals: [prop()], sources: [srow()], documents: [doc()], tasks: [task(), task({ id: 23n, title: "Ask for the signed copy", kind: "manual", auto: false, doneAt: now, daysLeft: [] })], audit: [{ id: 1n, at: now, who: ME, contractId: 1n, sourceId: [7n], what: "terms set by hand", before: "", after: "1,500.00 EUR · yearly", }], rules: [{ id: 41n, contractId: 1n, kind: "senderAddress", value: "billing@sunrise-cloud.example", confirmed: true, createdAt: now, createdBy: ME }], canEdit: staff }] : [];
+    case "getContract": return a[1] === 1n || a[1] === 2n || a[1] === 9n ? [{ contractType: typeOf(1n), typeValues: [["pricingModel","per seat"],["plan","Team"]], contract: contract(a[1] === 2n ? { id: 2n, title: "Sunrise Cloud — Storage add-on", revision: 1n, terms: terms({ amountMinor: [], noticeMonths: [], noticeDate: "", decideBy: "" }) } : {}), row: crow(), responsibleName: "Me Myself", deputyName: "", viewerNames: [[ANA, "Ana Ruiz"]], holderNames: [[ME, "Me Myself", true], [ANA, "Ana Ruiz", true], ["p_0000000000000099", "Old Colleague", false]], proposals: [prop()], sources: [srow()], documents: [doc()], tasks: [task(), task({ id: 23n, title: "Ask for the signed copy", kind: "manual", auto: false, doneAt: now, daysLeft: [] })], audit: [{ id: 1n, at: now, who: ME, contractId: 1n, sourceId: [7n], what: "terms set by hand", before: "", after: "1,500.00 EUR · yearly", }], rules: [{ id: 41n, contractId: 1n, kind: "senderAddress", value: "billing@sunrise-cloud.example", confirmed: true, createdAt: now, createdBy: ME }], canEdit: staff }] : [];
     case "directory": return [{ id: ANA, email: "ana@example.com", displayName: "Ana Ruiz", department: "Ops" }, { id: "p_00000000000000b2", email: "ben@example.com", displayName: "Ben Ko", department: "IT" }];
-    case "connectionStatus": return [{ mailboxAddress: "subscriptions@acme.example", relayCount: 1n, lastReceivedAt: now, sourcesToday: 4n, openJobs: 1n, oldestOpenJobAt: now, failedJobs: 0n, failedSources: 1n, aiCallsToday: 3n, aiDailyBudget: 200n, aiSource: "hub", outboxPending: 2n, outboxFailed: 1n, outboxFailures: [{ id: 51n, title: "Decide by 17 Sep: Sunrise Cloud", attempts: 3n, lastError: "hub unreachable" }], blobBytes: 4800000n, lastDirectoryPull: now, jobs: [{ id: 61n, step: "extract", ref: 9n, attempts: 2n, nextAt: now, lockedUntil: 0n, doneAt: 0n, lastError: "budget", createdAt: now }] }];
-    case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "https://contracts.test", orgName: "Acme", editorGroup: "contracts-editors", adminGroup: "contracts-admins", adminEmails: ["me@example.com"], mailboxAddress: "subscriptions@acme.example", relayPrincipals: ["aaaaa-bbbbb-ccccc"], tzName: "Europe/Zurich", tzOffsetMinutes: 120n, leadDays: 14n, reminderDays: [30n, 14n, 7n], aiDailyBudget: 200n, aiSource: "hub", aiCallsToday: 3n, peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, contracts: 6n, sources: 9n, openProposals: 1n, openTasks: 2n, blobBytes: 4800000n, demoSeeded: false, version: "0.1.0" }];
+    case "connectionStatus": return [{ lastReceivedAt: now, sourcesToday: 4n, openJobs: 1n, oldestOpenJobAt: now, failedJobs: 0n, failedSources: 1n, aiCallsToday: 3n, aiDailyBudget: 200n, aiSource: "hub", outboxPending: 2n, outboxFailed: 1n, outboxFailures: [{ id: 51n, title: "Decide by 17 Sep: Sunrise Cloud", attempts: 3n, lastError: "hub unreachable" }], blobBytes: 4800000n, lastDirectoryPull: now, jobs: [{ id: 61n, step: "extract", ref: 9n, attempts: 2n, nextAt: now, lockedUntil: 0n, doneAt: 0n, lastError: "budget", createdAt: now }] }];
+    case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "https://contracts.test", orgName: "Acme", editorGroup: "contracts-editors", adminGroup: "contracts-admins", adminEmails: ["me@example.com"], tzName: "Europe/Zurich", tzOffsetMinutes: 120n, leadDays: 14n, aiDailyBudget: 200n, aiSource: "hub", aiCallsToday: 3n, peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, contracts: 6n, sources: 9n, openProposals: 1n, openTasks: 2n, blobBytes: 4800000n, demoSeeded: false, version: "0.1.0" }];
     case "adminLogRows": return [{ at: now, who: "me@example.com", what: "settings saved" }];
     case "importPreview": return { ok: true, detail: "", headers: ["Vendor", "Product", "Amount", "Currency", "Interval", "Renews", "Notice months", "Owner e-mail"], unmapped: [], total: 2n, rows: [{ line: 2n, ok: true, title: "Nimbus · Pro", vendor: "Nimbus", problems: [], exists: [] }, { line: 3n, ok: true, title: "Sunrise Cloud · Team", vendor: "Sunrise Cloud", problems: [], exists: [1n] }] };
     case "importCommit": return { ok: true, detail: "", created: 1n, skipped: 1n, problems: 0n };
@@ -103,10 +118,13 @@ const hidden = (id) => $(id).classList.contains("hidden");
 check(on("layout") && $("login").style.display === "none", "layout shown after ticket login");
 check(!!document.querySelector("#topbar .ks-topbar") && /Contracts/.test($("ks-appName").textContent) && $("ks-badge").textContent === "2", "shared topbar with bell count");
 check(!window.location.hash.includes("uht="), "ticket stripped");
-check(on("viewSaas") && /Annual SaaS run rate/.test($("saasBody").textContent), "SaaS overview is the landing page");
-await go("#/contracts"); check(document.querySelectorAll(".saas-table tbody tr").length===1,"SaaS portfolio table renders without record-by-record queries");
-await go("#/reports"); check(/Software spend/.test($("saasBody").textContent),"management report opens");
+check(on("viewSaas") && /Annual run rate/.test($("saasBody").textContent), "contracts overview is the landing page");
+await go("#/contracts"); check(document.querySelectorAll(".saas-table tbody tr").length===2 && /Datacenter/.test($("saasBody").textContent),"portfolio table renders every type without record-by-record queries");
+await go("#/reports"); check(/Contract spend/.test($("saasBody").textContent),"management report opens");
 await go("#/settings"); check(/90/.test($("saasBody").textContent) && /IT/.test($("saasBody").textContent),"reminders and Hub groups available");
+check([...$("spaceSelect").querySelectorAll("optgroup")].map(g=>g.label).join("|")===(role==="admin"?"My workspaces|Shared":"My workspaces") && !$("spaceSelect").querySelector('option[value="personal:'+ANA+'"]') && !$("spaceSelect").querySelector('option[value="team:7"]'),"selector shows memberships and shared spaces only: "+$("spaceSelect").innerHTML.slice(0,120));
+check((/All workspaces/.test($("saasBody").textContent) && /ana@example.com/.test($("saasBody").textContent) && /Finance/.test($("saasBody").textContent))===(role==="admin"),"admins reach other workspaces from Settings");
+await go("#/space"); check((!!$("spDelete") && $("spDelete").disabled)===staff,"owners get a delete control that stays disabled while the space holds records");
 await go("#/tasks");
 check(!hidden("navConn"), "workspace tools available for scoped exports");
 check(hidden("aiBox") === !(staff && mode === "editor"), "AI-off notice only for staff when the lane is off: hidden=" + hidden("aiBox"));
@@ -129,7 +147,7 @@ check(last("snoozeTask") && last("snoozeTask")[1][1] === 22n && last("snoozeTask
 // ---- inbox
 await go("#/inbox");
 check(on("viewInbox") && document.querySelectorAll("#ibList tr[data-s]").length === 2, "inbox rows: " + document.querySelectorAll("#ibList tr[data-s]").length);
-check(/READY FOR REVIEW/.test($("ibList").textContent) && /FAILED/.test($("ibList").textContent), "status tags in the inbox");
+check(/READY TO CHECK/.test($("ibList").textContent) && /NEEDS A LOOK/.test($("ibList").textContent), "status tags in the inbox");
 await click(document.querySelector('#ibFilters [data-st="filed"]'));
 check(last("listSources")[1][1] === "filed" && /Invoice 2026-08/.test($("ibList").textContent), "filter → listSources(filed)");
 // .eml upload through the intake lane
@@ -181,19 +199,19 @@ await click($("ibPaste")); check(on("pasteModal"), "paste modal opens");
 $("pmFrom").value = "sales@nimbus.example"; $("pmSubject").value = "Quote"; $("pmText").value = "Pro plan, 12 seats, 480.00 EUR per month.";
 await click($("pmSend"));
 check(last("intakeBegin")[1][1].kind === "manual" && last("intakeBegin")[1][1].text.startsWith("Pro plan") && last("intakeCommit"), "manual intake begin+commit");
-check(window.location.hash === "#/inbox/12", "lands on the new source: " + window.location.hash);
+check(window.location.hash === "#/intake/12", "pasted text lands on the review: " + window.location.hash);
 
 }
 // ---- one message
 await go("#/inbox/7");
-check(on("viewSource") && /Your renewal/.test($("srcTitle").textContent) && /READY FOR REVIEW/.test($("srcStatus").textContent), "source head");
+check(on("viewSource") && /Your renewal/.test($("srcTitle").textContent) && /READY TO CHECK/.test($("srcStatus").textContent), "source head");
 check(/Sunrise Cloud/.test($("srcMeta").textContent) && /cc me@example.com/.test($("srcMeta").textContent) && $("srcMeta").querySelector('a[href="#/c/1"]'), "source meta with cc and contract link");
 const propBox = document.querySelector('#srcProposals .prop[data-p="11"]');
 check(!!propBox && document.querySelectorAll('#srcProposals .prop[data-p="11"] tbody tr').length === 3, "open proposal with three field rows");
 check(/1,650\.00/.test(propBox.textContent) && /1,500\.00/.test(propBox.textContent), "money shown as decimals (old and new)");
 check(propBox.querySelector('input[data-i="0"]').checked && propBox.querySelector('input[data-i="1"]').checked && !propBox.querySelector('input[data-i="2"]').checked, "explicit fields pre-ticked, ambiguous not");
 check(/might be counted from the invoice date/.test(propBox.textContent), "uncertainties listed");
-check(/Seats raised to 25/.test($("srcProposals").textContent) && /CONFIRMED/.test($("srcProposals").textContent), "decided proposal listed");
+check(/Seats raised to 25/.test($("srcProposals").textContent) && /saved by/.test($("srcProposals").textContent), "history lists the saved suggestion");
 const tsel = propBox.querySelector("[data-target]");
 check(tsel && tsel.options.length === (staff ? 4 : 1) && tsel.options[0].value === "1" && (!staff || tsel.options[1].value === "2"), "target select: own contract" + (staff ? " + message candidate + other/new" : " only (members choose among the proposal's candidates)") + ": " + (tsel && tsel.options.length));
 check(!!propBox.querySelector("[data-assign]") === staff, "hand-to only for staff");
@@ -249,10 +267,48 @@ await click($("cNew")); check(on("viewIntake") && !!$("chooseContract"), "new co
 await go("#/intake/12");
 check($("review-amountMinor").value === "480.00" && $("review-vendor").value === "Sunrise Cloud", "AI fields prefilled in human units");
 $("review-title").value = "Reviewed licence"; $("review-product").value="Completed product"; $("review-amountMinor").value="1200";
+check($("review-contractType")&&$("review-contractType").value==="7"&&!$("review-type-pricingModel")&&!!document.querySelector("[data-reread-type]")&&/did not name a contract type/.test($("intakeBody").textContent),"unclassified reading lands on Other with a hint and a re-read control");$("review-contractType").value="1";$("review-contractType").dispatchEvent(new window.Event("change"));check(!!$("review-type-pricingModel"),"type fields follow the chosen type");$("review-type-pricingModel").value="flat";
 const reviewForm=document.querySelector(".intake-form");reviewForm.dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true}));await settle();
 const saved=last("createContractFromSource");
+check(saved[1][2].fields[0].field==="contractType"&&saved[1][2].fields[0].value==="1"&&saved[1][2].fields.some(f=>f.field==="type:pricingModel"&&f.value==="flat"),"review sends the contract type first and its typed fields");
 check(saved && saved[1][1]===12n && saved[1][2].fields.some(f=>f.field==="product"&&f.value==="Completed product") && saved[1][2].fields.some(f=>f.field==="amountMinor"&&f.value==="120000"),"one save includes completed missing fields and whole major amounts as minor units");
-check(window.location.hash==="#/contracts","saved review opens the SaaS table");
+check(window.location.hash==="#/c/9","saved review opens the saved record");
+{ // a saved invoice can be turned into a tracked subscription from its record
+  const base2 = (await globalThis.__fakeBackend.getContract("t", 2n))[0];
+  overrides.getContract = async (_t, id) => id === 2n ? [{...base2, contract: {...base2.contract, tags: ["document-type:invoice"]}}] : globalThis.__fakeBackend.getContract.call(null, _t, id);
+  delete overrides.getContract; overrides.getContract = async (_t, id) => id === 2n ? [{...base2, contract: {...base2.contract, tags: ["document-type:invoice"]}}] : [base2];
+  await go("#/c/2");
+  check(/Document details/.test($("rTerms").textContent) && !!$("rTrackAsContract") === staff, "billing record offers tracking as a subscription to editors");
+  if (staff) { await click($("rTrackAsContract")); const up = last("updateContract"); check(up && up[1][1] === 2n && up[1][3].tags.includes("document-type:subscription") && !up[1][3].tags.includes("document-type:invoice"), "track-as-subscription rewrites the document type tag"); }
+  delete overrides.getContract;
+}
+if (role === "admin") {
+  // the AI proposes a new type: an admin creates it from the review and the values already read are kept
+  const base12 = (await globalThis.__fakeBackend.getSource("t", 12n))[0];
+  overrides.getSource = async (_t, id) => id === 12n ? [{...base12, proposals: [{...prop({ id: 31n, sourceId: 12n, contractId: [], kind: "order_confirmation", changes: [{ field: "vendor", oldValue: "", newValue: "RM Swiss Umzüge", basis: "explicit", evidence: [] }, { field: "type:moveDate", oldValue: "", newValue: "2026-11-26", basis: "explicit", evidence: [] }] }), typeProposal: [{ id: [], name: "Moving services", icon: "🚚", description: "Moves and cleaning.", fields: [{ key: "moveDate", title: "Move date", kind: "date", options: [], required: true, inList: true, remind: true }], hasSeats: false, enabled: true }]}]}] : [base12];
+  await go("#/intake/12");
+  check(/AI proposes a new one: 🚚 Moving services/.test($("intakeBody").textContent) && !!document.querySelector("[data-create-type]"), "type proposal card with a create button");
+  await click(document.querySelector("[data-create-type]"));
+  const st = last("saveContractType"); check(st && st[1][1].name === "Moving services" && st[1][1].fields[0].key === "moveDate" && st[1][1].id.length === 0, "create uses the proposed definition");
+  delete overrides.getSource;
+  // attach the document to an existing contract instead of creating a new one
+  await go("#/intake/12");
+  const modeSel = document.querySelector("[data-target-mode]"); check(!!modeSel && modeSel.value === "new" && document.querySelector("[data-target-pick]").hidden, "review defaults to a new contract with the existing-contract option available");
+  modeSel.value = "existing"; modeSel.dispatchEvent(new window.Event("change")); await settle();
+  type(document.querySelector("[data-target-search]"), "Sunrise"); await settle(); await settle();
+  check(!!document.querySelector('[data-pick-contract="1"]'), "existing contracts are searchable from the review");
+  await click(document.querySelector('[data-pick-contract="1"]'));
+  check(/Updating “Sunrise Cloud — Team plan”/.test($("intakeBody").textContent) && /Update Sunrise/.test(document.querySelector(".intake-form [type=submit]").textContent) && $("review-amountMinor").placeholder === "today: 1500.00", "chosen contract shows today's values as placeholders");
+  $("review-amountMinor").value = "1650";
+  document.querySelector(".intake-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })); await settle();
+  const ft = last("fileToContract"); check(ft && ft[1][1] === 12n && ft[1][2] === 1n && ft[1][3] === 3n && ft[1][4].some(f => f.field === "amountMinor" && f.value === "165000") && !ft[1][4].some(f => f.field === "trackStatus"), "update goes to fileToContract with the record revision and checked fields");
+  check(window.location.hash === "#/c/1", "updating opens the record");
+  await go("#/c/1/documents"); check(!!document.querySelector('#rDocuments a[href="#/c/1/add"]'), "record offers adding another document");
+  { const btn = $("rReread"); check(!!btn, "staff can read the linked documents again"); if (btn) { const before = calls.filter(([m]) => m === "reprocessSource").length; btn.click(); for (let i = 0; i < 4; i++) await tick(); check(calls.filter(([m]) => m === "reprocessSource").length > before, "re-read queues the linked documents"); } }
+  await go("#/c/1/add"); check(on("viewIntake") && /Add a document to Sunrise Cloud — Team plan/.test($("intakeTitle").textContent), "adding a document to a record names the record");
+  await go("#/add/manual"); check(on("editDrawer") && /New contract/.test($("edTitle").textContent), "add by hand opens the manual record form");
+  $("editDrawer").classList.remove("on");
+}
 }
 // ---- the record
 await go("#/c/1");
@@ -334,7 +390,7 @@ if (!staff) {
   check(on("viewConn") && !hidden("cnExport"), "viewers can export their current space");
   check(!document.querySelector("#srcProposals [data-confirm]"), "viewers cannot confirm proposals");
 } else {
-  check(on("viewConn") && document.querySelectorAll("#cnStatus .tstat").length === 6 && /subscriptions@acme.example/.test($("cnStatus").textContent) && /1 trusted/.test($("cnStatus").textContent), "connection status page");
+  check(on("viewConn") && document.querySelectorAll("#cnStatus .tstat").length === 6 && /Uploads and pasted text/.test($("cnStatus").textContent) && !/relay/i.test($("cnStatus").textContent), "connection status page without mail relay");
   check(/hub unreachable/.test($("cnStatus").textContent) && /extract/.test($("cnStatus").textContent), "outbox failure + job queue shown");
   await click($("cnStatus").querySelector("[data-retry]")); check(last("retryNotification") && last("retryNotification")[1][1] === 51n, "retry a failed reminder");
   const admTabs = [...document.querySelectorAll("#viewConn .tabs .adm")];
@@ -344,15 +400,12 @@ if (!staff) {
   if (role === "admin") {
     await click($("exAll")); check(last("exportAll") && downloads.length >= 3 && /downloaded/.test($("exStatus").textContent), "full export downloads JSON");
     await go("#/connection/settings");
-    check(!hidden("cnSettings") && $("sLead").value === "14" && $("sReminders").value === "30, 14, 7" && $("sTzOff").value === "120", "settings prefilled");
-    $("sLead").value = "21"; $("sReminders").value = "45, 14"; await click($("sSave"));
+    check(!hidden("cnSettings") && $("sLead").value === "14" && !$("sReminders") && $("sTzOff").value === "120", "settings prefilled, no global reminder schedule");
+    $("sLead").value = "21"; await click($("sSave"));
     const ss = last("setSettings");
-    check(ss && ss[1][1].leadDays === 21n && ss[1][1].reminderDays.length === 2 && ss[1][1].reminderDays[0] === 45n && ss[1][1].tzOffsetMinutes === 120n && ss[1][1].mailboxAddress === "subscriptions@acme.example", "setSettings with bigint fields + mailbox from the relay tab");
+    check(ss && ss[1][1].leadDays === 21n && ss[1][1].tzOffsetMinutes === 120n && !("reminderDays" in ss[1][1]) && !("mailboxAddress" in ss[1][1]), "setSettings carries the decision lead, no schedule, no mailbox");
     check(!last("setAdminEmails") && !$("sEditorGroup") && /saved/.test($("sStatus").textContent), "settings save never writes local roles");
-    await go("#/connection/relay");
-    check(!hidden("cnRelay") && $("rlPrincipals").value === "aaaaa-bbbbb-ccccc", "relay tab prefilled");
-    $("rlPrincipals").value = "aaaaa-bbbbb-ccccc\nddddd-eeeee"; await click($("rlSave"));
-    check(last("setRelayPrincipals") && last("setRelayPrincipals")[1][1].length === 2 && last("setRelayPrincipals")[1][1][1] === "ddddd-eeeee", "setRelayPrincipals(2)");
+    check(!$("cnRelay") && !document.querySelector('[data-tab="relay"]'), "no mail relay tab");
     // import: paste → columns guessed → preview → commit
     await go("#/connection/import");
     $("imCsv").value = "Vendor;Product;Amount;Currency;Interval;Renews;Notice months;Owner e-mail\nNimbus;Pro;1.200,00;EUR;year;2027-03-01;3;ana@example.com\nSunrise Cloud;Team;1500.00;EUR;year;2027-01-01;3;me@example.com\n";
@@ -423,9 +476,7 @@ if (role === "admin") {
   await go("#/s/intake/space");
   check(/Access follows your Hub roles/.test($("spContent").textContent), "shared intake displays explicit Hub role policy");
   check(!$("spSave")&&!$("spPerson"), "built-in intake cannot edit its membership locally");
-  overrides.setSpaceRelay=async()=>{throw new Error("offline");};
-  $("spRelay").value="aaaaa-bbbbb-ccccc";await click($("spRelayConnect"));
-  check(/could not be saved/.test($("spRelayStatus").textContent)&&!$("spRelayConnect").disabled,"relay failure recovers controls");delete overrides.setSpaceRelay;
+  check(!$("spRelay")&&!/relay/i.test($("spContent").textContent),"no mail relay controls on the shared intake");
   await go("#/intake/12");const destination=document.querySelector('[data-destination]');destination.value="team:1";destination.dispatchEvent(new window.Event('change'));
   const saves=calls.filter(c=>c[0]==="createContractFromSource").length;
   await click(document.querySelector('[data-move]'));

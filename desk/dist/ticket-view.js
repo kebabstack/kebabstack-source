@@ -14,13 +14,15 @@ export const statusPill = (t, staff = false) => `<span class="pill s-${esc(t.sta
 export function createTicketView({ profilePictures, $, getBackend, getMe, getReturnRoute, session, loadAgents, renderFields, collectFields, setStatus }) {
   let current = null, activeId = null, generation = 0, pending = 0, loading = false, kind = 'comment', aiSuggestion = null;
   let checklistOpen = false, customerSignature = "", privacySignature = "";
+  let previewUrl = null;
+  const clearPreview = () => { if (previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = null; $("tFilePreview").replaceChildren(); $("tFilePreview").classList.add("hidden"); };
   let agents = []; const drafts = new Map(), dirty = new Set();
   const api = () => getBackend();
   const personContext = createPersonContext({root: $("tPersonContext"), lifecycleRoot: $("tLifecycle"), api, getMe, session, reload: id => load(id)});
   const same = id => activeId === String(id) && !!getMe();
   const draftKey = (id, mode = kind) => `${getMe()?.id}:${id}:${mode}`;
   const forget = id => { for(const key of drafts.keys())if(key.startsWith(`${getMe()?.id}:${id}:`))drafts.delete(key); };
-  const clearTicketData = () => { paintCustomerWorkflow({el:$('tWorkflow'),value:null}); $('cBody').value=''; for(const id of ['tWorkflow','tCustomer','tSubject','tBody','tTimeline','tActivity','tAuthor','tAuthorAvatar','tFieldsView','tRequester','tTasks','tLinks','tFiles','tApproval'])$(id)?.replaceChildren(); for(const input of $('tWrap').querySelectorAll('input,textarea'))input.value=''; };
+  const clearTicketData = () => { clearPreview(); paintCustomerWorkflow({el:$('tWorkflow'),value:null}); $('cBody').value=''; for(const id of ['tWorkflow','tCustomer','tSubject','tBody','tTimeline','tActivity','tAuthor','tAuthorAvatar','tFieldsView','tRequester','tTasks','tLinks','tFiles','tApproval'])$(id)?.replaceChildren(); for(const input of $('tWrap').querySelectorAll('input,textarea'))input.value=''; };
   const remember = () => { if (activeId) drafts.set(draftKey(activeId), $('cBody').value); };
   const html = (id, value) => { const el = $(id); if (el.innerHTML !== value) el.innerHTML = value; };
   const toggle = (id, show) => $(id).classList.toggle('hidden', !show);
@@ -66,7 +68,9 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
       const who = event.kind === 'ai' ? 'AI assistant' : nameOf(event.who);
       const mode = event.kind === 'note' ? 'note' : event.kind === 'ai' ? 'ai' : event.actorKind === 'agent' ? 'agent' : '';
       const badge = internal ? 'Internal · support team only' : event.kind === 'file' ? 'Attachment' : event.actorKind === 'agent' ? 'IT support' : '';
-      const content = `<div class="message-heading"><div class="avatar" data-avatar-person="${esc(event.who)}">${esc(event.kind === 'ai' ? '✦' : initials(who))}</div><div><span class="who">${esc(who)}</span>${badge ? `<span class="message-badges"><span class="pill">${badge}</span></span>` : ''}</div><time class="when" datetime="${new Date(ms(event.at)).toISOString()}">${date(event.at)}</time></div>${event.kind === 'ai' ? `<details><summary>AI working notes</summary><div class="rich-text">${formatMessage(event.body)}</div></details>` : `<div class="rich-text">${formatMessage(event.body)}</div>`}`;
+      const fileId = event.kind === 'file' ? event.meta?.find(([key]) => key === 'fileId')?.[1] : null;
+      const fileLink = fileId && /^\d+$/.test(fileId) ? `<a href="#" data-f="${fileId}">${esc(event.body)}</a>` : '';
+      const content = `<div class="message-heading"><div class="avatar" data-avatar-person="${esc(event.who)}">${esc(event.kind === 'ai' ? '✦' : initials(who))}</div><div><span class="who">${esc(who)}</span>${badge ? `<span class="message-badges"><span class="pill">${badge}</span></span>` : ''}</div><time class="when" datetime="${new Date(ms(event.at)).toISOString()}">${date(event.at)}</time></div>${event.kind === 'ai' ? `<details><summary>AI working notes</summary><div class="rich-text">${formatMessage(event.body)}</div></details>` : `<div class="rich-text">${fileLink || formatMessage(event.body)}</div>`}`;
       let node = [...root.children].find(n => n.dataset.eventId === id);
       if (!node) { node = document.createElement('article'); node.dataset.eventId = id; }
       node.className = `ev ${mode}`;
@@ -148,7 +152,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     const tasks = staff ? full.tasks : [];
     toggle('tTasksCard', staff && (tasks.length > 0 || checklistOpen)); toggle('tTaskAdd', staff); toggle('tAddChecklist', staff && !tasks.length && !checklistOpen);
     $('tTaskCount').textContent = `${tasks.filter(t => t.state === 'done').length} of ${tasks.length}`;
-    html('tTasks', tasks.map((task,index) => `<div class="task ${esc(task.state)}"><span class="t">${esc(task.title)}${task.by === "system:assets" ? '<small class="kv"> · checked in Assets</small>' : ""}</span><select data-task="${index}"${task.by === "system:assets" ? ' disabled title="Updated automatically from Assets"' : paused ? ' disabled title="Review the directory change first"' : ''} aria-label="Status of ${esc(task.title)}"><option value="open"${task.state === 'open' ? ' selected' : ''}>To do</option><option value="done"${task.state === 'done' ? ' selected' : ''}>Done</option><option value="na"${task.state === 'na' ? ' selected' : ''}>Not needed</option></select></div>`).join(''));
+    html('tTasks', tasks.map((task,index) => `<div class="task ${esc(task.state)}"><span class="t">${esc(task.title)}${task.by === "system:assets" ? '<small class="kv"> · checked in Assets</small>' : task.by === "system:contracts" ? '<small class="kv"> · checked in Contracts</small>' : ""}</span><select data-task="${index}"${task.by === "system:assets" ? ' disabled title="Updated automatically from Assets"' : task.by === "system:contracts" ? ' disabled title="Updated automatically from Contracts"' : paused ? ' disabled title="Review the directory change first"' : ''} aria-label="Status of ${esc(task.title)}"><option value="open"${task.state === 'open' ? ' selected' : ''}>To do</option><option value="done"${task.state === 'done' ? ' selected' : ''}>Done</option><option value="na"${task.state === 'na' ? ' selected' : ''}>Not needed</option></select></div>`).join(''));
     if(customer && $('tCustomerPrivacy')) {
       const sig=JSON.stringify([String(t.id),String(t.updatedAt),String(customer.deleteAt),customer.hold,full.role||getMe()?.role,Number(opt(customer.hold)?.until||0)>Date.now()*1e6],(_,v)=>typeof v==='bigint'?String(v):v);
       if(sig!==privacySignature){privacySignature=sig;const selected=String(t.id),privacyRoot=$('tCustomerPrivacy');
@@ -158,7 +162,8 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     toggle('tFieldsCard', staff && defs.length > 0 && !opt(full.customer));
     toggle('tLinksCard', staff || t.links.length > 0); toggle('tLinkAdd', staff);
     html('tLinks', t.links.map(([k,v]) => `<div><span class="pill">${esc(k)}</span> ${/^https?:\/\//.test(v) ? `<a href="${esc(v)}" target="_blank" rel="noopener noreferrer">${esc(v)}</a>` : esc(v)}${staff ? ` <button class="icon-button" data-k="${esc(k)}" data-v="${esc(v)}" aria-label="Remove link ${esc(v)}">×</button>` : ''}</div>`).join(''));
-    toggle('tFilesCard', full.files.length > 0);
+    toggle('tFilesCard', full.files.length > 0 || (t.channel === 'slack' && staff));
+    toggle('tRetryImages', t.channel === 'slack' && staff);
     html('tFiles', full.files.map(f => `<div><a href="#" data-f="${f.id}">${esc(f.name)}</a><span class="rowsub">${Math.max(1,Math.round(Number(f.size)/1024))} KB · ${esc(nameOf(f.by))}</span></div>`).join(''));
     const ap = opt(full.approval);
     toggle('tApproval', !!ap);
@@ -186,7 +191,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     if (!/^\d+$/.test(textId) || !getMe()) { toggle('tWrap',false); toggle('tMissing',true); return; }
     if (background && (pending || loading || !same(id))) return;
     const fresh = activeId !== textId;
-    if (fresh) { paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); remember(); activeId = textId; current = null; kind = 'comment'; checklistOpen = false; aiSuggestion = null; dirty.clear(); toggle('tWrap',false); toggle('tMissing',false); }
+    if (fresh) { clearPreview(); paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); remember(); activeId = textId; current = null; kind = 'comment'; checklistOpen = false; aiSuggestion = null; dirty.clear(); toggle('tWrap',false); toggle('tMissing',false); }
     const stamp = ++generation, person = getMe().id; loading = true;
     if (!background) sync('Loading request…');
     try {
@@ -289,17 +294,30 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     $('tFieldsSave').onclick = e => action(e.currentTarget,'tStatus',id => api().setFields(session.load(),id,collectFields(form)), () => toggle('tFieldsForm',false));
   };
   for (const id of ['tQueue','tDue','tPriority','tAssignee','tState']) $(id).addEventListener('input', () => dirty.add(id));
-  $('tFiles').onclick = async e => {
+  $('tRetryImages').onclick = e => action(e.currentTarget,'tStatus',id => api().retrySlackImages(session.load(),id));
+  const openAttachment = async e => {
     const link=e.target.closest('a[data-f]'); if (!link) return; e.preventDefault();
+    const ticketId = activeId, openedGeneration = generation, viewer = getMe()?.id;
     try {
       const file=opt(await api().fileData(session.load(),BigInt(link.dataset.f)));
+      if (!same(ticketId) || generation !== openedGeneration || getMe()?.id !== viewer) return;
       if (!file) { setStatus('tStatus','err','This attachment is no longer available.'); return; }
       const url=URL.createObjectURL(new Blob([new Uint8Array(file.data)],{type:file.mime || 'application/octet-stream'}));
-      const a=document.createElement('a'); a.href=url; a.download=file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url),5000);
+      const a=document.createElement('a'); a.href=url; a.download=file.name;
+      if (['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime)) {
+        clearPreview(); previewUrl = url;
+        const image=document.createElement('img'); image.src=url; image.alt=file.name; image.style.maxWidth='100%'; image.style.maxHeight='70vh'; image.style.objectFit='contain';
+        const close=document.createElement('button'); close.textContent='Close image'; close.className='secondary sm'; close.onclick=() => { clearPreview(); (link.isConnected ? link : $('tFiles').querySelector('a[data-f="'+link.dataset.f+'"]'))?.focus(); };
+        a.textContent='Download image';
+        const original=document.createElement('a'); original.href=url; original.target='_blank'; original.rel='noopener'; original.textContent='Open full size';
+        const actions=document.createElement('div'); actions.className='btnrow'; actions.append(close,original,a);
+        $('tFilePreview').append(actions,image); toggle('tFilePreview',true); close.focus();
+      } else { a.click(); setTimeout(() => URL.revokeObjectURL(url),5000); }
     } catch(e) { setStatus('tStatus','err',error(e)); }
   };
+  $('tFiles').onclick = openAttachment; $('tTimeline').addEventListener('click',openAttachment);
   const refresh = () => { if (activeId && !document.hidden && getMe()) return load(activeId,{background:true}); };
   setInterval(refresh,7000); document.addEventListener('visibilitychange',refresh);
   window.addEventListener('beforeunload',e => { remember(); if ([...drafts.values()].some(Boolean)) { e.preventDefault(); e.returnValue=''; } });
-  return {load, refresh, leave(){paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); remember(); activeId=null; generation++; loading=false; current=null;}, reset(){paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); activeId=null; current=null; generation++; loading=false; drafts.clear(); dirty.clear(); $('cBody').value=''; toggle('tWrap',false);}};
+  return {load, refresh, leave(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); remember(); activeId=null; generation++; loading=false; current=null;}, reset(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); activeId=null; current=null; generation++; loading=false; drafts.clear(); dirty.clear(); $('cBody').value=''; toggle('tWrap',false);}};
 }

@@ -1,5 +1,26 @@
 # Changelog — kebab-stack desk
 
+## [0.33.0] — 2026-10-16
+
+- Slack completion detection: with AI assistance enabled, an explicit completed-work comment from Desk staff can resolve the request. The model must quote evidence; ambiguous statements keep the current status. Permissions and request revision are checked after the model returns, and the normal checklist, approval and offboarding gates still apply. The activity records the decision and Slack receives the status update.
+- New Slack requests receive a short AI-generated title when the configured model answers; the original message remains the request body. Without a usable model response, the original first-line title remains. Slack acknowledgements and status messages link the ticket ID directly.
+- PNG, JPEG, GIF and WebP images synchronize between Slack threads and public Desk attachments. Private downloads use the bot token only on Slack's file host; uploads use Slack's external-upload API. Durable transfer jobs retry up to five times, record failures, and can be retried by staff from the ticket. Requires Slack bot scopes `files:read` and `files:write` and app reinstallation.
+- Images over 1.5 MB use an available Slack thumbnail (labelled as a preview); the existing 20-file and storage limits remain. Unsupported files stay in Slack with an explicit transfer notice. Existing historical placeholders are not backfilled.
+- Ticket attachments open an inline image preview with close/download controls. Internal notes remain excluded from Slack and AI context.
+
+## [0.32.0] — 2026-10-11
+
+- Faster sign-in: the ticket login redeems at the Hub, refreshes the person's groups and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less), the AI status refreshes after the answer; the directory is pulled only when the person is unknown or the cache is stale.
+- Suite login (Hub ≥ 0.40.0): opened on the company domain with the Hub's suite cookie, the tool signs in through `loginWithSuite` without a detour through the Hub page. Sign out here clears the cookie; the Hub re-checks the person and their access on every redemption. No other changes.
+
+## [0.31.1] — 2026-10-08
+
+- Slack: a mention in a message from Slack (`<@U…>`) now shows the person's name in the request instead of the raw member id. Desk resolves it through the same users.info lookup that already identifies the author, caches the name, and stores the message as `<@U…|Name>`; earlier messages keep what Slack sent.
+
+## [0.31.0] — 2026-10-06
+
+- Offboarding, licenses & seats: with Hub 0.39 and Contracts 0.12 connected, the checklist item "Revoke licenses & seats" follows Contracts the same way "Reclaim devices" follows Assets. Desk asks the Hub how many contracts still list the departing person as a seat holder; the item stays open until every seat is released in Contracts, turns "done" automatically, and cannot be ticked by hand while a Contracts app is connected. The person panel shows "Licenses & seats · n of m released". Contracts tells each contract's responsible person once per case. Unlike hardware, an unreachable Contracts app does not block completion: the item keeps its last known state. Without a connected Contracts app the item stays a manual checkbox.
+
 ## [0.30.0] — 2026-10-06
 
 - Onboarding from the directory: with **Settings → General → Create an Onboarding request when a new person appears in the directory** switched on, a person the Hub reports as new (SCIM, Okta, OpenTeam, local, invitation) becomes an internal Onboarding request with name and date filled in; hardware, manager and the checklist stay with IT. One request per person; an import of more than ten people in one batch creates none and leaves a line in the admin log. Off by default.

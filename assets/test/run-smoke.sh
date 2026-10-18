@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 node --check dist/app.js
 node --check dist/deal.js
 T=$(mktemp -d)
-cp dist/finance.js dist/handover.js dist/index.html dist/app.js dist/canonical-url.js dist/workflow.js dist/idl.js dist/hub-client.js dist/invoice-pdf.js "$T/"
+cp dist/photo-review.js dist/finance.js dist/handover.js dist/labels.js dist/bulk.js dist/index.html dist/app.js dist/canonical-url.js dist/workflow.js dist/idl.js dist/hub-client.js dist/invoice-pdf.js "$T/"
 mkdir -p "$T/vendor" && cp dist/vendor/pdf-lib.min.js dist/vendor/qrcode.js "$T/vendor/"
 cp test/agent-bundle.stub.js "$T/agent-bundle.js"
 cp test/smoke.mjs "$T/"
@@ -19,10 +19,10 @@ PY
 [ -d node_modules ] && ln -s "$(pwd)/node_modules" "$T/node_modules" || true
 [ -n "${NODE_PATH:-}" ] && ln -sfn "$NODE_PATH" "$T/node_modules" || true
 [ -d ../node_modules ] && [ ! -e "$T/node_modules" ] && ln -s "$(cd .. && pwd)/node_modules" "$T/node_modules" || true
-(cd "$T" && node smoke.mjs admin 2>/dev/null | tail -3 && node smoke.mjs admin noai 2>/dev/null | tail -3 && node smoke.mjs member 2>/dev/null | tail -3)
+(cd "$T" && node smoke.mjs admin | tail -3 && node smoke.mjs admin noai | tail -3 && node smoke.mjs member | tail -3)
 (cd "$T" && node smoke.mjs admin ai admin-deal)
-(cd "$T" && for flow in auto retry rejected return signed canonical canonical-ticket; do node smoke.mjs member ai "$flow"; done)
-node --test test/intake.test.mjs test/canonical-url.test.mjs test/handover.test.mjs
+(cd "$T" && for flow in auto retry rejected return signed canonical canonical-ticket suite suite-rejected; do node smoke.mjs member ai "$flow"; done)
+node --test test/photo-batch.test.mjs test/intake.test.mjs test/canonical-url.test.mjs test/handover.test.mjs
 rm -rf "$T"
 
 (cd .. && for flow in accept decline reopen reload resume not-ready download-error hash-mismatch lost-response revoked; do node assets/test/dealroom.mjs "$flow"; done)

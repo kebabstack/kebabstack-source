@@ -518,5 +518,157 @@
       "binary-review"
     ],
     "reason": "Reviewed font tables, embedded copyright and OFL URL; no WOFF2 metadata/private payload. Local Latin-subset font under SIL OFL 1.1, with original copyright and full license included in the adjacent *-OFL.txt file. Public game typography; no installation data."
+  },
+  {
+    "path": "assets/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "assets/dist/vendor/pdf-lib.min.js",
+    "sha256": "4927385c9ceb060202085db63547b49dea737b0ce3a5a5c522289d48095ff464",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Vendored PDF library JavaScript with Unicode replacement literals, not binary customer content; existing library license retained."
+  },
+  {
+    "path": "assets/test/fixtures/photo-label.png",
+    "sha256": "2360a01cf70b8c873b56ee854e2effd4437a0f5660e515f85847f7714d046d9b",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed fictional demo label; PNG contains IHDR/IDAT/IEND only, no metadata or customer photo."
+  },
+  {
+    "path": "bug/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "bug/dist/assets/commander.png",
+    "sha256": "92b200f4150a40f4c59255cfb108d2be88af35c39571e282b0bb5e8ae1e8f9ca",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed existing public game astronaut illustration; EXIF reviewed separately in private evidence; no customer data."
+  },
+  {
+    "path": "bug/dist/client-api.js",
+    "sha256": "fdbf80d438af02165dbb156717b832becee8db04b3a0729dc3fc80640dfb91b8",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "bug/src/assets/commander.png",
+    "sha256": "92b200f4150a40f4c59255cfb108d2be88af35c39571e282b0bb5e8ae1e8f9ca",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed existing public game astronaut illustration; EXIF reviewed separately in private evidence; no customer data."
+  },
+  {
+    "path": "bug2d/dist/assets/commander.png",
+    "sha256": "92b200f4150a40f4c59255cfb108d2be88af35c39571e282b0bb5e8ae1e8f9ca",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed existing public game astronaut illustration; EXIF reviewed separately in private evidence; no customer data."
+  },
+  {
+    "path": "bug2d/dist/client-api.js",
+    "sha256": "337b4b1e2cac056b8bd1e1c948c7260ce1d74c6597b785c5070c6e25f780ce72",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "bug2d/src/assets/commander.png",
+    "sha256": "92b200f4150a40f4c59255cfb108d2be88af35c39571e282b0bb5e8ae1e8f9ca",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed existing public game astronaut illustration; EXIF reviewed separately in private evidence; no customer data."
+  },
+  {
+    "path": "contracts/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "contracts/dist/document-upload.js",
+    "sha256": "ffc63764b843f7831f4e5b9fc1eae9f0f8ab4f65d84488d3e714a9ad80bb2bbe",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Source JavaScript contains a literal Unicode replacement character used for document text validation, not binary private data."
+  },
+  {
+    "path": "crumbs/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "desk/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "forms/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "hub/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "kitchen/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "trust/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "watch/dist/agent-bundle.js",
+    "sha256": "13edc0b0192212852021f03da7567e37ce416f2a4456824e316039f596fe9243",
+    "rules": [
+      "canister-reference"
+    ],
+    "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
   }
 ]

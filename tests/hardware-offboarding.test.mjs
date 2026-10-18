@@ -31,7 +31,7 @@ async function fixture(pic, baseline=false) {
   const a=ok(await assets.app.createAsset(admin,{tag:'HW-'+kind,serial:'SERIAL-'+kind,vendor:'Example',model:kind,kind,note:''}));
   ok(await assets.app.addEventTo(admin,a.id,'handed_out','alice@lifecycle.test','Received by Alice'));ids.push(a.id);
  }
- ok(await assets.app.setSettings(admin,{adminGroup:'',appUrl:'https://assets.lifecycle.test',tagPrefix:'HW-',orgName:'Test company'}));ok(await assets.app.setBilling(admin,billing));
+ ok(await assets.app.setSettings(admin,{adminGroup:'',appUrl:'https://assets.lifecycle.test',orgName:'Test company'}));ok(await assets.app.setBilling(admin,billing));
  return {h,desk,assets,owner,hr,admin,member,ids};
 }
 async function departure(f) {
@@ -119,14 +119,14 @@ test('hardware upgrade: preserves Lunch, central roles, held devices and issued 
   ok(await assets.app.setSaleChecks(admin,sale.id,true,true));
   { const s0=(await assets.app.getSale(admin,sale.id))[0]; if(s0.sale.status==='accepted')ok(await assets.app.issueInvoice(admin,sale.id)); if((await assets.app.getSale(admin,sale.id))[0].sale.pdfId===0n)ok(await assets.app.attachSaleDocument(admin,sale.id,'invoice',Buffer.from('%PDF-1.4\n'+'Existing invoice document '.repeat(20)))); } // 0.19 archives at acceptance; the 0.17 baseline needs issue + upload
   const before=(await assets.app.getSale(admin,sale.id))[0];
-  const offered=ok(await assets.app.createSale(admin,ids[1],buyer,20000n,''));ok(await assets.app.offerSale(admin,offered.id));const [pending]=await assets.app.getSale(admin,offered.id);ok(await assets.app.acceptOffer(alice,offered.id,pending.waiverVersion,[buyer]));
+  const offered=ok(await assets.app.createSale(admin,ids[1],buyer,20000n,''));ok(await assets.app.offerSale(admin,offered.id));const [pending]=await assets.app.getSale(admin,offered.id);ok(await assets.app.acceptOffer(alice,offered.id,pending.waiverVersion,[buyer]));const acceptedBefore=(await assets.app.getSale(admin,offered.id))[0].sale;
   const lunch=createIdentity('hardware-lunch').getPrincipal();h.hub.setPrincipal(principal.owner);await h.hub.connectApp({name:'Lunch',canisterId:lunch.toText(),note:'',lanes:['identity'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[]});h.hub.setPrincipal(lunch);const lunchBefore=await h.hub.team_members();
   h.hub.setPrincipal(principal.owner);const policy=await h.hub.getAppPermissions(assets.c.id);
   await upgrade(pic,h,'hub');await upgrade(pic,desk,'desk');await upgrade(pic,assets,'assets');
   h.hub.setPrincipal(lunch);assert.deepEqual(await h.hub.team_members(),lunchBefore);h.hub.setPrincipal(principal.owner);assert.deepEqual(await h.hub.getAppPermissions(assets.c.id),policy);
   assert.deepEqual((await assets.app.getSale(admin,sale.id))[0].sale,before.sale);
   const id=await departure(f);ok(await decide(desk,owner,id,true,'Confirmed'));await desk.app.offboardingHardware(owner,id);
-  ok(await assets.app.continueFormerBuyerSale(admin,offered.id,'alice@private.test'));const converted=(await assets.app.getSale(admin,offered.id))[0].sale;assert.equal(converted.status,'draft');assert.equal(converted.acceptedAt,0n);assert.equal(converted.buyer.pid,'');
+  ok(await assets.app.continueFormerBuyerSale(admin,offered.id,'alice@private.test'));const converted=(await assets.app.getSale(admin,offered.id))[0].sale;if(acceptedBefore.invoiceNo){assert.equal(converted.status,acceptedBefore.status,'modern baselines issue the invoice at acceptance');assert.equal(converted.invoiceNo,acceptedBefore.invoiceNo);assert.equal(converted.pdfHash,acceptedBefore.pdfHash);assert.deepEqual(converted.buyer,acceptedBefore.buyer,'issued buyer identity is immutable');}else{assert.equal(converted.status,'draft');assert.equal(converted.acceptedAt,0n);assert.equal(converted.buyer.pid,'');}
   assert.equal((await assets.app.continueFormerBuyerSale(admin,sale.id,'alice@lifecycle.test')).ok,false);
   ok(await assets.app.continueFormerBuyerSale(admin,sale.id,'alice@private.test'));
   const link=ok(await assets.app.createDealLink(admin,sale.id)),key=link.url.split('.').at(-1);

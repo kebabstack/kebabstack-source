@@ -1,8 +1,8 @@
 # Kebabstack: staged path to a public release
 
-Accepted product direction, 18 September 2026. Target repository:
-`kebabstack/kebabstack-source`. Prepare it privately after sanitization; publish the
-reviewed release when its acceptance gates are met. The existing operational
+Product direction established on 18 September 2026. The sanitized public alpha
+source is maintained at `kebabstack/kebabstack-source`; publish only reviewed
+snapshots after the source acceptance gates pass. The existing operational
 repository and deployments remain separate. Marketplace acceptance depends on
 the platform operator; a clean repository alone does not establish readiness.
 
@@ -10,7 +10,7 @@ the platform operator; a clean repository alone does not establish readiness.
 
 | Stage | Outcome | Acceptance | Status |
 | --- | --- | --- | --- |
-| 0 · Publication foundation | Repeatable source audit, export without internal history, explicit content review | Unsafe source blocks export; existing files stay intact; license and public source bytes are preserved | Implemented; public snapshot acceptance is tracked in SOURCE-RELEASE.md |
+| 0 · Publication foundation | Repeatable source audit, export without internal history, explicit content review | Unsafe source blocks export; existing files stay intact; license and public source bytes are preserved | Implemented; source cleanup findings remain open |
 | 1 · Hub Operations | Useful overview of Desk, Trust, Assets, Contracts, Watch and offboarding; work and TV views | Backend-enforced scopes; clear stale/error/empty states; useful 1080p/4K layout; no personal Owner session on a shared TV | Work view and TV pairing implemented locally; history next |
 | 2 · Connected follow-up | Three clear templates: Trust protection, contract/seat review, Watch findings | Dry run, explicit enablement, one existing/new Desk case, durable retries, source-verified outcome | Planned |
 | 3 · SaaS account reconciliation | Provider accounts and seats compared with Hub people and Contracts | Supported providers chosen from pilot need; first read-only; no usage or savings claims from allocations alone | Planned |
@@ -124,4 +124,4 @@ upgrade tests. Marketplace cleanup is not authorization to rewrite live state.
 
 Desk 0.19.0 and the Hub reporting extension (released as Hub 0.31.0) introduced an alpha for scoped hourly service reporting. The [operator and pilot guide](../desk/REPORTING.md) separates implemented confirmation/review/release/CSV and retention from planned country-specific rules. A complete reporting-period reconciliation remains a gate before spreadsheet cutover; marketplace publication and production rollout are separate.
 
-Desk 0.23.0 and Hub 0.31.0 completed local UX and populated-upgrade review. See the module changelogs and reporting guide. Verified mobile paging, pilot reconciliation and marketplace acceptance remain separate gates.
+Desk 0.23.0 and Hub 0.31.0 have scoped UX and populated-upgrade evidence; installation-specific rollout receipts remain private. Verified mobile paging, pilot reconciliation and marketplace sanitization remain open.

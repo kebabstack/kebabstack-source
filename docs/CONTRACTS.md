@@ -3,6 +3,7 @@
 > records the original 0.1.0 design. Where it describes global admin/editor access, one organisation-wide
 > inbox or an admin-wide export, it is superseded by [contracts/README.md](../contracts/README.md),
 > [INSTALL.md](../contracts/INSTALL.md) and the current [API guide](agent/contracts-actions.md).
+> **0.14.0 (2026-10-09):** the mail relay described below was removed; documents arrive by upload only.
 
 # contracts — design (2026-09-06 · built as contracts 0.1.0; this page keeps the decisions)
 

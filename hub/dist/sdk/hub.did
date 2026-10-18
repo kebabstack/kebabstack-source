@@ -1072,6 +1072,7 @@ service : {
   hub_supportContext: (viewer: text, subject: text, cid: nat) -> (Context);
   hub_supportSources: (viewer: text) -> (vec Source) query;
   hub_syncHardware: (input: Case) -> (Progress);
+  hub_syncSeats: (input: Case) -> (Progress);
   hub_workboardSales: (viewer: text, cid: nat, filter: SalesFilter) -> (Page);
   hub_workboardSources: (viewer: text) -> (vec Source) query;
   icpChart: () -> (record {
@@ -1285,6 +1286,15 @@ service : {
       detail: text;
       ok: bool;
     });
+  /// The signed-in person's suite-login token (portal session required). Reused while it is valid;
+  /// it expires with the Hub session.
+  mintSuiteLogin: (sessionToken: text) ->
+   (record {
+      detail: text;
+      expiresAt: int;
+      ok: bool;
+      token: text;
+    });
   myAccess: () ->
    (record {
       access: variant {
@@ -1474,6 +1484,17 @@ service : {
       orgName: text;
       token: text;
     });
+  /// Redeem a suite-login token. ONLY registered connector canisters may call. Reusable while the
+  /// Hub session lives; the person's live status and their access to THIS app are re-checked.
+  redeemSuiteLogin: (token: text) ->
+   (record {
+      detail: text;
+      displayName: text;
+      email: text;
+      id: opt text;
+      ok: bool;
+      suiteToken: opt text;
+    });
   /// Redeem a hand-off ticket. ONLY registered connector canisters may call.
   /// One-time: the ticket is deleted on first use, valid 90 s, and the
   /// user's live status is re-checked here.
@@ -1581,6 +1602,8 @@ service : {
   revokeInvite: (email: text) -> (nat);
   /// Owners: switch source 1 off (pushes refused; people already pushed stay).
   revokeScimToken: () -> (bool);
+  /// End the caller's suite login now (Hub sign-out in passkey mode; SSO sign-out goes through ssoLogout).
+  revokeSuiteLogin: (sessionToken: text) -> (bool);
   rotateOidcSecret: (id: nat) ->
    (record {
       detail: text;

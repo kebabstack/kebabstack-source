@@ -52,7 +52,7 @@ persistent actor Trust {
   var adminClaimed : Bool = false; // claimAdmin is one-shot
   var assetsId : Text = ""; // assets BACKEND canister id — where device owners come from
   var gatewayDomain : Text = "icp.net"; // the HTTP gateway agents connect through: <backend-id>.<domain>
-  transient let BUILD_VERSION : Text = "0.9.2";
+  transient let BUILD_VERSION : Text = "0.11.0";
   transient let H : Int = 3_600_000_000_000;
   transient let DAY : Int = 86_400_000_000_000;
 
@@ -298,9 +298,12 @@ persistent actor Trust {
     if (not Hub.directoryFresh(lastDirectoryPull) or not Hub.isActive(people, email) or roleOf(email) == "none" or Hub.appRole(people, email, "trust") != viewerRole) return Support.denied();
     if (roleOf(email) == "member" and viewer != subject) return Support.denied();
     let out = List.empty<Support.Item>();
+    // A device that keeps reporting after its owner left is still in use somewhere: say so first.
+    let subjectGone = not Hub.isActive(people, emailOfPid(subject));
     for ((_, n) in nodes.entries()) if (ownerOfSerial(n.hardwareSerial) == subject) {
       let v = toView(n);
-      out.add({ id = n.hardwareSerial; kind = "device posture"; title = n.hostname; detail = n.hardwareSerial # " · " # v.assessment.passed.toText() # " of " # v.assessment.expected.toText() # " verified passing"; status = switch (v.assessment.state) { case ("passing") "checks passing"; case ("attention") "needs attention"; case ("stale") "stale checks"; case ("error") "check unavailable"; case (_) "not fully assessed" }; path = "#/d/" # v.nodeKey; historical = false });
+      let lately = now() - n.lastSeen < 7 * DAY;
+      out.add({ id = n.hardwareSerial; kind = "device posture"; title = n.hostname; detail = n.hardwareSerial # " · " # v.assessment.passed.toText() # " of " # v.assessment.expected.toText() # " verified passing"; status = (if (subjectGone and lately) "still reporting after departure · " else "") # (switch (v.assessment.state) { case ("passing") "checks passing"; case ("attention") "needs attention"; case ("stale") "stale checks"; case ("error") "check unavailable"; case (_) "not fully assessed" }); path = "#/d/" # v.nodeKey; historical = false });
     };
     Support.ready(out.toArray());
   };
@@ -350,20 +353,39 @@ persistent actor Trust {
   // =====================================================================
   // sign-in (hub ticket lane)
   // =====================================================================
-  public shared func loginWithTicket(ticket : Text) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
-    if (hubId == "" or not Hub.ticketLooksValid(ticket)) return null;
-    let expectedHub = hubId;
-    let r = await Hub.hub(expectedHub).redeemTicket(ticket);
+  // ---- sign-in (0.11.0): redeem at the Hub, groups, session — no management-canister round; AI status refreshes afterwards ----
+  var tokenSeed : ?Blob = null; // per-app secret for session tokens (raw_rand, once); see Hub.deriveToken
+  var tokenCounter : Nat = 0;
+  func initTokenSeed() : async () { if (tokenSeed == null) { let r = await ic00.raw_rand(); if (tokenSeed == null) tokenSeed := ?r } };
+  func freshToken() : Text { assert tokenSeed != null; tokenCounter += 1; Hub.deriveToken(switch (tokenSeed) { case (?b) b; case null Blob.fromArray([]) }, tokenCounter, now()) };
+  /// Turn a Hub answer (ticket or suite login) into an app session. The directory is pulled only when the
+  /// person is unknown or the cache is stale.
+  func establishSession(expectedHub : Text, r : Hub.RedeemResult) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
     if (not r.ok or hubId != expectedHub) return null;
     if (not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") { try { ignore await pullDirectory() } catch (_) {} };
     if (hubId != expectedHub or not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") return null;
     try { Map.add(groupsCache, Text.compare, lower(r.email), await Hub.hub(hubId).groupsOf(r.email)) } catch (_) {};
-    await refreshHubAi(); await refreshAiStatus();
-    let tok = hex(await ic00.raw_rand());
-    if (hubId != expectedHub or not Hub.isActive(people, r.email) or not Hub.directoryFresh(lastDirectoryPull) or roleOf(r.email) == "none") return null;
+    if (tokenSeed == null) await initTokenSeed();
+    if (not hubAiTried) await refreshHubAi(); // first sign-in after an upgrade: the AI banner must not flicker "off"
+    if (hubId != expectedHub or not Hub.isActive(people, r.email) or roleOf(r.email) == "none") return null;
+    let tok = freshToken();
     ignore Hub.mintSession(sessions, tok, r.email, r.displayName, 10 * H);
+    ignore Timer.setTimer<system>(#seconds 0, func() : async () { await refreshHubAi(); await refreshAiStatus() });
     // suiteToken: the hub's read-only token for the shared topbar (bell, menu, name, picture) — passed through, never stored
     ?{ token = tok; email = lower(r.email); displayName = r.displayName; role = roleOf(r.email); suiteToken = (switch (r.suiteToken) { case (?t) t; case null "" }) };
+  };
+  public shared func loginWithTicket(ticket : Text) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
+    if (hubId == "" or not Hub.ticketLooksValid(ticket)) return null;
+    let expectedHub = hubId;
+    let r = await Hub.hub(expectedHub).redeemTicket(ticket);
+    await establishSession(expectedHub, r);
+  };
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  public shared func loginWithSuite(token : Text) : async ?{ token : Text; email : Text; displayName : Text; role : Text; suiteToken : Text } {
+    if (hubId == "" or not Hub.ticketLooksValid(token)) return null;
+    let expectedHub = hubId;
+    let r = await Hub.hub(expectedHub).redeemSuiteLogin(token);
+    await establishSession(expectedHub, r);
   };
   public shared query func whoami(tok : Text) : async ?{ id : Text; email : Text; displayName : Text; role : Text; roleSource : Text; orgName : Text; hubId : Text; needsClaim : Bool; aiOn : Bool; ai : AiState; enrollConfigured : Bool; ownersConfigured : Bool } {
     switch (me(tok)) {

@@ -1,5 +1,11 @@
 # Product website changes
 
+## [0.5.6] — 2026-10-18
+
+- Describe the public standalone game’s optional player identity accurately; it does not use company Hub sign-in.
+- Verify deployment recipe version metadata against the website package during the public-artifact test.
+- Explain Crumbs’ optional consented browser recognition in German and English while preserving the website’s own cookieless configuration. Distinguish the product capability from this site’s privacy notice.
+
 ## [0.5.5] — 2026-09-29
 
 - Give Hub Operations a dedicated bilingual section with an illustrative work/TV switch and a visible entry from the suite overview.

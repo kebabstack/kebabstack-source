@@ -142,7 +142,7 @@ export const content = {
           "Website-Übersicht, Hub-Rechte und Datenexport",
           "Google Search Console und Data Studio mit Einrichtungsanleitung",
         ],
-        note: "Nativer Collector, ohne Cookies oder Browser-Speicher. Google-Anbindungen sind optional und benötigen eigene Konfiguration. Keine dauerhaften Besucherprofile; Datenschutz und Kapazität bleiben Teil der Einführung.",
+        note: "Nativer Collector, standardmäßig ohne Cookies oder Browser-Speicher. Optional erkennt Crumbs Browser nach Einwilligung wieder; Installationshilfe und widerrufbare Auswahl sind enthalten. Google-Anbindungen brauchen eigene Konfiguration. Datenschutz und Kapazität müssen je Website geprüft werden.",
       },
       {
         id: "phone",
@@ -186,7 +186,7 @@ export const content = {
       [
         "Ship the Bug",
         "Eine kleine Pause",
-        "Ein Spiel in 2D und 3D. Öffentlich spielbar, mit optionalem Hub-Profil und freiwilligen Bestenlisten.",
+        "Ein Spiel in 2D und 3D. Öffentlich spielbar, mit optionalem Spielernamen oder Internet Identity und freiwilligen Bestenlisten.",
         "bug",
       ],
     ],
@@ -530,7 +530,7 @@ export const content = {
           "Multi-site overview, Hub permissions and data export",
           "Google Search Console and Data Studio with setup guides",
         ],
-        note: "Native collector, no cookies or browser storage. Optional Google connections need your own configuration. No persistent visitor profiles; privacy and capacity remain part of adoption.",
+        note: "Native collector, no cookies or browser storage by default. Optional consented browser recognition includes setup guidance and a revocable choice. Google connections need separate configuration. Review privacy and capacity for each website.",
       },
       {
         id: "phone",
@@ -574,7 +574,7 @@ export const content = {
       [
         "Ship the Bug",
         "A small break",
-        "A game in 2D and 3D. Public play, with optional Hub profiles and opt-in leaderboards.",
+        "A game in 2D and 3D. Public play, with optional player names or Internet Identity and opt-in leaderboards.",
         "bug",
       ],
     ],

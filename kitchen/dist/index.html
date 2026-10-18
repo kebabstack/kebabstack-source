@@ -106,6 +106,7 @@ const idl = ({ IDL }) => {
     refresh: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
     removeLeftovers: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setHub: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setInstallationFile: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Vec(IDL.Nat8)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setPantry: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     update: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
     updateHub: IDL.Func([], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),

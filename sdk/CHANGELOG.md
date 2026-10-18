@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.16.0] — 2026-10-11
+
+- Add the Hub 0.40.0 suite-login contract: browser `suiteCookie` helpers and Motoko `redeemSuiteLogin`, allowing configured company-domain apps to establish their own session from a Hub suite-login token. Cookie domain selection excludes gateway suffixes and bare hosts.
+- Add `deriveToken` for app session tokens derived from a per-app secret seed, counter and timestamp, avoiding a management-canister randomness call on every sign-in. This entry records the existing implementation introduced in `92a899b`; it does not change the SDK runtime.
+
 ## [0.15.0] — 2026-10-06
 
 - Lifecycle events gain the kind `#created`: the Hub reports a person who appears in the directory after the Hub already knew its people. Apps that read `hub_lifecycleEvents` must build with this SDK before a Hub that sends it is installed; a Desk on the previous SDK would fail to decode the batch.

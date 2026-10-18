@@ -62,6 +62,7 @@ module {
     filters : [Filter];
     dimension : Text;
     limit : Nat;
+    dayStarts : ?[Int]; // 0.7.0: UTC instants of local midnights for the website's time zone; day buckets follow them (null = UTC days)
   };
   public type Metrics = {
     visitors : Nat;

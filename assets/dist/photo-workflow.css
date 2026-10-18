@@ -1,0 +1,44 @@
+/* Photo tasks use shared semantic tokens; global navigation remains owned by the SDK. */
+.device-photo-section{border-top:1px solid var(--ks-rule);margin-top:20px;padding-top:20px}
+.photo-review{width:min(1100px,96vw);max-width:96vw;max-height:94dvh;padding:0;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-card);color:var(--ks-fg);overflow:auto}
+.photo-review::backdrop{background:rgba(0,0,0,.7)}
+.photo-review header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px;border-bottom:1px solid var(--ks-rule)}
+.photo-review h2{font-size:22px;margin:0}.photo-review header p{font-size:13px;color:var(--ks-fg-secondary);margin:6px 0 0}
+.photo-review-body{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;padding:20px}
+.photo-review-body>*{min-width:0}.photo-review form label{font-size:13px;letter-spacing:0;text-transform:none;line-height:1.5}.photo-review input,.photo-review select{display:block;margin-top:4px;font-size:16px!important}.photo-review small{display:block;color:var(--ks-fg-secondary);font-size:12px;overflow-wrap:anywhere}
+.photo-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}.photo-controls span{font-size:12px;color:var(--ks-fg-secondary)}
+.photo-viewport{height:440px;overflow:auto;background:var(--ks-bg-sunk);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-input)}.photo-viewport img{display:block;width:100%;max-width:none;height:auto;max-height:100%;object-fit:contain;object-position:top left}
+.photo-review button,.photo-review input,.photo-review select{min-height:44px}.photo-review form button{margin-top:18px}
+#devScan{display:inline-flex;align-items:center;justify-content:center;background:var(--ks-accent);color:var(--ks-on-accent);border-radius:var(--ks-radius-pill);padding:12px 18px;text-decoration:none;font-weight:600;min-height:44px}
+#devBulk>strong{flex-basis:100%}#devBulk select{width:auto;flex:1}#devBulk button{min-height:40px}
+@media(max-width:760px){
+  #v-devices .page-heading{display:grid;gap:12px}#v-devices .page-heading>.btnrow{justify-content:flex-start}
+  #stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}.stat{min-width:0!important;padding:10px!important}.stat .l{letter-spacing:0!important}
+  #nav{gap:0;padding:0 12px}.tab{min-height:44px;padding:10px}
+  .photo-review{max-height:96dvh;width:96vw}.photo-review header,.photo-review-body{padding:14px}.photo-review-body{grid-template-columns:minmax(0,1fr);gap:12px}.photo-viewport{height:32dvh;min-height:160px}
+  #v-bulk button,#v-device button,#v-devices button{min-height:44px}#v-bulk input,#v-bulk select{font-size:16px}
+  #devBulk{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#devBulk>strong,#devBulk>select,#devBulk>.status{grid-column:1/-1}#devBulk button{padding:8px;white-space:normal}
+  #dAdminRow{align-items:stretch}.location-kv{flex-basis:100%;flex-wrap:wrap}.location-kv select{min-width:0}
+  .kvl>div{overflow-wrap:anywhere}.device-head>div:first-child{min-width:0}.device-head .btnrow{width:100%}
+}
+@media(max-width:380px){main{padding:18px 12px 65px}.card{padding:14px}.filters input[type=search],.filters select{width:100%;min-width:0}.row>div{min-width:0;flex-basis:100%}.photo-controls{gap:4px}.photo-controls button{padding:8px 12px}}
+
+.photo-steps{display:flex;gap:6px;margin:14px 0;flex-wrap:wrap}.photo-step{font:500 12px var(--ks-ui);padding:6px 9px;border-bottom:2px solid var(--ks-rule);color:var(--ks-fg-secondary)}.photo-step.on{border-color:var(--ks-accent);color:var(--ks-fg);font-weight:700}
+@media(max-width:760px){#nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}.tab{font-size:11px;padding:8px 4px;white-space:normal;min-width:0}.photo-step{font-size:11px;padding:6px}}
+
+.photo-review header{position:sticky;top:0;z-index:2;background:var(--ks-bg-card)}.photo-review footer{position:sticky;bottom:0;padding:12px 20px;border-top:1px solid var(--ks-rule);background:var(--ks-bg-card);display:flex;justify-content:flex-end}.photo-review footer button{min-height:44px}.photo-review h2{overflow-wrap:anywhere}
+@media(max-width:760px){
+ .ks-workspace #layout #nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;padding:0 12px}
+ .ks-workspace #layout #nav>button.tab[data-view]{white-space:normal;overflow-wrap:anywhere;min-width:0;width:100%;margin-left:0;padding:8px 4px;min-height:44px;line-height:1.3}
+}
+
+/* Reconciliation actions stay with their serial on narrow screens. */
+@media (max-width: 700px) {
+  #v-apple table, #v-apple tbody { display: block; width: 100%; }
+  #v-apple thead { display: none; }
+  #v-apple tbody tr { display: block; margin-block: var(--ks-space-4); padding: var(--ks-space-4); border: 1px solid var(--ks-rule); border-radius: var(--ks-radius-card); background: var(--ks-bg-card); }
+  #v-apple tbody td { display: block; border: 0; padding: var(--ks-space-2) 0; overflow-wrap: anywhere; }
+  #v-apple td[data-label]::before { content: attr(data-label); display: block; font-family: var(--ks-ui); font-size: var(--ks-fz-marker); color: var(--ks-fg-secondary); margin-bottom: var(--ks-space-1); }
+  #v-apple .apple-row-action:empty { display: none; }
+  #v-apple .apple-row-action button { width: 100%; min-height: 44px; }
+}

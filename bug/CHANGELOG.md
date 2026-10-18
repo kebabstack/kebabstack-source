@@ -1,5 +1,9 @@
 # Changelog — kebab-stack bug (Ship the Bug)
 
+## [0.20.2] — 2026-10-18
+
+- Synchronize the bundled canonical Hub client with the suite source. Standalone sign-in, game rules and score compatibility remain unchanged; no production rollout is implied by this source maintenance release.
+
 ## [0.20.1] — 2026-10-01
 
 - Release held steering/fire/charge controls when the pointer is released outside their button, including failed pointer capture. Returning with an unpressed mouse cancels a missed release; merely moving or parking the mouse never steers. Preserve independent touch pointers and cancel interrupted launches safely.

@@ -1,7 +1,23 @@
-import importlib.util, pathlib, subprocess, tempfile, unittest
+import importlib.util, json, pathlib, subprocess, tempfile, unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('release',ROOT/'tools/check-release.py'); release=importlib.util.module_from_spec(spec);spec.loader.exec_module(release)
 class ReleaseChecks(unittest.TestCase):
+    def test_release_companions_reject_stale_docs_and_schema_versions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp);(root/'dist').mkdir()
+            (root/'CHANGELOG.md').write_text('current release')
+            (root/'dist/CHANGELOG.md').write_text('old release')
+            (root/'package.json').write_text(json.dumps({'version':'1.0.0'}))
+            (root/'dist/openapi.json').write_text(json.dumps({'info':{'version':'1.0.0'}}))
+            (root/'package-lock.json').write_text(json.dumps({'version':'1.0.1','packages':{'':{'version':'1.0.0'}}}))
+            errors=release.companion_errors(root,'1.0.1')
+            self.assertEqual(len(errors),4)
+            (root/'dist/CHANGELOG.md').write_text('current release')
+            (root/'package.json').write_text(json.dumps({'version':'1.0.1'}))
+            (root/'dist/openapi.json').write_text(json.dumps({'info':{'version':'1.0.1'}}))
+            (root/'package-lock.json').write_text(json.dumps({'version':'1.0.1','packages':{'':{'version':'1.0.1'}}}))
+            self.assertEqual(release.companion_errors(root,'1.0.1'),[])
+
     def test_live_ids_rejected_without_mapping_files(self):
         for path,fields in release.FRONTENDS.items():
             valid='\n'.join(f'const {k} = "{v}";' for k,v in fields.items())

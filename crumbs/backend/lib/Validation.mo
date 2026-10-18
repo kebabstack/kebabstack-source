@@ -4,11 +4,20 @@ import Iter "mo:core/Iter";
 import Char "mo:core/Char";
 
 module {
+  /// IANA zone names as the browser reports them (Intl.supportedValuesOf): letters, digits, "/", "_", "+", "-"; the backend never converts, it only buckets by the instants the client supplies.
+  public func timezone(t : Text) : Bool {
+    if (t.size() == 0 or t.size() > 64) return false;
+    t.chars().all(func c = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or c == '/' or c == '_' or c == '+' or c == '-');
+  };
   public func identifier(t : Text) : Bool {
     t.size() > 0 and t.size() <= 80 and t.chars().all(func c = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or c == '_' or c == '-')
   };
   public func hex(t : Text) : Bool {
     t.size() == 64 and t.chars().all(func c = (c >= 'a' and c <= 'f') or (c >= '0' and c <= '9'))
+  };
+  public func cookieId(t : Text) : Bool {
+    let chars=t.chars().toArray();if(chars.size()!=36)return false;
+    for(i in chars.keys()) {let c=chars[i];if(i==8 or i==13 or i==18 or i==23){if(c!='-')return false}else if(not ((c >= 'a' and c <= 'f') or (c >= '0' and c <= '9')))return false};true
   };
   func safe(t : Text, n : Nat) : Bool {
     t.size() <= n and t.chars().all(func c = c >= ' ' and c != '\u{7f}')
@@ -16,13 +25,13 @@ module {
   public func site(s : T.Site) : ?Text {
     if (not identifier(s.id) or not safe(s.name, 100) or s.name == "") return ?"Invalid site id or name";
     if (s.domain.size() == 0 or s.domain.size() > 253 or s.domain != s.domain.toLower() or not s.domain.chars().all(func c = (c >= 'a' and c <= 'z') or (c >= '0' and c <= '9') or c == '.' or c == '-')) return ?"Use a lowercase hostname without protocol or port";
-    if (s.retentionDays < 1 or s.retentionDays > 1827 or s.allowedProperties.size() > 20 or s.excludedPaths.size() > 50 or s.viewers.size() > 200 or s.timezone != "UTC") return ?"Use UTC; retention must be 1–1827 days and configuration within bounds";
+    if (s.retentionDays < 1 or s.retentionDays > 1827 or s.allowedProperties.size() > 20 or s.excludedPaths.size() > 50 or s.viewers.size() > 200 or not timezone(s.timezone)) return ?"Time zone must be an IANA name such as Europe/Zurich; retention must be 1–1827 days and configuration within bounds";
     if (s.allowedProperties.values().any(func p = not identifier(p)) or s.excludedPaths.values().any(func p = not p.startsWith(#text "/") or not safe(p, 512))) return ?"Invalid property or exclusion";
     null;
   };
   public func event(e : T.Event, s : T.Site, now : Int) : ?Text {
     if (not s.enabled) return ?"Site is paused";
-    if (not identifier(e.id) or not hex(e.visitor)) return ?"Invalid event or visitor id";
+    if (not identifier(e.id) or not (hex(e.visitor) or (e.visitor.startsWith(#text "c:") and hex(e.visitor.stripStart(#text "c:") ?? "")))) return ?"Invalid event or visitor id";
     if (e.at < now - 7 * 86400 or e.at > now + 60 or e.at < now - s.retentionDays * 86400) return ?"Event outside accepted time window";
     if (e.hostname != s.domain or not e.path.startsWith(#text "/") or not safe(e.path, 512) or e.path.contains(#char '?') or e.path.contains(#char '#')) return ?"Invalid hostname or unsanitized path";
     if (s.excludedPaths.values().any(func p = e.path.startsWith(#text p))) return ?"Excluded page";

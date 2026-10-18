@@ -1,5 +1,83 @@
 # Changelog — kebab-stack contracts
 
+## [0.19.0] — 2026-10-17
+
+- Contract list bounds long cost notes and names; narrow screens show labelled cards. Notes in confirmed terms span the available width.
+- Original PDF/image preview on the contract overview with page controls and zoom; documents remain permission checked and PDF pages render locally.
+- Saved contracts can check supplementary public vendor terms, showing source and retrieval time and explicitly reviewing before saving. Discovery also uses the saved vendor/product and referenced public terms links.
+- PDF text extraction retains hyperlink destinations and page markers. AI text-only reads retain middle clauses; native document reads retain up to 120,000 supplementary characters instead of 12,000; referenced terms are distinguished from clauses actually read. Existing stored PDFs need a new upload to extract previously missing hyperlink annotations.
+- Extraction instructions distinguish reseller/product, invoice quantity/licensed seats, bundle component prices and product-specific cancellation clauses.
+- Invoice/receipt filtering now respects search and type filters. Original downloads and text views discard stale session/navigation responses and report fetch failures.
+
+
+## [0.18.1] — 2026-10-11
+
+- Fix: the Reporting currency card under Settings had its save button disabled for everyone, and the overview hint showed no link for workspace owners. Both now follow the workspace role the portfolio reports (`canManage`). No data changes.
+
+## [0.18.0] — 2026-10-11
+
+- **One annual figure.** Workspace owners set a reporting currency and the exchange rates under Settings → Reporting currency (1 USD = 0.88 CHF, maintained by hand, never fetched). The overview then shows one headline run rate in that currency with every recorded currency and tax basis listed beneath it, and says which currencies lack a rate. Amounts on contracts stay exactly as recorded; the tax basis is reported per contract, never converted. New `setReporting`; `portfolio` returns `reporting`.
+- **Discounts.** Three commercial fields: list price before discount (same currency, period and tax basis as the amount), discount in percent, and the discount basis (non-profit, education, volume…). The AI reads them from documents like every other field (prompt version contracts-visual-7, evidence required, confirmed by a person); the contract list shows "40% off list · non-profit" under the annual cost and the overview adds "Discounts received" with the yearly saving.
+- **Read documents again.** On a record, staff can queue every linked document for a fresh AI reading (for example to pick up discounts and list prices on contracts filed before 0.18.0). Results arrive as suggested changes on the record; nothing is overwritten.
+
+## [0.17.0] — 2026-10-11
+
+- Faster sign-in: the ticket login redeems at the Hub, refreshes the person's groups and answers; the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less); the directory is pulled only when the person is unknown or the cache is stale.
+- Suite login (Hub ≥ 0.40.0): opened on the company domain with the Hub's suite cookie, the tool signs in through `loginWithSuite` without a detour through the Hub page. Sign out here clears the cookie; the Hub re-checks the person and their access on every redemption. No other changes.
+
+## [0.16.1] — 2026-10-09
+
+- Wording: no more "email", "message" or "mailbox" in the app. The review's source panel reads "Source text", the inbox and record pages speak of documents, limits and audit entries too (owner feedback). Saved .eml files still upload like any other file; they are just not advertised.
+
+## [0.16.0] — 2026-10-09
+
+- **One review for new and existing contracts.** The review asks "Save as: a new contract / an update to an existing contract". For an update you pick the record (search by name or vendor; preselected when the document is already linked, when the AI names it, or when the upload started from a record), today's values appear as placeholders, filled fields replace them, empty ones leave the record alone, and the document is attached. The separate "suggested changes" page is no longer where uploads land; it stays as history and for the record's own suggestions. New `fileToContract(sourceId, contractId, revision, fields, note)` applies this atomically and closes open suggestions of that document.
+- **Several documents per contract.** The record's Documents tab offers **+ Add document**: the upload opens the review with that record preselected, so amendments, renewal letters and invoices land on the contract they belong to (tester feedback).
+- **Contracts without a document.** "Add by hand" on the Contracts list and on the upload page opens the record form directly for old agreements whose paperwork is not at hand (tester feedback).
+
+## [0.15.0] — 2026-10-09
+
+- **One way for documents: upload → check → record.** A new document opens its review directly (also from the inbox list, the Today page and after pasting text); the record is saved with one click and opened. A document that is saved shows "Saved as <contract>" and its inbox page becomes history. The separate proposal/decision/filing vocabulary is gone from the upload path.
+- **Suggested changes, for mails about existing contracts.** What used to be "proposals" is now "Suggested changes": check, correct, save what applies, or decline. Status words in plain language: Reading, Ready to check, Saved, Ignored, Needs a look. Inbox tabs: Suggested changes · Text · Documents · Options.
+
+## [0.14.2] — 2026-10-09
+
+- **Saving opens the record.** Filing from the review now lands on the saved record instead of the list, so what was saved is visible at once (owner report: a saved upload seemed to vanish).
+- **Document type up front.** The review shows "Document type" in the first section; an AI reading that classified an order as an invoice or receipt is visible before saving instead of sitting in the collapsed details.
+- **Invoices are not hidden any more.** The Contracts list shows billing documents like every other record, tagged "invoice only, not tracked"; the filter "Invoices & receipts" narrows to them. Before, a document the AI read as an invoice was saved but never listed.
+- **An invoice for a subscription becomes the subscription.** When the reading of an invoice or receipt carries a period, seats, interval or renewal, the review defaults the document type to "Subscription (tracked)" with the invoice attached; a bare receipt stays a payment record. The options say what is tracked. A saved billing document offers **Track as subscription** on its record. Titles default to "vendor — product" instead of the file name.
+
+## [0.14.1] — 2026-10-09
+
+- **The AI picks the contract type.** Every reading now classifies the document into one of the listed types (software → SaaS, hosting → Datacenter, lines → Telecom, equipment → Hardware, people/time/moves/cleaning → Services, premises → Rent); the classification needs no quote and is shown as "From document". Before, `contractType` was not part of the answer schema, so every upload landed on SaaS. An unclassified reading now lands on **Other** with a hint instead of SaaS.
+- **New types on request.** When no listed type fits, the AI returns a type proposal (name, icon, description, 2–8 fields; dates can carry reminders). The review shows it; a Contracts admin creates it with one click and the values the AI already read for those fields are filed with the record. Invalid proposed fields are filtered.
+- **Force the type.** "Read again as the selected type" re-reads the original with the chosen type's fields and ignores proposals (`reprocessSourceAs`). Unknown type fields in an answer are dropped with a note instead of failing the reading. `ProposalView` gains `typeProposal`.
+
+## [0.14.0] — 2026-10-09
+
+- **Mail relay removed.** Contracts no longer receives e-mail. Documents arrive by upload (PDF, image, text, saved .eml) or pasted text from a signed-in member; the Cloudflare worker (`contracts/relay`), the Mail setup guide, the Relay tab, the contracts address and the per-workspace relay binding are gone. `setSpaceRelay` and `setRelayPrincipals` no longer exist; `intakeBegin` requires a session and accepts kinds `eml` and `manual`. Stored state of earlier relay deliveries stays readable.
+- **One reminder schedule per workspace.** The workspace policy (Settings → Reminders: marks, on/off, recipients) now drives renewal and cancellation deadlines, dated type fields and task due dates of that workspace; tasks use the marks at or under 30 days. The global "remind this many days before" setting is gone; global settings keep the decision lead, time zone and AI budget. The 90-day mark is no longer mandatory, so IT and PfOps can choose different schedules. Reminder titles start with the workspace name. Delivery stays the Hub notification lane → Slack bot; nothing is sent by e-mail.
+- `getSettings`/`setSettings` drop `reminderDays`, `mailboxAddress`, `relayPrincipals`; `connectionStatus` drops `mailboxAddress` and `relayCount`.
+
+## [0.13.1] — 2026-10-09
+
+- **Workspace selector shows what is yours.** It lists your personal workspace, the teamspaces you belong to and, for app admins, the shared Contract intake and the pre-workspace "Existing contracts". Everything an app admin can open by role only — other people's personal workspaces (only those holding records; the person's e-mail is shown) and teamspaces they are not a member of — moved to **Settings → All workspaces**. Before, admins saw one entry per directory person, including empty ones.
+- **Teamspaces can be deleted.** An owner deletes an empty teamspace from Manage workspace; one that still holds records (including its trash) says how many must be moved or deleted first. Sessions bound to the deleted space end. `listSpaces` rows carry `email`, `items` and `member`; new `deleteSpace(revision)`.
+
+## [0.13.0] — 2026-10-09
+
+- **Contract types.** Every contract keeps the shared core (parties, responsibility, term, money, renewal, notice, decision date, documents). An admin-defined type adds its own fields (text, number, date, choice, amount, yes/no, person) under Settings → Contract types; starters ship for SaaS / Subscription, Datacenter / Colocation, Telecom, Hardware lease / Maintenance, Services, Rent / Real estate and Other. Existing records are SaaS / Subscription. The type and its fields show on the record, chosen fields show in the list, the list filters by type, and the document assistant classifies new contracts into a type and fills its fields (`contractType`, `type:<key>` in proposals). Date fields marked "remind" fire reminders like task due dates. Seat follow-up at offboarding applies only to types with seats. Person fields appear in the Desk person panel.
+- **Reminders fixed (audit 2026-10-09).** The schedule now runs against the last cancellation date when one is known, otherwise the renewal or end date; before, it counted down to the renewal date and the warnings that matter could arrive after the deadline. Computed cancellation and decision dates follow the renewal date, notice rule and lead-days setting again instead of going stale (a date a person typed stays). Auto-renewing contracts whose renewal passed roll forward by their interval (audited). Drafts with dates are included and say "Draft". The deputy is always told (group deputies expanded), and when nobody in a space is active any more the register's admins are. Titles carry the contract name, what happens, the dates, the days left and the amount. Automatic decision tasks and manual tasks are reminded without a backlog. Reminders no longer depend on the app address: without one the bell still rings, only the link is missing. A short Hub outage no longer turns queued notices into permanent failures; obsolete notices are dropped instead of counted as failures. The scan no longer walks the whole directory per contract.
+- **One workspace for every contract.** The sidebar reads Overview · To do · Contracts · License keys · Inbox · Settings; the open decisions moved from the Overview badge to their own To do entry. The Contracts list shows each record's type, filters by type and searches the type's listed fields; "Seats" stays blank for types without seats. Run rate, next decisions and the management report cover all types, not only software. Contract types are managed on the Settings page (Hub admins), next to the renewal reminders. Rows returned by `portfolio` carry `typeId`, `typeName`, `typeIcon`, `hasSeats` and `listFields`.
+
+## [0.12.1] — 2026-10-09
+
+- Hub Operations and the team-room screen receive `seatsHeld`: active or cancelling contracts that still list a seat holder who is no longer active in the directory. This is the leftover of the Desk offboarding follow-up (0.12.0) made visible where IT looks every day. Requires Hub 0.39.1 for the count to appear.
+
+## [0.12.0] — 2026-10-06
+
+- Offboarding follow-up for seats: when Desk runs an offboarding, Contracts reports (through the Hub) how many contracts still list the departing person as a seat holder, explicitly or through a Hub group while the account is active. Desk binds its "Revoke licenses & seats" checklist item to that count. The responsible person of each affected contract receives one notification per case ("… is leaving · release the seat in …") with a link to the contract; the seat is released here under License assignments, Desk never edits contract data. Requires Hub 0.39 and Desk 0.31; older Desks keep the manual checklist item.
+
 ## [0.11.2] — 2026-09-29
 
 - Synchronize the shared Hub console link: visible for active global Hub Owner/Admin/Helpdesk roles, hidden for ordinary users and app-only roles. Existing app permissions and business records are unchanged. Requires Hub 0.37.1 for the navigation hint.

@@ -62,7 +62,11 @@ for app in apps:
         dst = app / "dist" / name
         if not dst.exists(): problems.append(f"{app.name}/dist/{name} missing — every app ships it (copy from {src})")
         elif dst.read_bytes() != (ROOT / src).read_bytes(): problems.append(f"{app.name}/dist/{name} differs from {src} — copy it, never edit it in the app")
-    if "mountTopbar(" not in (app / "dist").joinpath("app.js").read_text(errors="ignore") and "mountTopbar(" not in (app / "dist/index.html").read_text(errors="ignore"):
+    # Bug 0.18+ is a standalone game; its reviewed immersive shell deliberately
+    # does not mount company navigation. Legacy Hub-integrated Bug still must.
+    standalone_game = (app.name == 'bug' and (app / 'src/player-session.js').exists()
+                       and (ROOT / 'design/reviews/2026-09-30-bug-standalone.md').exists())
+    if not standalone_game and "mountTopbar(" not in (app / "dist").joinpath("app.js").read_text(errors="ignore") and "mountTopbar(" not in (app / "dist/index.html").read_text(errors="ignore"):
         problems.append(f"{app.name}: frontend does not mount the shared topbar (mountTopbar) — apps have no header of their own")
 
 # --- version discipline: mops.toml = backend constant = frontend constant, changelog has the section, served copy in step
@@ -79,4 +83,4 @@ if not _re.match(r"^\d+\.\d+\.\d+$", ver): problems.append(f"version {ver} is no
 
 if problems:
     print("SDK CHECK FAIL"); [print(" -", p) for p in problems]; sys.exit(1)
-print(f"SDK OK · {len(sdk)} hub methods promised by the SDK all present with matching arity/kind · served copies in step · {len(apps)} apps ship identical client + tokens and mount the topbar · version {ver} in step (mops.toml, backend, frontend, changelog)")
+print(f"SDK OK · {len(sdk)} hub methods promised by the SDK all present with matching arity/kind · served copies in step · {len(apps)} apps ship identical client + tokens; suite shells mount the topbar (reviewed standalone game exception) · version {ver} in step (mops.toml, backend, frontend, changelog)")

@@ -2,7 +2,7 @@
 
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical identity, semantic light/dark colours and common navigation/control sizes. Product access and workflow boundaries remain explicit.
 
-Cookieless website analytics for kebab-stack, targeting a reliable Plausible replacement. **0.6.1 is an alpha pilot, not yet approved to retire Plausible.** Backend, native HTTP collection, REST API and dashboard run on your Cloud Engine. A Node/SQLite collector remains optional. Core analytics does not require an external analytics SaaS. Optional Google integrations are explicitly configured by the operator.
+Website analytics with cookieless defaults and an optional consented cookie mode for kebab-stack, targeting a reliable Plausible replacement. **0.9.1 is an alpha pilot, not yet approved to retire Plausible.** Backend, native HTTP collection, REST API and dashboard run on your Cloud Engine. A Node/SQLite collector remains optional. Core analytics does not require an external analytics SaaS. Optional Google integrations are explicitly configured by the operator.
 
 For management: the implemented core covers traffic, acquisition, events, goals, funnels, journeys and historical imports. The adoption decision depends on matching your real workload and the features you use. There is no validated throughput or operating-cost claim. See [replacement acceptance](PARITY.md).
 
@@ -10,13 +10,19 @@ For operators: [INSTALL](INSTALL.md) covers native collection, Hub access, reten
 
 ## Implemented
 
+0.9.1 fixes report instruction exhaustion by reusing compact visitor keys and session-level acquisition calculations. Tracking script settings link the [cookie/cookieless comparison](dist/consent.html#comparison); [API mode examples](dist/api.html#collection-modes), normalized export schema and TypeScript declarations match both modes.
+
+0.9.0 adds optional consented cookies, a visitor choice panel and [CMP integration guide](dist/consent.html), delivery receipt validation, idempotent consent callbacks and accurate route counting even after URL redaction. Collection mode is available as a report breakdown/filter. Existing websites remain cookieless unless their embed is explicitly replaced.
+
 0.6.1 puts website context in the compact page heading. Use All websites to add a site, Settings to inspect your access and Saved filters to open saved-filter actions.
+
+New in 0.7.0: reports open on the last seven days in the website's time zone with previous-period comparison, Acquisition shows conversions per source for a chosen goal, quick goals and funnels save in one click, and Settings adds a website from its domain alone while showing whether tracking data arrives.
 
 New in 0.6.0: Acquisition compares channels, recognized AI referrals and campaigns with events and revenue. Goals & revenue adds no-code scroll thresholds and source-attributed currency totals. Saved filters/funnels and All websites reduce repeated setup. Search Console has guided, on-demand OAuth setup; a downloadable Data Studio connector reads aggregates with a website-scoped key. See the in-app [integration guide](dist/integrations.html).
 
-- Small tracker with no cookies or browser storage; pageviews, SPA navigation, custom events/properties, optional outbound/download/form events, active time and scroll depth. Consent gating, pause/resume, GPC and DNT support. No account IDs or persistent cross-site identifier.
+- Default tracker mode has no cookies or browser storage; optional 90-day first-party browser IDs require explicit consent; pageviews, SPA navigation, custom events/properties, optional outbound/download/form events, active time and scroll depth. Consent gating, pause/resume, GPC and DNT support. No account IDs or persistent cross-site identifier.
 - Native canister HTTP ingress with durable commit before acknowledgment, per-site daily HMAC visitor estimates, batching, retries, deduplication and atomic validation. Raw IP/UA are processed by the canister but excluded from stored analytics events. Optional Node/SQLite collector and local GeoIP database.
-- Dashboard with realtime visitors, date comparison, campaign/source/page/device/location reports, compound filters, goals, sequential funnels, journeys, entry/exit pages and imported history. Reporting timezone is explicitly UTC in this release.
+- Dashboard with realtime visitors, date comparison, campaign/source/page/device/location reports, compound filters, goals, sequential funnels, journeys, entry/exit pages and imported history. Daily buckets follow the website's time zone; hourly and realtime buckets and visitor-ID rotation stay on UTC.
 - Task-focused settings for General, Tracking script and People & access; automatic website IDs, quick/custom date ranges, explicit goal/funnel forms, copy controls and unsaved-change confirmation. Empty accounts show one relevant next step.
 - Native Candid plus REST v1, generated Candid/browser bindings, OpenAPI 3.1, JS client with TypeScript declarations, raw export, goals, annotations and import endpoints. Read/manage/share keys require their issuer's current website management rights and a fresh Hub directory.
 - Hub sign-in and central roles: Admin, Analyst (viewer), None. New access defaults to None. Per-website Read/Manage grants to named Hub users; Hub owners/admins always administer all websites. New websites start admin-only. Separate signed collector principals. See [website access](ACCESS.md).
@@ -32,7 +38,7 @@ website / SPA → HTTPS gateway → Crumbs backend on Cloud Engine
                                      └ Hub directory ← users and website access
 ```
 
-The HTTP query entrypoint requests a verified update. Successful native `202` responses report `durability: "canister"`: accepted events are already committed. The backend chooses time, order and the daily website visitor hash; browser-supplied identifiers cannot override them. IP limits and total event budgets bound application work. No extra server is required.
+The HTTP query entrypoint requests a verified update. Successful native `202` responses report `durability: "canister"`: accepted events are already committed. The backend chooses time, order and the daily website visitor hash; browser-supplied identifiers cannot override cookieless estimates. Explicitly consented random cookie IDs produce separate site-scoped browser pseudonyms. IP limits and total event budgets bound application work. No extra server is required.
 
 On the supported ICP gateway, `X-Real-IP` is overwritten from its connection metadata. Ordinary `X-Forwarded-For` is ignored. This is **not proof of a gateway caller**: direct public Candid calls can forge request headers, and browser analytics are inherently forgeable. No HTTP header grants report or management access. Collection continues during Hub outages; protected reports fail closed when the directory lease expires.
 

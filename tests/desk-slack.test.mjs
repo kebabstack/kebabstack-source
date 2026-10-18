@@ -29,8 +29,8 @@ const message=(id,user,ts,txt,thread)=>({type:'event_callback',event_id:id,event
 const reaction=(id,user,ts,added=true)=>({type:'event_callback',event_id:id,event:{type:added?'reaction_added':'reaction_removed',user,reaction:'white_check_mark',item:{type:'message',channel:CHANNEL,ts}}});
 async function flushOne(pic,desk,match){await pic.advanceTime(11000);return answer(pic,match,{ok:true});}
 
-async function wire(pic){
- const c=await setup(pic);
+async function wire(pic,baseline=false){
+ const c=await setup(pic,baseline);
  // Calls that wait for a Slack answer are submitted deferred, so the outcall can be mocked while they run.
  const hubDeferred=pic.createDeferredActor(await idl('hub/backend/dist/backend.did'),c.h.canisterId);hubDeferred.setPrincipal(identity.owner);
  const deskDeferred=pic.createDeferredActor(await idl('desk/backend/dist/backend.did'),c.b.canisterId);
@@ -71,8 +71,8 @@ test('slack: a channel message becomes a request for the Slack user, the bot ans
   // 3 · the bot acknowledges in the thread first, then marks the message with 👀 — in that order, with a working link
   const ack=await flushOne(pic,c.desk,'chat.postMessage');
   assert.match(text(ack.body),new RegExp(`"thread_ts":"${anchor}"`));
-  assert.match(text(ack.body),/https:\/\/desk\.customer\.test\/#\/t\/\d+\|Open request/,'the acknowledgement links to the request on the configured desk address');
-  assert.match(text(ack.body),/\*SUP-\d+\* created/);
+  assert.match(text(ack.body),/https:\/\/desk\.customer\.test\/#\/t\/\d+\|SUP-\d+/,'the acknowledgement links to the request on the configured desk address');
+  assert.match(text(ack.body),/\|SUP-\d+>\* created/);
   assert.doesNotMatch(text(ack.body),/_\.\./,'no double period after a subject that ends with one');
   const eyes=await answer(pic,'reactions.add',{ok:true});assert.match(text(eyes.body),/"name":"eyes"/);
   await noOutcall(pic);
@@ -121,11 +121,13 @@ test('slack: a channel message becomes a request for the Slack user, the bot ans
   full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.equal(full.ticket.status,'resolved');
   await flushOne(pic,c.desk,'chat.postMessage');await noOutcall(pic);
   // 8b · the requester writes again after the resolve: the reply is kept, nothing reopens by itself, the owners are asked
-  assert.equal((await post(pic,c.desk,message('Ev6b','UALPHA','1700000000.000250','Nope, still broken.',anchor))).body,'ok');
+  assert.equal((await post(pic,c.desk,message('Ev6b','UALPHA','1700000000.000250','Nope, still broken. <@UBETA> please check.',anchor))).body,'ok');
+  // the mentioned member is looked up once (e-mail was cached at step 8, the name was not) so the request shows a name, not an id
+  await answer(pic,'users.info',{ok:true,user:{real_name:'Beta Tester',profile:{email:'beta@customer.test',display_name:''}}});
   await quiet(pic);
   full=(await c.desk.getTicket(c.tokens.alpha,row.id))[0];
   assert.equal(full.ticket.status,'resolved','a reply alone never changes a finished request');
-  assert.ok(full.events.some(e=>e.kind==='comment'&&e.body==='Nope, still broken.'),'the reply is on the request');
+  assert.ok(full.events.some(e=>e.kind==='comment'&&e.body==='Nope, still broken. <@UBETA|Beta Tester> please check.'),'the reply is on the request with the mention resolved: '+JSON.stringify(full.events.filter(e=>e.kind==='comment').map(e=>e.body)));
   await noOutcall(pic);
   assert.ok((await c.desk.notifyHealth(c.tokens.owner))[0].recent.some(r=>/replied after resolution .* reopen\?/.test(r.title)),'the owners are asked whether to reopen');
   // 8b2 · ↩️ on the first message is the explicit "not done": it reopens whoever had set the ✅
@@ -222,5 +224,103 @@ test('slack: a message from a Slack user without a known e-mail still becomes a 
   assert.equal(again.ok,true,again.detail);
   const second=(await c.desk.getTicket(c.tokens.owner,again.id))[0];
   assert.equal(second.ticket.waitingOn,'approval','with another administrator the request waits for approval');
+ }finally{await pic.tearDown();}
+});
+
+const aiResult=content=>({choices:[{message:{content:JSON.stringify(content)}}]});
+async function enableAI(c){unwrap(await c.desk.setAi(c.tokens.owner,{provider:'openai',url:'https://ai.example.test/v1/chat/completions',key:'fixture-key',model:'fixture-model'}));}
+async function createSlackFixture(pic,c,anchor='1700000010.000100'){
+ await post(pic,c.desk,message('start'+anchor,'UEMP',anchor,'TablePlus subscription expired. Please renew it.'));
+ await answer(pic,'users.info',{ok:true,user:{profile:{email:'employee@customer.test'}}});await quiet(pic);
+ const row=(await c.desk.myTickets(c.tokens.employee))[0];assert.ok(row);
+ return {row,anchor};
+}
+test('slack AI: summarized title, authorized completion, uncertainty, stale decisions and checklist guard',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await wire(pic);await enableAI(c);
+  const anchor='1700000020.000100';
+  await post(pic,c.desk,message('title','UEMP',anchor,'Hi, looks like our TablePlus subscription expired. Could we get that again?'));
+  await answer(pic,'users.info',{ok:true,user:{profile:{email:'employee@customer.test'}}});
+  // The independent triage and title calls may arrive in either order.
+  for(let i=0;i<2;i++){
+   const r=await outcall(pic,'ai.example.test');const title=text(r.body).includes('short, specific ticket title');
+   await pic.mockPendingHttpsOutcall({requestId:r.requestId,subnetId:r.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from(JSON.stringify(aiResult(title?{title:'Renew TablePlus subscription'}:{summary:'Subscription expired',priority:'normal',suggestedType:'',questions:[],sensitive:false})))}});
+  }
+  await quiet(pic);const row=(await c.desk.myTickets(c.tokens.employee))[0];assert.equal(row.subject,'Renew TablePlus subscription');
+  const ack=await flushOne(pic,c.desk,'chat.postMessage');assert.match(text(ack.body),/\|SUP-\d+>\* created: _Renew TablePlus subscription_/);assert.doesNotMatch(text(ack.body),/Open request/);await answer(pic,'reactions.add',{ok:true});
+  await post(pic,c.desk,message('notstaff','UEMP','1700000020.000110','Done, renewed.',anchor));await quiet(pic);await noOutcall(pic);
+  await post(pic,c.desk,message('maybe','UBETA','1700000020.000120','I will renew it tomorrow.',anchor));await answer(pic,'users.info',{ok:true,user:{profile:{email:'beta@customer.test'}}});
+  await answer(pic,'ai.example.test',aiResult({kind:'keep',evidence:''}));await quiet(pic);assert.notEqual((await c.desk.getTicket(c.tokens.owner,row.id))[0].ticket.status,'resolved');
+  await post(pic,c.desk,message('stale','UBETA','1700000020.000130','Renewed, it works again.',anchor));
+  const stale=await outcall(pic,'ai.example.test');
+  await post(pic,c.desk,message('newproblem','UEMP','1700000020.000140','Still cannot log in.',anchor));await quiet(pic);
+  await pic.mockPendingHttpsOutcall({requestId:stale.requestId,subnetId:stale.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from(JSON.stringify(aiResult({kind:'resolved',evidence:'Renewed, it works again.'})))}});
+  await quiet(pic);assert.notEqual((await c.desk.getTicket(c.tokens.owner,row.id))[0].ticket.status,'resolved','late AI decision must not override newer reply');
+  await post(pic,c.desk,message('invalidjson','UBETA','1700000020.000145','Done.',anchor));await answer(pic,'ai.example.test',{choices:[{message:{content:'not JSON'}}]});await quiet(pic);assert.notEqual((await c.desk.getTicket(c.tokens.owner,row.id))[0].ticket.status,'resolved');
+  await post(pic,c.desk,message('inventedevidence','UBETA','1700000020.000146','Still investigating.',anchor));await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Fixed everything.'}));await quiet(pic);assert.notEqual((await c.desk.getTicket(c.tokens.owner,row.id))[0].ticket.status,'resolved');
+  const task=await c.desk.addTask(c.tokens.beta,row.id,'Verify license');assert.equal(task.ok,true);
+  await post(pic,c.desk,message('blocked','UBETA','1700000020.000150','Renewed, it works again.',anchor));await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Renewed, it works again.'}));await quiet(pic);
+  let full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.notEqual(full.ticket.status,'resolved');assert.ok(full.events.some(e=>e.kind==='ai'&&/checklist/.test(e.body)));
+  for(let i=0;i<full.tasks.length;i++)unwrap(await c.desk.setTask(c.tokens.beta,row.id,BigInt(i),'done'));
+  await post(pic,c.desk,message('done','UBETA','1700000020.000160','Renewed and verified, everything works now.',anchor));await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Renewed and verified, everything works now.'}));await quiet(pic);
+  full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.equal(full.ticket.status,'resolved');assert.ok(full.events.some(e=>e.kind==='ai'&&/Slack completion comment/.test(e.body)));
+  unwrap(await c.desk.setStatus(c.tokens.beta,row.id,'open',''));
+  await c.desk.setAiTriage(c.tokens.owner,false);
+  await post(pic,c.desk,message('disabled','UBETA','1700000020.000170','Everything is fixed.',anchor));await quiet(pic);
+  assert.ok(!(await pic.getPendingHttpsOutcalls()).some(r=>r.url.includes('ai.example.test')));
+  assert.equal((await c.desk.getTicket(c.tokens.owner,row.id))[0].ticket.status,'open');
+  await c.desk.setAiTriage(c.tokens.owner,true);
+  await post(pic,c.desk,message('revoke','UBETA','1700000020.000180','Everything is fixed.',anchor));const revoked=await outcall(pic,'ai.example.test');
+  c.hub.setPrincipal(identity.owner);const [policy]=await c.hub.getAppPermissions(c.conn.id);
+  unwrap(await c.hub.setAppPermissions(c.conn.id,policy.revision,{app:'desk',defaultRole:'member',people:[{id:c.ids.alpha,role:'agent'}],groups:[]}));await c.refresh();
+  await pic.mockPendingHttpsOutcall({requestId:revoked.requestId,subnetId:revoked.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from(JSON.stringify(aiResult({kind:'resolved',evidence:'Everything is fixed.'})))}});await quiet(pic);
+  assert.equal((await c.desk.getTicket(c.tokens.owner,row.id))[0].ticket.status,'open','revoked agent cannot resolve through an in-flight AI call');
+
+ }finally{await pic.tearDown();}
+});
+
+test('slack images: private download, dedupe, upload to original thread, retries and no credential forwarding',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await wire(pic);const {row,anchor}=await createSlackFixture(pic,c);
+  await flushOne(pic,c.desk,'chat.postMessage');await answer(pic,'reactions.add',{ok:true});
+  const png=Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789c636000020000050001a5f645400000000049454e44ae426082','hex');
+  const event=message('image','UEMP','1700000010.000110','Here is the screenshot',anchor);event.event.files=[{id:'F001'}];event.event.subtype='file_share';
+  await post(pic,c.desk,event);await quiet(pic);await pic.advanceTime(11000);
+  await answer(pic,'files.info',{ok:true,file:{id:'F001',name:'screenshot.png',mimetype:'image/png',size:png.length,url_private:'https://files.slack.com/files-pri/T1-F001/screenshot.png'}});
+  const dl=await outcall(pic,'files-pri');assert.ok(dl.headers.some(h=>h[0].toLowerCase()==='authorization'&&h[1]==='Bearer '+TOKEN));
+  await pic.mockPendingHttpsOutcall({requestId:dl.requestId,subnetId:dl.subnetId,response:{type:'success',statusCode:200,headers:[['Content-Type','image/png']],body:png}});await quiet(pic);
+  let full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.equal(full.files.length,1);assert.equal(full.files[0].name,'screenshot.png');
+  assert.deepEqual(Buffer.from((await c.desk.fileData(c.tokens.employee,full.files[0].id))[0].data),png);
+  assert.equal((await post(pic,c.desk,event)).body,'duplicate');event.event_id='duplicate-file';await post(pic,c.desk,event);await quiet(pic);await pic.advanceTime(11000);await noOutcall(pic);assert.equal((await c.desk.getTicket(c.tokens.owner,row.id))[0].files.length,1);
+  const uploaded=await c.desk.addFile(c.tokens.beta,row.id,'fixed.png','image/png',png);assert.equal(uploaded.ok,true);await pic.advanceTime(11000);
+  await answer(pic,'files.getUploadURLExternal',{ok:true,file_id:'F002',upload_url:'https://files.slack.com/upload/v1/fixture'});
+  const upload=await outcall(pic,'upload/v1');assert.deepEqual(Buffer.from(upload.body),png);assert.ok(!upload.headers.some(h=>h[0].toLowerCase()==='authorization'),'signed upload URL needs no bot token');
+  await pic.mockPendingHttpsOutcall({requestId:upload.requestId,subnetId:upload.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from('OK')}});
+  const completed=await answer(pic,'files.completeUploadExternal',{ok:true});const completion=JSON.parse(text(completed.body));assert.equal(completion.thread_ts,anchor);assert.equal(completion.channel_id,CHANNEL);assert.equal(completion.files[0].id,'F002');await quiet(pic);
+  const bad=message('badimage','UEMP','1700000010.000120','image',anchor);bad.event.files=[{id:'F003'}];await post(pic,c.desk,bad);await quiet(pic);await pic.advanceTime(11000);
+  await answer(pic,'files.info',{ok:true,file:{id:'F003',name:'bad.png',mimetype:'image/png',size:100,url_private:'https://files.slack.com.evil.test/files-pri/x'}});await quiet(pic);await noOutcall(pic);
+  full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.equal(full.files.length,2);assert.ok(full.events.some(e=>/Unsupported private Slack image URL/.test(e.body)));
+  assert.equal((await c.desk.retrySlackImages(c.tokens.employee,row.id)).ok,false,'requester cannot restart transfer jobs');
+  await pic.upgradeCanister({sender:identity.controller,canisterId:c.b.canisterId,wasm:process.env.KEBAB_CUSTOMER_WASM||'desk/backend/dist/backend.wasm',upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+  assert.equal((await c.desk.getTicket(c.tokens.owner,row.id))[0].files.length,2,'imported image persists across upgrade');
+  unwrap(await c.desk.retrySlackImages(c.tokens.beta,row.id));await pic.advanceTime(11000);
+  await answer(pic,'files.info',{ok:false,error:'missing_scope'});await quiet(pic);assert.match((await c.desk.slackStatus(c.tokens.owner))[0].intakes[0].lastResult,/missing_scope/);
+ }finally{await pic.tearDown();}
+});
+
+test('slack upgrade: published baseline retains ticket, file, thread and central role policy',{skip:!process.env.KEBAB_CUSTOMER_BASELINE},async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await wire(pic,true);const {row,anchor}=await createSlackFixture(pic,c);
+  const file=await c.desk.addFile(c.tokens.beta,row.id,'existing.txt','text/plain',Buffer.from('existing attachment'));assert.equal(file.ok,true);
+  const before=(await c.desk.getTicket(c.tokens.owner,row.id))[0];
+  await pic.upgradeCanister({sender:identity.controller,canisterId:c.b.canisterId,wasm:process.env.KEBAB_CUSTOMER_WASM||'desk/backend/dist/backend.wasm',upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+  const after=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.deepEqual(after.ticket,before.ticket);assert.deepEqual(after.files,before.files);
+  assert.equal((await c.desk.whoami(c.tokens.beta))[0].role,'agent');assert.equal((await c.desk.whoami(c.tokens.employee))[0].role,'requester');
+  await post(pic,c.desk,message('upgraded-thread','UEMP','1700000010.000170','Still in the original thread',anchor));await quiet(pic);
+  assert.ok((await c.desk.getTicket(c.tokens.owner,row.id))[0].events.some(e=>e.body==='Still in the original thread'));
+  assert.deepEqual(Buffer.from((await c.desk.fileData(c.tokens.employee,file.id))[0].data),Buffer.from('existing attachment'));
  }finally{await pic.tearDown();}
 });

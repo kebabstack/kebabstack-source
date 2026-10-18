@@ -41,6 +41,10 @@ test('collector HTTP: fake IP ignored, bot filter, CORS, malformed payload and d
  assert.equal((await send({id:'other',site:'main',url:'https://evil.test/',kind:'pageview'})).status,400);
  assert.equal((await send({id:'evil',site:'main',url:'https://example.test/',kind:'pageview'},{origin:'https://evil.test'})).status,403);
  assert.equal((await send({id:'bot',site:'main',url:'https://example.test/',kind:'pageview'},{'user-agent':'Googlebot'})).status,202);assert.equal(store.get('main','bot'),undefined);
+ assert.equal((await send({id:'http-one',site:'main',url:'https://example.test/',kind:'pageview'})).status,202,'identical retry succeeds');
+ assert.equal((await send({id:'http-one',site:'main',url:'https://example.test/changed',kind:'pageview'})).status,409,'conflicting retry fails');
+ assert.equal((await send([{id:'batch-conflict',site:'main',url:'https://example.test/',kind:'pageview'},{id:'batch-conflict',site:'main',url:'https://example.test/changed',kind:'pageview'}])).status,409);assert.equal(store.get('main','batch-conflict'),undefined);
+ assert.equal((await send({id:'dnt',site:'main',url:'https://example.test/',kind:'pageview'},{dnt:'1'})).status,202);assert.equal(store.get('main','dnt'),undefined);
  const report=await fetch(base+'/api/v1/query',{method:'POST',headers:{authorization:'Bearer valid'},body:JSON.stringify({site:'main',from:1,until:2})});assert.equal(report.status,200);assert.equal((await report.json()).totals.pageviews,'1');
  assert.equal((await fetch(base+'/api/v1/query',{method:'POST',body:'{}'})).status,401);
  const failed=await fetch(base+'/api/v1/query',{method:'POST',headers:{authorization:'Bearer explode'},body:JSON.stringify({site:'main',from:1,until:2})});assert.equal(failed.status,503);assert.deepEqual(await failed.json(),{error:'service_unavailable',message:'Service unavailable; retry with the same event id'});
@@ -69,3 +73,9 @@ test('optional local datacenter filter ignores hosting ranges without storing IP
  assert.equal(normalize({...input,referrer:'https://sub.semalt.com/'},site,context),null);
  assert.ok(normalize({...input,referrer:'https://notsemalt.com/'},site,context));
 });
+
+test('cookie normalization is consent-gated, site-scoped, stable across daily salt/IP changes',()=>{
+ const cookieId='12345678-1234-4234-8234-123456789abc',raw={id:'cookie',url:'https://example.test/',kind:'pageview',cookieId,cookieConsent:true};
+ const first=normalize(raw,site,context);assert.match(first.visitor,/^c:[a-f0-9]{64}$/);assert.equal(normalize(raw,site,{...context,ip:'198.51.100.1',salt:Buffer.alloc(32,2)}).visitor,first.visitor);assert.throws(()=>normalize({...raw,cookieConsent:false},site,context),/consent/);assert.notEqual(normalize({...raw,url:'https://other.test/'},{...site,id:'other',domain:'other.test'},context).visitor,first.visitor);
+});
+test('collector capacity rejects a whole batch before storing any prefix',()=>{const dir=mkdtempSync(join(tmpdir(),'crumbs-capacity-')),store=new Store(dir,{maxPending:1});try{assert.throws(()=>store.putBatch([event('one'),event('two')]),/full/);assert.equal(store.count('pending'),0);assert.deepEqual(store.putBatch([event('one')]),['pending']);}finally{store.close();rmSync(dir,{recursive:true,force:true});}});

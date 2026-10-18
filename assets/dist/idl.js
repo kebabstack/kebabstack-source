@@ -4,7 +4,7 @@ export const idlFactory = ({ IDL }) => {
   const Valuation = IDL.Record({ at: IDL.Int, by: IDL.Text, input: ValuationInput, revision: IDL.Nat });
   const Snapshot = IDL.Record({ checkedAt: IDL.Int, metrics: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)), schema: IDL.Nat, state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }) });
   const AiState = IDL.Record({ connectorId: IDL.Nat, keySet: IDL.Bool, laneGranted: IDL.Bool, model: IDL.Text, source: IDL.Text });
-  const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, ai: AiState, aiModel: IDL.Text, aiSource: IDL.Text, appUrl: IDL.Text, hubId: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat, photoBytes: IDL.Nat, tagPrefix: IDL.Text, trustId: IDL.Text, trustLastPull: IDL.Int });
+  const Settings = IDL.Record({ adminCount: IDL.Nat, adminEmails: IDL.Vec(IDL.Text), adminGroup: IDL.Text, ai: AiState, aiModel: IDL.Text, aiSource: IDL.Text, appUrl: IDL.Text, hubId: IDL.Text, lastDirectoryPull: IDL.Int, orgName: IDL.Text, peopleCount: IDL.Nat, photoBytes: IDL.Nat, trustId: IDL.Text, trustLastPull: IDL.Int });
   const Selection = IDL.Variant({ all: IDL.Null, ids: IDL.Vec(IDL.Nat) });
   const SalesFilter = IDL.Record({ completed: IDL.Bool, mine: IDL.Bool, offset: IDL.Nat, selection: Selection });
   const Buyer = IDL.Record({ country: IDL.Text, email: IDL.Text, houseNo: IDL.Text, name: IDL.Text, pid: IDL.Text, postalCode: IDL.Text, street: IDL.Text, town: IDL.Text });
@@ -14,6 +14,8 @@ export const idlFactory = ({ IDL }) => {
   const SaleSummary = IDL.Record({ assetId: IDL.Nat, buyerName: IDL.Text, creditNoteNo: IDL.Text, currency: IDL.Text, deviceName: IDL.Text, deviceTag: IDL.Text, grossMinor: IDL.Nat, id: IDL.Nat, invoiceNo: IDL.Text, mdmRemoved: IDL.Bool, phase: IDL.Text, receiptPending: IDL.Bool, status: IDL.Text, updatedAt: IDL.Int, wiped: IDL.Bool });
   const Read = IDL.Record({ confidence: IDL.Float64, kind: IDL.Text, value: IDL.Text });
   const ReadResult = IDL.Record({ detail: IDL.Text, kind: IDL.Text, model: IDL.Text, notes: IDL.Text, ok: IDL.Bool, reads: IDL.Vec(Read), retryable: IDL.Opt(IDL.Bool), sticker: IDL.Text, vendor: IDL.Text });
+  const Reread = IDL.Record({ detail: IDL.Text, ok: IDL.Bool, photoId: IDL.Nat, result: ReadResult });
+  const RegisterOptions = IDL.Record({ digits: IDL.Nat, locations: IDL.Vec(IDL.Text), nextTag: IDL.Text, prefix: IDL.Text });
   const Purchase = IDL.Record({ at: IDL.Int, by: IDL.Text, currency: IDL.Text, date: IDL.Text, note: IDL.Text, priceMinor: IDL.Nat });
   const Progress = IDL.Record({ bindings: IDL.Vec(IDL.Text), checkedAt: IDL.Int, open: IDL.Nat, sources: IDL.Nat, state: IDL.Text, total: IDL.Nat });
   const PhotoMeta = IDL.Record({ assetId: IDL.Nat, at: IDL.Int, by: IDL.Text, eventId: IDL.Nat, id: IDL.Nat, mime: IDL.Text, size: IDL.Nat });
@@ -30,7 +32,9 @@ export const idlFactory = ({ IDL }) => {
   const MdmMeta = IDL.Record({ compliance: IDL.Text, connId: IDL.Nat, connName: IDL.Text, deviceName: IDL.Text, externalId: IDL.Text, kind: IDL.Text, lastSeen: IDL.Text, osVersion: IDL.Text, syncedAt: IDL.Int, userEmail: IDL.Text, userName: IDL.Text });
   const Manifest = IDL.Record({ description: IDL.Text, name: IDL.Text, needs: IDL.Vec(IDL.Text), version: IDL.Text, wants: IDL.Vec(IDL.Text) });
   const LogRow = IDL.Record({ at: IDL.Int, what: IDL.Text, who: IDL.Text });
+  const LabelLayoutView = IDL.Record({ fields: IDL.Vec(IDL.Text), note: IDL.Text, size: IDL.Text });
   const Item = IDL.Record({ detail: IDL.Text, historical: IDL.Bool, id: IDL.Text, kind: IDL.Text, path: IDL.Text, status: IDL.Text, title: IDL.Text });
+  const Hardware = IDL.Record({ cores: IDL.Nat, encrypted: IDL.Text, fetchedAt: IDL.Int, memoryGb: IDL.Nat, modelId: IDL.Text, processor: IDL.Text, source: IDL.Text, storageFreeGb: IDL.Nat, storageGb: IDL.Nat });
   const Case = IDL.Record({ desk: IDL.Text, dueAt: IDL.Opt(IDL.Int), key: IDL.Text, person: IDL.Text, revision: IDL.Int, state: IDL.Text, ticket: IDL.Nat, url: IDL.Text });
   const Handover = IDL.Record({ assetId: IDL.Nat, caseKey: IDL.Text, choice: IDL.Text, dueOn: IDL.Text, note: IDL.Text, owner: IDL.Text, person: IDL.Text, recipient: IDL.Text, revision: IDL.Nat, saleId: IDL.Nat, stage: IDL.Text, updatedAt: IDL.Int });
   const HandoverView = IDL.Record({ context: Case, device: IDL.Text, done: IDL.Bool, identifier: IDL.Text, ownerName: IDL.Text, personName: IDL.Text, plan: Handover, progress: IDL.Text, recipientEmail: IDL.Text });
@@ -43,7 +47,7 @@ export const idlFactory = ({ IDL }) => {
   const DealStatus = IDL.Record({ active: IDL.Bool, completedAt: IDL.Int, downloadedAt: IDL.Int, exists: IDL.Bool, expiresAt: IDL.Int, generation: IDL.Nat, handedOverAt: IDL.Int, history: IDL.Vec(DealEvent), notification: IDL.Text, openedAt: IDL.Int });
   const Context = IDL.Record({ checkedAt: IDL.Int, items: IDL.Vec(Item), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   const Asset = IDL.Record({ archived: IDL.Bool, assignee: IDL.Text, createdAt: IDL.Int, createdBy: IDL.Text, holder: IDL.Text, id: IDL.Nat, kind: IDL.Text, model: IDL.Text, note: IDL.Text, serial: IDL.Text, status: IDL.Text, tag: IDL.Text, updatedAt: IDL.Int, vendor: IDL.Text });
-  const AssetRow = IDL.Record({ asset: Asset, assigneeEmail: IDL.Text, assigneeName: IDL.Text, createdByName: IDL.Text, lastAt: IDL.Int, lastEvent: IDL.Text, mdm: IDL.Text, mdmMismatch: IDL.Bool, mdmUser: IDL.Text, photoCount: IDL.Nat });
+  const AssetRow = IDL.Record({ abmCapacity: IDL.Text, asset: Asset, assigneeEmail: IDL.Text, assigneeName: IDL.Text, createdByName: IDL.Text, hardware: IDL.Opt(Hardware), lastAt: IDL.Int, lastEvent: IDL.Text, location: IDL.Text, mdm: IDL.Text, mdmMismatch: IDL.Bool, mdmUser: IDL.Text, mdmUserName: IDL.Text, photoCount: IDL.Nat });
   const Candidate = IDL.Record({ row: AssetRow, score: IDL.Nat, why: IDL.Text });
   const Billing = IDL.Record({ country: IDL.Text, currency: IDL.Text, depreciationMonths: IDL.Nat, floorPct: IDL.Nat, footer: IDL.Text, houseNo: IDL.Text, iban: IDL.Text, lang: IDL.Text, legalName: IDL.Text, minPriceMinor: IDL.Nat, paymentDays: IDL.Nat, postalCode: IDL.Text, prefix: IDL.Text, street: IDL.Text, town: IDL.Text, uid: IDL.Text, vatRateBp: IDL.Nat, vatRegistered: IDL.Bool, waiverText: IDL.Text, waiverVersion: IDL.Nat, yearInNumber: IDL.Bool });
   const AssetInput = IDL.Record({ kind: IDL.Text, model: IDL.Text, note: IDL.Text, serial: IDL.Text, tag: IDL.Text, vendor: IDL.Text });
@@ -60,8 +64,10 @@ export const idlFactory = ({ IDL }) => {
     addMdm: IDL.Func([IDL.Text, IDL.Record({ clientId: IDL.Text, kind: IDL.Text, name: IDL.Text, secret: IDL.Text, url: IDL.Text })], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool })], []),
     addPhoto: IDL.Func([IDL.Text, IDL.Nat, IDL.Vec(IDL.Nat8), IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     adminLogRows: IDL.Func([IDL.Text], [IDL.Vec(LogRow)], ["query"]),
+    applyReading: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, AssetInput], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     archiveAsset: IDL.Func([IDL.Text, IDL.Nat, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     attachSaleDocument: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Vec(IDL.Nat8)], [IDL.Record({ detail: IDL.Text, docId: IDL.Nat, ok: IDL.Bool })], []),
+    bulkPlace: IDL.Func([IDL.Text, IDL.Vec(IDL.Nat), IDL.Text, IDL.Text], [IDL.Record({ changed: IDL.Nat, detail: IDL.Text, ok: IDL.Bool, skipped: IDL.Nat })], []),
     cancelSale: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ creditNoteNo: IDL.Text, detail: IDL.Text, ok: IDL.Bool })], []),
     claimAdmin: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     completeDealHandover: IDL.Func([IDL.Text, IDL.Nat, IDL.Bool, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
@@ -84,9 +90,11 @@ export const idlFactory = ({ IDL }) => {
     financePayments: IDL.Func([IDL.Text, IDL.Bool, IDL.Nat], [IDL.Opt(IDL.Record({ matched: IDL.Nat, open: IDL.Nat, overdue: IDL.Nat, rows: IDL.Vec(IDL.Record({ buyer: IDL.Text, currency: IDL.Text, device: IDL.Text, dueOn: IDL.Text, id: IDL.Nat, number: IDL.Text, outstandingMinor: IDL.Nat })), totals: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat)) }))], ["query"]),
     financeSetup: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ activeMembers: IDL.Nat, enabled: IDL.Bool, mode: IDL.Text }))], []),
     formerBuyerStatus: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ eligible: IDL.Bool, person: IDL.Text, privateEmail: IDL.Text }))], ["query"]),
-    getAsset: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ abm: IDL.Opt(AbmDevice), asset: Asset, assigneeEmail: IDL.Text, assigneeName: IDL.Text, createdByName: IDL.Text, events: IDL.Vec(Event), mdm: IDL.Opt(MdmMeta), mdmMismatch: IDL.Bool, photos: IDL.Vec(PhotoMeta) }))], ["query"]),
+    getAsset: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ abm: IDL.Opt(AbmDevice), asset: Asset, assigneeEmail: IDL.Text, assigneeName: IDL.Text, createdByName: IDL.Text, events: IDL.Vec(Event), hardware: IDL.Opt(Hardware), location: IDL.Text, mdm: IDL.Opt(MdmMeta), mdmMismatch: IDL.Bool, photos: IDL.Vec(PhotoMeta) }))], ["query"]),
     getBilling: IDL.Func([IDL.Text], [IDL.Opt(Billing)], ["query"]),
     getDeal: IDL.Func([IDL.Nat, IDL.Text], [IDL.Opt(DealView)], ["query"]),
+    getLabelLayout: IDL.Func([IDL.Text], [IDL.Opt(LabelLayoutView)], ["query"]),
+    getLocations: IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], ["query"]),
     getSale: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(SaleView)], ["query"]),
     getSettings: IDL.Func([IDL.Text], [IDL.Opt(Settings)], ["query"]),
     handoverOf: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(HandoverView)], ["query"]),
@@ -114,8 +122,10 @@ export const idlFactory = ({ IDL }) => {
     listAssets: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Bool], [IDL.Vec(AssetRow)], ["query"]),
     listMdm: IDL.Func([IDL.Text], [IDL.Vec(MdmView)], ["query"]),
     listSales: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(SaleView)], ["query"]),
+    loginWithSuite: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     markPaid: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    mdmDetailsPreview: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     myOffers: IDL.Func([IDL.Text], [IDL.Vec(SaleView)], ["query"]),
     notifyStatus: IDL.Func([IDL.Text], [IDL.Opt(NotifyState)], ["query"]),
     offerSale: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
@@ -127,10 +137,14 @@ export const idlFactory = ({ IDL }) => {
     recordSalePayment: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, PaymentInput], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     recordWaiver: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     refreshAi: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, state: AiState })], []),
+    refreshHardware: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    registerDevice: IDL.Func([IDL.Text, IDL.Record({ assignee: IDL.Text, create: AssetInput, location: IDL.Text, mime: IDL.Text, photo: IDL.Opt(IDL.Vec(IDL.Nat8)), status: IDL.Text })], [IDL.Record({ assetId: IDL.Nat, detail: IDL.Text, ok: IDL.Bool, tag: IDL.Text })], []),
+    registerOptions: IDL.Func([IDL.Text], [IDL.Opt(RegisterOptions)], ["query"]),
     removeAbm: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     removeDemo: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     removeMdm: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     removePhoto: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    rereadPhoto: IDL.Func([IDL.Text, IDL.Nat], [Reread], []),
     revokeDealLink: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     saleDocument: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ bytes: IDL.Vec(IDL.Nat8), hash: IDL.Text, mime: IDL.Text, name: IDL.Text }))], ["query"]),
     saleFinanceNotification: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(IDL.Record({ complete: IDL.Bool, detail: IDL.Text, kind: IDL.Text }))], ["query"]),
@@ -141,11 +155,15 @@ export const idlFactory = ({ IDL }) => {
     saveAssetValuation: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, ValuationInput], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     seedDemo: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setAdminEmails: IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setAssetLocation: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setBilling: IDL.Func([IDL.Text, Billing], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setHub: IDL.Func([IDL.Text], [IDL.Bool], []),
+    setLabelLayout: IDL.Func([IDL.Text, LabelLayoutView], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setLocations: IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setPurchase: IDL.Func([IDL.Text, IDL.Nat, IDL.Opt(IDL.Nat), IDL.Text, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSaleChecks: IDL.Func([IDL.Text, IDL.Nat, IDL.Bool, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
-    setSettings: IDL.Func([IDL.Text, IDL.Record({ adminGroup: IDL.Text, appUrl: IDL.Text, orgName: IDL.Text, tagPrefix: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setSettings: IDL.Func([IDL.Text, IDL.Record({ adminGroup: IDL.Text, appUrl: IDL.Text, orgName: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setTagScheme: IDL.Func([IDL.Text, IDL.Record({ digits: IDL.Nat, prefix: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setTrustCanister: IDL.Func([IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setValuationDefaults: IDL.Func([IDL.Text, IDL.Nat, IDL.Vec(IDL.Record({ kind: IDL.Text, months: IDL.Nat }))], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     signOut: IDL.Func([IDL.Text], [], []),

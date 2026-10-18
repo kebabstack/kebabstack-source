@@ -20,17 +20,18 @@ export class Store {
     return this.db.prepare('SELECT secret FROM salts WHERE day=?').get(day).secret;
   }
   get(site,id){return this.db.prepare('SELECT payload,state FROM events WHERE site=? AND id=?').get(site,id);}
-  put(event) {
-    const old=this.get(event.site,event.id);if(old)return old.state;
-    if(this.count('pending')>=this.maxPending)throw Object.assign(new Error('Collector queue is full'),{status:503});
+  put(event) {return this.putBatch([event])[0];}
+  putBatch(events) {
+    const fresh=new Set(events.filter(e=>!this.get(e.site,e.id)).map(e=>e.site+':'+e.id));
+    if(this.count('pending')+fresh.size>this.maxPending)throw Object.assign(new Error('Collector queue is full'),{status:503});
     this.db.exec('BEGIN IMMEDIATE');
     try {
-      const r=this.db.prepare('INSERT INTO events(site,id,payload,created) VALUES (?,?,?,?)').run(event.site,event.id,'',event.at);
-      event.order=Number(r.lastInsertRowid);
-      this.db.prepare('UPDATE events SET payload=? WHERE seq=?').run(JSON.stringify(event),r.lastInsertRowid);
-      this.db.exec('COMMIT');
+      const states=events.map(event=>{const old=this.get(event.site,event.id);if(old)return old.state;
+        const r=this.db.prepare('INSERT INTO events(site,id,payload,created) VALUES (?,?,?,?)').run(event.site,event.id,'',event.at);
+        const stored={...event,order:Number(r.lastInsertRowid)};
+        this.db.prepare('UPDATE events SET payload=? WHERE seq=?').run(JSON.stringify(stored),r.lastInsertRowid);return 'pending';});
+      this.db.exec('COMMIT');return states;
     } catch(e) {this.db.exec('ROLLBACK');throw e;}
-    return 'pending';
   }
   count(state){return this.db.prepare('SELECT COUNT(*) AS n FROM events WHERE state=?').get(state).n;}
   oldestPending(){return this.db.prepare("SELECT MIN(created) AS at FROM events WHERE state='pending'").get().at??null;}

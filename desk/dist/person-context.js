@@ -27,7 +27,7 @@ export function createPersonContext({root, lifecycleRoot, api, getMe, session, r
       full=data;
       const p=data.person;
       const open=[...root.querySelectorAll('details[open][data-source]')].map(x=>x.dataset.source);
-      root.innerHTML=`<div class="field-heading"><h3>${p.id === ticket.requester.id ? 'Person & related work' : 'Affected person'}</h3><button type="button" class="text-button" data-refresh-context aria-label="Refresh person context">Refresh</button></div><div class="context-person"><strong>${esc(p.displayName || p.email || 'Unknown person')}</strong><span>${esc(p.email)}</span>${p.department ? `<span>${esc(p.department)}</span>` : ''}<span class="pill ${p.active ? '' : 'off'}">${p.active ? 'Active in Desk directory' : 'Inactive in Desk directory'}</span></div><p class="context-caption">Live summaries · your app permissions apply</p><div data-hardware></div><div data-context-sources></div><div data-context-tickets></div><p class="context-caption" data-context-status role="status">Checking connected apps…</p>`;
+      root.innerHTML=`<div class="field-heading"><h3>${p.id === ticket.requester.id ? 'Person & related work' : 'Affected person'}</h3><button type="button" class="text-button" data-refresh-context aria-label="Refresh person context">Refresh</button></div><div class="context-person"><strong>${esc(p.displayName || p.email || 'Unknown person')}</strong><span>${esc(p.email)}</span>${p.department ? `<span>${esc(p.department)}</span>` : ''}<span class="pill ${p.active ? '' : 'off'}">${p.active ? 'Active in Desk directory' : 'Inactive in Desk directory'}</span></div><p class="context-caption">Live summaries · your app permissions apply</p><div data-hardware></div><div data-seats></div><div data-context-sources></div><div data-context-tickets></div><p class="context-caption" data-context-status role="status">Checking connected apps…</p>`;
       root.querySelector('[data-refresh-context]').onclick=()=>load(ticket,true);
       renderLifecycle(data.lifecycle, id, valid);
       const hardware=root.querySelector('[data-hardware]');
@@ -44,6 +44,17 @@ export function createPersonContext({root, lifecycleRoot, api, getMe, session, r
             form.onsubmit=async e=>{e.preventDefault();if(!valid())return;const button=form.querySelector('button'),status=form.querySelector('[role=status]');button.disabled=true;try{const r=await api().cancelOffboarding(session.load(),id,c.revision,form.elements.reason.value);if(!valid())return;status.textContent=r.detail;if(r.ok){checked=0;await reload(id);}}catch{if(valid())status.textContent='Could not confirm cancellation. Refresh the case before retrying.';}finally{button.disabled=false;}};
           }
         }).catch(()=>{if(valid())hardware.innerHTML='<p class="context-caption" role="status">Hardware follow-up is unavailable. Refresh before completing this offboarding.</p>';});
+      }
+
+      const seats=root.querySelector('[data-seats]');
+      if(typeof api().offboardingSeats === 'function') {
+        seats.innerHTML='<p class="context-caption" role="status">Checking licenses &amp; seats…</p>';
+        api().offboardingSeats(session.load(),id).then(optional=>{
+          if(!valid())return;
+          const s=opt(optional); if(!s){seats.replaceChildren();return;}
+          const p=s.progress,c=s.context,ready=p.state==='ready';
+          seats.innerHTML=`<div class="hardware-summary"><div class="field-heading"><h3>Licenses &amp; seats</h3><span class="pill ${ready&&Number(p.open)===0?'':'off'}">${c.state==='cancelled'?'Cancelled':ready?`${Number(p.total)-Number(p.open)} of ${p.total} released`:'Not verified'}</span></div><p class="context-caption">${c.state==='cancelled'?'Departure cancelled. Seat assignments stay as they are.':!ready?(Number(p.sources)?'Contracts could not be checked. The checklist keeps its last known state.':'No Contracts app is connected; tick the seats item by hand.'):c.state==='review'?'Confirm departure to ask each contract owner to release the seat.':c.state==='paused'?'Paused while the account change or approval is reviewed.':Number(p.total)===0?'No seats assigned at the last check.':'Each contract owner was told once. Seats are released in Contracts and checked here automatically.'}</p></div>`;
+        }).catch(()=>{if(valid())seats.innerHTML='<p class="context-caption" role="status">Seat follow-up is unavailable. Refresh before completing this offboarding.</p>';});
       }
 
       const related=root.querySelector('[data-context-tickets]');

@@ -110,12 +110,25 @@ type Result_3 =
    err: Error;
    ok: vec SavedReport;
  };
-type Result_20 =
+type Result_22 =
  variant {
    err: Error;
    ok: record {
          people: vec AccessPerson;
          truncated: bool;
+       };
+ };
+type Result_21 =
+ variant {
+   err: Error;
+   ok: vec Annotation;
+ };
+type Result_20 =
+ variant {
+   err: Error;
+   ok: record {
+         key: Key;
+         token: text;
        };
  };
 type Result_2 =
@@ -126,30 +139,17 @@ type Result_2 =
 type Result_19 =
  variant {
    err: Error;
-   ok: vec Annotation;
- };
-type Result_18 =
- variant {
-   err: Error;
-   ok: record {
-         key: Key;
-         token: text;
-       };
- };
-type Result_17 =
- variant {
-   err: Error;
    ok: record {
          cursor: text;
          events: vec Event;
        };
  };
-type Result_16 =
+type Result_18 =
  variant {
    err: Error;
    ok: vec nat;
  };
-type Result_15 =
+type Result_17 =
  variant {
    err: Error;
    ok:
@@ -162,10 +162,24 @@ type Result_15 =
       visitors: nat;
     };
  };
-type Result_14 =
+type Result_16 =
+ variant {
+   err: Error;
+   ok: vec record {
+             completions: nat;
+             value: text;
+             visitors: nat;
+           };
+ };
+type Result_15 =
  variant {
    err: Error;
    ok: vec Goal;
+ };
+type Result_14 =
+ variant {
+   err: Error;
+   ok: bool;
  };
 type Result_13 =
  variant {
@@ -211,6 +225,7 @@ type Result =
  };
 type ReportRequest =
  record {
+   dayStarts: opt vec int;
    dimension: text;
    filters: vec Filter;
    from: int;
@@ -440,8 +455,8 @@ type AccessPerson =
    id: text;
  };
 service : {
-  accessPeople: (token: text, site: text, search: text) -> (Result_20) query;
-  annotations: (token: text, site: text) -> (Result_19) query;
+  accessPeople: (token: text, site: text, search: text) -> (Result_22) query;
+  annotations: (token: text, site: text) -> (Result_21) query;
   collectorSites: () -> (vec Site) query;
   configureCollectors: (collectors: vec principal) -> ();
   createKey: (token: text, site: text, name: text, scope:
@@ -449,19 +464,22 @@ service : {
      manage;
      read;
      share;
-   }, days: nat) -> (Result_18);
+   }, days: nat) -> (Result_20);
   deleteGoal: (token: text, site: text, id: text) -> (Result_5);
   deleteReport: (token: text, site: text, id: text, revision: nat) ->
    (Result_5);
   deleteSite: (token: text, id: text) -> (Result_5);
   exportEvents: (token: text, site: text, after: text, limit: nat) ->
-   (Result_17) query;
+   (Result_19) query;
   funnel: (token: text, request: ReportRequest, steps: vec FunnelStep) ->
-   (Result_16) query;
+   (Result_18) query;
   getSiteAccess: (token: text, site: text) -> (Result) query;
   goalReport: (token: text, request: ReportRequest, id: text) ->
-   (Result_15) query;
-  goals: (token: text, site: text) -> (Result_14) query;
+   (Result_17) query;
+  goalRows: (token: text, request: ReportRequest, id: text) ->
+   (Result_16) query;
+  goals: (token: text, site: text) -> (Result_15) query;
+  hasImports: (token: text, site: text) -> (Result_14) query;
   health: (token: text) -> (Result_13) query;
   http_request: (_req: HttpRequest) -> (HttpResponse) query;
   http_request_update: (req: HttpRequest) -> (HttpResponse);
@@ -485,6 +503,15 @@ service : {
   journeys: (token: text, request: ReportRequest) -> (Result_9) query;
   listKeys: (token: text) -> (Result_8) query;
   listSites: (token: text) -> (vec SiteView) query;
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {

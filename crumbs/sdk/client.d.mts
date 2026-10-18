@@ -1,12 +1,14 @@
 export type Integer = string;
 export interface Filter { dimension: string; values: string[]; exclude: boolean }
-export interface Query {site:string;from:number;until:number;dimension?:string;filters?:Filter[];limit?:number}
+export interface Query {site:string;from:number;until:number;dimension?:string;filters?:Filter[];limit?:number;dayStarts?:number[]}
 export interface Metrics {visitors:Integer;visits:Integer;pageviews:Integer;events:Integer;bounces:Integer;durationSeconds:Integer;engagementMs:Integer;scrollDepthSum:Integer;scrollSamples:Integer;revenue:[string,Integer][]}
 export interface Report {totals:Metrics;rows:{value:string;metrics:Metrics}[];scanned:Integer;truncated:boolean}
 export interface Site {id:string;name:string;domain:string;timezone?:string;retentionDays?:number;enabled?:boolean;allowedProperties?:string[];excludedPaths?:string[];viewers?:string[]}
 export interface AccessPerson {id:string;email:string;displayName:string;active:boolean;eligible:boolean;automatic:boolean}
 export interface SiteAccess {site:string;revision:Integer;readers:AccessPerson[];managers:AccessPerson[];legacyAllReaders:boolean;updatedBy:string;updatedAt:Integer}
-export interface Event {id:string;site:string;url:string;referrer?:string;kind:'pageview'|'event'|'engagement';name?:string;props?:Record<string,string|number|boolean>;interactive?:boolean;revenueMinor?:number;currency?:string;engagementMs?:number;scrollDepth?:number}
+export interface Event {id:string;site:string;url:string;referrer?:string;kind:'pageview'|'event'|'engagement';name?:string;props?:Record<string,string|number|boolean>;interactive?:boolean;revenueMinor?:number;currency?:string;engagementMs?:number;scrollDepth?:number;cookieId?:string;cookieConsent?:boolean}
+/** Normalized export; raw cookie IDs, IP/UA and original URLs are not stored. */
+export interface StoredEvent {id:string;site:string;visitor:string;path:string;hostname:string;source:string;medium:string;campaign:string;content:string;term:string;country:string;region:string;city:string;device:string;browser:string;os:string;name:string;currency:string;at:Integer;order:Integer;kind:{pageview:null}|{event:null}|{engagement:null};props:[string,string][];interactive:boolean;revenueMinor:Integer;engagementMs:Integer;scrollDepth:Integer}
 export interface Goal {id:string;site:string;name:string;kind:'page'|'event'|'scroll';value:string;scrollDepth?:number|string|null}
 export interface Key {id:string;owner:string;site:string;name:string;scope:'read'|'manage'|'share';expiresAt:Integer}
 export interface Annotation {id:string;site:string;at:Integer;text:string}
@@ -28,5 +30,5 @@ export class Crumbs {
  journeys(request:Query):Promise<[string,string,Integer][]>;
  goalReport(request:Query&{id:string}):Promise<{visitors:Integer;completions:Integer;revenue:[string,Integer][]}>;
  goals(site:string):Promise<Goal[]>;saveGoal(goal:Goal):Promise<unknown>;
- exportEvents(site:string,options?:{limit?:number}):AsyncGenerator<Record<string,unknown>>;
+ exportEvents(site:string,options?:{limit?:number}):AsyncGenerator<StoredEvent>;
 }

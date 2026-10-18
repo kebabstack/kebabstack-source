@@ -16,6 +16,12 @@ import Text "mo:core/Text";
 import List "mo:core/List";
 import Iter "mo:core/Iter";
 import Blob "mo:core/Blob";
+import Array "mo:core/Array";
+import Nat "mo:core/Nat";
+import Nat8 "mo:core/Nat8";
+import Int "mo:core/Int";
+import Char "mo:core/Char";
+import Sha256 "mo:sha2/Sha256";
 import Permissions "Permissions";
 
 module {
@@ -114,6 +120,7 @@ module {
   /// the caller being a REGISTERED connector (Apps → Connect an app).
   public type Hub = actor {
     redeemTicket : shared (Text) -> async RedeemResult;
+    redeemSuiteLogin : shared (Text) -> async RedeemResult; // hub ≥ 0.40: the suite cookie's token — reusable while the Hub session lives, re-checked per app
     checkAccess : shared query (Text) -> async Access;
     principalPerson : shared query (Text) -> async ?{ email : Text; access : Access };
     connectorDirectory : shared query () -> async [DirectoryRow];
@@ -407,6 +414,22 @@ module {
       };
     };
     Text.decodeUtf8(Blob.fromArray(out.toArray())) ?? t;
+  };
+
+  // ---------- session tokens without a consensus round (hub ≥ 0.40) ----------
+  //
+  // Keep `var tokenSeed : ?Blob = null` and `var tokenCounter : Nat = 0` as stable fields. Fill the
+  // seed once with raw_rand (`if (tokenSeed == null) { let r = await ic.raw_rand(); if (tokenSeed == null) tokenSeed := ?r }`),
+  // then every token is `Hub.deriveToken(seed, counter, Time.now())`: a SHA-256 over the secret seed,
+  // a counter and the time. Unpredictable without the canister state; no management-canister call per sign-in.
+  public func deriveToken(seed : Blob, counter : Nat, now : Int) : Text {
+    hexOf(Sha256.fromArray(#sha256, Array.concat(Blob.toArray(seed), Blob.toArray(Text.encodeUtf8("tok:" # Nat.toText(counter) # ":" # Int.toText(now))))));
+  };
+  func hexOf(b : Blob) : Text {
+    let digits = Text.toArray("0123456789abcdef");
+    var out = "";
+    for (byte in Blob.toArray(b).vals()) { let v = Nat8.toNat(byte); out #= Char.toText(digits[v / 16]) # Char.toText(digits[v % 16]) };
+    out;
   };
 
   /// Ticket sanity before the inter-canister call: hex, 16–160 chars.

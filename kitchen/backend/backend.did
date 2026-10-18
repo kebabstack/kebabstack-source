@@ -79,9 +79,6 @@ type Install =
 /// update_settings / stop / delete work from a canister without cycles.
 /// Stable state is append-only (never remove or rename a top-level var).
 service : {
-  /// Register canisters that were deployed by hand as an installed recipe, so
-  /// the kitchen can update them from now on. Requires the kitchen to be a
-  /// controller of both (add-controller once, like for the vault).
   adopt: (recipeId: text, backend: text, frontend: text, version: text) ->
    (record {
       detail: text;
@@ -165,6 +162,17 @@ service : {
                            detail: text;
                            ok: bool;
                          });
+  /// Register canisters that were deployed by hand as an installed recipe, so
+  /// the kitchen can update them from now on. Requires the kitchen to be a
+  /// controller of both (add-controller once, like for the vault).
+  /// 0.9.0 · installation files: a Hub owner places one file under /.well-known/ on an installed app's frontend
+  /// (custom-domain ownership `ic-domains`, deployment metadata). The Kitchen is the only principal that may write
+  /// there; nothing else on the frontend changes, release updates keep these keys, shared recipes never carry them.
+  setInstallationFile: (recipeId: text, key: text, contentType: text,
+   content: blob) -> (record {
+                        detail: text;
+                        ok: bool;
+                      });
   setPantry: (id: text) -> (record {
                               detail: text;
                               ok: bool;

@@ -46,3 +46,14 @@ source is not a backup of the data in a running installation.
 For future updates, keep production identities and operational configuration
 outside this repository. Follow [the source publication procedure](PUBLIC-SOURCE.md)
 and the versioned Kitchen release workflow for deployable packages.
+
+## Source maintenance — 18 October 2026
+
+The current source update includes Assets 0.28.0, Contracts 0.19.0, Desk 0.33.0,
+Crumbs 0.9.1, Hub 0.40.1, Kitchen 0.9.1, MCP 0.3.1 and website 0.5.6.
+Public Bug 0.20.x and legacy Bug2D 0.2.5 are preserved instead of replacing them
+with older internal game sources. Bug 0.20.2 synchronizes its bundled SDK copy;
+the reviewed standalone game shell remains independent of company navigation.
+Source publication does not deploy any installation. Pinned development tooling
+still has dependency advisories; a passing runtime dependency audit is not a
+whole-toolchain clearance. See module tests and installation guides.

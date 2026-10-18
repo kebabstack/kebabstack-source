@@ -1,6 +1,6 @@
 # Install or upgrade Ship the Bug
 
-Version 0.20.1 fixes the boost fade, input release, shader portability and narrow
+Version 0.20.2 synchronizes the bundled suite client without changing standalone sign-in or game rules. Version 0.20.1 fixes the boost fade, input release, shader portability and narrow
 layouts. Upgrade recipe **bug** in place; preserve both canisters, origin, boards and profiles. No
 schema or ruleset change is required. The backend differs only in BUILD_VERSION.
 

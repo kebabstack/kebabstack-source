@@ -1866,6 +1866,16 @@ service : {
   listCustomerTypes: (tok: text, projectId: nat) -> (vec Type) query;
   listFormsSources: (tok: text, projectId: nat) -> (vec FormsSource) query;
   listTickets: (tok: text, f: Filter__1) -> (vec TicketRow) query;
+  /// Sign in with the suite cookie's token (hub ≥ 0.40): the Hub re-checks the person and their access to this app.
+  loginWithSuite: (token: text) ->
+   (opt
+     record {
+       displayName: text;
+       email: text;
+       role: text;
+       suiteToken: text;
+       token: text;
+     });
   loginWithTicket: (ticket: text) ->
    (opt
      record {
@@ -1897,6 +1907,11 @@ service : {
           typeId: opt nat;
         }) query;
   offboardingHardware: (tok: text, id: nat) ->
+   (opt record {
+          context: Case;
+          progress: Progress;
+        });
+  offboardingSeats: (tok: text, id: nat) ->
    (opt record {
           context: Case;
           progress: Progress;
@@ -2039,6 +2054,10 @@ service : {
                                         });
   resolveOncallIncident: (tok: text, id: nat, revision: nat, resolution:
    text) -> (Result);
+  retrySlackImages: (tok: text, id: nat) -> (record {
+                                               detail: text;
+                                               ok: bool;
+                                             });
   reviewReportingRecord: (tok: text, id: nat, recordId: nat, revision:
    nat, approve: bool, reason: text) -> (Result);
   revokeCustomerKey: (tok: text, id: nat) -> (bool);

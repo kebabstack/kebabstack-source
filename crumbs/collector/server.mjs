@@ -7,6 +7,7 @@ import {Actor,HttpAgent} from '@icp-sdk/core/agent';
 import {Ed25519KeyIdentity} from '@icp-sdk/core/identity';
 import {idlFactory} from '../dist/idl.js';
 import {Store,flush} from './store.mjs';
+import {isDeepStrictEqual} from 'node:util';
 import {normalize,clientIp,isBot,identifier} from './privacy.mjs';
 import {api} from './api.mjs';
 import {deadlineActor,rpcFetch} from './transport.mjs';
@@ -36,20 +37,24 @@ export function createCollector({actor,store,trustedProxies=[],lookup=()=>({}),n
         const rateKey=createHmac('sha256',salt).update(ip).digest('hex');
         if(!rates.has(rateKey)&&rates.size>=10000|| (rates.get(rateKey)??0)+batch.length>300){send(429,{error:'rate_limited'},{'Retry-After':'60'});return;}
         rates.set(rateKey,(rates.get(rateKey)??0)+batch.length);
-        let queued=0,ignored=0;const records=[];
+        let queued=0,ignored=0;const records=[],pending=new Map();
         for(const raw of batch){
           if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new TypeError('Event must be an object');
           const site=sites.find(s=>s.id===raw.site||(!raw.site&&s.domain===(raw.domain??raw.d)));
           if(!site||!site.enabled)throw Object.assign(new Error('Unknown or paused site'),{status:404});
           if(req.headers.origin){const origin=new URL(req.headers.origin);if(origin.hostname!==site.domain||!['http:','https:'].includes(origin.protocol))throw Object.assign(new Error('Origin does not match website'),{status:403});res.setHeader('Access-Control-Allow-Origin',origin.origin);res.setHeader('Vary','Origin');}
-          if(isBot(ua)||req.headers['sec-gpc']==='1'){ignored++;continue;}
+          if(isBot(ua)||req.headers['sec-gpc']==='1'||req.headers.dnt==='1'){ignored++;continue;}
           const id=raw.id??randomUUID();if(!identifier(id))throw new TypeError('Invalid event id');
-          const prior=store.get(site.id,id);
-          if(prior){if(prior.state==='rejected')throw Object.assign(new Error('Event previously rejected; inspect collector health'),{status:422});queued++;continue;}
-          const record=normalize({...raw,id},site,{ip,ua,salt,now:time,geo:lookup(ip)});
-          if(record)records.push(record);else ignored++;
+          const prior=store.get(site.id,id),record=normalize({...raw,id},site,{ip,ua,salt,now:time,geo:lookup(ip)});
+          const old=prior?JSON.parse(prior.payload):pending.get(site.id+':'+id);
+          if(old){
+            if(prior?.state==='rejected')throw Object.assign(new Error('Event previously rejected; inspect collector health'),{status:422});
+            if(!record||((old.visitor.startsWith('c:')||record.visitor.startsWith('c:'))&&old.visitor!==record.visitor)||!isDeepStrictEqual({...record,at:old.at,order:old.order,visitor:old.visitor},old))throw Object.assign(new Error('Event ID already used with different data'),{status:409});
+            queued++;continue;
+          }
+          if(record){records.push(record);pending.set(site.id+':'+id,record);}else ignored++;
         }
-        for(const record of records){store.put(record);queued++;}
+        store.putBatch(records);queued+=records.length;
         send(202,{queued,ignored,durability:'collector',delivery:'asynchronous'});void drain();return;
       }
       const token=/^Bearer ([^\s]+)$/.exec(req.headers.authorization??'')?.[1]??'';

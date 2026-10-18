@@ -1,5 +1,9 @@
 # Changelog — kebab-mcp
 
+## [0.3.1] — 2026-10-18
+
+- Update the MCP SDK and affected transitive dependencies to patched compatible releases. The connector remains a local stdio server with unchanged app permissions and update retry rules.
+
 ## [0.3.0] — 2026-09-23
 
 - Recheck Hub authorization and menu membership before app calls, including cached sessions. Fail closed on Hub errors, isolate caches by Hub/tile/backend and reject ambiguous or partial app names. Coalesce concurrent sign-ins and refresh live interfaces.

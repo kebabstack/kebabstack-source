@@ -50,6 +50,7 @@ export const idlFactory = ({ IDL }) => {
     hub_usesGroup: IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], ["query"]),
     info: IDL.Func([], [IDL.Record({ appUrl: IDL.Text, hubId: IDL.Text, hubSet: IDL.Bool, orgName: IDL.Text, version: IDL.Text })], ["query"]),
     installScript: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Text)], ["query"]),
+    loginWithSuite: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     pullOwnersNow: IDL.Func([IDL.Text], [IDL.Record({ count: IDL.Nat, detail: IDL.Text, ok: IDL.Bool })], []),
     queryResults: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Record({ answered: IDL.Nat, rows: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Text)), sql: IDL.Text, targeted: IDL.Nat, title: IDL.Text }))], ["query"]),

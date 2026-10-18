@@ -1372,7 +1372,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.38.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.40.1"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1518,6 +1518,7 @@ const idlFactory = ({ IDL }) => {
     hub_supportContext: IDL.Func([IDL.Text, IDL.Text, IDL.Nat], [Context], []),
     hub_supportSources: IDL.Func([IDL.Text], [IDL.Vec(Source)], ["query"]),
     hub_syncHardware: IDL.Func([Case], [Progress], []),
+    hub_syncSeats: IDL.Func([Case], [Progress], []),
     hub_workboardSales: IDL.Func([IDL.Text, IDL.Nat, SalesFilter], [Page], []),
     hub_workboardSources: IDL.Func([IDL.Text], [IDL.Vec(Source)], ["query"]),
     icpChart: IDL.Func([], [IDL.Record({ body: IDL.Text, src: IDL.Text })], []),
@@ -1554,6 +1555,7 @@ const idlFactory = ({ IDL }) => {
     markNotificationsRead: IDL.Func([IDL.Text, IDL.Vec(IDL.Nat)], [IDL.Nat], []),
     mintAppTicket: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, ticket: IDL.Text, url: IDL.Text })], []),
     mintAssistantCode: IDL.Func([IDL.Text], [IDL.Record({ code: IDL.Text, detail: IDL.Text, ok: IDL.Bool })], []),
+    mintSuiteLogin: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, expiresAt: IDL.Int, ok: IDL.Bool, token: IDL.Text })], []),
     myAccess: IDL.Func([], [IDL.Record({ access: IDL.Variant({ active: IDL.Null, inactive: IDL.Null, unknown: IDL.Null }), email: IDL.Opt(IDL.Text) })], ["query"]),
     myAccessRequests: IDL.Func([IDL.Text], [IDL.Vec(AccessRequest)], ["query"]),
     myAssistants: IDL.Func([IDL.Text], [IDL.Vec(AssistantView)], ["query"]),
@@ -1592,6 +1594,7 @@ const idlFactory = ({ IDL }) => {
     reactivateUser: IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
     reassignOwned: IDL.Func([IDL.Nat, IDL.Vec(IDL.Text), IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, moved: IDL.Nat, ok: IDL.Bool })], []),
     redeemAssistantCode: IDL.Func([IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, displayName: IDL.Text, email: IDL.Text, expiresAt: IDL.Int, id: IDL.Text, ok: IDL.Bool, orgName: IDL.Text, token: IDL.Text })], []),
+    redeemSuiteLogin: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, displayName: IDL.Text, email: IDL.Text, id: IDL.Opt(IDL.Text), ok: IDL.Bool, suiteToken: IDL.Opt(IDL.Text) })], []),
     redeemTicket: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, displayName: IDL.Text, email: IDL.Text, id: IDL.Opt(IDL.Text), ok: IDL.Bool, suiteToken: IDL.Opt(IDL.Text) })], []),
     regenHookSecret: IDL.Func([IDL.Nat], [IDL.Text], []),
     regenSigningKey: IDL.Func([IDL.Nat], [IDL.Text], []),
@@ -1617,6 +1620,7 @@ const idlFactory = ({ IDL }) => {
     revokeGrant: IDL.Func([IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     revokeInvite: IDL.Func([IDL.Text], [IDL.Nat], []),
     revokeScimToken: IDL.Func([], [IDL.Bool], []),
+    revokeSuiteLogin: IDL.Func([IDL.Text], [IDL.Bool], []),
     rotateOidcSecret: IDL.Func([IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, secret: IDL.Text })], []),
     rotateScimSourceToken: IDL.Func([IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, token: IDL.Text })], []),
     runSetup: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Bool], []),
@@ -2812,6 +2816,7 @@ const kitchenIdlFactory = ({ IDL }) => {
     refresh: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
     removeLeftovers: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setHub: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setInstallationFile: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Vec(IDL.Nat8)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setPantry: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     update: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
     updateHub: IDL.Func([], [IDL.Record({ detail: IDL.Text, jobId: IDL.Nat, ok: IDL.Bool })], []),
@@ -3214,6 +3219,19 @@ async function ssoHandleRedirect() {
   } catch (e) { loginFailure("We couldn’t finish signing you in. Check your connection and start again."); return false; }
 }
 
+// Suite login (0.40.0): one Hub sign-in, every tool. The cookie lives on the company's parent domain only
+// (sdk suiteCookie.domainFor); tools on a public gateway address keep the ticket hand-off.
+async function ensureSuiteLogin() {
+  try {
+    const lib = globalThis.kebabHub || (await import("./sdk/hub-client.js"));
+    if (!lib.suiteCookie.domainFor(location.hostname) || lib.suiteCookie.read()) return;
+    const r = await pActor().mintSuiteLogin(pTok());
+    if (r.ok) lib.suiteCookie.write(r.token, Number(r.expiresAt / 1000000000n) - Math.floor(Date.now() / 1000), location.hostname);
+  } catch (e) {}
+}
+async function clearSuiteLogin() {
+  try { const lib = globalThis.kebabHub || (await import("./sdk/hub-client.js")); lib.suiteCookie.clear(location.hostname); } catch (e) {}
+}
 // ---------- portal avatar ----------
 const pInitials = (n, e) => ((n || e || "?").trim().split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join("") || "?").toUpperCase();
 async function loadPortalAvatar(u) {
@@ -3601,6 +3619,8 @@ function paintIdentity(u) {
 }
 async function showPortal(u) {
   if (oidcPending() && portalMode !== "passkey") { showOidcConsent(anonBackend, localStorage.getItem("uh-sso-token") || ""); return; }
+  const suite = ensureSuiteLogin(); // runs beside the portal; a jump to a tool waits for it so the tool finds the cookie
+  if (sessionStorage.getItem("uh-jump")) await suite;
   if (await resumeAppJump(u)) return;
   $("login").classList.add("hidden");
   $("layout").classList.add("hidden");
@@ -3626,10 +3646,11 @@ async function showPortal(u) {
 function showPortalData(s) { paintIdentity(s); }
 async function ssoSignOut() {
   clearInterval(portalPoller);
-  if (portalMode === "passkey") { try { await authClient.logout(); } catch (e) {} location.reload(); return; }
+  await clearSuiteLogin();
+  if (portalMode === "passkey") { try { await backend.revokeSuiteLogin(""); } catch (e) {} try { await authClient.logout(); } catch (e) {} location.reload(); return; }
   const t = localStorage.getItem("uh-sso-token");
   localStorage.removeItem("uh-sso-token");
-  if (t) { try { await anonBackend.ssoLogout(t); } catch (e) {} }
+  if (t) { try { await anonBackend.ssoLogout(t); } catch (e) {} } // ssoLogout also revokes the suite login behind the cookie
   location.reload();
 }
 
@@ -4947,7 +4968,7 @@ async function afterLogin() {
     if (signout) {
       sessionStorage.removeItem("ks-console-entry"); sessionStorage.removeItem("ks-signout"); sessionStorage.removeItem("uh-pkce"); sessionStorage.removeItem("uh-jump"); sessionStorage.removeItem("ks-oidc");
       const t = localStorage.getItem("uh-sso-token"); localStorage.removeItem("uh-sso-token");
-      await Promise.allSettled([t ? anonBackend.ssoLogout(t) : Promise.resolve(), authClient.logout()]);
+      await Promise.allSettled([clearSuiteLogin(), t ? anonBackend.ssoLogout(t) : Promise.resolve(), authClient.logout()]);
       await providers; loginSettle("You’re signed out. Choose an account to continue."); return;
     }
     if (hasCallback) {

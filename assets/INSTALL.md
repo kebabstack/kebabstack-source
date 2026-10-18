@@ -37,6 +37,13 @@ icp canister call backend setHub '("<HUB-BACKEND-CANISTER-ID>")' -e ic
 
 `setHub` configures the Hub and clears old authorization caches. Local admin bootstrap methods are retired.
 
+### Suite login (Assets ≥ 0.25.0, Hub ≥ 0.40.0)
+
+When Assets and the Hub run on the same parent domain (for example `assets.kebabstack.com` and
+`dfinity.kebabstack.com`), a person signed in to the Hub opens Assets without a detour: the Hub's suite cookie
+is redeemed by the Assets backend at the Hub, which re-checks the person and their Assets access. On a public
+gateway address (`…icp0.io`) the ticket hand-off through the Hub keeps working unchanged. Nothing to configure.
+
 ## 3 · Register assets in the hub
 
 Hub → **Apps** → 🍢 **Connect an app**: paste the assets **backend** canister
@@ -62,7 +69,7 @@ Open Hub → **Permissions**, select this app and review the effective roles. Ac
 ## 5 · Finish
 
 - assets → Settings → General → **Who runs the register**: company name, **App address**
-  (this Assets frontend's HTTPS URL for notification links), tag prefix.
+  (this Assets frontend's HTTPS URL for notification links).
 - Optional: Hub Settings → AI — any OpenAI-compatible chat endpoint or Anthropic.
 - Evaluation instance: Settings → Maintenance → **Seed demo data**.
 
@@ -199,6 +206,26 @@ register* is the gap to close (Add / Add all → devices land as *unknown* with 
 *No device management* are devices no MDM holds. The sync repeats every six hours; devices released
 from Apple's register disappear from the list, devices already in the register stay.
 
+## 7b · Hardware from device management (0.24.0)
+
+The MDM sync fills a **Hardware** line per device (processor, cores, memory, boot-volume size and free space, encryption).
+
+- **Iru (Kandji):** the device list has no hardware, so the sync calls `GET /api/v1/devices/{device_id}/details` per device.
+  The API token needs the *Device Information* permission (Settings → Access → API token); *Device secrets* stays
+  optional and is only used by the unlock-PIN lookup. Each detail call is one HTTPS outcall of the canister, so a sync
+  reads at most 40 devices per run (unknown first, then older than seven days) and continues with the next run; with
+  the six-hour timer a register of 500 Macs is complete after about two days. **Refresh hardware from Iru** on a device
+  page reads one device immediately. A sync result that says *hardware unavailable for n (check the token's Device
+  Information permission)* means the token lacks that permission or the details endpoint is not licensed.
+- **Jamf Pro:** processor, cores, RAM and disk size come with the existing computer inventory call (sections
+  `HARDWARE` and `STORAGE`); no extra permission beyond *Read Computers*.
+- **Intune:** total and free storage, RAM and encryption come from the managed-devices list; Graph v1.0 reports no
+  processor name.
+- **Fallback:** where the MDM reports nothing, the capacity from Apple Business Manager (e.g. "512 GB") is shown.
+
+The hardware store is additive; nothing is written to the MDM. The CSV export gains `location, processor, cores,
+memory gb, storage gb`. Members see the hardware of their own devices under *My devices*.
+
 ## Upgrades
 
 Before every backend deploy of a live assets (append-only stable state):
@@ -277,3 +304,74 @@ provider's billing or usage limit. The app displays sanitized guidance and the
 HTTP status, not provider response bodies. No automatic vendor/model switch is
 made. The one transient retry can make a second provider request; ordinary
 employees remain unable to invoke photo recognition.
+
+## Photo workflow verification (0.27.0)
+
+No new Hub lane or provider credential is required. Keep Assets' existing AI lane
+and configure a vision-capable model in the Hub. After an upgrade, verify an
+existing admin session: Devices → Add from photos → select test labels → Read
+with AI → compare the photo and correct its fields → register only intended rows.
+Then open one saved asset and choose Read photo again with AI. Nothing should
+change until Apply corrections; its history should name the photo.
+
+The connected setting describes credentials, not proof that a provider request
+will succeed. Authentication, billing, rate-limit and transport failures remain
+possible and are shown in the reading workflow. If credentials cannot be fetched,
+use Settings → Connections → Ask the hub again and verify the Hub AI lane.
+Keep test photos free of sensitive personal information: reading sends them to
+the configured AI service. Drafts are held in the browser tab, not durable storage.
+
+Local checks: run `bash assets/test/run-smoke.sh` from the repository root and
+the Assets PocketIC security tests. `node assets/tools/preview.mjs` builds a local
+UI fixture with simulated backend/AI responses; it is not an OCR-quality test.
+Production delivery still uses the shared Kitchen release executor, matching
+published artifacts, and explicit authorization for the deployment.
+
+### General regression check (0.27.1)
+
+Invalid photo size/type/storage capacity and invalid scan actions are checked before
+creating the device or saving evidence. Correct the reported input and retry; a
+validation failure must not leave a partial device. In a photo batch, select the
+recipient from the directory or clear the field. Clearing it leaves the new devices
+unassigned. Apple inventory uses cards on narrow screens.
+
+Local findings, test scope and remaining release gates are recorded in
+[the general audit](../design/reviews/2026-10-14-assets-general-audit.md).
+
+
+## Automatic reading recovery (0.27.2)
+
+Single intake, photo batches and stored-photo re-reading use the same backend
+recovery. A truncated, malformed or empty reading triggers one new request with
+the original photo and a larger response allowance (2048 → 4096 tokens). This
+can add provider usage and latency. An earlier transient HTTP failure may also
+receive the existing single frontend retry: at most three provider calls for a
+photo in that combined case. Persistent configuration, billing and refusal
+errors do not trigger format recovery. No provider or model is switched.
+
+A failed response is not proof of an unreadable photo. Assets reports the error,
+keeps the evidence available and does not save partial codes. Successful readings
+still require review before changes are applied. This improves response handling;
+it does not guarantee every identifier is correctly recognized. Verify real
+label recognition with representative photos on the configured provider.
+
+## Automatic, permanent inventory tags (0.28.0)
+
+Every creation path uses the same persistent sequence. The number is allocated
+when the device is saved, not when a photo is read or a preview is shown. New
+CSV rows receive numbers in file order; simultaneous requests receive numbers
+in backend processing order. Archiving or removing sample data never reuses a
+number. Prefix and padding can be configured before the first allocation and
+are fixed afterwards.
+
+CSV requires a serial column and matches existing active devices by serial.
+Tag columns are ignored: foreign inventory numbers cannot overwrite or select
+an unrelated device. Rows without serials are skipped. Use single registration
+with a model for a device whose serial is unavailable. Photo stickers remain
+useful matching evidence, but cannot set or overwrite the inventory number.
+
+On upgrade, existing tags (including archived devices) remain unchanged. Missing
+tags receive successive numbers in device-id order above the highest existing
+numeric suffix. Each repair is recorded in history. No old labels are renumbered;
+previously issued invoice snapshots remain unchanged. Test a populated upgrade
+before production; this source change alone does not alter the live register.

@@ -3,7 +3,10 @@ import { createHandoverPanel, renderFormerBuyer } from "./handover.js";
 import { PHASES, phaseOf, nextStep } from "./workflow.js";
 import { idlFactory } from "./idl.js";
 import { canonicalDestination } from "./canonical-url.js";
-import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory } from "./hub-client.js";
+import { createLabels } from "./labels.js";
+import { openPhotoReview } from "./photo-review.js";
+import { createBulk, rowFromReading } from "./bulk.js";
+import { appSignIn, takeHubTicket, session, mountTopbar, topbarIdlFactory, suiteCookie } from "./hub-client.js";
 
 // deploy-time constants (INSTALL.md: sed the placeholders; the kitchen patches them on install)
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
@@ -25,10 +28,26 @@ const ago = (ns) => {
   const h = Math.round(m / 60); if (Math.abs(h) < 48) return h + " h ago";
   return Math.round(h / 24) + " d ago";
 };
+// 0.24.0 · one time language: absolute date plus "(3 weeks ago)" for MDM/ABM timestamps that arrive as ISO text.
+const fmtIso = (iso) => { if (!iso) return ""; const t = Date.parse(iso); if (!Number.isFinite(t)) return iso; return new Date(t).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) + " (" + ago(BigInt(Math.round(t)) * 1000000n) + ")"; };
+const gbText = (n) => { n = Number(n); return n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + " TB" : n + " GB"; };
+// Hardware as the MDM reported it; falls back to what Apple Business Manager knows about the purchase.
+function hwSummary(h, abmCapacity, long) {
+  const parts = [];
+  if (h) {
+    if (h.processor) parts.push(h.processor + (long && Number(h.cores) ? " · " + Number(h.cores) + " cores" : ""));
+    if (Number(h.memoryGb)) parts.push(gbText(h.memoryGb) + (long ? " memory" : ""));
+    if (Number(h.storageGb)) parts.push(gbText(h.storageGb) + (long && Number(h.storageFreeGb) ? " (" + gbText(h.storageFreeGb) + " free)" : ""));
+    if (long && h.encrypted) parts.push(h.encrypted === "yes" ? "encrypted" : "not encrypted");
+  }
+  if (!parts.length && abmCapacity) parts.push(String(abmCapacity).replace(/(\d)\s*(GB|TB)/i, "$1 $2") + (long ? " · per Apple Business Manager" : ""));
+  return parts.join(" · ");
+}
+const kindFromModel = (model) => { const m = (model || "").toLowerCase(); if (/ipad|\btab\b|tablet/.test(m)) return "tablet"; if (/iphone|pixel|galaxy|phone/.test(m)) return "phone"; if (/macbook|thinkpad|latitude|surface|xps|elitebook|laptop|notebook|zenbook/.test(m)) return "laptop"; if (/monitor|display|ultrasharp|thinkvision/.test(m)) return "monitor"; if (/airpods|keyboard|mouse|dock|headset|charger|adapter|cable/.test(m)) return "accessory"; return ""; };
 const setStatus = (id, cls, text) => { if (id === "loginStatus") signIn.status(cls, text); const el = $(id); if (!el) return; el.className = "status " + (cls || ""); el.textContent = text || ""; };
 const bigint = (x) => BigInt(Number(x) || 0);
 const KIND_ICON = { laptop: "💻", phone: "📱", tablet: "📱", monitor: "🖥", accessory: "🎧", other: "📦" };
-const STATUS_WORD = { in_stock: "in stock", preparing: "with IT · preparing", assigned: "assigned", loaned: "loaned", sold: "sold", scrapped: "scrapped", lost: "lost", unknown: "unknown" };
+const STATUS_WORD = { in_stock: "in stock", preparing: "with IT · preparing", deployed: "deployed", assigned: "assigned", loaned: "loaned", sold: "sold", scrapped: "scrapped", lost: "lost", unknown: "unknown" };
 const ACT_WORD = { handed_out: "handed out", returned: "returned", loaned: "loaned", sold: "sold", scrapped: "scrapped", lost: "lost", note: "note", photo: "photo", created: "created", edited: "edited", imported: "imported", reassigned: "reassigned", sale: "sale" };
 const SALE_WORD = { draft: "draft", offered: "offered", accepted: "accepted", issued: "invoiced", paid: "paid", cancelled: "cancelled" };
 const fmtMoney = (minor, cur) => { const n = Number(minor); return Math.floor(n / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + "." + String(n % 100).padStart(2, "0") + (cur ? " " + cur : ""); };
@@ -38,7 +57,7 @@ const hubSettingsAi = () => (HUB_URL.startsWith("https://") ? `${HUB_URL}/#/sett
 const deviceName = (a) => (`${a.vendor} ${a.model}`.trim() || a.tag || a.serial || `device #${a.id}`);
 
 let financeWorkspace;
-let backend, hubActor = null, topbar = null, me = null, curId = 0, curAsset = null, curAssigneeEmail = "";
+let backend, hubActor = null, topbar = null, me = null, curId = 0, curAsset = null, curAssigneeEmail = "", appInfo = {}, lastRows = [];
 
 // ---------- the shared topbar (brand · app · menu · bell · theme · person) — one component for the whole suite ----------
 function mountBar() {
@@ -62,13 +81,14 @@ function route() {
   const admin = me.role === "admin";
   const financial = admin || me.role === "finance";
   let v = view || (me.role === "finance" ? "finance" : "devices");
-  const known = admin ? ["finance", "intake", "devices", "d", "apple", "sales", "sale", "offers", "import", "settings", "docs"] : financial ? ["finance", "sales", "devices", "d", "offers", "sale", "docs"] : ["devices", "d", "offers", "sale", "docs"];
+  const known = admin ? ["finance", "intake", "bulk", "devices", "d", "apple", "sales", "sale", "offers", "import", "settings", "docs"] : financial ? ["finance", "sales", "devices", "d", "offers", "sale", "docs"] : ["devices", "d", "offers", "sale", "docs"];
   if (!known.includes(v)) v = "devices";
   document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === "v-" + (v === "d" ? "device" : v)));
-  document.querySelectorAll("#nav .tab").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "d" && el.dataset.view === "devices") || (v === "sale" && el.dataset.view === (financial ? "sales" : "offers"))));
+  document.querySelectorAll("#nav .tab").forEach((el) => el.classList.toggle("active", el.dataset.view === v || (v === "d" && el.dataset.view === "devices") || (v === "bulk" && el.dataset.view === "intake") || (v === "sale" && el.dataset.view === (financial ? "sales" : "offers"))));
   if (v === "finance") { financeWorkspace ||= createFinance($("v-finance"), {api:()=>backend,token:tok,hubUrl:HUB_URL}); financeWorkspace.load(arg); }
   if (v === "intake") loadRecent();
-  if (v === "devices") loadDevices();
+  if (v === "bulk") bulk.show();
+  if (v === "devices") loadDevices(); else listLabels.close();
   if (v === "d") loadDevice(Number(arg));
   if (v === "apple") loadApple();
   if (v === "import") {}
@@ -108,11 +128,38 @@ function paintAiBanner() {
   if (off) $("aiOff").innerHTML = `<b>Photo recognition is off.</b> Find devices by tag or serial. Photos still save as evidence. <a href="#/settings/connections">Manage photo recognition →</a>`;
 }
 
+// Refresh stale capabilities when the operator requests reading; never hide the action.
+let photoAiPending = null;
+async function ensurePhotoAi() {
+  if (me?.aiOn) return {ok:true};
+  if (!photoAiPending) photoAiPending = (async () => {
+    const tok = session.load();
+    try {
+      const r = await backend.refreshAi(tok);
+      if (tok !== session.load()) return {ok:false, detail:"Your session changed. Reopen the photo task."};
+      if (r.ok) { const w = opt(await backend.whoami(session.load())); if (w && tok === session.load()) me = w; paintAiBanner(); }
+      return r;
+    } catch { return {ok:false, detail:"Could not contact the Hub. Try again; your photos are kept in this draft."}; }
+    finally { photoAiPending = null; }
+  })();
+  return photoAiPending;
+}
 // ---------- boot / session ----------
+let aiRetried = false;
 async function refreshMe() {
   const w = opt(await backend.whoami(session.load()));
   if (!w) return false;
-  me = w; renderNav(); return true;
+  me = w; renderNav();
+  // Right after an upgrade the backend holds no AI key until it asks the Hub again; do that once per page load instead of showing "off" (0.26.1).
+  if (!w.aiOn && w.role === "admin" && !aiRetried) {
+    aiRetried = true;
+    backend.refreshAi(session.load()).then(async (r) => {
+      if (!r?.ok || me !== w) return;
+      const again = opt(await backend.whoami(session.load()));
+      if (again?.aiOn && me === w) { me = again; renderNav(); paintAiBanner(); paintBulkBar(); }
+    }).catch(() => {});
+  }
+  return true;
 }
 async function boot() {
   const { HttpAgent, Actor } = await import("./agent-bundle.js");
@@ -127,6 +174,7 @@ async function boot() {
       location.replace(canonicalDestination(info.appUrl, location.href));
       return;
     }
+    appInfo = info;
     if (info.hubId) hubActor = Actor.createActor(topbarIdlFactory, { agent, canisterId: info.hubId });
     if (info.orgName) $("loginSub").textContent = `${info.orgName} · assets`;
     if (!info.hubSet) { $("loginWarn").classList.remove("hidden"); $("loginWarn").textContent = "This app is not connected to your company Hub yet. Contact your IT team."; }
@@ -137,6 +185,11 @@ async function boot() {
     setStatus("loginStatus", "", "signing in…");
     const r = opt(await backend.loginWithTicket(ticket));
     if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else setStatus("loginStatus", "err", "the hub ticket was not accepted — try again from the hub");
+  } else if (!session.load() && suiteCookie.read()) {
+    // Suite login (0.25.0): the Hub's cookie on the company domain signs in without a round trip through the Hub.
+    setStatus("loginStatus", "", "signing in…");
+    let r = null; try { r = opt(await backend.loginWithSuite(suiteCookie.read())); } catch (e) {}
+    if (r) { session.save(r.token); session.saveSuite(r.suiteToken || ""); } else { suiteCookie.clear(); setStatus("loginStatus", "", ""); }
   }
   if (session.load() && (await refreshMe())) {
     try { sessionStorage.removeItem("ks-assets-offer-login"); } catch (_) {}
@@ -162,6 +215,7 @@ async function boot() {
 }
 function signOut() {
   clearPin();
+  suiteCookie.clear(); // leaving this tool also stops the automatic suite sign-in until the Hub is opened again
   const t = session.load(); session.clear();
   if (t) backend.signOut(t).catch(() => {});
   me = null; if (topbar) { topbar.destroy(); topbar = null; } $("layout").classList.remove("on"); $("login").style.display = "grid"; setStatus("loginStatus", "", "signed out");
@@ -225,8 +279,8 @@ function ikReset() {
   $("ik0").classList.remove("hidden"); $("recentCard").classList.remove("hidden");
   $("shotImg").classList.add("hidden"); $("reads").innerHTML = ""; $("readNotes").textContent = ""; $("ikQuery").value = "";
   $("cands").innerHTML = '<div class="empty">nothing searched yet</div>'; setStatus("candStatus", "", ""); setStatus("saveStatus", "", "");
-  for (const id of ["nTag", "nSerial", "nVendor", "nModel", "nNote", "ikTo", "ikNote"]) $(id).value = "";
-  $("ikTo").dataset.email = "";
+  for (const id of ["nTag", "nSerial", "nVendor", "nModel", "nNote", "ikTo", "ikNote", "nTo"]) $(id).value = "";
+  $("ikTo").dataset.email = ""; $("nTo").dataset.email = ""; $("nLocation").value = ""; intakeLabels.close();
   $("actChips").querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.act === "handed_out")); toRowFor("handed_out", "toRow", "toLabel");
 }
 $("camBtn").onclick = () => $("camFile").click();
@@ -247,6 +301,7 @@ async function ikPhoto(file) {
   if (ik !== draft || photoToken !== session.load()) { if (photo.url?.startsWith("blob:")) URL.revokeObjectURL(photo.url); return; }
   ik.photo = photo;
   $("shotImg").src = photo.url; $("shotImg").classList.remove("hidden");
+  if (!me.aiOn) await ensurePhotoAi();
   if (!me.aiOn) { $("readStatus").textContent = "Photo kept in this draft. Reading is off; search below or add the device manually."; return; }
   await ikReadPhoto();
 }
@@ -281,16 +336,18 @@ async function ikReadPhoto() {
   $("readStatus").textContent = r.reads.length ? `read ${r.reads.length} code${r.reads.length === 1 ? "" : "s"}${vendorModel ? " · " + vendorModel : ""}${r.sticker && r.sticker !== "unsure" ? " · sticker: " + r.sticker : ""}` : "no code could be read — search by hand or add the device" + (vendorModel ? ` (looks like ${vendorModel})` : "");
   $("reads").innerHTML = r.reads.map((x, i) => `<button class="read ${x.confidence < 0.6 ? "low" : ""}" data-i="${i}" title="tap to search for this reading"><span class="k">${esc(x.kind.replace("_", " "))}</span>${esc(x.value)}<span class="c">${Math.round(x.confidence * 100)}%</span></button>`).join("");
   $("readNotes").textContent = r.notes || "";
-  // prefill the new-device form from the reading
-  if (!$("nSerial").value) $("nSerial").value = (r.reads.find((x) => x.kind === "serial") || {}).value || "";
-  if (!$("nTag").value) $("nTag").value = (r.reads.find((x) => x.kind === "asset_tag") || {}).value || "";
+  // Use the same Dell identifier preference as batch intake and stored-photo review.
+  const proposal = rowFromReading(r);
+  if (!$("nSerial").value) $("nSerial").value = proposal.serial;
+  if (!$("nNote").value) $("nNote").value = proposal.note;
+
   if (!$("nVendor").value) $("nVendor").value = r.vendor || ""; if (!$("nModel").value) $("nModel").value = r.model || ""; if (r.kind && [...$("nKind").options].some((o) => o.value === r.kind)) $("nKind").value = r.kind;
-  if (r.reads.length) await ikSearch(r.reads.map((x) => x.value));
+  if (r.reads.length) await ikSearch(r.reads.map((x) => x.value), true);
 }
 $("reads").onclick = (e) => { const b = e.target.closest(".read"); if (!b) return; const v = ik.reads[Number(b.dataset.i)].value; $("ikQuery").value = v; ikSearch([v]); };
 let qTimer = 0;
 $("ikQuery").oninput = () => { ikStopReading(); ++ikSearchSequence; clearTimeout(qTimer); qTimer = setTimeout(() => { const v = $("ikQuery").value.trim(); if (v.length >= 3) ikSearch([v]); }, 250); };
-async function ikSearch(values) {
+async function ikSearch(values, fromPhoto = false) {
   const draft = ik, sequence = ++ikSearchSequence, token = session.load();
   const current = () => ik === draft && sequence === ikSearchSequence && token === session.load();
   setStatus("candStatus", "", "searching…");
@@ -300,15 +357,43 @@ async function ikSearch(values) {
   setStatus("candStatus", "", "");
   $("cands").innerHTML = c.length ? c.map((x) => { const a = x.row.asset; return `<div class="cand"><span class="sc">${x.score}%</span><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · "))} · ${esc(STATUS_WORD[a.status] || a.status)}${x.row.assigneeName ? " · " + esc(x.row.assigneeName) : ""}<br>${esc(x.why)}</span></div><button class="sm primary" data-pick="${a.id}">This one</button></div>`; }).join("") : `<div class="empty">no device matches ${esc(values.join(", "))} — add it below, or fix the reading and search again</div>`;
   $("cands").querySelectorAll("[data-pick]").forEach((b) => (b.onclick = () => { const x = c.find((y) => Number(y.row.asset.id) === Number(b.dataset.pick)); ik.chosen = x.row.asset; ik.create = null; ikStep2(); }));
+  // A photo that matches nothing is a new device: open the form instead of asking for one more click (0.24.0).
+  if (fromPhoto && !c.length && $("ikNewCard").classList.contains("hidden")) $("ikNew").click();
 }
+$("nModel").addEventListener("change", () => { const k = kindFromModel($("nModel").value); if (k && !$("nKind").dataset.touched) $("nKind").value = k; });
+$("nKind").addEventListener("change", () => { $("nKind").dataset.touched = "1"; });
 $("ikRetryRead").onclick = () => ikReadPhoto();
 $("ikManual").onclick = () => $("ikNew").click();
-$("ikNew").onclick = () => { ikStopReading(); ++ikSearchSequence; $("readStatus").textContent = ik?.photo ? "Photo kept in this draft. Enter the device details below." : "Enter the device details below."; $("readRecovery").classList.add("hidden"); $("ikNewCard").classList.remove("hidden"); $("nSerial").focus(); $("ikNewCard").scrollIntoView({ behavior: "smooth", block: "start" }); };
+$("ikNew").onclick = () => { ikStopReading(); ++ikSearchSequence; loadRegisterOptions(); $("readStatus").textContent = ik?.photo ? "Photo kept in this draft. Enter the device details below." : "Enter the device details below."; $("readRecovery").classList.add("hidden"); $("ikNewCard").classList.remove("hidden"); $("nSerial").focus(); $("ikNewCard").scrollIntoView({ behavior: "smooth", block: "start" }); };
 $("ikRestart").onclick = () => ikReset();
-$("ikUseNew").onclick = () => {
-  const x = { tag: $("nTag").value.trim(), serial: $("nSerial").value.trim(), vendor: $("nVendor").value.trim(), model: $("nModel").value.trim(), kind: $("nKind").value, note: $("nNote").value.trim() };
-  if (!x.tag && !x.serial && !x.model) return setStatus("newStatus", "err", "at least a tag, a serial or a model");
-  ik.create = x; ik.chosen = null; ikStep2();
+let registerOptions = null;
+async function loadRegisterOptions() {
+  try { registerOptions = opt(await backend.registerOptions(session.load())); } catch (_) { registerOptions = null; }
+  const sel = $("nLocation"), current = sel.value;
+  sel.innerHTML = '<option value="">—</option>' + (registerOptions?.locations || []).map((l) => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
+  sel.value = current;
+  $("nLocationHint").innerHTML = registerOptions?.locations?.length ? "" : 'No locations yet — define them under <a href="#/settings/general">Settings → Register devices</a>.';
+  $("nTag").placeholder = registerOptions?.nextTag ? `automatic · next ${registerOptions.nextTag}` : "automatic";
+}
+attachPicker("nTo", "nToList");
+$("ikRegister").onclick = async () => {
+  const create = { tag: "", serial: $("nSerial").value.trim(), vendor: $("nVendor").value.trim(), model: $("nModel").value.trim(), kind: $("nKind").value, note: $("nNote").value.trim() };
+  if (!create.serial && !create.model && !create.tag) return setStatus("newStatus", "err", "at least a serial number or a model");
+  if ($("nTo").value.trim() && !$("nTo").dataset.email) return setStatus("newStatus", "err", "pick the person from the directory, or clear the field");
+  setStatus("newStatus", "", "registering…"); $("ikRegister").disabled = true;
+  try {
+    const r = await backend.registerDevice(session.load(), { create, assignee: $("nTo").dataset.email || "", location: $("nLocation").value, status: $("nDeployed").checked && !$("nTo").dataset.email ? "deployed" : "", photo: ik?.photo ? [[...ik.photo.bytes]] : [], mime: ik?.photo ? ik.photo.mime : "" });
+    if (!r.ok) { setStatus("newStatus", "err", r.detail); return; }
+    const asset = { ...create, tag: r.tag, id: r.assetId };
+    $("ik1").classList.add("hidden"); $("ik3").classList.remove("hidden");
+    $("doneTitle").textContent = `${deviceName(asset)} — ${r.detail}`;
+    $("doneSub").textContent = ik?.photo ? "photo kept as evidence on this device" : "no photo attached";
+    $("doneNext").textContent = "Next device";
+    $("doneOpen").onclick = () => { location.hash = "#/d/" + Number(r.assetId); };
+    intakeLabels.open([asset]);
+    loadRecent();
+  } catch (e) { setStatus("newStatus", "err", String(e.message || e).slice(0, 140)); }
+  finally { $("ikRegister").disabled = false; }
 };
 function ikStep2() {
   ikStopReading(); ++ikSearchSequence;
@@ -340,7 +425,7 @@ $("ikSave").onclick = async () => {
   } catch (e) { setStatus("saveStatus", "err", String(e.message || e).slice(0, 140)); }
   finally { $("ikSave").disabled = false; }
 };
-$("doneNext").onclick = () => { ikReset(); loadRecent(); $("camBtn").focus(); };
+$("doneNext").onclick = () => { ikReset(); loadRecent(); $("doneNext").textContent = "Next photo"; $("camBtn").focus(); };
 async function loadRecent() {
   let s; try { s = await backend.stats(session.load()); } catch (e) { return; }
   $("recentRows").innerHTML = s.recent.length ? s.recent.map((x) => `<div class="ev ${["handed_out", "returned", "loaned", "sold", "scrapped", "lost"].includes(x.event.kind) ? "act" : ""}"><span class="dot"></span><div><div class="what"><a href="#/d/${Number(x.event.assetId)}" style="color:inherit;text-decoration:none"><b>${esc(x.name)}</b></a> — ${esc(x.event.detail)}</div><div class="meta">${esc(ago(x.event.at))} · ${esc(x.event.by)}${Number(x.event.photoId) ? " · 📷" : ""}</div></div></div>`).join("") : '<div class="empty">nothing yet — the first photo starts the history</div>';
@@ -350,20 +435,179 @@ async function loadRecent() {
 let devFilter = "";
 async function loadDevices() {
   const q = $("devQ").value.trim(), st = $("devStatus").value;
-  let rows = [], s = null, pending = null;
+  let rows = [], s = null, pending = null, all = null, abm = [];
   $("devStatus").querySelector('[value="offboarding"]').hidden = me.role !== "admin";
-  try { [rows, s, pending] = await Promise.all([backend.listAssets(session.load(), q, st, false), backend.stats(session.load()), me.role === "admin" ? backend.pendingHandoverCount(session.load()).catch(()=>null) : null]); } catch (e) { $("devRows").innerHTML = `<div class="empty">${esc(String(e.message || e).slice(0, 120))}</div>`; return; }
-  $("stats").innerHTML = `<button class="stat ${!st ? "active" : ""}" aria-pressed="${!st}" data-st=""><div class="n">${Number(s.total)}</div><div class="l">All devices</div></button>` + s.byStatus.filter(([k]) => ["assigned", "in_stock", "loaned", "unknown"].includes(k)).map(([k, n]) => `<button class="stat ${st === k ? "active" : ""}" aria-pressed="${st === k}" data-st="${esc(k)}"><div class="n">${Number(n)}</div><div class="l">${esc(STATUS_WORD[k] || k)}</div></button>`).join("");
+  const admin = me.role === "admin", listStatus = st === "attention" ? "" : st;
+  try { [rows, s, pending, all, abm] = await Promise.all([backend.listAssets(session.load(), q, listStatus, false), backend.stats(session.load()), admin ? backend.pendingHandoverCount(session.load()).catch(()=>null) : null, admin && (q || listStatus) ? backend.listAssets(session.load(), "", "", false).catch(() => null) : null, admin ? backend.listAbm(session.load()).catch(() => []) : []]); } catch (e) { $("devRows").innerHTML = `<div class="empty">${esc(String(e.message || e).slice(0, 120))}</div>`; return; }
+  // Needs attention (0.24.0): everything the register cannot settle on its own, in one place with its answer.
+  const base = all || (q || listStatus ? [] : rows), gone = ["sold", "scrapped", "lost"];
+  const attention = admin ? { mismatch: base.filter((r) => r.mdmMismatch), noSerial: base.filter((r) => !r.asset.serial && !gone.includes(r.asset.status)), abmOnly: (abm || []).reduce((n, c) => n + Number(c.unmatched || 0), 0), offboarding: Number(pending || 0) } : null;
+  const attentionCount = attention ? attention.mismatch.length + attention.noSerial.length + attention.abmOnly + attention.offboarding : 0;
+  $("stats").innerHTML = `<button class="stat ${!st ? "active" : ""}" aria-pressed="${!st}" data-st=""><div class="n">${Number(s.total)}</div><div class="l">All devices</div></button>` + s.byStatus.filter(([k]) => ["assigned", "deployed", "in_stock", "loaned", "unknown"].includes(k)).map(([k, n]) => `<button class="stat ${st === k ? "active" : ""}" aria-pressed="${st === k}" data-st="${esc(k)}"><div class="n">${Number(n)}</div><div class="l">${esc(STATUS_WORD[k] || k)}</div></button>`).join("");
   if ((typeof pending === "bigint" || typeof pending === "number") && Number(pending) > 0) $("stats").insertAdjacentHTML("beforeend", `<button class="stat ${st === "offboarding" ? "active" : ""}" aria-pressed="${st === "offboarding"}" data-st="offboarding"><div class="n">${pending}</div><div class="l">Offboarding</div></button>`);
+  if (attentionCount > 0) $("stats").insertAdjacentHTML("beforeend", `<button class="stat attention ${st === "attention" ? "active" : ""}" aria-pressed="${st === "attention"}" data-st="attention"><div class="n">${attentionCount}</div><div class="l">Needs attention</div></button>`);
   $("stats").style.gridTemplateColumns = `repeat(${$("stats").children.length}, minmax(0, 1fr))`;
   $("stats").querySelectorAll(".stat").forEach((el) => (el.onclick = () => { $("devStatus").value = el.dataset.st; loadDevices(); }));
-  $("devRows").innerHTML = rows.length ? rows.map((r) => { const a = r.asset; return `<a class="dev" href="#/d/${a.id}" data-id="${a.id}"><div class="ic">${KIND_ICON[a.kind] || "📦"}</div><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div><div class="r"><span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span><span class="kv">${esc(r.assigneeName || a.holder || "")}${r.lastEvent ? (r.assigneeName || a.holder ? " · " : "") + esc(ago(r.lastAt)) : ""}${r.mdmMismatch ? ` · <span class="pill warn" title="The register and MDM disagree. Open the device to compare.">Review MDM</span>` : ""}</span></div></a>`; }).join("") : '<div class="empty">no devices match</div>';
+  if (st === "attention") { renderAttention(attention); lastRows = []; $("devLabels").classList.add("hidden"); $("devRows").classList.remove("selectable"); return; }
+  $("devRows").innerHTML = rows.length ? rows.map((r) => { const a = r.asset, hw = hwSummary(opt(r.hardware), r.abmCapacity); return `<div class="dev-row"><label class="dev-pick"><input type="checkbox" data-pick-id="${a.id}" aria-label="Select ${esc(deviceName(a))}"></label><a class="dev" href="#/d/${a.id}" data-id="${a.id}"><div class="ic">${KIND_ICON[a.kind] || "📦"}</div><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span>${hw ? `<span class="hw">${esc(hw)}</span>` : ""}</div><div class="r"><span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span><span class="kv">${esc([r.assigneeName || a.holder || "", r.location || ""].filter(Boolean).join(" · "))}${r.lastEvent ? (r.assigneeName || a.holder || r.location ? " · " : "") + esc(ago(r.lastAt)) : ""}${r.mdmMismatch ? ` · <span class="pill warn" title="The register and MDM disagree. Open the device to compare.">Review MDM</span>` : ""}</span></div></a></div>`; }).join("") : '<div class="empty">no devices match</div>';
   $("devRows").querySelectorAll(".dev").forEach((el) => (el.onclick = () => { location.hash = "#/d/" + el.dataset.id; }));
+  lastRows = rows; $("devLabels").classList.toggle("hidden", me.role !== "admin" || !rows.length); $("devLabels").textContent = `Print labels (${rows.length})`;
+  $("devRows").classList.toggle("selectable", me.role === "admin" && devSelectMode);
+  $("devPickAll").classList.toggle("hidden", me.role !== "admin" || !rows.length); $("devPickAll").textContent = devSelectMode ? "Select all" : "Select";
+  $("devRows").querySelectorAll("[data-pick-id]").forEach((box) => (box.onchange = paintBulkBar));
+  paintBulkBar();
 }
+const pickedIds = () => [...$("devRows").querySelectorAll("[data-pick-id]:checked")].map((b) => BigInt(b.dataset.pickId));
+async function paintBulkBar() {
+  const n = pickedIds().length, bar = $("devBulk"), admin = me.role === "admin";
+  bar.classList.toggle("hidden", n === 0);
+  // The head button prints the selection as soon as there is one (0.26.0); the list count otherwise.
+  $("devLabels").textContent = n ? `Print labels (${n} selected)` : `Print labels (${lastRows.length})`;
+  if (n === 0) return;
+  $("devBulkCount").textContent = `${n} selected`;
+  $("devBulkLabels").classList.toggle("hidden", !admin); $("devBulkLabels").textContent = `Print labels (${n})`;
+  $("devBulkReread").classList.toggle("hidden", !admin);
+  if (!$("devBulkLocation").dataset.loaded) { await fillLocationSelect($("devBulkLocation"), ""); $("devBulkLocation").dataset.loaded = "1"; }
+}
+// Checkboxes appear once someone wants to select (0.24.0); "Clear" puts the list back to reading mode.
+let devSelectMode = false;
+$("devPickAll").onclick = () => { if (!devSelectMode) { devSelectMode = true; $("devRows").classList.add("selectable"); $("devPickAll").textContent = "Select all"; return; } const boxes = [...$("devRows").querySelectorAll("[data-pick-id]")]; const all = boxes.every((b) => b.checked); boxes.forEach((b) => (b.checked = !all)); paintBulkBar(); };
+$("devBulkClear").onclick = () => { $("devRows").querySelectorAll("[data-pick-id]").forEach((b) => (b.checked = false)); devSelectMode = false; $("devRows").classList.remove("selectable"); $("devPickAll").textContent = "Select"; paintBulkBar(); };
+function renderAttention(att) {
+  const dev = (r) => { const a = r.asset; return `<a class="dev" href="#/d/${a.id}" data-id="${a.id}"><div class="ic">${KIND_ICON[a.kind] || "📦"}</div><div class="t"><b>${esc(deviceName(a))}</b><span>${esc([a.tag, a.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div></a>`; };
+  const blocks = [];
+  for (const r of att.mismatch) { const a = r.asset, gone = ["sold", "scrapped", "lost"].includes(a.status); blocks.push(`<div class="att">${dev(r)}<div class="att-why">${gone ? `The register says <b>${esc(STATUS_WORD[a.status])}</b>, ${esc(r.mdm)} still sees this device.` : `The register says <b>${esc(r.assigneeName || "nobody")}</b>, ${esc(r.mdm)} sees <b>${esc(r.mdmUserName || r.mdmUser)}</b>.`}</div><div class="btnrow">${gone ? `<a href="#/d/${a.id}"><button class="sm" type="button">Check the device</button></a>` : r.mdmUser ? `<button class="sm primary" type="button" data-att-hand="${a.id}" data-email="${esc(r.mdmUser)}" data-name="${esc(r.mdmUserName || r.mdmUser)}" data-mdm="${esc(r.mdm)}">Record hand-over to ${esc(r.mdmUserName || r.mdmUser)}</button>` : ""}</div></div>`); }
+  for (const r of att.noSerial) blocks.push(`<div class="att">${dev(r)}<div class="att-why">No serial number: the device cannot be matched with the MDM or Apple.</div><div class="btnrow"><button class="sm" type="button" data-att-serial="${r.asset.id}">Add serial</button></div></div>`);
+  if (att.abmOnly) blocks.push(`<div class="att"><div class="att-why"><b>${att.abmOnly}</b> Apple device${att.abmOnly === 1 ? "" : "s"} the company bought ${att.abmOnly === 1 ? "is" : "are"} not in the register.</div><div class="btnrow"><a href="#/apple"><button class="sm" type="button">Open Apple inventory</button></a></div></div>`);
+  if (att.offboarding) blocks.push(`<div class="att"><div class="att-why"><b>${att.offboarding}</b> device${att.offboarding === 1 ? "" : "s"} with outstanding hardware follow-up after a departure.</div><div class="btnrow"><button class="sm" type="button" data-att-status="offboarding">Show them</button></div></div>`);
+  $("devRows").innerHTML = blocks.join("") || '<div class="empty">nothing needs attention</div>';
+  $("devRows").querySelectorAll(".dev").forEach((el) => (el.onclick = (e) => { e.preventDefault(); location.hash = "#/d/" + el.dataset.id; }));
+}
+let pendingEdit = 0;
+$("devRows").addEventListener("click", async (e) => {
+  const hand = e.target.closest("[data-att-hand]"), serial = e.target.closest("[data-att-serial]"), status = e.target.closest("[data-att-status]");
+  if (status) { $("devStatus").value = status.dataset.attStatus; loadDevices(); return; }
+  if (serial) { pendingEdit = Number(serial.dataset.attSerial); location.hash = "#/d/" + pendingEdit; return; }
+  if (!hand) return;
+  hand.disabled = true;
+  const r = await backend.addEventTo(session.load(), BigInt(hand.dataset.attHand), "handed_out", hand.dataset.email, "reported by " + hand.dataset.mdm);
+  if (!r.ok) { hand.disabled = false; hand.textContent = r.detail; return; }
+  loadDevices();
+});
+async function bulkApply(status) {
+  const ids = pickedIds(); if (!ids.length) return;
+  const loc = $("devBulkLocation").value;
+  if (!loc && !status) return setStatus("devBulkStatus", "err", "choose a location");
+  setStatus("devBulkStatus", "", "updating…");
+  const r = await backend.bulkPlace(session.load(), ids, loc, status);
+  setStatus("devBulkStatus", r.ok ? "ok" : "err", r.detail);
+  if (r.ok) { $("devBulkLabels").classList.remove("hidden"); loadDevices(); }
+}
+$("devBulkDeploy").onclick = () => bulkApply("deployed");
+$("devBulkStock").onclick = () => bulkApply("in_stock");
+$("devBulkMove").onclick = () => bulkApply("");
+const pickedRows = () => { const ids = new Set(pickedIds().map(String)); return lastRows.filter((r) => ids.has(String(r.asset.id))); };
+$("devBulkLabels").onclick = () => { const picked = pickedRows().map((r) => r.asset); if (picked.length) listLabels.open(picked); };
+$("devLabels").onclick = () => { const picked = pickedRows().map((r) => r.asset); if (picked.length) listLabels.open(picked); else if (lastRows.length) listLabels.open(lastRows.map((r) => r.asset)); };
+// Read photos again (0.26.0): the newest stored photo of each selected device goes through the vision model once more,
+// the differences are shown per field and nothing changes until "Apply corrections". The history names the photo.
+const READ_FIELDS = [["serial", "Serial"], ["vendor", "Vendor"], ["model", "Model"], ["kind", "Kind"]];
+let rereadRows = [], rereadRun = 0, rereadCardId = "devRereadCard", rereadBusy = false;
+const rereadChanges = (e) => {
+  if (!e.row) return [];
+  const changes = READ_FIELDS.filter(([f]) => (e.edited || e.row[f]) && e.row[f] !== (e.asset[f] || "")).map(([f, label]) => ({ f, label, from: e.asset[f] || "", to: e.row[f] }));
+  if (e.row.note && !(e.asset.note || "").includes(e.row.note)) changes.push({f:"note",label:"Add note",from:e.asset.note || "",to:[e.asset.note,e.row.note].filter(Boolean).join(" · ")});
+  return changes;
+};
+async function rereadSelected(selection, cardId = "devRereadCard") {
+  if (rereadBusy) return;
+  const picked = Array.isArray(selection) ? selection : pickedRows(); if (!picked.length) return;
+  $(rereadCardId).innerHTML = ""; $(rereadCardId).classList.add("hidden");
+  rereadCardId = cardId;
+  const run = ++rereadRun, token = session.load(), card = $(rereadCardId);
+  rereadRows = picked.map((r) => ({ asset: { ...r.asset }, state: Number(r.photoCount) ? "waiting" : "nophoto", row: null, photoId: 0, detail: "" }));
+  card.classList.remove("hidden"); paintReread(true); card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  for (const e of rereadRows) {
+    if (e.state !== "waiting") continue;
+    e.state = "reading"; paintReread(true);
+    if (!me.aiOn) await ensurePhotoAi();
+    if (run !== rereadRun || token !== session.load()) return;
+    let r = null;
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        r = await backend.rereadPhoto(token, BigInt(e.asset.id));
+        if (run !== rereadRun || token !== session.load()) return;
+        if (r.ok || r.result?.retryable?.[0] !== true || attempt === 1) break;
+        await new Promise((res) => setTimeout(res, 1200));
+      }
+    } catch (err) { r = { ok: false, detail: String(err?.message || err).slice(0, 120) }; }
+    if (run !== rereadRun || token !== session.load()) return;
+    e.photoId = Number(r.photoId || 0);
+    if (r.ok) { e.row = rowFromReading(r.result, { kind: e.asset.kind }); e.photoId = Number(r.photoId); e.state = "read"; e.selected = e.row.confidence >= 0.6; } else { e.state = "failed"; e.detail = r.detail; }
+    paintReread(true);
+  }
+  paintReread(false);
+}
+function paintReread(busy) {
+  rereadBusy = busy;
+  const card = $(rereadCardId), done = rereadRows.filter((e) => e.state !== "waiting" && e.state !== "reading").length;
+  const rows = rereadRows.map((e, i) => {
+    const changes = rereadChanges(e), low = e.row && Number(e.row.confidence) < 0.6;
+    let body;
+    if (e.state === "waiting") body = "waiting…";
+    else if (e.state === "reading") body = "reading the photo…";
+    else if (e.state === "nophoto") body = "no photo on this device — add one on the device page or scan it";
+    else if (e.state === "failed") body = `<span class="low">${esc(e.detail)}</span>`;
+    else if (e.state === "applied") body = "updated";
+    else if (!changes.length) body = "No changes proposed. Compare the photo before confirming the reading.";
+    else body = changes.map((c) => `<div><b>${esc(c.label)}</b>: ${c.from ? esc(c.from) : "<i>empty</i>"} → <b>${esc(c.to)}</b></div>`).join("") + (low ? '<div class="low">low confidence — check the photo before applying</div>' : "");
+    if (e.state === "read" || (e.state === "failed" && e.photoId)) body += `<div class="btnrow"><button type="button" data-review-reading="${i}"${busy ? " disabled" : ""}>View photo & edit</button></div>`;
+    const pick = e.state === "read" && changes.length ? `<input type="checkbox" data-reread="${i}"${e.selected ? " checked" : ""} aria-label="Apply to ${esc(deviceName(e.asset))}">` : "";
+    return `<div class="reread-row"><span class="pick">${pick}</span><div class="t"><b>${esc(deviceName(e.asset))}</b><span>${esc([e.asset.tag, e.asset.serial].filter(Boolean).join(" · ") || "no tag, no serial")}</span></div><div class="reread-body">${body}</div></div>`;
+  }).join("");
+  card.innerHTML = `<div class="btnrow" style="justify-content:space-between;margin:0"><h3 style="margin:0">Read photos again</h3><button class="sm" type="button" data-reread-close>Close</button></div><p class="kv" role="status">${busy ? `Reading ${done} of ${rereadRows.length}… AI is reading; incomplete responses are recovered automatically.` : `${rereadRows.filter(e => e.state === "read" || e.state === "applied").length} of ${rereadRows.length} read successfully. Tick what to take over; the device history names the photo.`}</p><div class="reread-list">${rows}</div><div class="btnrow"><button class="primary sm" type="button" data-reread-apply${busy || !rereadRows.some(e => e.state === "read" && e.selected && rereadChanges(e).length) ? " disabled" : ""}>Apply corrections</button><span class="status" id="devRereadStatus" role="status"></span></div>`;
+  card.querySelector("[data-reread-close]").onclick = () => { rereadRun++; rereadBusy = false; rereadRows = []; card.classList.add("hidden"); };
+  card.querySelectorAll("[data-reread]").forEach(b => b.onchange = () => { rereadRows[Number(b.dataset.reread)].selected = b.checked; card.querySelector("[data-reread-apply]").disabled = !rereadRows.some(e => e.state === "read" && e.selected && rereadChanges(e).length); });
+  card.querySelectorAll("[data-review-reading]").forEach(b => b.onclick = async () => {
+    const e = rereadRows[Number(b.dataset.reviewReading)];
+    let url; try { url = await photoUrl(e.photoId); } catch { url = ""; }
+    if (!url) return setStatus("devRereadStatus", "err", "Photo unavailable. Try again before applying.");
+    if (!e.row) e.row = {...e.asset,note:"",confidence:0,reads:[]};
+    openPhotoReview({ url, title: deviceName(e.asset), values: {...e.row,...Object.fromEntries(READ_FIELDS.map(([f])=>[f,e.edited ? e.row[f] : e.row[f] || e.asset[f] || ""]))}, current: e.asset, onSave: values => { Object.assign(e.row, values); e.edited = true; e.selected = true; e.state = "read"; paintReread(false); } });
+  });
+  card.querySelector("[data-reread-apply]").onclick = applyReread;
+}
+async function applyReread() {
+  if (rereadBusy) return;
+  const boxes = [...$(rereadCardId).querySelectorAll("[data-reread]:checked")];
+  if (!boxes.length) return setStatus("devRereadStatus", "err", "nothing ticked");
+  rereadBusy = true; $(rereadCardId).querySelectorAll("button,input").forEach(el => el.disabled = true);
+  setStatus("devRereadStatus", "", "applying…");
+  const entries = boxes.map(b => rereadRows[Number(b.dataset.reread)]), applyToken = session.load(), applyRun = rereadRun;
+  let ok = 0; const errors = [];
+  for (const e of entries) {
+    if (applyToken !== session.load()) break;
+    const a = e.asset, input = { tag: a.tag, serial: a.serial, vendor: a.vendor, model: a.model, kind: a.kind, note: a.note };
+    const changes = rereadChanges(e);
+    let latest;
+    try { latest = opt(await backend.getAsset(applyToken, BigInt(a.id)))?.asset; } catch {}
+    if (!latest) { errors.push(`${deviceName(a)}: Could not check the current details. Try again.`); continue; }
+    if (changes.some(c => latest[c.f] !== a[c.f])) { errors.push(`${deviceName(a)}: Details changed since the reading. Read the photo again before applying.`); continue; }
+    for (const f of Object.keys(input)) input[f] = latest[f];
+    for (const c of changes) input[c.f] = c.to;
+    let r; try { r = await backend.applyReading(applyToken, BigInt(a.id), BigInt(e.photoId), input); } catch (err) { r = { ok: false, detail: String(err?.message || err).slice(0, 120) }; }
+    if (r.ok) { ok++; Object.assign(e.asset, input); e.row = null; e.state = "applied"; } else errors.push(`${deviceName(a)}: ${r.detail}`);
+  }
+  if (applyRun !== rereadRun || applyToken !== session.load()) return;
+  paintReread(false);
+  setStatus("devRereadStatus", errors.length ? "err" : "ok", `${ok} updated${errors.length ? " · " + errors.join(" · ") : ""}`);
+  if (ok) { loadDevices(); if (rereadCardId === "dRereadCard") loadDevice(curId); }
+}
+$("devBulkReread").onclick = rereadSelected;
 let devTimer = 0;
 $("devQ").oninput = () => { clearTimeout(devTimer); devTimer = setTimeout(loadDevices, 220); };
 $("devStatus").onchange = loadDevices;
-$("devAdd").onclick = () => { location.hash = "#/intake"; setTimeout(() => $("handBtn").click(), 50); setTimeout(() => $("ikNew").click(), 120); };
+$("devAdd").onclick = () => { location.hash = "#/intake"; ikReset(); ikStep1(); $("ikNew").click(); $("readStatus").textContent = "Enter the device details below, or go back and take a photo."; };
 
 const hardwarePanel = createHandoverPanel({root:$("dHardware"), api:()=>backend, token:()=>session.load(), viewer:()=>me, reload:()=>loadDevice(curId), startSale:async v=>{
   if (!curAsset || curAsset.id !== v.plan.assetId) return;
@@ -373,26 +617,48 @@ const hardwarePanel = createHandoverPanel({root:$("dHardware"), api:()=>backend,
   buyerKindSel="external";
   $("bPersonRow").classList.add('hidden');$("bExtRow").classList.remove('hidden');$("bName").value=v.personName;$("bEmail").value='';$("bEmail").focus();
 }});
+const labelOptions = { printRoot: $("labelPrint"), api: () => backend, token: () => session.load(), hub: () => hubActor, settings: () => ({ orgName: me?.orgName || appInfo.orgName || "", appUrl: appInfo.appUrl || "" }), loadQr: () => loadScript("./vendor/qrcode.js", "qrcode") };
+const listLabels = createLabels({ root: $("devLabelCard"), ...labelOptions });
+const intakeLabels = createLabels({ root: $("ikLabelCard"), ...labelOptions });
+const bulk = createBulk({ root: $("bulkRoot"), api: () => backend, token: () => session.load(), shrink, attachPicker, ensureAi: ensurePhotoAi, review: openPhotoReview, labels: (card) => createLabels({ root: card, ...labelOptions }) });
+const labels = createLabels({ root: $("dLabelCard"), printRoot: $("labelPrint"), api: () => backend, token: () => session.load(), hub: () => hubActor, settings: () => ({ orgName: me?.orgName || appInfo.orgName || "", appUrl: appInfo.appUrl || "" }), loadQr: () => loadScript("./vendor/qrcode.js", "qrcode") });
 // ---------- one device ----------
 async function loadDevice(id) {
+  if (curId !== id) { rereadRun++; rereadBusy = false; $("dRereadCard").classList.add("hidden"); }
   curId = id; hardwarePanel.reset();
   let d; try { d = opt(await backend.getAsset(session.load(), BigInt(id))); } catch (e) { d = null; }
   if (!d) { $("dName").textContent = "not found"; $("dKv").innerHTML = ""; $("dEvents").innerHTML = '<div class="empty">this device does not exist, or is not yours</div>'; return; }
   curAsset = d.asset; curAssigneeEmail = d.assigneeEmail || ""; const a = d.asset; const admin = me.role === "admin";
   $("dName").textContent = deviceName(a);
   $("dPills").innerHTML = `<span class="pill s-${esc(a.status)}">${esc(STATUS_WORD[a.status] || a.status)}</span> ${a.archived ? '<span class="pill off">archived</span>' : ""} <span class="pill">${esc(a.kind)}</span>`;
-  $("dKv").innerHTML = [["Tag", a.tag], ["Serial", a.serial], ["Who has it", d.assigneeName ? `${esc(d.assigneeName)} <span class="kv mono">${esc(d.assigneeEmail || "")}</span>` : (a.holder ? esc(a.holder) + ' <span class="kv">(external)</span>' : "nobody")], ["Note", a.note], ["Registered", fmt(a.createdAt) + (d.createdByName ? ` · ${esc(d.createdByName)}` : "")]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Who has it" ? v : esc(v)}</div>`).join("");
+  const hw = opt(d.hardware), ab0 = opt(d.abm), hwLine = hwSummary(hw, ab0 ? ab0.capacity : "", true);
+  $("dKv").innerHTML = [["Tag", a.tag], ["Serial", a.serial], ["Hardware", hwLine], ["Who has it", d.assigneeName ? `${esc(d.assigneeName)} <span class="kv mono">${esc(d.assigneeEmail || "")}</span>` : (a.holder ? esc(a.holder) + ' <span class="kv">(external)</span>' : a.status === "deployed" ? `deployed${d.location ? " at " + esc(d.location) : ""} <span class="kv">(no personal owner)</span>` : "nobody")], ["Location", d.location], ["Note", a.note], ["Registered", fmt(a.createdAt) + (d.createdByName ? ` · ${esc(d.createdByName)}` : "")]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Who has it" ? v : esc(v)}</div>`).join("");
   const md = opt(d.mdm);
   $("dMdm").classList.toggle("hidden", !md);
-  if (md) $("dMdm").innerHTML = `<details ${d.mdmMismatch ? "open" : ""}><summary><b>${esc(md.connName)}</b> · Device management${d.mdmMismatch ? ' <span class="pill warn">mismatch</span>' : ""}</summary><div class="kvl">${[["Device name", md.deviceName], ["OS", md.osVersion], ["Last seen", md.lastSeen], ["Logged-in user", md.userEmail ? `${md.userName ? esc(md.userName) + " · " : ""}<span class="mono">${esc(md.userEmail)}</span>` : (md.userName || "")], ["Compliance", md.compliance], ["Synced", ago(md.syncedAt)]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Logged-in user" ? v : esc(v)}</div>`).join("")}</div>${d.mdmMismatch ? `<div class="kv" style="margin-top:6px">${a.status === "sold" || a.status === "scrapped" || a.status === "lost" ? `The register says <b>${esc(STATUS_WORD[a.status])}</b>, but the MDM still sees this device. Verify the device and its MDM enrolment, then resolve the mismatch.` : `The register says <b>${esc(d.assigneeName || "nobody")}</b>, the MDM sees <b>${esc(md.userName || md.userEmail)}</b>. Record the hand-over here if the MDM is right.`}</div>` : ""}</details>`;
+  const gone = a.status === "sold" || a.status === "scrapped" || a.status === "lost", seenMs = md && md.lastSeen ? Date.parse(md.lastSeen) : NaN;
+  if (md) $("dMdm").innerHTML = `<details open><summary><b>Managed by ${esc(md.connName)}</b>${Number.isFinite(seenMs) ? ` · seen ${esc(ago(BigInt(Math.round(seenMs)) * 1000000n))}` : ""}${d.mdmMismatch ? ' <span class="pill warn">mismatch</span>' : ""}</summary><div class="kvl">${[["Device name", md.deviceName], ["OS", md.osVersion], ["Last seen", fmtIso(md.lastSeen)], ["Logged-in user", md.userEmail ? `${md.userName ? esc(md.userName) + " · " : ""}<span class="mono">${esc(md.userEmail)}</span>` : (md.userName || "")], ["Compliance", md.compliance], ["Hardware read", hw && Number(hw.fetchedAt) ? ago(hw.fetchedAt) + (hw.modelId ? " · " + hw.modelId : "") : (md.kind === "iru" ? "not yet" : "")], ["Synced", ago(md.syncedAt)]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${k === "Logged-in user" ? v : esc(v)}</div>`).join("")}</div>${d.mdmMismatch ? `<div class="kv mdm-note">${gone ? `The register says <b>${esc(STATUS_WORD[a.status])}</b>, but the MDM still sees this device. Verify the device and its MDM enrolment, then resolve the mismatch.` : `The register says <b>${esc(d.assigneeName || "nobody")}</b>, the MDM sees <b>${esc(md.userName || md.userEmail)}</b>. Record the hand-over here if the MDM is right.`}</div>` : ""}${admin ? `<div class="btnrow">${d.mdmMismatch && !gone && md.userEmail ? `<button id="dMdmHand" class="primary sm" type="button">Record hand-over to ${esc(md.userName || md.userEmail)}</button>` : ""}${md.kind === "iru" ? `<button id="dHwRefresh" class="sm" type="button">Refresh hardware from ${esc(md.connName)}</button><button id="dHwPreview" class="sm" type="button" title="Which sections ${esc(md.connName)} reports for this device (read-only)">What ${esc(md.connName)} reports</button>` : ""}<span id="dHwStatus" class="status" role="status"></span></div><pre id="dHwPreviewOut" class="kv mdm-preview hidden"></pre>` : ""}</details>`;
+  if (md && admin && $("dMdmHand")) $("dMdmHand").onclick = async () => { $("dMdmHand").disabled = true; const r = await backend.addEventTo(session.load(), BigInt(curId), "handed_out", md.userEmail, "reported by " + md.connName); setStatus("dHwStatus", r.ok ? "ok" : "err", r.ok ? r.detail : r.detail); if (r.ok) loadDevice(curId); else $("dMdmHand").disabled = false; };
+  if (md && admin && $("dHwPreview")) $("dHwPreview").onclick = async () => { $("dHwPreview").disabled = true; setStatus("dHwStatus", "", "asking " + md.connName + "…"); const r = await backend.mdmDetailsPreview(session.load(), BigInt(curId)); setStatus("dHwStatus", r.ok ? "ok" : "err", r.ok ? "read-only, nothing stored" : r.detail); $("dHwPreview").disabled = false; if (r.ok) { $("dHwPreviewOut").textContent = r.detail; $("dHwPreviewOut").classList.remove("hidden"); } };
+  if (md && admin && $("dHwRefresh")) $("dHwRefresh").onclick = async () => { $("dHwRefresh").disabled = true; setStatus("dHwStatus", "", "asking " + md.connName + "…"); const r = await backend.refreshHardware(session.load(), BigInt(curId)); setStatus("dHwStatus", r.ok ? "ok" : "err", r.detail); $("dHwRefresh").disabled = false; if (r.ok) loadDevice(curId); };
   const ab = opt(d.abm);
   $("dAbm").classList.toggle("hidden", !ab);
-  if (ab) $("dAbm").innerHTML = `<details ${!ab.mdmServer || ["sold", "scrapped", "lost"].includes(a.status) ? "open" : ""}><summary><b>${esc(ab.connName)}</b>${ab.mdmServer ? "" : ' <span class="pill warn">no device management</span>'}${["sold", "scrapped", "lost"].includes(a.status) ? ` <span class="pill warn">still in ABM — release it there</span>` : ""}</summary><div class="kvl">${[["Managed by", ab.mdmServer || "no device-management service holds it"], ["Model", [ab.model, ab.capacity, ab.color].filter(Boolean).join(" · ")], ["Ordered", [ab.orderDate, ab.orderNo ? "order " + ab.orderNo : "", ab.source ? "via " + ab.source.toLowerCase().replace("_", " ") : ""].filter(Boolean).join(" · ")], ["In Apple's register since", ab.addedAt], ["Synced", ago(ab.syncedAt)]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${esc(v)}</div>`).join("")}</div></details>`;
-  $("dActions").innerHTML = admin ? `<button id="dDoAct" class="primary sm">What happened?</button>` : "";
+  if (ab) $("dAbm").innerHTML = `<details ${!ab.mdmServer || ["sold", "scrapped", "lost"].includes(a.status) ? "open" : ""}><summary><b>Bought via ${esc(ab.connName)}</b>${ab.orderDate ? ` · ${esc(ab.orderDate)}` : ""}${ab.mdmServer ? "" : ' <span class="pill warn">no device management</span>'}${["sold", "scrapped", "lost"].includes(a.status) ? ` <span class="pill warn">still in ABM — release it there</span>` : ""}</summary><div class="kvl">${[["Managed by", ab.mdmServer || "no device-management service holds it"], ["Model", [ab.model, ab.capacity, ab.color].filter(Boolean).join(" · ")], ["Ordered", [ab.orderDate, ab.orderNo ? "order " + ab.orderNo : "", ab.source ? "via " + ab.source.toLowerCase().replace("_", " ") : ""].filter(Boolean).join(" · ")], ["In Apple's register since", ab.addedAt], ["Synced", ago(ab.syncedAt)]].filter(([, v]) => v).map(([k, v]) => `<div>${k}</div><div>${esc(v)}</div>`).join("")}</div></details>`;
+  const sellable = !["sold", "scrapped"].includes(a.status);
+  $("dActions").innerHTML = admin ? `<button id="dLabel" class="sm">Label</button>${sellable ? `<button id="dSell" class="sm" type="button">Sell this device</button>` : ""}<button id="dDoAct" class="primary sm">What happened?</button>` : "";
+  if (admin) $("dLabel").onclick = () => labels.open([a]);
+  if (admin && $("dSell")) $("dSell").onclick = () => { dSaleWanted = true; $("dSaleCard").classList.remove("hidden"); if (!$("dSaleStart").classList.contains("hidden") && !$("dSellBtn").disabled) $("dSellBtn").click(); $("dSaleCard").scrollIntoView({ behavior: "smooth" }); };
+  dSaleWanted = false;
+  labels.close();
   if (admin) $("dDoAct").onclick = () => { $("dActCard").classList.remove("hidden"); const def = a.status === "assigned" || a.status === "loaned" ? "returned" : "handed_out"; dAct = def; $("dActChips").querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.act === def)); toRowFor(def, "dToRow", "dToLabel"); $("dActCard").scrollIntoView({ behavior: "smooth" }); };
+  $("dReread").onclick = () => rereadSelected([{asset: a, photoCount: d.photos.length}], "dRereadCard");
+  $("dReread").disabled = !d.photos.length;
+  $("dPhotoHint").textContent = d.photos.length ? "AI reads the newest photo. Review the photo and edit its suggestions before saving." : "Add a label photo to read its serial number with AI.";
+  $("dPhotoTools").classList.toggle("hidden", !admin);
   $("dAdminRow").classList.toggle("hidden", !admin);
-  $("dSaleCard").classList.toggle("hidden", !admin);
+  if (admin) { fillLocationSelect($("dLocationSel"), d.location); const placeable = !a.assignee && !a.holder && ["in_stock", "deployed", "preparing", "unknown"].includes(a.status); $("dPlace").classList.toggle("hidden", !placeable); $("dPlace").textContent = a.status === "deployed" ? "Back to stock" : "Mark deployed here"; }
+  $("dSaleCard").classList.add("hidden");
   if (admin) { loadDeviceSale(a); hardwarePanel.load(a); }
+  if (admin && pendingEdit === Number(a.id)) { pendingEdit = 0; $("dEdit").click(); $("eSerial").focus(); }
   $("dArchive").textContent = a.archived ? "Restore" : "Archive";
   $("dEditCard").classList.add("hidden"); $("dActCard").classList.add("hidden");
   $("dPhotos").innerHTML = d.photos.map((p) => `<img data-photo="${p.id}" alt="" title="${esc(fmt(p.at))}">`).join("");
@@ -400,11 +666,16 @@ async function loadDevice(id) {
   $("dEvents").innerHTML = d.events.length ? d.events.map((e) => `<div class="ev ${["handed_out", "returned", "loaned", "sold", "scrapped", "lost"].includes(e.kind) ? "act" : ""}"><span class="dot"></span><div><div class="what">${esc(e.detail)}</div><div class="meta">${esc(fmt(e.at))} · ${esc(e.by)}</div>${Number(e.photoId) ? `<img data-photo="${Number(e.photoId)}" alt="">` : ""}</div></div>`).join("") : '<div class="empty">no history yet</div>';
   for (const img of $("dEvents").querySelectorAll("img")) { photoUrl(img.dataset.photo).then((u) => { if (u) img.src = u; else img.remove(); }); img.onclick = () => photoUrl(img.dataset.photo).then(zoom); }
 }
+async function fillLocationSelect(sel, current) {
+  try { const list = await backend.getLocations(session.load()); sel.innerHTML = '<option value="">—</option>' + list.map((l) => `<option value="${esc(l)}">${esc(l)}</option>`).join(""); if (current && !list.includes(current)) sel.insertAdjacentHTML("beforeend", `<option value="${esc(current)}">${esc(current)}</option>`); sel.value = current || ""; } catch (_) {}
+}
+$("dPlace").onclick = async () => { const a = curAsset; if (!a) return; const next = a.status === "deployed" ? "in_stock" : "deployed"; const r = await backend.bulkPlace(session.load(), [BigInt(curId)], $("dLocationSel").value, next); setStatus("dStatus", r.ok && r.changed > 0n ? "ok" : "err", r.ok ? r.detail : r.detail); if (r.ok) loadDevice(curId); };
+$("dLocationSel").onchange = async () => { const r = await backend.setAssetLocation(session.load(), BigInt(curId), $("dLocationSel").value); setStatus("dStatus", r.ok ? "ok" : "err", r.ok ? "location saved" : r.detail); if (r.ok) loadDevice(curId); };
 $("dEdit").onclick = () => { const a = curAsset; if (!a) return; $("eTag").value = a.tag; $("eSerial").value = a.serial; $("eVendor").value = a.vendor; $("eModel").value = a.model; $("eKind").value = a.kind; $("eNote").value = a.note; $("dEditCard").classList.remove("hidden"); };
 $("eCancel").onclick = () => $("dEditCard").classList.add("hidden");
 $("eSave").onclick = async () => {
   setStatus("eStatus", "", "saving…");
-  const r = await backend.updateAsset(session.load(), BigInt(curId), { tag: $("eTag").value.trim(), serial: $("eSerial").value.trim(), vendor: $("eVendor").value.trim(), model: $("eModel").value.trim(), kind: $("eKind").value, note: $("eNote").value.trim() });
+  const r = await backend.updateAsset(session.load(), BigInt(curId), { tag: curAsset.tag, serial: $("eSerial").value.trim(), vendor: $("eVendor").value.trim(), model: $("eModel").value.trim(), kind: $("eKind").value, note: $("eNote").value.trim() });
   setStatus("eStatus", r.ok ? "ok" : "err", r.ok ? "saved" : r.detail);
   if (r.ok) loadDevice(curId);
 };
@@ -504,10 +775,15 @@ function renderSaleWorkflow(v, deal) {
 // ---------- settings ----------
 async function loadSettings() {
   const s = opt(await backend.getSettings(session.load())); if (!s) return;
-  $("sAppUrl").value = s.appUrl; $("sPrefix").value = s.tagPrefix; $("sOrg").value = s.orgName;
+  if (!s.appUrl && location.protocol === "https:" && me.role === "admin" && !loadSettings.urlTried) { // the app knows its own address (0.24.0)
+    loadSettings.urlTried = true;
+    try { const r = await backend.setSettings(session.load(), { adminGroup: "", appUrl: location.origin + "/", orgName: s.orgName }); if (r.ok) { s.appUrl = location.origin + "/"; await refreshMe(); } } catch (_) {}
+  }
+  $("sAppUrl").value = s.appUrl; $("sOrg").value = s.orgName;
+  loadRegisterSettings();
   $("sMeta").textContent = `${Number(s.peopleCount)} people from the hub${Number(s.lastDirectoryPull) ? " · synced " + ago(s.lastDirectoryPull) : ""} · ${Number(s.adminCount)} admin${Number(s.adminCount) === 1 ? "" : "s"} · photos ${Math.round(Number(s.photoBytes) / 1048576)} MB`;
   $("sTrust").value = s.trustId || "";
-  $("sAppUrlHint").textContent = s.appUrl ? "Slack and Hub notifications open the matching device, offer or invoice." : "App address is missing: Slack and Hub notifications have no link. Enter this Assets app's HTTPS address above and save.";
+  $("sAppUrlHint").textContent = s.appUrl ? "Slack and Hub notifications open the matching device, offer or invoice." + (s.appUrl === location.origin + "/" ? " Detected from this app's address." : "") : "App address is missing: Slack and Hub notifications have no link. Enter this Assets app's HTTPS address above and save.";
   $("sTrustMeta").textContent = !s.trustId ? "not allowed yet" : Number(s.trustLastPull) ? `trust last read the list ${ago(s.trustLastPull)}` : "allowed — trust has not read the list yet (it pulls every 15 minutes, or on Sync now there)";
   const on = s.aiSource === "hub";
   $("sAiPill").textContent = on ? "on" : "off"; $("sAiPill").className = "pill " + (on ? "on" : "off");
@@ -658,7 +934,7 @@ async function loadApple() {
   const addable = apRows.filter((r) => !opt(r.assetId)).length;
   $("apCount").textContent = `${apRows.length} shown` + (addable ? ` · ${addable} not in the register` : "");
   $("apAddAll").classList.toggle("hidden", addable < 2); $("apAddAll").textContent = `Add all ${addable} to the register`;
-  $("apRows").innerHTML = apRows.length ? apRows.map((r) => { const d = r.device, aid = opt(r.assetId); return `<tr><td class="mono">${esc(d.serial)}</td><td><b>${esc(d.model || d.productType)}</b><div class="kv">${esc([d.capacity, d.color, d.family].filter(Boolean).join(" · "))}</div></td><td class="kv">${esc(d.orderDate || "—")}${d.source ? `<div class="kv">${esc(d.source.toLowerCase().replace("_", " "))}</div>` : ""}</td><td>${d.mdmServer ? esc(d.mdmServer) : '<span class="pill warn">none</span>'}</td><td>${aid !== null ? `<a href="#/d/${aid}">${esc(r.assetTag || "open")}</a> <span class="pill s-${esc(r.assetStatus)}">${esc(STATUS_WORD[r.assetStatus] || r.assetStatus)}</span>${r.assigneeName ? ` <span class="kv">${esc(r.assigneeName)}</span>` : ""}` : '<span class="kv">not in the register</span>'}</td><td>${aid === null ? `<button class="sm primary" data-ap-add="${esc(d.serial)}">Add</button>` : ""}</td></tr>`; }).join("") : '<tr><td colspan="6" class="kv">nothing matches this filter</td></tr>';
+  $("apRows").innerHTML = apRows.length ? apRows.map((r) => { const d = r.device, aid = opt(r.assetId); return `<tr><td data-label="Serial" class="mono">${esc(d.serial)}</td><td data-label="Model"><b>${esc(d.model || d.productType)}</b><div class="kv">${esc([d.capacity, d.color, d.family].filter(Boolean).join(" · "))}</div></td><td data-label="Ordered" class="kv">${esc(d.orderDate || "—")}${d.source ? `<div class="kv">${esc(d.source.toLowerCase().replace("_", " "))}</div>` : ""}</td><td data-label="Managed by">${d.mdmServer ? esc(d.mdmServer) : '<span class="pill warn">none</span>'}</td><td data-label="In the register">${aid !== null ? `<a href="#/d/${aid}">${esc(r.assetTag || "open")}</a> <span class="pill s-${esc(r.assetStatus)}">${esc(STATUS_WORD[r.assetStatus] || r.assetStatus)}</span>${r.assigneeName ? ` <span class="kv">${esc(r.assigneeName)}</span>` : ""}` : '<span class="kv">not in the register</span>'}</td><td class="apple-row-action">${aid === null ? `<button class="sm primary" data-ap-add="${esc(d.serial)}">Add</button>` : ""}</td></tr>`; }).join("") : '<tr><td colspan="6" class="kv">nothing matches this filter</td></tr>';
 }
 $("apFilters").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (!c) return; apFilter = c.dataset.f; $("apFilters").querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === c)); loadApple(); });
 $("apConn").onchange = loadApple;
@@ -670,9 +946,23 @@ async function apAdopt(serials) {
 $("apRows").addEventListener("click", (e) => { const b = e.target.closest("button[data-ap-add]"); if (b) apAdopt([b.dataset.apAdd]); });
 $("apAddAll").onclick = () => { const ss = apRows.filter((r) => !opt(r.assetId)).map((r) => r.device.serial); if (ss.length && confirm(`Take ${ss.length} devices into the register as "unknown"? You can archive any of them later.`)) apAdopt(ss); };
 
+async function loadRegisterSettings() {
+  const o = opt(await backend.registerOptions(session.load()).catch(() => null)); if (!o) return;
+  $("sLocations").value = o.locations.join("\n"); $("sTagPrefix").value = o.prefix; $("sTagDigits").value = Number(o.digits);
+  const tagsAllocated = BigInt(o.nextTag.slice(o.prefix.length)) > 1n; $("sTagPrefix").readOnly = tagsAllocated; $("sTagDigits").readOnly = tagsAllocated;
+  $("sTagNext").textContent = `Next automatic tag: ${o.nextTag}. Numbers are assigned when saved and never reused. The scheme is fixed after the first allocation.`;
+}
+$("sRegSave").onclick = async () => {
+  setStatus("sRegStatus", "", "saving…");
+  const list = $("sLocations").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  const a = await backend.setLocations(session.load(), list);
+  const b = a.ok ? await backend.setTagScheme(session.load(), { prefix: $("sTagPrefix").value.trim(), digits: BigInt(Math.max(3, Math.min(10, Number($("sTagDigits").value) || 6))) }) : a;
+  setStatus("sRegStatus", b.ok ? "ok" : "err", b.ok ? "saved" : b.detail);
+  loadRegisterSettings();
+};
 $("sSave").onclick = async () => {
   setStatus("sStatus", "", "saving…");
-  const r = await backend.setSettings(session.load(), { adminGroup: "", appUrl: $("sAppUrl").value.trim(), tagPrefix: $("sPrefix").value.trim(), orgName: $("sOrg").value.trim() });
+  const r = await backend.setSettings(session.load(), { adminGroup: "", appUrl: $("sAppUrl").value.trim(), orgName: $("sOrg").value.trim() });
   setStatus("sStatus", r.ok ? "ok" : "err", r.ok ? "saved" : r.detail);
   await refreshMe(); loadSettings();
 };
@@ -703,6 +993,7 @@ function downloadBytes(name, bytes, mime) { const a = document.createElement("a"
 
 // ----- device page: purchase details + start a sale
 let dSaleInfo = null, buyerKindSel = "person", bPicked = null;
+let dSaleWanted = false;
 async function loadDeviceSale(a) {
   let info; try { info = await backend.saleOfDevice(tok(), BigInt(a.id)); } catch (e) { return; }
   dSaleInfo = info;
@@ -710,6 +1001,8 @@ async function loadDeviceSale(a) {
   $("pPrice").value = pu ? fmtMoney(pu.priceMinor).replace(/'/g, "") : ""; $("pCur").value = pu ? pu.currency : ""; $("pDate").value = pu ? pu.date : ""; $("pNote").value = pu ? pu.note : "";
   $("dPurchaseLine").textContent = pu ? `The company paid ${fmtMoney(pu.priceMinor, pu.currency)}${pu.date ? " on " + pu.date : ""}${pu.note ? " · " + pu.note : ""}.` : "No purchase details yet — with price and date the rule can propose a selling price.";
   const sv = opt(info.sale);
+  // The selling card appears when there is something to show (purchase price or a sale), or on request (0.24.0).
+  $("dSaleCard").classList.toggle("hidden", !(me.role === "admin" && (pu || sv || dSaleWanted)));
   $("dSaleOpen").classList.toggle("hidden", !sv); $("dSaleStart").classList.toggle("hidden", !!sv || a.status === "sold" || a.status === "scrapped"); $("dSellForm").classList.add("hidden");
   if (sv) { const s = sv.sale; $("dSaleOpen").innerHTML = `<div class="kv">Sale <b>#${Number(s.id)}</b> · <span class="pill st-${esc(s.status)}">${esc(SALE_WORD[s.status] || s.status)}</span> · ${esc(s.buyer.name)} · ${esc(fmtMoney(s.grossMinor, s.currency))}${s.invoiceNo ? " · " + esc(s.invoiceNo) : ""}</div><div class="btnrow"><a href="#/sale/${Number(s.id)}"><button class="primary sm">Open the sale</button></a></div>`; }
   else {

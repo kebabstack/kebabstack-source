@@ -259,3 +259,13 @@ current staff access and source boundaries, and report per-ticket outcomes.
 ## Forms public intake
 
 See [public forms, embedding and the Desk handoff](../forms/INTAKE.md) for setup, privacy boundaries and alpha limitations. External mail is not connected.
+
+## Slack image and AI assistance upgrade (0.33.0)
+
+Add bot scopes `files:read` and `files:write` to the existing Slack app, reinstall it in the workspace, and update its Hub token if Slack issues a replacement. Keep the existing Events subscriptions and support-channel membership. Desk Settings → Slack → Refresh pulls the Hub credentials. No public file-sharing scope is required. Downloads remain private; Desk stores its own copy under the ticket's access controls.
+
+Settings → AI → AI assistance controls triage, title summaries, completion detection and follow-up reopening. It defaults to enabled, as triage did previously. The configured provider receives the original request text and the staff completion comment, never internal notes. Explicit completion by a currently authorized staff member may resolve the request; checklist, approval and hardware gates still apply. Disable assistance to retain manual status/reaction handling only. AI can misclassify natural language; the status message and audit note make decisions reviewable and the existing reopen action remains available.
+
+Image jobs survive upgrades. Up to five attempts use increasing delays (1–4 minutes); inspect ticket activity and Settings → Slack for errors. After fixing scopes or availability, use Attachments → Retry image sync. PNG, JPEG, GIF and WebP are supported; each stored image is at most 1.5 MB, with 20 attachments per ticket and the existing global storage cap. Large Slack images use available previews; old placeholders and non-image files require manual handling. Deleting a Slack file does not erase Desk's stored copy, or vice versa. Include both systems in retention procedures.
+
+Release validation must include real local Hub/Desk Wasm with mocked Slack/AI boundaries, a populated upgrade, the Desk frontend smokes, and the stable compatibility check against the committed baseline. A live Slack round-trip still requires a configured workspace and authorized test messages; local protocol tests do not certify workspace permissions.

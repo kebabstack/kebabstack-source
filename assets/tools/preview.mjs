@@ -10,10 +10,10 @@ let source = fs.readFileSync(path.join(root,'assets/test/smoke.mjs'),'utf8');
 source = source.slice(source.indexOf('const now ='),source.indexOf('const dom ='));
 source = source.replace(/import \{ generateKeyPairSync[^\n]*\n/,'').replace(/const abmPair[^\n]*\n/,'').replace(/const abmPemPkcs8[^\n]*\n/,'').replace(/const abmPemSec1[^\n]*\n/,'');
 source = source.replace(/let role = .*?;/,'let role = new URLSearchParams(location.search).get("as") === "finance" ? "finance" : "admin";').replace(/let aiOn = .*?;/,'let aiOn = true;').replace(/const flow = .*?;/,'const flow = "";');
-source = source.replace(/appUrl: flow.startsWith\("canonical"\) \? "https:\/\/new.assets.test\/" : "https:\/\/assets.test\/"/,'appUrl: ""');
-source = source.replaceAll('Me Myself','Demo Admin');
-source = source.replace(/photos: \[\{ id: 5n,[^\]]+\}\]/,'photos: []');
-source = source.replaceAll('ev(9, "handed_out", "handed out to Ana Ruiz", 5n)','ev(9, "handed_out", "handed out to Ana Ruiz")');
+source = source.replace(/appUrl: flow\.startsWith\("canonical"\)[^,]*,/,'appUrl: "",'); // no canonical redirect in the local preview (the smoke's ternary grew a suite branch in 0.25.0)
+source = source.replaceAll('Me Myself','Demo Admin').replace('let failReading = false;', 'let failReading = new URLSearchParams(location.search).get("demo") === "ai-error";');
+const demoPhoto = fs.readFileSync(path.join(root,'assets/test/fixtures/photo-label.png')).toString('base64');
+source = source.replace('case "photo": return [{ mime: "image/jpeg", bytes: [255, 216, 255] }];', `case "photo": return [{ mime: "image/png", bytes: Uint8Array.from(atob("${demoPhoto}"), c => c.charCodeAt(0)) }];`);
 const fixture = `
 const previewSales = [
   {id:7n,status:'paid',name:'MacBook Pro 14″',buyer:'Alex Morgan',price:65000n,wiped:false,mdmRemoved:false,invoice:'IT-2026-0014'},
@@ -52,6 +52,8 @@ source=source.replace('  switch (m) {',`  if(m==='financeSetup')return [{mode:'t
 source+='\nlocalStorage.setItem("ks-assets-session","preview-only");\n';
 fs.writeFileSync(path.join(out,'fixture.js'),source);
 let html=fs.readFileSync(path.join(out,'index.html'),'utf8').replace('<script type="module" src="./app.js"></script>','<script src="./fixture.js"></script><script type="module" src="./app.js"></script>');
+// ?demo=reread walks the reviewer to the selection bar and the read-again card (screenshots for design reviews).
+html=html.replace('</body>',`<script>if(new URLSearchParams(location.search).get('demo')==='reread'){let n=0;const t=setInterval(()=>{const pick=document.getElementById('devPickAll'),boxes=document.querySelectorAll('[data-pick-id]');if(++n>60)clearInterval(t);if(!pick||pick.classList.contains('hidden')||boxes.length<2)return;clearInterval(t);pick.click();boxes[0].click();boxes[1].click();setTimeout(()=>document.getElementById('devBulkReread').click(),150);},100);}</script></body>`);
 html=html.replace('<body>','<body><div style="background:#255946;color:#fff;text-align:center;padding:7px;font:11px system-ui">LOCAL DESIGN PREVIEW · Fictional data · Changes affect this preview only</div>');
 fs.writeFileSync(path.join(out,'index.html'),html);
 console.log('Preview built in '+out+'\nServe locally: python3 -m http.server 4173 --bind 127.0.0.1 --directory '+out);

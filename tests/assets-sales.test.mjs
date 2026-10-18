@@ -116,3 +116,69 @@ test('outside buyer: a private link survives payment-term, prefix and footer cha
   assert.equal(dueDays,30,'the invoice uses the payment days in force when it was issued');
  }finally{await x.pic.tearDown();}
 });
+
+test('device labels: the default layout is an admin setting with a fixed vocabulary; members cannot read or change it',async()=>{
+ const x=await setup(server.getUrl());
+ try{
+  const a=x.apps.assets.app,admin=x.assetToken,employee=await x.login('assets','employee');
+  assert.deepEqual(await a.getLabelLayout(employee),[],'members have no label settings');
+  const [initial]=await a.getLabelLayout(admin);assert.equal(initial.size,'62x29');assert.ok(initial.fields.includes('qr'));
+  assert.equal((await a.setLabelLayout(employee,{size:'62x29',fields:['qr','tag'],note:''})).ok,false);
+  assert.equal((await a.setLabelLayout(admin,{size:'a4',fields:['qr','tag'],note:''})).ok,false,'unknown media is refused');
+  assert.equal((await a.setLabelLayout(admin,{size:'62x29',fields:['qr','secret'],note:''})).ok,false,'unknown field is refused');
+  assert.equal((await a.setLabelLayout(admin,{size:'62x29',fields:['qr'],note:'x'.repeat(161)})).ok,false,'footer text is bounded');
+  unwrap(await a.setLabelLayout(admin,{size:'23x23',fields:['qr','tag','logo','note'],note:' If found, please contact it@example.test '}));
+  assert.deepEqual((await a.getLabelLayout(admin))[0],{size:'23x23',fields:['qr','tag','logo','note'],note:'If found, please contact it@example.test'});
+ }finally{await x.pic.tearDown();}
+});
+
+test('registering a device: automatic tags continue the register, locations are admin-defined, a person is handed the device in the same step',async()=>{
+ const x=await setup(server.getUrl());
+ try{
+  const a=x.apps.assets.app,admin=x.assetToken,employee=await x.login('assets','employee');
+  assert.deepEqual(await a.registerOptions(employee),[]);
+  let [o]=await a.registerOptions(admin);const initial=o.nextTag;assert.match(initial,/^\d{6}$/,'six padded digits, continuing from the fixture devices');assert.deepEqual(o.locations,[]);
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'',vendor:'',model:'',kind:'laptop',note:''},assignee:'',location:'',status:'',photo:[],mime:''})).ok,false,'needs a serial or a model');
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'S-1',vendor:'Apple',model:'MacBook Air',kind:'laptop',note:''},assignee:'',location:'Nowhere',status:'',photo:[],mime:''})).ok,false,'unknown location is refused');
+  assert.equal((await a.setLocations(employee,['Desk 1'])).ok,false);
+  unwrap(await a.setLocations(admin,[' Zürich office · 3rd floor ','Storage room','Storage room','']));
+  [o]=await a.registerOptions(admin);assert.deepEqual(o.locations,['Zürich office · 3rd floor','Storage room']);
+  const first=unwrap(await a.registerDevice(admin,{create:{tag:'',serial:'S-1',vendor:'Apple',model:'MacBook Air',kind:'laptop',note:''},assignee:'',location:'Storage room',status:'',photo:[],mime:''}));
+  assert.equal(first.tag,initial);const [v1]=await a.getAsset(admin,first.assetId);assert.equal(v1.location,'Storage room');assert.equal(v1.asset.status,'in_stock');
+  unwrap(await a.createAsset(admin,{tag:'DFN-000433',serial:'S-433',vendor:'Apple',model:'MacBook Pro',kind:'laptop',note:''}));
+  [o]=await a.registerOptions(admin);assert.equal(o.nextTag,String(BigInt(initial)+2n).padStart(6,'0'),'manual input cannot change the sequence');
+  assert.equal((await a.setTagScheme(admin,{prefix:'DFN-',digits:6n})).ok,false,'scheme cannot change after allocation');
+  assert.equal((await a.setTagScheme(admin,{prefix:'TOO-LONG-PREFIX',digits:6n})).ok,false);
+  const second=unwrap(await a.registerDevice(admin,{create:{tag:'',serial:'S-2',vendor:'Samsung',model:'Galaxy S24',kind:'phone',note:''},assignee:'employee@workboard.test',location:'',status:'',photo:[],mime:''}));
+  assert.equal(second.tag,o.nextTag);const [v2]=await a.getAsset(admin,second.assetId);assert.equal(v2.asset.status,'assigned');assert.equal(v2.asset.assignee,x.ids.employee);assert.equal(v2.location,'');
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'S-2',vendor:'',model:'',kind:'phone',note:''},assignee:'',location:'',status:'',photo:[],mime:''})).ok,false,'duplicate serial is refused');
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'S-3',vendor:'',model:'Dock',kind:'accessory',note:''},assignee:'nobody@workboard.test',location:'',status:'',photo:[],mime:''})).ok,false,'unknown person is refused');
+  unwrap(await a.setAssetLocation(admin,first.assetId,'Zürich office · 3rd floor'));assert.equal((await a.getAsset(admin,first.assetId))[0].location,'Zürich office · 3rd floor');
+  assert.equal((await a.setAssetLocation(admin,first.assetId,'Mars')).ok,false);
+  assert.ok((await a.listAssets(admin,'3rd floor','',false)).some(r=>r.asset.id===first.assetId),'search finds a device by its location');
+  assert.equal((await a.setAssetLocation(employee,first.assetId,'')).ok,false);
+ }finally{await x.pic.tearDown();}
+});
+
+test('deployed devices: registered or moved to a location in bulk without a personal owner; held devices are skipped',async()=>{
+ const x=await setup(server.getUrl());
+ try{
+  const a=x.apps.assets.app,admin=x.assetToken,employee=await x.login('assets','employee');
+  unwrap(await a.setLocations(admin,['G11-1','G11-2']));
+  const mon=unwrap(await a.registerDevice(admin,{create:{tag:'',serial:'8VLM9H3',vendor:'Dell',model:'U4021QW',kind:'monitor',note:''},assignee:'',location:'G11-1',status:'deployed',photo:[],mime:''}));
+  let [v]=await a.getAsset(admin,mon.assetId);assert.equal(v.asset.status,'deployed');assert.equal(v.location,'G11-1');assert.match(mon.detail,/deployed at G11-1/);
+  assert.equal((await a.registerDevice(admin,{create:{tag:'',serial:'X-1',vendor:'Dell',model:'U4021QW',kind:'monitor',note:''},assignee:'employee@workboard.test',location:'',status:'deployed',photo:[],mime:''})).ok,false,'a person makes it assigned, not deployed');
+  const stock1=unwrap(await a.registerDevice(admin,{create:{tag:'',serial:'2H3R8H3',vendor:'Dell',model:'U4021QW',kind:'monitor',note:''},assignee:'',location:'',status:'',photo:[],mime:''}));
+  const stock2=unwrap(await a.registerDevice(admin,{create:{tag:'',serial:'9KB1GH3',vendor:'Dell',model:'U4021QW',kind:'monitor',note:''},assignee:'',location:'',status:'',photo:[],mime:''}));
+  const held=unwrap(await a.registerDevice(admin,{create:{tag:'',serial:'HELD-1',vendor:'Apple',model:'MacBook',kind:'laptop',note:''},assignee:'employee@workboard.test',location:'',status:'',photo:[],mime:''}));
+  assert.equal((await a.bulkPlace(employee,[stock1.assetId],'G11-1','deployed')).ok,false);
+  assert.equal((await a.bulkPlace(admin,[stock1.assetId],'Mars','deployed')).ok,false);
+  const r=unwrap(await a.bulkPlace(admin,[stock1.assetId,stock2.assetId,held.assetId,999999n],'G11-1','deployed'));
+  assert.equal(r.changed,2n);assert.equal(r.skipped,2n,'the assigned laptop and the unknown id are skipped');
+  for(const id of [stock1.assetId,stock2.assetId]){const [d]=await a.getAsset(admin,id);assert.equal(d.asset.status,'deployed');assert.equal(d.location,'G11-1');}
+  assert.equal((await a.getAsset(admin,held.assetId))[0].asset.status,'assigned','bulk never touches a device a person holds');
+  const stats=await a.stats(admin);assert.equal(Object.fromEntries(stats.byStatus).deployed,3n);
+  unwrap(await a.bulkPlace(admin,[stock1.assetId],'','in_stock'));[v]=await a.getAsset(admin,stock1.assetId);assert.equal(v.asset.status,'in_stock');assert.equal(v.location,'G11-1','location stays unless changed');
+  unwrap(await a.addEventTo(admin,stock2.assetId,'handed_out','employee@workboard.test',''));assert.equal((await a.getAsset(admin,stock2.assetId))[0].asset.status,'assigned','a deployed device can still be handed to a person');
+ }finally{await x.pic.tearDown();}
+});

@@ -18,7 +18,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 EXCLUDED = (
     '**/deployments/**', 'docs/release-*.md', 'docs/reviews/**',
-    'docs/REVIEW-*.md', 'docs/SANITIZE.md', 'docs/RELAUNCH.md', '**/DEPLOYED.md',
+    'docs/REVIEW-*.md', 'docs/INTEGRITY-20*.md', 'docs/SANITIZE.md', 'docs/RELAUNCH.md', '**/DEPLOYED.md',
     '.git/**', '**/.git/**', '.icp/**', '**/.icp/**', '.mops/**', '**/.mops/**',
     'node_modules/**', '**/node_modules/**', '**/backend/dist/**',
     'kitchen/dist/recipes/**', '.marketplace-private/**',

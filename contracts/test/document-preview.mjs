@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+import {mountDocumentPreview} from '../dist/document-preview.js';
+const dom=new JSDOM('<section></section>');globalThis.document=dom.window.document;
+const root=document.querySelector('section');let resolve,stale=false,created=0,revoked=0;
+const originalCreate=URL.createObjectURL,originalRevoke=URL.revokeObjectURL;
+URL.createObjectURL=()=>{created++;return 'blob:fixture';};URL.revokeObjectURL=()=>revoked++;
+const files=[{id:1n,name:'sticker.png',mime:'image/png',size:10n}];
+let dispose=mountDocumentPreview(root,{documents:files,load:()=>new Promise(r=>resolve=r),stale:()=>stale});
+stale=true;resolve({name:'sticker.png',mime:'image/png',bytes:new Uint8Array([1])});await new Promise(r=>setImmediate(r));
+assert.equal(created,0,'a late response after workspace navigation must not show a private original');dispose();
+stale=false;dispose=mountDocumentPreview(root,{documents:files,load:async()=>({name:'sticker.png',mime:'image/png',bytes:new Uint8Array([1])}),stale:()=>stale});await new Promise(r=>setImmediate(r));assert.equal(root.querySelectorAll('img').length,1);dispose();assert.equal(revoked,1);assert.equal(root.querySelectorAll('img').length,0);
+let requested=false;mountDocumentPreview(root,{documents:[{...files[0],mime:'text/html'}],load:async()=>{requested=true;},stale:()=>false});assert.equal(requested,false,'uploaded HTML must never be embedded as active app content');
+URL.createObjectURL=originalCreate;URL.revokeObjectURL=originalRevoke;dom.window.close();console.log('Document preview: stale access, resource cleanup and inactive content passed');

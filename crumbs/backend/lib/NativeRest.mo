@@ -47,7 +47,7 @@ module {
       if(H.field(f,"values")==null or not H.textFields(f,["dimension"]) or not H.textArrays(f,["values"]) or not H.boolFields(f,["exclude"]))return null;
       filters.add({dimension=H.str(f,"dimension","");values=H.strings(f,"values");exclude=H.bool(f,"exclude",false)})
     };
-    ?{site=H.str(j,"site","");from;until;limit=Int.abs(limit);dimension=H.str(j,"dimension","");filters=filters.toArray()}
+    ?{site=H.str(j,"site","");from;until;limit=Int.abs(limit);dimension=H.str(j,"dimension","");filters=filters.toArray();dayStarts=(switch(H.field(j,"dayStarts")){case (?#array(xs)) ?xs.map(func(v:Json):Int{switch v {case (#number(#int(n))) n;case _ -1}}).filter(func(n:Int):Bool{n>=0});case _ null})}
   };
   func natField(j:Json,key:Text):?Nat {let n=H.num(j,key,-1);if(n < 0)null else ?Int.abs(n)};
   func metric(j:Json):?T.Metrics {

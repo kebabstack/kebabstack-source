@@ -23,7 +23,7 @@ Vendors sell this as a separate product (Okta Identity Governance, Entra ID
 Governance P2). In the hub it is a thin layer over the existing rule, so there
 is no second system of record and nothing to keep in sync.
 
-## Decisions (2026-09-03)
+## Product decisions (2026-09-03)
 
 | Question | Decision | Why |
 |---|---|---|

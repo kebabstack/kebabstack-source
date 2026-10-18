@@ -36,3 +36,4 @@ bug/test/public-baseline/
 
 # Crumbs collector runtime identity, salts and delivery queue.
 crumbs/collector/data/
+.contracts-preview/

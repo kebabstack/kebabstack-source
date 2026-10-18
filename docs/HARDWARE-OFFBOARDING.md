@@ -1,7 +1,7 @@
 # Hardware offboarding
 
 Implemented in Hub 0.27, Desk 0.14 and Assets 0.13; the suite remains alpha.
-Use the [operator guide](OPERATIONS.md) for installation-specific rollout and recovery. Production receipts are intentionally kept outside the public source.
+Verify your own installation and preserve its rollout evidence privately.
 
 ## Operator workflow
 

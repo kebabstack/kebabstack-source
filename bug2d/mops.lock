@@ -1,13 +1,18 @@
 {
   "version": 3,
   "mopsTomlDepsHash": "7ad0939935d8def81bb148e012df815e6b624b3b4f0088fc694d18225eacc10a",
-  "localDepsHash": "bbcb417d2939a273310ace52c22642ad50a9e78d2d0440be6be50957fe196f05",
+  "localDepsHash": "e52aa96349708f0f00a3892c702d4e2117d9267da1eb1438e007029caf0cab2d",
   "deps": {
     "core": "2.6.1",
-    "kebab-hub": "../sdk/motoko"
+    "kebab-hub": "../sdk/motoko",
+    "sha2": "0.1.14"
   },
   "graph": {
-    "core@2.6.1": {}
+    "core@2.2.0": {},
+    "core@2.6.1": {},
+    "sha2@0.1.14": {
+      "core": "2.2.0"
+    }
   },
   "hashes": {
     "core@2.6.1": {
@@ -68,6 +73,14 @@
       "core@2.6.1/src/pure/Queue.mo": "129647e8a3dd65404f8ad28fc8f299fd4586bc32802ad9ede9c1f21249d4e54b",
       "core@2.6.1/src/pure/RealTimeQueue.mo": "60e1f118e1fd728c64ac769396b2441a3e9be5208051139b3dd652125a81a0cb",
       "core@2.6.1/src/pure/Set.mo": "c8f6f193a4b42b2df65ce8c05d610ccbcdc8befddc72acd44445e7290224373e"
+    },
+    "sha2@0.1.14": {
+      "sha2@0.1.14/LICENSE": "0351aa17e901e2f426698e6199237119a18c8ea1674877e0eb4d694ee9c4b938",
+      "sha2@0.1.14/NOTICE": "2a2979e2cb91a7d903c3377ed8031a92e7fd467fd9ddb005f2ae2042ead1b4f1",
+      "sha2@0.1.14/README.md": "f06ce7acdfabd793202505e744591c6692b54eeb97f97689bc889fd1926a1de0",
+      "sha2@0.1.14/mops.toml": "ba73b13715683357925fb004b66e43a0f3fabb5fdce3028f13d12d4a297b3170",
+      "sha2@0.1.14/src/Sha256.mo": "d7c858eb1c097e9336ace80e754fb45b3c7b8e11884bebce3a228af5b4494c26",
+      "sha2@0.1.14/src/Sha512.mo": "8b9f809dd637e4490ca7c33a0c6911e4ab853a3c69a8b54304567ff502068559"
     }
   }
 }

@@ -22,7 +22,7 @@ async function setup(live=false,baseline=false){const pic=await PocketIc.create(
  if(baseline!==true){const p=ok(await app.getSiteAccess(owner.token,'main'));ok(await app.setSiteAccess(owner.token,'main',p.revision,[alice],[]));}
  const now=BigInt(Math.floor(Number(await pic.getTime())/1000));
  const event=(id,extra={})=>({id,site:'main',visitor:'a'.repeat(64),at:now-100n,order:1n,kind:{pageview:null},path:'/',hostname:'example.test',source:'google.com',medium:'',campaign:'',content:'',term:'',country:'CH',region:'',city:'',device:'Desktop',browser:'Firefox',os:'Linux',name:'',props:[],interactive:true,revenueMinor:0n,currency:'',engagementMs:0n,scrollDepth:0n,...extra});
- const request=(extra={})=>({site:'main',from:now-1000n,until:now+100n,filters:[],dimension:'',limit:100n,...extra});
+ const request=(extra={})=>({site:'main',from:now-1000n,until:now+100n,filters:[],dimension:'',limit:100n,dayStarts:[],...extra});
  return {pic,h,c,hub,app,owner,viewer,site,now,event,request,conn,alice,bob,login};}
 function ok(r){assert.ok('ok'in r,JSON.stringify(r,(_,v)=>typeof v==='bigint'?v.toString():v));return r.ok;}
 test('Crumbs: exact metrics, signed collection, atomic validation, deduplication and site authorization',async()=>{const s=await setup();const {pic,app,owner,viewer,event,request}=s;try{
@@ -67,14 +67,15 @@ test('Crumbs: acquisition attribution, engagement isolation, import conflicts an
  const entry=ok(await app.report(owner.token,request({dimension:'entryPath'})));assert.equal(entry.rows[0].value,'/');const exit=ok(await app.report(owner.token,request({dimension:'exitPath'})));assert.equal(exit.rows[0].value,'/pricing');
  const m=source.totals,row={id:'history',site:'main',day:(now/86400n-2n)*86400n,dimension:'import:visitors',value:'{}',metrics:m};
  assert.ok('conflict'in(await app.importAggregates(owner.token,[row,{...row,metrics:{...m,pageviews:9n}}])).err);assert.equal(ok(await app.imported(owner.token,'main',now-86400n*4n,now)).length,0);
- assert.equal(ok(await app.importAggregates(owner.token,[row,row])),1n);assert.equal(ok(await app.importAggregates(owner.token,[row])),0n);
+ assert.equal(ok(await app.hasImports(owner.token,'main')),false,'no history before the first import');assert.equal(ok(await app.importAggregates(owner.token,[row,row])),1n);assert.equal(ok(await app.importAggregates(owner.token,[row])),0n);assert.equal(ok(await app.hasImports(owner.token,'main')),true);assert.ok('unauthorized'in(await app.hasImports(owner.token,'other')).err);
  ok(await app.saveSite(owner.token,{...s.site,retentionDays:1n}));assert.equal(ok(await app.imported(owner.token,'main',now-86400n*4n,now)).length,0,'expired history immediately hidden');
  await pic.advanceTime(86400*1000+1000);await pic.tick(5);await pic.advanceTime(31000);await pic.tick(5);
  const fresh=await s.login('owner');assert.ok(fresh);assert.equal(ok(await app.health(fresh.token)).storedEvents,0n);assert.equal(ok(await app.health(fresh.token)).storageChargeBytes,0n);
  }finally{await s.pic.tearDown();}});
-test('Crumbs: multi-batch dataset preserves exact unique counts and ordering',async()=>{const s=await setup();try{const {app,owner,event,request,now}=s;app.setPrincipal(ids.collector);const count=Number(process.env.CRUMBS_LOAD_EVENTS??5000),start=performance.now();assert.ok(Number.isInteger(count)&&count>=1000&&count<=50000);
+test('Crumbs: multi-batch dataset preserves exact unique counts and ordering',async()=>{const s=await setup();try{const {app,owner,event,request,now}=s;app.setPrincipal(ids.collector);const count=Number(process.env.CRUMBS_LOAD_EVENTS??50000),start=performance.now();assert.ok(Number.isInteger(count)&&count>=1000&&count<=50000);
  for(let offset=0;offset<count;offset+=50){const batch=Array.from({length:Math.min(50,count-offset)},(_,j)=>{const i=offset+j;return event('load-'+i,{visitor:(i%1000).toString(16).padStart(64,'0'),order:BigInt(i+1),at:now-300n,path:i%2?'/pricing':'/'});});assert.equal(ok(await app.ingestBatch(batch)).accepted,BigInt(batch.length));}
  const queryStart=performance.now(),r=ok(await app.report(owner.token,request({dimension:'path'})));assert.equal(r.totals.visitors,1000n);assert.equal(r.totals.pageviews,BigInt(count));assert.equal(r.totals.visits,1000n);assert.equal(r.rows.reduce((n,row)=>n+row.metrics.pageviews,0n),BigInt(count));
+ for(const dimension of ['channel','aiSource','campaign']) {const report=ok(await app.report(owner.token,request({dimension,filters:[{dimension:'source',values:['google.com'],exclude:false}]})));assert.equal(report.totals.pageviews,BigInt(count));assert.equal(report.totals.visitors,1000n);assert.equal(report.rows.reduce((n,row)=>n+row.metrics.pageviews,0n),BigInt(count));}
  console.log(JSON.stringify({environment:'local PocketIC, not a production SLA',events:count,ingestMs:Math.round(queryStart-start),reportMs:Math.round(performance.now()-queryStart)}));
  }finally{await s.pic.tearDown();}});
 
@@ -289,6 +290,15 @@ test('Crumbs business: scroll goal deduplication, attribution, currencies, REST 
  assert.deepEqual(channels.find(r=>r.value==='AI assistants').metrics.revenue,[['CHF',1200n]]);assert.deepEqual(channels.find(r=>r.value==='Paid search').metrics.revenue,[['EUR',500n]]);
  const ai=ok(await app.report(owner.token,request({dimension:'aiSource',filters:[{dimension:'aiSource',values:[''],exclude:true}]})));assert.equal(ai.totals.visitors,1n);assert.equal(ai.rows[0].value,'ChatGPT');
  assert.ok(ok(await app.report(viewer.token,request({dimension:'minute'}))).rows.every(r=>BigInt(r.value)%60n===0n));
+ // Conversions per acquisition group: visitors who reached the goal, deduplicated per session for scroll goals.
+ const rows=ok(await app.goalRows(viewer.token,request({dimension:'channel'}),goal.id));assert.deepEqual(rows,[{value:'AI assistants',visitors:1n,completions:1n}]);
+ assert.ok('invalid'in(await app.goalRows(viewer.token,request(),goal.id)).err,'grouping needs a dimension');assert.ok('notFound'in(await app.goalRows(viewer.token,request({dimension:'channel'}),'missing')).err);
+ assert.ok('unauthorized'in(await app.goalRows(viewer.token,request({site:'private',dimension:'channel'}),goal.id)).err);
+ // Day buckets follow the website's local midnights supplied by the client; without them UTC days apply.
+ const utcDay=(s.now/86400n)*86400n,local=utcDay-7200n;const localDays=ok(await app.report(viewer.token,request({dimension:'day',from:utcDay-86400n,dayStarts:[[local-86400n,local,local+86400n]]}))).rows;
+ assert.ok(localDays.every(r=>[local-86400n,local,local+86400n].includes(BigInt(r.value))),JSON.stringify(localDays.map(r=>r.value)));assert.equal(localDays.reduce((n,r)=>n+r.metrics.pageviews,0n),3n);
+ assert.ok(ok(await app.report(viewer.token,request({dimension:'day'}))).rows.every(r=>BigInt(r.value)%86400n===0n),'UTC days without client midnights');
+ assert.ok('invalid'in(await app.saveSite(owner.token,{...s.site,timezone:'Europe/Zürich'})).err,'time zone names are validated');ok(await app.saveSite(owner.token,{...s.site,timezone:'Europe/Zurich'}));assert.equal((await app.listSites(owner.token)).find(x=>x.id==='main').timezone,'Europe/Zurich');
  const rest=await nativeApi(s,'/goals/report',viewer.token,'POST',{...request(),id:goal.id});assert.equal(rest.status,200);assert.equal(rest.data.completions,'1');
  assert.equal((await nativeApi(s,'/goals?site=main',viewer.token)).data[0].scrollDepth,'60');
  ok(await app.saveSite(owner.token,{...s.site,retentionDays:1827n}));assert.ok('invalid'in(await app.saveSite(owner.token,{...s.site,retentionDays:1828n})).err);
@@ -314,4 +324,40 @@ test('Crumbs business: saved views and SEO are scoped, revision protected, bound
  const disconnected=ok(await app.saveSearchConnection(owner.token,'main',{clientId:'',property:'',revision:connection.revision}));assert.equal(disconnected.revision,2n);assert.deepEqual(ok(await app.searchSnapshot(viewer.token,'main')),[]);
  assert.ok('conflict'in(await app.saveSearchSnapshot(owner.token,connection.revision,snap)).err);
  ok(await app.deleteSite(owner.token,'main'));assert.ok('unauthorized'in(await app.savedReports(owner.token,'main')).err);
+ }finally{await s.pic.tearDown();}});
+
+test('Crumbs native: consented cookies distinguish shared-IP browsers and survive IP/day changes; cookieless stays daily',async()=>{const s=await setup();try{
+ const cookieId='12345678-1234-4234-8234-123456789abc',cookieConsent=true;
+ assert.equal((await nativePost(s,nativeEvent('no-consent',{cookieId}))).status,400);
+ assert.equal((await nativePost(s,nativeEvent('bad-cookie',{cookieId:'-'.repeat(36),cookieConsent}))).status,400);
+ assert.equal((await nativePost(s,[nativeEvent('browser-one',{cookieId,cookieConsent}),nativeEvent('browser-two',{cookieId:'22345678-1234-4234-8234-123456789abc',cookieConsent}),nativeEvent('daily-one')])).data.accepted,3);
+ const before=ok(await s.app.exportEvents(s.owner.token,'main','',100n)).events;const one=before.find(e=>e.id==='browser-one');assert.match(one.visitor,/^c:[a-f0-9]{64}$/);assert.ok(!JSON.stringify(one,(_,v)=>typeof v==='bigint'?v.toString():v).includes(cookieId));
+ assert.equal((await nativePost(s,nativeEvent('browser-new-ip',{cookieId,cookieConsent}),nativeHeaders.map(([k,v])=>[k,k==='X-Real-IP'?'198.51.100.1':v]))).data.accepted,1);
+ assert.equal((await nativePost(s,nativeEvent('browser-one',{cookieId:'32345678-1234-4234-8234-123456789abc',cookieConsent}))).status,409);
+ await s.pic.advanceTime(86400000);await s.pic.tick(5);const owner=await s.login('owner');await nativePost(s,[nativeEvent('browser-day-two',{cookieId,cookieConsent}),nativeEvent('daily-two')]);
+ const all=ok(await s.app.exportEvents(owner.token,'main','',100n)).events;assert.equal(all.find(e=>e.id==='browser-day-two').visitor,one.visitor);assert.equal(all.find(e=>e.id==='browser-new-ip').visitor,one.visitor);assert.notEqual(all.find(e=>e.id==='daily-two').visitor,all.find(e=>e.id==='daily-one').visitor);
+ const r=ok(await s.app.report(owner.token,s.request({until:s.now+90000n,dimension:'trackingMode'})));assert.equal(r.totals.pageviews,6n);assert.equal(r.rows.find(x=>x.value==='cookie').metrics.visitors,2n);assert.equal(r.rows.find(x=>x.value==='cookieless').metrics.visitors,2n);
+ const rest=await nativeApi(s,'/query',owner.token,'POST',s.request({until:s.now+90000n,dimension:'trackingMode'}));assert.equal(rest.status,200);assert.equal(rest.data.totals.pageviews,'6');
+ for(const [mode,views] of [['cookie','4'],['cookieless','2']]) {const result=await nativeApi(s,'/query',owner.token,'POST',s.request({until:s.now+90000n,filters:[{dimension:'trackingMode',values:[mode],exclude:false}]}));assert.equal(result.status,200);assert.equal(result.data.totals.pageviews,views);assert.equal(result.data.totals.visitors,'2');}
+ const exported=await nativeApi(s,'/export?site=main&limit=100',owner.token);assert.equal(exported.status,200);assert.equal(exported.data.events.length,6);assert.ok(!JSON.stringify(exported.data).includes(cookieId));
+ const {readFileSync}=await import('node:fs');const schema=JSON.parse(readFileSync('crumbs/dist/openapi.json','utf8')).components.schemas.StoredEvent;
+ for(const event of exported.data.events){assert.deepEqual(Object.keys(event).sort(),schema.required.toSorted());assert.match(event.visitor,new RegExp(schema.properties.visitor.pattern));assert.deepEqual(event.kind,{pageview:null});}
+
+ }finally{await s.pic.tearDown();}});
+
+test('Crumbs native: concurrent retries and the read-only HTTP upgrade handshake cannot inflate pageviews',async()=>{const s=await setup();try{
+ const raw=nativeEvent('one-real-view');for(let i=0;i<5;i++)assert.deepEqual((await s.app.http_request(nativeRequest('/api/v1/events','POST',raw,nativeHeaders))).upgrade,[true]);
+ assert.equal(ok(await s.app.report(s.owner.token,s.request())).totals.pageviews,0n);
+ const results=await Promise.all(Array.from({length:12},()=>nativePost(s,raw)));
+ assert.ok(results.every(r=>r.status===202));assert.equal(results.reduce((n,r)=>n+r.data.accepted,0),1);assert.equal(results.reduce((n,r)=>n+r.data.duplicates,0),11);
+ assert.equal(ok(await s.app.report(s.owner.token,s.request())).totals.pageviews,1n);
+ const rejected=await nativePost(s,[nativeEvent('atomic-good'),nativeEvent('atomic-invalid',{url:'https://wrong.test/'})]);assert.equal(rejected.status,400);assert.equal(ok(await s.app.report(s.owner.token,s.request())).totals.pageviews,1n);
+ }finally{await s.pic.tearDown();}});
+
+test('Crumbs cookie visits split at UTC midnight even within thirty minutes',async()=>{const s=await setup();try{
+ const cookieId='12345678-1234-4234-8234-123456789abc',cookieConsent=true;
+ await s.pic.setTime(new Date('2026-09-19T23:59:00Z'));await s.pic.tick(5);assert.equal((await nativePost(s,nativeEvent('before-midnight',{cookieId,cookieConsent}))).status,202);
+ await s.pic.setTime(new Date('2026-09-20T00:01:00Z'));await s.pic.tick(5);assert.equal((await nativePost(s,nativeEvent('after-midnight',{cookieId,cookieConsent}))).status,202);const owner=await s.login('owner');
+ const from=BigInt(Date.parse('2026-09-19T23:58:00Z')/1000),until=BigInt(Date.parse('2026-09-20T00:02:00Z')/1000);const r=ok(await s.app.report(owner.token,s.request({from,until})));assert.equal(r.totals.visitors,1n);assert.equal(r.totals.visits,2n);assert.equal(r.totals.pageviews,2n);
+ const today=ok(await s.app.report(owner.token,s.request({from:BigInt(Date.parse('2026-09-20T00:00:00Z')/1000),until})));assert.equal(today.totals.visits,1n);assert.equal(today.totals.pageviews,1n);
  }finally{await s.pic.tearDown();}});

@@ -7,9 +7,12 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 const html = fs.readFileSync("index.html", "utf8").replace('<script type="module" src="./app.js"></script>', "");
 const now = BigInt(Date.now()) * 1000000n;
+const appliedReadings = [];
+let failReading = false;
 const ANA = "p_00000000000000a1", ME = "p_00000000000000ee"; // assets 0.6.0: people are hub person ids
 const asset = (id, over = {}) => ({ id: BigInt(id), tag: "INV-000" + id, serial: "C02XG2JHJGH" + id, vendor: "Apple", model: "MacBook Pro 14\"", kind: "laptop", status: "assigned", assignee: ANA, holder: "", note: "", createdAt: now, updatedAt: now, createdBy: ME, archived: false, ...over });
-const row = (id, over = {}) => ({ asset: asset(id, over), assigneeName: "Ana Ruiz", photoCount: 1n, lastEvent: "handed out to Ana Ruiz", lastAt: now, mdm: id === 1 ? "Iru" : "", mdmUser: id === 1 ? "ben@example.com" : "", mdmMismatch: id === 1, assigneeEmail: over.assignee === "" ? "" : "ana@example.com", createdByName: "Me Myself" });
+const hardware = { processor: "Apple M1 Pro", cores: 10n, memoryGb: 16n, storageGb: 512n, storageFreeGb: 210n, encrypted: "yes", modelId: "MacBookPro18,3", source: "Iru", fetchedAt: now };
+const row = (id, over = {}) => ({ asset: asset(id, over), assigneeName: "Ana Ruiz", photoCount: 1n, lastEvent: "handed out to Ana Ruiz", lastAt: now, mdm: id === 1 ? "Iru" : "", mdmUser: id === 1 ? "ben@example.com" : "", mdmUserName: id === 1 ? "Ben Ko" : "", mdmMismatch: id === 1, assigneeEmail: over.assignee === "" ? "" : "ana@example.com", createdByName: "Me Myself", location: "", hardware: id === 1 ? [hardware] : [], abmCapacity: id === 3 ? "128GB" : "" });
 const ev = (id, kind, detail, photoId = 0n) => ({ id: BigInt(id), assetId: 1n, at: now, by: "Me Myself", kind, detail, to: "", photoId }); // by/to arrive as names (showEvent)
 // sales (0.7.0)
 const seller = { name: "Acme AG", street: "Musterstrasse", houseNo: "11", postalCode: "8002", town: "Zürich", country: "CH", uid: "CHE-123.456.789", vatRegistered: true };
@@ -45,7 +48,7 @@ let fakeDeal = { exists:false, active:false, expiresAt:now+14n*86400n*1000000000
 globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
   calls.push(m);
   switch (m) {
-    case "info": return { orgName: "Acme", hubId: "aaaaa-aa", hubSet: true, appUrl: flow.startsWith("canonical") ? "https://new.assets.test/" : "https://assets.test/", version: "0.1.0" };
+    case "info": return { orgName: "Acme", hubId: "aaaaa-aa", hubSet: true, appUrl: flow.startsWith("canonical") ? "https://new.assets.test/" : flow.startsWith("suite") ? "https://assets.kebabstack.test/" : "https://assets.test/", version: "0.1.0" };
     // hub calls made by the shared topbar (same fake actor: the stub ignores the canister id)
     case "suiteState": return [{ email: "me@example.com", displayName: "Me Myself", unread: 1n, expiresAt: now + 3600n * 1000000000n, active: true, provider: "suite" }];
     case "myNotifications": return { total: 1n, unread: 1n, slackDm: true, items: [{ id: 3n, email: "me@example.com", fromApp: "desk", title: "Ticket answered", url: "https://desk.test/#/t/1", kind: "desk", at: now, read: false, slack: "off" }] };
@@ -54,11 +57,12 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "myAvatarPortal": case "getCompanyLogo": case "tileIcon": return [];
     case "whoami": return [{ id: ME, email: "me@example.com", displayName: "Me Myself", role, roleSource: "hub owner", orgName: "Acme", hubId: "aaaaa-aa", needsClaim: false, aiOn, aiSource: aiOn ? "hub" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: aiOn ? "openai · gpt-4.1-mini" : "" } }];
     case "loginWithTicket": return flow === "rejected" ? [] : [{ token: "t0k", email: "me@example.com", displayName: "Me", role, suiteToken: "su1te" }];
+    case "loginWithSuite": return flow === "suite-rejected" || a[0] !== "c".repeat(64) ? [] : [{ token: "t0k", email: "me@example.com", displayName: "Me", role, suiteToken: "su1te" }];
     case "stats": return { total: 3n, byStatus: [["assigned", 2n], ["in_stock", 1n]], recent: [{ event: ev(9, "handed_out", "handed out to Ana Ruiz", 5n), name: "Apple MacBook Pro 14\"" }], photos: 1n, photoBytes: 120000n };
     case "listAssets": return [row(1), row(2, { status: "in_stock", assignee: "" }), row(3, { kind: "phone", model: "iPhone 15", serial: "G6TX9RQ2L7" })];
     case "pendingHandoverCount": return 0n;
     case "handoverOf": case "formerBuyerStatus": return [];
-    case "getAsset": return [{ asset: asset(1), assigneeName: "Ana Ruiz", assigneeEmail: "ana@example.com", createdByName: "Me Myself", events: [ev(9, "handed_out", "handed out to Ana Ruiz", 5n), ev(8, "created", "created via photo intake")], photos: [{ id: 5n, assetId: 1n, eventId: 9n, at: now, by: "me@example.com", mime: "image/jpeg", size: 120000n }], mdm: [{ connId: 1n, connName: "Iru", kind: "iru", externalId: "x1", deviceName: "Ana's MacBook", osVersion: "15.6", lastSeen: "2026-09-04T08:00:00Z", userEmail: "ben@example.com", userName: "Ben Ko", compliance: "", syncedAt: now }], mdmMismatch: true, abm: [abmDev("C02XG2JHJGH1", "Iru · Group")] }];
+    case "getAsset": return [{ asset: asset(1), assigneeName: "Ana Ruiz", assigneeEmail: "ana@example.com", createdByName: "Me Myself", events: [ev(9, "handed_out", "handed out to Ana Ruiz", 5n), ev(8, "created", "created via photo intake")], photos: [{ id: 5n, assetId: 1n, eventId: 9n, at: now, by: "me@example.com", mime: "image/jpeg", size: 120000n }], mdm: [{ connId: 1n, connName: "Iru", kind: "iru", externalId: "x1", deviceName: "Ana's MacBook", osVersion: "15.6", lastSeen: "2026-09-04T08:00:00Z", userEmail: "ben@example.com", userName: "Ben Ko", compliance: "", syncedAt: now }], mdmMismatch: true, abm: [abmDev("C02XG2JHJGH1", "Iru · Group")], hardware: [hardware] }];
     case "notifyStatus": return [{ at: now, ok: false, detail: "this app has no notify lane — an admin can grant it under Apps → Lanes", to: "ana@example.com", title: "A device is offered to you — review the price and terms" }];
     case "offerSale": return { ok: true, detail: "offered — but Ana Ruiz could NOT be notified: this app has no notify lane — an admin can grant it under Apps → Lanes. Tell them yourself, or fix it under Settings → Notifications" };
     case "listAbm": return abmConns;
@@ -74,7 +78,17 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "intakeMatch": return a[1].some((v) => /C02XG2/i.test(v)) ? [{ row: row(1), score: 90n, why: "serial matches (0/O, 1/I, 5/S read alike) (C02XG2JHJGH1)" }] : [];
     case "intakeRead": return { ok: true, detail: "", reads: [{ kind: "serial", value: "CO2XG2JHJGH1", confidence: 0.55 }, { kind: "asset_tag", value: "INV-0001", confidence: 0.95 }], vendor: "Apple", model: "MacBook Pro 14\"", kind: "laptop", sticker: "current", notes: "sticker slightly worn" };
     case "intakeCommit": return { ok: true, detail: "handed out to Ana Ruiz", assetId: 1n, eventId: 10n };
-    case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "", orgName: "Acme", adminGroup: "assets-admins", adminEmails: ["me@example.com"], tagPrefix: "INV-", peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, photoBytes: 120000n, aiSource: aiOn ? "hub" : "", aiModel: aiOn ? "openai · gpt-4.1-mini" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: "" } }];
+    case "getLabelLayout": return [{ size: "62x29", fields: ["qr", "tag", "serial", "model", "org"], note: "" }];
+    case "setLabelLayout": return { ok: true, detail: "" };
+    case "registerDevice": return { ok: true, assetId: 7n, tag: "000434", detail: "registered as 000434" };
+    case "registerOptions": return [{ locations: ["Zürich office · 3rd floor", "Storage room"], nextTag: "000434", prefix: "", digits: 6n }];
+    case "getLocations": return ["Zürich office · 3rd floor", "Storage room"];
+    case "setLocations": case "setTagScheme": case "setAssetLocation": return { ok: true, detail: "" };
+    case "bulkPlace": return { ok: true, changed: 2n, skipped: 0n, detail: "2 updated" };
+    case "refreshAi": return { ok: aiOn, detail: aiOn ? "AI from the hub: openai · gpt-4.1-mini" : "no AI key — an owner sets one under the hub's Settings → AI", state: { source: aiOn ? "hub" : "", keySet: aiOn, laneGranted: aiOn, connectorId: 1n, model: aiOn ? "openai · gpt-4.1-mini" : "" } };
+    case "rereadPhoto": if(failReading)return {ok:false,detail:"The AI service returned an invalid reading format. Automatic recovery also failed.",photoId:5n,result:{ok:false,retryable:[false]}}; return Number(a[1]) === 2 ? { ok: false, detail: "This device has no photo. Add one on the device page or scan it.", photoId: 0n, result: { ok: false, retryable: [false], detail: "no photo", reads: [], vendor: "", model: "", kind: "", sticker: "", notes: "" } } : { ok: true, detail: "", photoId: 5n, result: { ok: true, retryable: [false], detail: "", reads: [{ kind: "serial", value: "C02XG2JHJGH1", confidence: 0.92 }, { kind: "asset_tag", value: "INV-0001", confidence: 0.9 }], vendor: "Apple", model: "MacBook Pro 16\"", kind: "laptop", sticker: "current", notes: "" } };
+    case "applyReading": appliedReadings.push(a[3]); return a[3].model === "MacBook Pro 16\"" && Number(a[2]) === 5 ? { ok: true, detail: "" } : { ok: false, detail: "unexpected input" };
+    case "getSettings": return [{ hubId: "aaaaa-aa", appUrl: "", orgName: "Acme", adminGroup: "assets-admins", adminEmails: ["me@example.com"], peopleCount: 12n, lastDirectoryPull: now, adminCount: 1n, photoBytes: 120000n, aiSource: aiOn ? "hub" : "", aiModel: aiOn ? "openai · gpt-4.1-mini" : "", ai: { source: aiOn ? "hub" : "", keySet: true, laneGranted: aiOn, connectorId: 7n, model: "" } }];
     case "adminLogRows": return [{ at: now, who: "me@example.com", what: "x" }];
     case "importCsv": return { ok: true, created: 2n, updated: 1n, skipped: 0n, detail: "" };
     case "exportCsv": return "id,tag\n1,INV-0001\n";
@@ -82,6 +96,8 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "testMdm": return { ok: true, detail: "reached Iru: 42 devices on the first page, 40 already in the register" };
     case "syncMdm": return { ok: true, detail: "42 devices · 40 matched · 2 created" };
     case "addMdm": return { ok: true, detail: "", id: 2n };
+    case "refreshHardware": return { ok: true, detail: "Hardware read from Iru." };
+    case "mdmDetailsPreview": return { ok: true, detail: "sections: general, hardware_overview\nhardware_overview: {\"memory\":\"24 GB LPDDR5\"}" };
     // sales
     case "saleOfDevice": return { purchase: [{ priceMinor: 299900n, currency: "CHF", date: "2024-03-01", note: "shop", by: ME, at: now }], sale: [], proposal: [{ proposedMinor: 62000n, basis: "purchase price 2'999.00 CHF on 2024-03-01 · 30 of 36 months elapsed" }], billingReady: "" };
     case "priceProposal": return [{ proposedMinor: 62000n, basis: "rule" }];
@@ -113,7 +129,8 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     default: return { ok: true, detail: "", id: 1n, eventId: 1n };
   }
 } });
-const dom = new JSDOM(html, { url: "https://assets.test/#uht=" + "ab".repeat(20), runScripts: "outside-only", pretendToBeVisual: true });
+const dom = new JSDOM(html, { url: flow.startsWith("suite") ? "https://assets.kebabstack.test/#/devices" : "https://assets.test/#uht=" + "ab".repeat(20), runScripts: "outside-only", pretendToBeVisual: true });
+if (flow.startsWith("suite")) dom.window.document.cookie = "ks-suite=" + "c".repeat(64) + "; Domain=kebabstack.test; Path=/";
 const { window } = dom;
 globalThis.window = window; globalThis.document = window.document; globalThis.location = window.location; globalThis.history = window.history; globalThis.localStorage = window.localStorage;
 globalThis.sessionStorage = window.sessionStorage;
@@ -126,6 +143,7 @@ if (flow && flow !== "admin-deal") {
     globalThis.location = new Proxy({}, { get: (_, key) => window.location[key], set: (_, key, value) => { if (key === "href") jump = value; else window.location[key] = value; return true; } });
     if (flow === "retry") sessionStorage.setItem("ks-assets-offer-login", String(Date.now()));
   } else if (flow === "signed") localStorage.setItem("ks-assets-session", "existing-session");
+  else if (flow.startsWith("suite")) history.replaceState(null, "", "/#/devices"); // no ticket, no session: only the suite cookie
   else {
     sdk.hubJumpUrl("https://hub.test/", "https://assets.test/");
     history.replaceState(null, "", "/#uht=" + "ab".repeat(20) + "&th=dark");
@@ -137,6 +155,8 @@ if (flow && flow !== "admin-deal") {
 }
 globalThis.setInterval = () => 0; window.scrollTo = () => {}; window.Element.prototype.scrollIntoView = () => {}; globalThis.confirm = () => true; globalThis.alert = (m) => { throw new Error("alert: " + m) };
 globalThis.FormData = window.FormData; globalThis.Blob = window.Blob; globalThis.URL = window.URL; window.URL.createObjectURL = () => "blob:smoke"; globalThis.URL.createObjectURL = () => "blob:smoke";
+window.HTMLDialogElement.prototype.showModal = function(){this.open=true;};
+window.HTMLDialogElement.prototype.close = function(){this.open=false;this.dispatchEvent(new window.Event('close'));};
 // createImageBitmap + canvas are not in jsdom: the intake's shrink() is stubbed by injecting a ready photo
 const errors = [];
 window.addEventListener("error", (e) => errors.push(e.message));
@@ -153,6 +173,11 @@ if (flow.startsWith("canonical")) {
   check(jump === "https://new.assets.test/#/offers/7", "domain switch keeps the offer and drops credentials/query strings");
   check(!calls.includes("loginWithTicket") && !calls.includes("whoami"), "old-origin credentials are never used after the domain switch");
   check(!$("layout").classList.contains("on"), "old origin does not render buyer data");
+  console.log(flow, errors.length ? errors.join("\n") : "SMOKE OK"); process.exit(errors.length ? 1 : 0);
+}
+if (flow.startsWith("suite")) {
+  if (flow === "suite") check(calls.includes("loginWithSuite") && !calls.includes("loginWithTicket") && localStorage.getItem("ks-assets-session") === "t0k" && $("layout").classList.contains("on"), "suite cookie signs in without a ticket: " + calls.filter(c => /login/.test(c)).join(","));
+  if (flow === "suite-rejected") check(calls.includes("loginWithSuite") && !localStorage.getItem("ks-assets-session") && !/ks-suite=/.test(document.cookie) && !$("layout").classList.contains("on"), "a rejected suite cookie is cleared and the Hub button remains: cookie=" + document.cookie);
   console.log(flow, errors.length ? errors.join("\n") : "SMOKE OK"); process.exit(errors.length ? 1 : 0);
 }
 if (["auto", "retry", "rejected"].includes(flow)) {
@@ -176,7 +201,7 @@ if (flow === "admin-deal") {
   $("dealRefresh").click();for(let i=0;i<5;i++)await tick();
   check(!$("ckWiped").disabled&&$("sChecksTitle").textContent==="Prepare for hand-over","preparation remains editable after automatic invoice");
   $("pinRead").click(); for(let i=0;i<4;i++)await tick(); check($("pinValue").textContent==="001234","PIN keeps leading zeros"); $("pinHide").click(); check($("pinValue").textContent==="","hide clears PIN from DOM");
-  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true}));await tick();document.querySelector("[data-payment-save]").click();for(let i=0;i<5;i++)await tick();
+  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true}));for(let i=0;i<6;i++)await tick();
   check(!$("sChecksCard").classList.contains("hidden")&&!$("handoverCard").classList.contains("hidden"),"paid deal still requires hand-over");
   check(!$("handoverGo").disabled && /does not block/.test($("handoverHelp").textContent),"unconfirmed invoice receipt does not block a prepared paid hand-over");
   $("handoverAbm").checked=true;$("handoverGo").click();for(let i=0;i<5;i++)await tick();
@@ -220,21 +245,76 @@ if (role === "admin") {
   check(!$("ik3").classList.contains("hidden") && /handed out to Ana/.test($("doneTitle").textContent), "saved screen: " + $("doneTitle").textContent);
   check(calls.includes("intakeCommit"), "intakeCommit called");
   $("doneNext").click(); await tick(); check(!$("ik0").classList.contains("hidden"), "next photo resets");
+  check($("nTag").readOnly && $("eTag").readOnly, "inventory tags cannot be edited");
   // new-device path: no match → add
   $("handBtn").click(); await tick(); $("ikQuery").value = "ZZZ99999"; $("ikQuery").dispatchEvent(new window.Event("input")); for (let i = 0; i < 12; i++) await tick();
   check(/no device matches/.test($("cands").textContent), "no-match text");
-  $("ikNew").click(); await tick(); $("nModel").value = "ThinkPad"; $("ikUseNew").click(); await tick();
-  check(/ThinkPad \(new\)/.test($("ikDevName").textContent), "new device in step 2");
-  check(document.querySelector('#actChips .chip.on').dataset.act === "handed_out", "new device defaults to handed_out");
+  $("ikNew").click(); await tick(); $("nModel").value = "ThinkPad"; $("ikRegister").click(); for (let i = 0; i < 6; i++) await tick();
+  check(calls.includes("registerDevice") && !$("ik3").classList.contains("hidden") && /000434/.test($("doneTitle").textContent), "new device registered in one step with an automatic tag: " + $("doneTitle").textContent);
+  check(!$("ikLabelCard").classList.contains("hidden"), "label offered right after registering");
+  check(calls.includes("registerOptions") && $("nLocation").options.length === 3, "locations offered from settings");
   // devices
   await go("#/devices"); check(document.querySelectorAll("#devRows .dev").length === 3, "device rows: " + document.querySelectorAll("#devRows .dev").length);
   check(/Review MDM/.test(document.querySelector('#devRows .dev[data-id="1"]').textContent), "mismatch pill on row");
-  check(document.querySelectorAll("#stats .stat").length === 3, "status stats");
+  check(document.querySelectorAll("#stats .stat").length === 4 && /Needs attention/.test($("stats").textContent), "status stats + needs attention: " + document.querySelectorAll("#stats .stat").length);
+  check(/M1 Pro · 16 GB · 512 GB/.test(document.querySelector('#devRows .dev[data-id="1"]').textContent) && /128 GB/.test(document.querySelector('#devRows .dev[data-id="3"]').textContent), "hardware line in the list (MDM, ABM fallback)");
+  check($("devPickAll").textContent === "Select" && !$("devRows").classList.contains("selectable"), "checkboxes hidden until Select");
+  $("devPickAll").click(); check($("devRows").classList.contains("selectable") && $("devPickAll").textContent === "Select all", "select mode on"); $("devBulkClear").click(); check(!$("devRows").classList.contains("selectable"), "select mode off");
+  // 0.26.0: labels for the selection only, and the stored photos read again
+  $("devPickAll").click(); document.querySelector('[data-pick-id="1"]').click(); document.querySelector('[data-pick-id="2"]').click(); await tick();
+  check(!$("devBulk").classList.contains("hidden") && $("devBulkCount").textContent === "2 selected", "two devices selected");
+  check($("devBulkLabels").classList.contains("hidden") === (role !== "admin") && (role !== "admin" || $("devBulkLabels").textContent === "Print labels (2)"), "selection bar offers labels for the selection: " + $("devBulkLabels").textContent);
+  if (role === "admin") {
+    check($("devLabels").textContent === "Print labels (2 selected)", "head button prints the selection: " + $("devLabels").textContent);
+    $("devLabels").click(); for (let i = 0; i < 6; i++) await tick(); check(!$("devLabelCard").classList.contains("hidden") && /2 labels|2 devices|Print 2/.test($("devLabelCard").textContent), "label card for the two selected devices: " + $("devLabelCard").textContent.slice(0, 80));
+    check(!$("devBulkReread").classList.contains("hidden"), "read-again stays discoverable with stale or absent AI status");
+    if (aiOn) {
+      $("devBulkReread").click(); for (let i = 0; i < 12; i++) await tick();
+      check(!$("devRereadCard").classList.contains("hidden") && /MacBook Pro 14" → MacBook Pro 16"/.test($("devRereadCard").textContent.replace(/\s+/g, " ")) && /This device has no photo/.test($("devRereadCard").textContent), "re-read shows the proposed change and the device without a photo: " + $("devRereadCard").textContent.slice(0, 400));
+      check(document.querySelectorAll("#devRereadCard [data-reread]:checked").length === 1, "confident change is ticked");
+      const beforeApply = calls.length; $("devRereadCard").querySelector("[data-reread-apply]").click(); for (let i = 0; i < 8; i++) await tick();
+      check(calls.slice(beforeApply).includes("applyReading") && /1 updated/.test($("devRereadStatus").textContent), "corrections applied through applyReading: " + $("devRereadStatus").textContent);
+    }
+  }
+  $("devBulkClear").click(); await tick();
+  document.querySelector('#stats [data-st="attention"]').click(); for (let i = 0; i < 5; i++) await tick();
+  check(/Record hand-over to Ben Ko/.test($("devRows").textContent) && /Apple device/.test($("devRows").textContent) && /Open Apple inventory/.test($("devRows").textContent), "needs-attention panel lists the mismatch and the Apple gap");
+  const beforeHand = calls.length; document.querySelector("[data-att-hand]").click(); for (let i = 0; i < 5; i++) await tick();
+  check(calls.slice(beforeHand).includes("addEventTo"), "one click records the hand-over the MDM reported");
+  document.querySelector('#stats [data-st=""]').click(); for (let i = 0; i < 5; i++) await tick();
   document.querySelector('#devRows .dev[data-id="1"]').click(); for (let i = 0; i < 5; i++) await tick();
   check(window.location.hash === "#/d/1" && /MacBook/.test($("dName").textContent), "device detail: " + $("dName").textContent);
+  check(!$("dPhotoTools").classList.contains("hidden") && !$("dReread").disabled, "device has a direct re-read action even with stale AI status");
+  const beforeDirectRead = calls.length; $("dReread").click(); for (let i=0;i<12;i++) await tick();
+  check(calls.slice(beforeDirectRead).includes("rereadPhoto") && !$("dRereadCard").classList.contains("hidden"), "re-read is available directly on the device");
+  $("dRereadCard").querySelector('[data-review-reading]').click();for(let i=0;i<4;i++)await tick();
+  const form=document.querySelector('#photoReviewFields');
+  form.querySelector('[name="model"]').value='MacBook Pro 14"';
+  form.querySelector('[name="note"]').value='Confirmed label by hand';
+  form.dispatchEvent(new window.Event('submit',{cancelable:true}));
+  check(/Add note/.test($("dRereadCard").textContent)&&!!$("dRereadCard").querySelector('[data-reread]'),'note-only correction remains selectable');
+  $("dRereadCard").querySelector('[data-review-reading]').click();for(let i=0;i<4;i++)await tick();
+  const edit=document.querySelector('#photoReviewFields');edit.querySelector('[name="model"]').value='MacBook Pro 16"';check(!edit.querySelector('[name="tag"]'),'AI review cannot edit inventory tags');edit.querySelector('[name="vendor"]').value='';edit.dispatchEvent(new window.Event('submit',{cancelable:true}));
+  $("dRereadCard").querySelector('[data-reread-apply]').click();for(let i=0;i<8;i++)await tick();
+  check(appliedReadings.at(-1)?.vendor===''&&appliedReadings.at(-1)?.tag==='INV-0001'&&appliedReadings.at(-1)?.note==='Confirmed label by hand','explicitly cleared field and note reach the backend');
+  $("dRereadCard").querySelector("[data-reread-close]").click();
+  failReading=true;$("dReread").click();for(let i=0;i<12;i++)await tick();
+  check($("dRereadCard").querySelector('[data-reread-apply]').disabled,'failed AI reading cannot apply empty corrections');
+  check(/0 of 1 read successfully/.test($("dRereadCard").textContent),'failure is not reported as successful reading');
+  $("dRereadCard").querySelector('[data-review-reading]').click();for(let i=0;i<4;i++)await tick();
+  check(!!document.querySelector('#photoReviewFields'),'photo remains available after failed AI recovery');
+  document.querySelector('.photo-review [data-close]').click();$("dRereadCard").querySelector('[data-reread-close]').click();failReading=false;
+
+
   check(document.querySelectorAll("#dEvents .ev").length === 2 && document.querySelectorAll("#dEvents img").length === 1, "history with photo");
   check(/Ana Ruiz/.test($("dKv").textContent) && /ana@example.com/.test($("dKv").textContent) && /Me Myself/.test($("dKv").textContent) && !/p_0000/.test($("dKv").textContent + $("dEvents").textContent), "device card shows names + address resolved from person ids, never the ids: " + $("dKv").textContent.slice(0, 160));
-  check(!$("dMdm").classList.contains("hidden") && /Iru/.test($("dMdm").textContent) && /Ben Ko/.test($("dMdm").textContent) && /Record the hand-over/.test($("dMdm").textContent), "mdm block with mismatch advice");
+  check(!$("dMdm").classList.contains("hidden") && /Managed by Iru/.test($("dMdm").textContent) && /Ben Ko/.test($("dMdm").textContent) && /Record the hand-over/.test($("dMdm").textContent), "mdm block with mismatch advice");
+  check(/Apple M1 Pro · 10 cores · 16 GB memory · 512 GB \(210 GB free\) · encrypted/.test($("dKv").textContent), "hardware line on the device: " + $("dKv").textContent.slice(0, 160));
+  check(!/2026-09-04T08:00:00Z/.test($("dMdm").textContent) && /ago\)/.test($("dMdm").textContent), "MDM last-seen is a formatted date");
+  check(!!$("dMdmHand") && /Record hand-over to Ben Ko/.test($("dMdmHand").textContent) && !!$("dHwRefresh"), "mismatch has a one-click answer and hardware can be refreshed");
+  const beforeHw = calls.length; $("dHwRefresh").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.slice(beforeHw).includes("refreshHardware"), "refresh asks the backend");
+  $("dHwPreview").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("mdmDetailsPreview") && /LPDDR5/.test($("dHwPreviewOut").textContent) && !$("dHwPreviewOut").classList.contains("hidden"), "what Iru reports is shown read-only");
+  check(!!$("dSell") && !!$("dArchive").closest(".more-menu"), "sell is a head action, archive sits in More");
   check(!!$("dDoAct"), "admin action button"); $("dDoAct").click(); await tick(); check(!$("dActCard").classList.contains("hidden") && document.querySelector('#dActChips .chip.on').dataset.act === "returned", "action card default");
   $("dEdit").click(); check(!$("dEditCard").classList.contains("hidden") && $("eSerial").value === "C02XG2JHJGH1", "edit prefilled");
   // ---- selling: purchase card, price proposal, start a sale for the colleague who has it
@@ -258,8 +338,8 @@ if (role === "admin") {
   check(calls.includes("issueInvoice") && !attached, "issued; the canister archives the PDF, the browser renders nothing");
   check(/IT-2026-0001/.test($("sKv").textContent) && /invoiced/.test($("sPills").textContent) && /RF94 IT20 2600 01/.test($("sKv").textContent), "sale page after issue: " + $("sTitle").textContent);
   check(!!document.querySelector("[data-payment]") && !!document.querySelector('#sActions [data-act="cancel"]'), "payment ledger + cancel actions after issue");
-  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true})); await tick(); check(!!document.querySelector("[data-payment-save]"), "payment review opens");
-  document.querySelector("[data-payment-save]").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("recordSalePayment"), "payment recorded through ledger");
+  check(!document.querySelector("[data-payment] [name=reference]"), "no bank reference field");
+  document.querySelector("[data-payment]").dispatchEvent(new window.Event("submit",{bubbles:true,cancelable:true})); for (let i = 0; i < 5; i++) await tick(); check(calls.includes("recordSalePayment"), "payment recorded in one step through the ledger");
   check(/still in ABM/.test($("sPills").textContent) && /released the device in Apple Business Manager/.test($("handoverAbmRow").textContent), "paid sale reminds to release the device in ABM: " + $("sPills").textContent.slice(0, 120));
   // sales list + export
   await go("#/d/1"); for (let i = 0; i < 3; i++) await tick(); check(!$("dAbm").classList.contains("hidden") && /Apple Business Manager · Group/.test($("dAbm").textContent) && /Iru · Group/.test($("dAbm").textContent) && /2024-03-12/.test($("dAbm").textContent), "device card shows the Apple Business Manager box");

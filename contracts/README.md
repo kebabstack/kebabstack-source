@@ -1,4 +1,4 @@
-# Contracts — SaaS costs, licenses and renewals
+# Contracts — agreements of every kind, costs, licenses and renewals
 
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical identity, semantic light/dark colours and common navigation/control sizes. Product access and workflow boundaries remain explicit.
 
@@ -9,6 +9,14 @@ Version **0.7.1** makes the daily workflow **upload → review → save → stay
 The overview shows current annual recurring cost, upcoming decisions and unassigned licenses.
 The SaaS table brings tool, owner, license count, dates, cancellation deadline and auto-renewal
 into one view. Personal and teamspaces retain their existing access rules.
+
+### 0.18.0 — one figure, discounts, re-reading
+
+Settings → Reporting currency turns several currencies into one annual figure on the overview using rates the
+workspace owners maintain themselves; every recorded currency and tax basis stays visible underneath. Discounts
+(list price, percent, basis) are commercial fields the AI reads with evidence and a person confirms; the overview
+sums the yearly saving. **Read documents again with AI** on a record re-reads all linked documents and proposes
+changes for confirmation.
 
 ## Start with one contract
 
@@ -107,7 +115,9 @@ Unknown conditions remain unknown. AI cannot guarantee which legal terms apply.
 | Teamspace editor | Maintains accessible records, incoming documents, proposals, tasks and imports. |
 | Teamspace viewer | Reads and exports accessible content; cannot change it. |
 | Shared Contract intake | Active Hub admins and Hub owners can review and distribute. Contracts Admins assigned in Hub also have access. |
-| Hub / app administrator | Configures the Hub connection, AI lane, trusted relay identities and app settings. Can access all personal/team content, including restricted records. |
+
+The workspace selector lists your personal workspace, the teamspaces you belong to and (for app admins) the shared Contract intake and the pre-workspace **Existing contracts**. App admins reach everything else — other people's personal workspaces that hold records, and teamspaces they do not belong to — from **Settings → All workspaces**; empty personal workspaces are not listed. A teamspace owner can delete an empty teamspace from Manage workspace; records, including the trash, must be moved or deleted first, and sessions bound to the space end.
+| Hub / app administrator | Configures the Hub connection, AI lane and app settings. Can access all personal/team content, including restricted records. |
 
 A restricted record further limits access to its responsible person, deputy and named viewers,
 plus that **space’s owners** and app admins. Those people must already belong to the space. Ordinary workspace
@@ -128,11 +138,9 @@ were retained. Since **0.8.0**, central permissions supersede frozen local admin
 space owners may move individual records, including their evidence, into spaces they own.
 An owner can also move a record between two spaces they own. Moving shared evidence is refused.
 
-Old relay identities must be bound to their intended space by a space owner before mail intake
-resumes. Do this during the upgrade window. No sender address or message header selects the space.
 Archived spaces remain readable; intake and content changes stop.
 
-## AI and mail are optional
+## AI is optional; documents arrive by upload
 
 AI access is checked in the background after startup, then at most once every five minutes. This
 checks the Hub configuration without sending a document or making a billable model request.
@@ -174,8 +182,9 @@ of displaying an inflated amount; other supported facts remain available.
 Delete an inbox item or saved record to **Trash** to remove it from active work. Restore is
 available in the same workspace. This does not permanently erase originals or change access.
 
-The optional Cloudflare Email Worker requires one dedicated relay identity per space, operator trust
-and approval by the space owner. See [relay/RUNBOOK.md](relay/RUNBOOK.md). Manual uploads need no relay.
+Since **0.14.0** there is no mail relay: documents reach a workspace by upload (PDF, image, text or a saved
+.eml) or pasted text from a signed-in member. Nothing is sent or received by e-mail; reminders go through the
+Hub to Slack.
 
 ## Costs and practical limits
 
@@ -200,14 +209,16 @@ multiple team owners before someone leaves.
 The backend uses the pinned Motoko compiler and existing persistent state contract. Before deploying,
 check the candidate stable signature against the committed baseline and run the upgrade regression.
 
-The browser PDF bundle is pinned through `relay/package-lock.json`. Rebuild with:
+The browser PDF bundle is pinned through `tools/pdf-text/package-lock.json`. Rebuild with:
 
 ```sh
-npm ci --ignore-scripts --prefix contracts/relay
+npm ci --ignore-scripts --prefix contracts/tools/pdf-text
 node contracts/tools/build-pdf-text.mjs
 ```
 
-## Document-first intake (0.4.0)
+## Document-first intake (0.4.0, simplified in 0.15.0)
+
+Since 0.15.0 the only path for a document is upload → check → record: the review opens directly, one click saves and opens the record, and the inbox entry then reads "Saved as <contract>". Since 0.16.0 the same review also updates an existing contract ("Save as: an update to an existing contract"): the record is preselected when the document is linked, named by the AI or added from the record's Documents tab, today's values show as placeholders, filled fields replace them, and the document is attached. A contract without paperwork is entered with **Add by hand**. "Suggested changes" remain as history and for suggestions made on a record.
 
 **Add contract** starts with a PDF, text file, saved email or image. The original is stored first;
 the review page shows AI details and lets you complete missing values before a single atomic
@@ -217,7 +228,7 @@ as the destination. Existing-contract suggestions keep their revision-checked re
 For a shared address, use the built-in **Contract intake**, available to current Hub admins
 and owners, then distribute reviewed records. To route a later email to an existing private
 or team agreement, choose **Move document there for review** before matching it in the
-destination. Transfers require ownership of both spaces and carry the original evidence. The app includes **Guide → Mail setup** and a [Google Workspace runbook](relay/RUNBOOK.md).
+destination. Transfers require ownership of both spaces and carry the original evidence.
 AI uses complete original supported files, bounded supplementary text and available thread
 references. Large groups of attachments require multiple model calls within outcall limits.
 Visible signature marks and reported signing remain unverified suggestions, not automatic
@@ -232,3 +243,38 @@ data boundaries and rollout. App roles remain managed in Hub.
 ## Hub Operations
 
 This app contributes aggregate-only, Admin-authorized summaries to Hub → Operations. See [definitions, access and freshness](../docs/HUB-OPERATIONS.md). Individual records remain in the app.
+
+## Contract types (0.13.0)
+
+Every contract shares the same core: counterparty, product or agreement, reference, responsible person and deputy, visibility, status, confirmed terms (amount, interval, start, end, renewal rule, notice rule, last cancellation date, internal decision date), documents, tasks and history. A **contract type** adds fields of its own. Admins define types under **Settings → Contract types**: each field has a key, a label, a kind (text, number, date, choice, amount, yes/no, person), whether it is required, whether it shows in the list, and for dates whether it triggers reminders. Starters: SaaS / Subscription (seats and license holders), Datacenter / Colocation (site, racks, power, bandwidth, SLA, access-list owner, access review date), Telecom / Connectivity, Hardware lease / Maintenance, Services / Consulting, Rent / Real estate, Other. Built-in types can be edited and disabled, not deleted.
+
+The record shows the type and its details beside the terms; the Contracts list shows the type and the fields marked for it, filters by type and searches those fields. New contracts pick a type in the editor. When a document is uploaded, the AI reading classifies it into one of the types by subject matter (never SaaS by default) and proposes the type's field values (`contractType`, `type:<key>`); the review screen shows the type (changeable) with its fields above the shared terms, hides seats for types without seats, and files everything with one **Save contract**. If no type fits, the AI proposes a new one with fields; an admin creates it from the review with one click and the values already read are kept. **Read again as the selected type** forces a type the AI missed. A person field accepts an e-mail and is stored as the directory id. Invalid type values are refused before anything is written. The sidebar reads Overview · To do · Contracts · License keys · Inbox · Settings; the Contract types card sits on the Settings page next to the renewal reminders (Hub admins). Offboarding in Desk asks about seats only for types that have seats; a person named in a type field appears in that person's context in Desk.
+
+## Reminders (0.14.0): one schedule per workspace
+
+Each workspace sets its own reminder policy under **Settings → Reminders**: the marks (days before, default 90, 60, 30, 7), whether reminders are on, and who hears them (responsible person, workspace owners, Hub admins, extra Hub groups; the deputy always). The policy drives all three reminder kinds of that workspace: renewal and cancellation deadlines, dated type fields marked "remind", and task due dates (tasks use the marks at or under 30 days, else 7). Every message starts with the workspace name, so IT and PfOps tell their deadlines apart. There is no global schedule any more; the global settings keep only the decision lead (how many days before the cancellation date the internal decision date falls), time zone and AI budget. Delivery: the Hub notification lane → Slack direct message from the Kebabstack bot; a person who mutes the bot still sees the reminder in the Hub inbox. No e-mail is sent.
+
+Marks run against the **last cancellation date** when the record has one, otherwise against the renewal or end date. Recipients: the policy's picks (responsible person, space owners, Hub admins, groups), always the deputy, and the register's admins when nobody in the space is active. Auto-renewing contracts whose renewal date passed roll forward by their billing interval with an audit entry. A cancellation date typed by a person is kept; a computed one follows changes of the renewal date, the notice rule and the lead-days setting. Reminders do not depend on the app address; without one the notification carries no link.
+
+
+### Document comparison and linked conditions (0.19.0)
+
+The contract overview displays stored PDFs and images beside the recorded terms on wide
+screens, with page selection and zoom; narrow screens stack the sections. Rendering stays
+in the browser and original bytes still require the current workspace session. Unsupported
+files remain downloadable under Documents.
+
+**Linked vendor conditions** is available to editors of contracts with a linked source.
+The check prefers referenced public terms links (including printed `www.…/agb` links) and
+can use the saved vendor/product after the original AI proposal has been confirmed. It
+shows the URL and lookup time. **Use as a reviewed suggestion** opens the terms editor;
+the person checks applicability and saves, with the source recorded in the audit reason.
+Public current terms do not establish which version was agreed at signing.
+
+New PDF uploads retain hyperlink annotations. For previously stored PDFs whose links are
+only hidden annotations, upload the original again to capture them, or supply the URL in
+the vendor check. Printed URLs already present in saved text can be used on existing records.
+Native reads retain up to 120,000 supplementary text characters plus original pages; HTTP
+request size and provider limits still apply. A stronger model cannot supply an agreement
+or referenced terms that were not provided or successfully retrieved. AI suggestions still
+need review, particularly reseller bundles, seat counts and product-specific notice clauses.

@@ -1,6 +1,6 @@
 # App permissions in Hub
 
-Implemented in Hub 0.23.1, Assets 0.11.0, Contracts 0.8.0, Desk 0.9.0, Forms 0.3.0, Trust 0.4.0 and Watch 0.6.0; SDK 0.6.0. Use the rollout sequence below for your installation. The local permission regressions also check preservation of unrelated external directory integrations.
+Implemented in Hub 0.23.1, Assets 0.11.0, Contracts 0.8.0, Desk 0.9.0, Forms 0.3.0, Trust 0.4.0 and Watch 0.6.0; SDK 0.6.0. Each installation must follow and verify the rollout sequence below; a source version is not proof of a completed deployment.
 
 Hub → **Permissions** is the authority for these six apps. Select an app to see every person's effective role and its reason. Select a person to see their saved roles across apps. Expand “What each role allows” for capabilities. Hub owners review and save changes; global Hub admins can inspect but cannot delegate app privileges.
 
@@ -19,6 +19,21 @@ Hub → **Permissions** is the authority for these six apps. Select an app to se
 | No access | Cannot sign in or read protected app data |
 
 Watch defaults to No access because it has no personal monitoring area. The other five default to Employee/Requester. Public Forms submission links and scoped external Assets dealroom links remain their own explicitly shared access paths; they never grant app administration.
+
+## Opening the Hub console
+
+From Hub 0.37.1 and SDK 0.14.1, **Hub** appears in the shared top-right navigation
+for an active global Owner, Admin or Helpdesk profile. An app-only Admin/Finance/
+Agent role does not confer Hub console access. The link follows the live Hub
+heartbeat; it is hidden when that check fails, the profile is inactive, the session
+expires or an older Hub does not supply the optional role field.
+
+The console continues to authenticate a **linked passkey**. Company SSO opens the
+employee workspace and connected apps; an explicit Hub console link opens the
+console directly when its matching authorized passkey session exists, otherwise
+it explains the passkey step. An existing passkey for a different person cannot
+silently replace the active company identity. Suite tokens remain read-only;
+showing a navigation link grants no new API permission.
 
 ## Precedence and identity
 

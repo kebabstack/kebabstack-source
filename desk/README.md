@@ -35,7 +35,9 @@ Desk staff resolves, removing it reopens; a bystander's ✅ is ignored since 0.2
 agent replies appear under the agent's name when the Slack app has `chat:write.customize` (0.29.1);
 replies on finished requests are kept, owners are asked whether to reopen, ↩️ on the first message
 reopens, and the AI assistant reopens genuine follow-ups when a key is configured; 🔒 marks closed (0.30.0);
-the Slack app is configured once in the hub and assigned to desk there. Teams
+Since 0.33.0, AI assistance also summarizes new Slack titles and resolves clear completed-work comments by Desk staff, with a visible audit note and the same approval/checklist/offboarding gates as manual resolution. Newer ticket changes invalidate an in-flight completion decision. This reduces repeated status entry; human review is still needed for ambiguous comments and blocked workflows. Without AI credentials or with assistance disabled, explicit buttons/reactions remain available.
+PNG/JPEG/GIF/WebP images synchronize both ways as public attachments with bounded retries. Images over 1.5 MB use Slack's available smaller preview; unsupported/oversize files and exhausted storage produce visible notices. Staff can retry failed image transfers from Attachments. Historical placeholders are not automatically imported. The bot requires `files:read` and `files:write`; copying an image creates another retained copy in the destination, not a linked deletion policy.
+The Slack app is configured once in the hub and assigned to desk there. Teams
 intake is not shipped.
 
 Custom domains are supported; see [INSTALL.md](INSTALL.md#custom-domain-for-an-existing-desk).

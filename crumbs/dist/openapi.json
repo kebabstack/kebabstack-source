@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Crumbs API",
-    "version": "0.6.0",
-    "description": "Cookieless analytics on a Cloud Engine. Base URL is your native backend HTTPS origin (or optional Node collector). Report/resource integers from Candid are decimal strings; collection acknowledgments and collector-health counters are JSON numbers. Native acceptance commits directly to the canister; Node acceptance confirms a local queue. Native mode requires stable event IDs and has no GeoIP. Native raw HTTP requests including IP/UA enter replicated processing but are excluded from persisted analytics event fields. Sending an event requires a registered website, not a secret browser key. Public collection is not proof of a human visitor. Report credentials are always server-side authorized. UTC day/hour buckets and rotating daily visitor estimates; see metric definitions. Query/auth credentials do not grant the signed collector lane."
+    "version": "0.9.1",
+    "description": "Website analytics on a Cloud Engine, cookieless by default with optional consented cookie recognition. Base URL is your native backend HTTPS origin (or optional Node collector). Report/resource integers from Candid are decimal strings; collection acknowledgments and collector-health counters are JSON numbers. Native acceptance commits directly to the canister; Node acceptance confirms a local queue. Native mode requires stable event IDs and has no GeoIP. Native raw HTTP requests including IP/UA enter replicated processing but are excluded from persisted analytics event fields. Sending an event requires a registered website, not a secret browser key. Public collection is not proof of a human visitor. Report credentials are always server-side authorized. UTC day/hour buckets and rotating daily visitor estimates; see metric definitions. Query/auth credentials do not grant the signed collector lane."
   },
   "servers": [
     {
@@ -14,7 +14,7 @@
   "paths": {
     "/api/v1/events": {
       "post": {
-        "summary": "Commit up to 50 cookieless events (native) or queue them (optional Node)",
+        "summary": "Commit up to 50 analytics events (native) or queue them (optional Node)",
         "operationId": "post_api_v1_events",
         "security": [],
         "parameters": [],
@@ -587,7 +587,7 @@
     },
     "/api/v1/funnels": {
       "post": {
-        "summary": "Sequential funnel within a visit; unique daily visitors per step",
+        "summary": "Sequential funnel within a visit; unique visitor estimates per step",
         "operationId": "post_api_v1_funnels",
         "security": [
           {
@@ -662,7 +662,7 @@
                   },
                   "dimension": {
                     "type": "string",
-                    "description": "channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+                    "description": "trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
                   },
                   "filters": {
                     "type": "array",
@@ -695,6 +695,14 @@
                     "minimum": 1,
                     "maximum": 1000,
                     "default": 100
+                  },
+                  "dayStarts": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "description": "Optional for dimension \"day\": ascending Unix seconds of the local midnights that start each day bucket (the website time zone). Omitted = UTC days."
                   },
                   "steps": {
                     "type": "array",
@@ -818,7 +826,7 @@
     },
     "/api/v1/goals/report": {
       "post": {
-        "summary": "Goal completions, daily visitor estimates and revenue",
+        "summary": "Goal completions, visitor estimates and revenue",
         "operationId": "post_api_v1_goals_report",
         "security": [
           {
@@ -936,7 +944,7 @@
                   },
                   "dimension": {
                     "type": "string",
-                    "description": "channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+                    "description": "trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
                   },
                   "filters": {
                     "type": "array",
@@ -969,6 +977,14 @@
                     "minimum": 1,
                     "maximum": 1000,
                     "default": 100
+                  },
+                  "dayStarts": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "description": "Optional for dimension \"day\": ascending Unix seconds of the local midnights that start each day bucket (the website time zone). Omitted = UTC days."
                   },
                   "id": {
                     "type": "string"
@@ -1923,8 +1939,10 @@
             "type": "string"
           },
           "timezone": {
-            "const": "UTC",
-            "default": "UTC"
+            "type": "string",
+            "pattern": "^[A-Za-z0-9/_+-]{1,64}$",
+            "default": "UTC",
+            "description": "IANA time zone name used for daily report buckets."
           },
           "retentionDays": {
             "type": "string",
@@ -2028,6 +2046,15 @@
             "type": "integer",
             "minimum": 0
           },
+          "cookieId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional random first-party browser identifier; only after explicit consent. Never an account, email or customer ID."
+          },
+          "cookieConsent": {
+            "type": "boolean",
+            "description": "Must be true when cookieId is supplied. Public input is not proof of legal consent."
+          },
           "scrollDepth": {
             "type": "integer",
             "minimum": 0,
@@ -2058,7 +2085,7 @@
           },
           "dimension": {
             "type": "string",
-            "description": "channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+            "description": "trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
           },
           "filters": {
             "type": "array",
@@ -2091,6 +2118,14 @@
             "minimum": 1,
             "maximum": 1000,
             "default": 100
+          },
+          "dayStarts": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Optional for dimension \"day\": ascending Unix seconds of the local midnights that start each day bucket (the website time zone). Omitted = UTC days."
           }
         },
         "required": [
@@ -2447,8 +2482,10 @@
             "type": "string"
           },
           "timezone": {
-            "const": "UTC",
-            "default": "UTC"
+            "type": "string",
+            "pattern": "^[A-Za-z0-9/_+-]{1,64}$",
+            "default": "UTC",
+            "description": "IANA time zone name used for daily report buckets."
           },
           "retentionDays": {
             "type": "integer",
@@ -2503,8 +2540,10 @@
             "type": "string"
           },
           "timezone": {
-            "const": "UTC",
-            "default": "UTC"
+            "type": "string",
+            "pattern": "^[A-Za-z0-9/_+-]{1,64}$",
+            "default": "UTC",
+            "description": "IANA time zone name used for daily report buckets."
           },
           "retentionDays": {
             "type": "string",
@@ -2672,91 +2711,9 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "description": "Stable random ID for retry deduplication; UUID recommended."
+            "type": "string"
           },
           "site": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string",
-            "format": "uri"
-          },
-          "referrer": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "object",
-            "description": "Native Candid variant, e.g. {\"pageview\":null}"
-          },
-          "name": {
-            "type": "string"
-          },
-          "props": {
-            "type": "array",
-            "items": {
-              "type": "array",
-              "prefixItems": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "string"
-                }
-              ],
-              "minItems": 2,
-              "maxItems": 2
-            }
-          },
-          "interactive": {
-            "type": "boolean",
-            "default": true
-          },
-          "revenueMinor": {
-            "oneOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string",
-                "pattern": "^[0-9]+$"
-              }
-            ]
-          },
-          "currency": {
-            "type": "string",
-            "pattern": "^[A-Z]{3}$"
-          },
-          "engagementMs": {
-            "oneOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string",
-                "pattern": "^[0-9]+$"
-              }
-            ]
-          },
-          "scrollDepth": {
-            "oneOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string",
-                "pattern": "^[0-9]+$"
-              }
-            ]
-          },
-          "visitor": {
-            "type": "string",
-            "description": "Daily pseudonym; potentially personal data."
-          },
-          "at": {
-            "type": "string"
-          },
-          "order": {
             "type": "string"
           },
           "path": {
@@ -2797,16 +2754,108 @@
           },
           "os": {
             "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "visitor": {
+            "type": "string",
+            "pattern": "^(c:)?[a-f0-9]{64}$",
+            "description": "Site-scoped pseudonym. c: marks consented cookie mode; otherwise daily cookieless. Raw cookie IDs, IP and UA are never export fields."
+          },
+          "at": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "object",
+            "description": "Candid variant: exactly one of pageview, event or engagement with null value."
+          },
+          "props": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "interactive": {
+            "type": "boolean"
+          },
+          "revenueMinor": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "engagementMs": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
+          },
+          "scrollDepth": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            ]
           }
         },
         "required": [
           "id",
           "site",
+          "path",
+          "hostname",
+          "source",
+          "medium",
+          "campaign",
+          "content",
+          "term",
+          "country",
+          "region",
+          "city",
+          "device",
+          "browser",
+          "os",
+          "name",
+          "currency",
           "visitor",
           "at",
           "order",
           "kind",
-          "path"
+          "props",
+          "interactive",
+          "revenueMinor",
+          "engagementMs",
+          "scrollDepth"
         ],
         "additionalProperties": false
       },

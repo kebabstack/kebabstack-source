@@ -97,6 +97,9 @@ your connector green after registration.
 The hub opens your app with `#uht=<ticket>` in the URL fragment.
 
 ```motoko
+// Same body for `loginWithSuite(token)`: call `Hub.hub(hubId).redeemSuiteLogin(token)` instead of redeemTicket (hub ≥ 0.40).
+// Session tokens: keep `var tokenSeed : ?Blob = null; var tokenCounter : Nat = 0`, fill the seed once with raw_rand and use
+// `Hub.deriveToken(seed, counter, Time.now())` — no management-canister call per sign-in.
 public shared func loginWithTicket(ticket : Text) : async ?{ token : Text; suiteToken : Text; email : Text; displayName : Text; role : Text } {
   if (not Hub.ticketLooksValid(ticket)) return null;
   let r = await Hub.hub(hubId).redeemTicket(ticket);
@@ -198,7 +201,7 @@ know*). Never ask them for a key.
 import { takeHubTicket, hubJumpUrl, session, initials, mountTopbar, topbarIdlFactory } from "./hub-client.js";
 ```
 
-1. On load: `takeHubTicket()`; if present → `loginWithTicket` → `session.save(r.token)` + `session.saveSuite(r.suiteToken)`.
+1. On load: `takeHubTicket()`; if present → `loginWithTicket` → `session.save(r.token)` + `session.saveSuite(r.suiteToken)`. Else, with no stored session and `suiteCookie.read()` set (hub ≥ 0.40, tools on the company's parent domain) → `loginWithSuite(cookie)`; a rejected cookie is cleared with `suiteCookie.clear()`.
 2. Else `session.load()` → call `me(tok)`; null → `session.clear()`.
 3. No session: `location.href = hubJumpUrl(HUB_URL, location.href)`.
 4. Avatars: `connectorAvatars(emails)` from the hub, fall back to `initials()`.

@@ -33,10 +33,19 @@ module {
       case _ [];
     };
   };
+  /// Counts added by newer app releases: shown when present, never required (an older app stays a valid source).
+  public func optional(app : Text) : [Text] {
+    switch (app) {
+      case "assets" ["deployed"];
+      case "contracts" ["seatsHeld"];
+      case _ [];
+    };
+  };
   public func filter(app : Text, snapshot : Operations.Snapshot) : Operations.Snapshot {
     if (snapshot.state != #ready) return { snapshot with metrics = [] };
     let allowed = keys(app);
     if (allowed.size() == 0 or allowed.any(func key = snapshot.metrics.filter(func (k, _) = k == key).size() != 1)) return Operations.unavailable();
-    { snapshot with metrics = snapshot.metrics.filter(func (key, _) = allowed.any(func k = k == key)) };
+    let extra = optional(app);
+    { snapshot with metrics = snapshot.metrics.filter(func (key, _) = allowed.any(func k = k == key) or extra.any(func k = k == key)) };
   };
 };

@@ -1,5 +1,97 @@
 # Changelog — kebab-stack assets
 
+## [0.28.0] — 2026-10-15
+
+- Allocate every new device tag centrally, including single/photo/bulk registration, CSV, MDM, Apple and sample data. Persist the sequence, allocate without an await, and never reuse numbers after sample removal or archive.
+- Preserve existing tags and fill missing tags in device-id order on upgrade, continuing above all existing numeric suffixes including archived devices. Record each repair in device history.
+- Reject tag changes through device editing and AI corrections. Remove tag editing from photo review and bulk forms; creation ignores externally supplied tags. Lock the numbering scheme after the first allocation.
+- CSV imports require serial numbers, match existing devices by serial and ignore imported tag values. New rows use automatic tags in CSV order; repeated serial imports preserve the assigned tag.
+
+## [0.27.2] — 2026-10-14
+
+- All photo-reading entry points now share automatic recovery for truncated, malformed, empty or structurally invalid AI responses. Read the original photo again once with a larger output budget; never salvage partial identifiers from broken JSON.
+- Increase output allowance from 500 to 2048 tokens, with 4096 for recovery. Correct the invalid numeric example in the extraction prompt, prioritize serial/Service Tag/inventory tag, and bound output to eight codes.
+- Recognize provider stop/refusal signals and assemble text blocks in order. Validate reading structure, code types and confidence bounds. Return a technical error after exhausted recovery without blaming image clarity or exposing provider response bodies.
+- Failed re-reads retain photo review; Apply is disabled without selected corrections and success counts exclude failures. Credentials and model selection remain managed by Hub; no automatic provider switch.
+
+## [0.27.1] — 2026-10-14
+
+- Reject invalid or unavailable photo storage before creating a device; scan intake also validates the action before saving device/photo evidence. Failed validation leaves no partial new device.
+- Clearing the batch recipient now clears the saved choice; unresolved directory text blocks registration. Bulk defaults no longer visually alter already registered rows.
+- AI review supports note-only additions and explicitly cleared fields without treating missing AI values as instructions to erase existing data.
+- Apple inventory becomes labelled cards on narrow screens, keeping serial, management state and Add together without horizontal scrolling.
+- General local regression review covers security, sales, Finance, hardware follow-up and responsive layouts. Production/provider and packaged upgrade verification remain separate release gates.
+
+## [0.27.0] — 2026-10-14
+
+- **Photos → review → register:** a direct entry from Devices, camera plus multiple-photo selection, and labelled review cards on phones instead of a wide table. Desktop keeps the editable table. Each row opens a zoomable photo beside editable fields; Dell Service Tags take priority over long serials.
+- **Read again on an existing asset:** a visible action beside its photos reads the newest stored photo. Review the evidence, edit the proposal and explicitly apply corrections. Empty-photo and AI errors explain the next step; the action no longer disappears with a stale AI status.
+- Restore Hub AI credentials after startup/upgrade and refresh stale capabilities when reading is requested. Existing sessions no longer require a new login to discover AI.
+- Failed batch readings show their reason and support per-photo retry. Permanent configuration errors are not automatically retried. Draft corrections survive navigation within the app; successful rows are not registered twice after a partial failure. Photo preparation failures cannot silently create devices without their evidence. Drafts still require this browser tab to remain open.
+- Native photo-review dialog supports keyboard focus, Escape, zoom controls and mobile reflow. Global navigation remains sticky while content scrolls. This release does not claim full accessibility certification or perfect recognition; operators review label readings before saving.
+
+## [0.26.0] — 2026-10-13
+
+- **Labels for the selection.** With devices selected, **Print labels** prints exactly those (the head button reads *Print labels (4 selected)*, the selection bar offers *Print labels (4)*); without a selection it prints the filtered list as before. Until now the bar's label button appeared only after a bulk status change, so a selection printed the whole list.
+- **Read photos again.** Select devices and choose **Read photos again**: the newest stored photo of each device goes through the vision model once more (one call per device, admins only), the review card shows every difference per field (serial, tag, vendor, model, kind) with the current value and the proposal, low-confidence reads stay unticked, devices without a photo say so. **Apply corrections** writes the ticked rows; the device history records *details corrected from the photo (read again with AI)* with the photo that was read. Nothing changes before that click. New update calls `rereadPhoto` and `applyReading`; stored data, authorization and photo storage are unchanged.
+
+## [0.25.0] — 2026-10-11
+
+- Faster sign-in: the ticket login makes one Hub call and answers; groups and the AI status refresh in the background, the session token derives from a per-app secret seed instead of a management-canister random call (one consensus round less), the directory is pulled only when the person is unknown or the cache is stale. Requires Hub ≥ 0.40.0 for the suite login; the ticket path works with any Hub.
+- Suite login: opened on the company domain with the Hub's suite cookie, Assets signs in through `loginWithSuite` without a detour through the Hub page. Sign out in Assets clears the cookie; the Hub re-checks the person and their Assets access on every redemption.
+
+## [0.24.1] — 2026-10-10
+
+- Hardware sizes: a memory value such as "24 GB LPDDR5" is read as 24 GB (0.24.0 appended the digits after the unit and showed 245 GB). Iru reports volume sizes in binary gigabytes labelled "GB"; they are now shown as decimal GB like macOS and Apple Business Manager (a 512 GB drive reads 494 GB, not 460). Stored values refresh with the next sync (devices read in 0.24.0 are re-read once) or with **Refresh hardware**.
+- Device page: **What Iru reports** (admins) lists the sections Iru's details answer contains and quotes the hardware and battery-related ones, read-only and unstored, so further fields (battery condition, cycle count) are wired against the real answer. New update call `mdmDetailsPreview`.
+
+## [0.24.0] — 2026-10-10
+
+- **Hardware from device management.** Devices synced from Iru (Kandji) show processor, cores, memory, boot-volume size and free space, and encryption: the sync reads `/api/v1/devices/{id}/details` for devices without hardware or older than a week, at most 40 per run (one HTTPS call each), the rest on the next run; **Refresh hardware** on the device reads one now. Jamf delivers processor, cores, RAM and disk size with the existing list (plus `section=STORAGE`), Intune storage, free space, RAM and encryption from its list. Where the MDM has nothing, the Apple Business Manager capacity stands in. Shown as a **Hardware** line on the device, as a second line in the device list and in *My devices*, and as `location, processor, cores, memory gb, storage gb` columns in the CSV export. New query fields `hardware` and `abmCapacity`; new update call `refreshHardware`. The token needs Iru's *Device Information* permission; without it the sync result says so.
+- **Needs attention** on Devices: one tile with the MDM mismatches, Apple devices not in the register, devices without a serial number and outstanding offboarding follow-ups, each with its answer: **Record hand-over to <person the MDM sees>**, Open Apple inventory, Add serial, Show them. The same one-click hand-over sits in the mismatch note on the device page.
+- Device page: *Managed by Iru (name) · seen 3 weeks ago* opens by default with formatted dates instead of raw ISO text, the Apple box reads *Bought via …*, Hardware sits under Serial, **Sell this device** is a head action and the selling card appears only with a purchase price, an open sale or on request, Archive moved into **More**.
+- Registering: a photo that matches nothing opens the new-device form by itself; **Add device** opens it directly; the kind follows the model (iPhone → phone, iPad → tablet, MacBook → laptop …) until changed.
+- Devices list: checkboxes appear after **Select**; **Clear** returns to reading mode. Tabs wrap on narrow screens so Settings and Apple inventory stay reachable on a phone. Warning pills use the shared rust token; device-page boxes use classes instead of inline styles.
+- Settings: an empty app address is filled from the app's own HTTPS address on first open by an admin; the notification links work without a setup step.
+- No change to collection, authorization or stored device data; the hardware store is additive, existing MDM notes are kept.
+
+## [0.23.1] — 2026-10-09
+
+- Stack follow-through for the deployed status: Hub Operations and the team-room screen receive a `deployed` count (devices in use at a location without a personal owner), and the person panel in Desk shows a device's location ("at G11-1") beside tag and serial. Requires Hub 0.39.1 for the new count to appear; older Hubs ignore it.
+
+## [0.23.0] — 2026-10-08
+
+- New status **deployed**: a device in use at a location without a personal owner (monitors, docks, meeting-room gear). Set it when registering (single or from photos: status per row and for all rows), on the device page (**Mark deployed here** / **Back to stock** next to the location), or for many devices at once.
+- Device list: select devices (checkboxes, **Select all** on the current filter) and apply **Deploy at location**, **Set location only** or **Back to stock** to all of them; devices held by a person, in a hand-over, sold, scrapped or lost are skipped and counted. Labels for the selection print from the same bar.
+- The list filter and the status counters know the new status; hand-outs from a deployed device work as before.
+
+## [0.22.0] — 2026-10-07
+
+- Register many devices from photos (Scan a device → **Register many from photos**): drop up to 60 label photos, the reading fills one table (vendor, model, kind, serial or Service Tag, note), devices already in the register are flagged and unticked, defaults for kind, location and recipient apply to every row, each cell stays editable, then one click registers everything with automatic tags and the photo as evidence, and the labels print in one batch.
+- Dell: the 7-character Service Tag is read as its own code and stored as the serial, the long serial goes into the note.
+
+## [0.21.0] — 2026-10-07
+
+- Registering a device is one step: take the photo (serial, vendor and model are read and can be corrected), the asset tag is generated automatically unless typed, optionally hand the device to a person from the directory or place it at a location, then **Register device & show label**. The label appears at once and prints from there. Automatic tags continue from the highest numeric tag already in the register; an optional prefix and the number of digits are set under Settings → Register devices.
+- Locations: admins define a list (offices, floors, desks, rooms, departments) under Settings → Register devices. A device carries at most one location, shown on its page and in the list, changeable on the device page, searchable. Never required.
+- Finding an existing device and recording what happened to it works as before; the previous "Use this new device → what happened" detour is gone.
+
+## [0.20.2] — 2026-10-07
+
+- Settings: the "Tag prefix" field is removed. It was stored but never applied anywhere (not on manual entry, scan or import), so it only suggested a behaviour that did not exist. Device tags are printed and searched exactly as recorded. Existing data is untouched.
+
+## [0.20.1] — 2026-10-07
+
+- Labels: lines shrink to fit the label instead of being cut off; the company logo sits in the centre of the QR code (error correction H keeps the code readable) instead of beside the name; the fixed "if found" line is replaced by a free footer text (up to 160 characters, for example "If found, please contact it@example.com") that is saved with the default layout. The format list names the DK-22212 film alongside DK-22205.
+
+## [0.20.0] — 2026-10-07
+
+- Device labels: **Label** on a device and **Print labels** on the device list render QR labels for Brother DK media (62 × 29, 90 × 29, 23 × 23 mm and 62 mm continuous) and print them through the browser’s print dialog, one label per page. The QR code opens the device page in Assets, so a phone camera identifies a device without an app. Fields are chosen per print (asset tag, serial, vendor and model, company name, company logo from the Hub, an “if found, return to” line); **Save as default** stores the layout for every admin. No device data changes; labels are not stored.
+
+## [0.19.1] — 2026-10-06
+
+- Payments, one step: Finance records a payment with amount and date and a single **Record payment** click. The review dialog and the bank-reference field are gone. The payment history sits directly under the form; every entry has **Edit** (amount or date) and **Remove**. Both are written as correction entries that reverse the original, so the ledger still shows what was recorded, what changed, by whom and when. No change to the ledger rules: no future dates, no overpayment, no recording your own purchase.
+
 ## [0.19.0] — 2026-10-06
 
 - A colleague's acceptance issues the invoice at once, as the private dealroom does: gapless number, invoice data, the exact PDF and its archive commit together in the canister. The buyer downloads the invoice immediately; IT no longer clicks *Issue the invoice* and no PDF is rendered in a browser. Long terms paginate and names with non-Latin characters are refused instead of printed as "?".

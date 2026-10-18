@@ -14,6 +14,23 @@ def placeholder_errors(path, data):
         if matches != [expected]: errors.append(f'{path}: {key} must be the repository placeholder {expected!r}')
     return errors
 
+def companion_errors(directory, version):
+    """Check release companions that belong to the same module release."""
+    errors = []
+    served = directory / 'dist/CHANGELOG.md'
+    if served.exists() and served.read_bytes() != (directory / 'CHANGELOG.md').read_bytes():
+        errors.append(f'{directory.name}: served changelog differs from source CHANGELOG.md')
+    for relative in ['package.json', 'package-lock.json', 'dist/openapi.json']:
+        path = directory / relative
+        if not path.exists(): continue
+        data = json.loads(path.read_text())
+        actual = data.get('info', data).get('version')
+        if actual != version:
+            errors.append(f'{directory.name}/{relative}: version {actual!r} must match {version}')
+        if relative == 'package-lock.json' and data.get('packages', {}).get('', {}).get('version') != version:
+            errors.append(f'{directory.name}/{relative}: root package version must match {version}')
+    return errors
+
 def main():
     args = argparse.ArgumentParser(description=__doc__); args.add_argument('--staged', action='store_true')
     args.add_argument('--placeholders-from-index', action='store_true', help='check the deployment placeholders in the git index instead of the working tree (a live working clone keeps its canister ids in the tracked frontends on purpose); metadata is still checked in the working tree')
@@ -31,6 +48,7 @@ def main():
     if not options.staged:
         for module in ['hub','desk','assets','watch','crumbs','trust','forms','bug','bug2d','contracts','vault','kitchen']:
             config = tomllib.loads((ROOT/module/'mops.toml').read_text()); version = config['package']['version']
+            errors += companion_errors(ROOT/module, version)
             source = (ROOT/module/'backend/main.mo').read_text()
             if not re.search(r'transient let BUILD_VERSION\s*:\s*Text\s*=\s*"'+re.escape(version)+'"',source): errors.append(f'{module}: runtime version must match mops.toml ({version})')
             if f'## [{version}]' not in (ROOT/module/'CHANGELOG.md').read_text(): errors.append(f'{module}: missing changelog section {version}')

@@ -30,7 +30,7 @@ recovery, upgrades of Kitchen itself and controller management.
 | Your engine's **subnet id** | Console → your engine → **Settings** (under the engine's identifiers) | you can paste it |
 | Git | [git-scm.com](https://git-scm.com) | `git --version` |
 | Node.js **22.22.2 or newer supported release** | [nodejs.org](https://nodejs.org) | `node --version` |
-| The `icp` CLI + `ic-wasm` | `npm install -g @icp-sdk/icp-cli@1.4.0 @icp-sdk/ic-wasm@0.11.1` | `icp --version` |
+| The `icp` CLI + `ic-wasm` | `npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm` | `icp --version` |
 | mops (Motoko packages) | `npm ci` in the cloned repository; use `node_modules/.bin/mops` | `node_modules/.bin/mops --version` (pinned 3.2.0) |
 | Python **3.11 or newer** | verify your installed version; [python.org](https://python.org) | `python3 --version` |
 
@@ -53,8 +53,8 @@ unauthorized. If your console lives elsewhere, use that URL.
 ### A1 · Get the code, deploy the kitchen (one terminal session)
 
 ```bash
-git clone https://github.com/kebabstack/kebabstack-source.git kebabstack
-cd kebabstack
+git clone https://github.com/kebabstack/kebabstack-source.git
+cd kebabstack-source
 npm ci
 export PATH="$PWD/node_modules/.bin:$PATH"
 cd kitchen
@@ -245,3 +245,12 @@ Hub 0.31.0 and Desk 0.19.0 add supplemental project reporting grants. Upgrade bo
 ## Optional OpenTeam directory source
 
 Companies using OpenSaaS can configure Hub → Directory sync → OpenTeam. This is a read-only directory integration, independent of login. Follow the [OpenTeam setup and compatibility guide](OPENTEAM.md), preview conflicts before enabling, and keep existing sources until their ownership has been reconciled. No source is enabled by an upgrade.
+
+### Hub console entry from connected apps
+
+The **Hub** button in shared navigation uses the person's global Hub role (Hub
+0.37.1 / SDK 0.14.1). A company-SSO user who has never linked a passkey needs a
+Hub owner to create an invitation under People. Accept that invitation with the
+intended passkey; the linked key inherits the existing central role. No new app
+administrator list or role override is needed. Preserve the controller recovery
+identity. This release does not make company SSO tokens console credentials.

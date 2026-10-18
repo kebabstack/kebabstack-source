@@ -1,5 +1,27 @@
 # Changelog — kebab-stack hub
 
+## [0.40.1] — 2026-10-18
+
+- Regenerate the browser installer interface from compiled Candid so the existing owner-only installation-file method is represented correctly. No permissions or stable-state change.
+
+## [0.40.0] — 2026-10-11
+
+- **One Hub sign-in, every tool.** After signing in, the Hub keeps a suite-login token in a cookie on the company's parent domain (dfinity.kebabstack.com → `.kebabstack.com`). A tool on that domain opened without its own session hands the token to its backend, which redeems it at the Hub (`redeemSuiteLogin`, connector canisters only): no detour through the Hub page, no ticket, one call. The token can only open app sessions in tools the person may use; it dies with the Hub session (sign-out, expiry). New portal calls `mintSuiteLogin` and `revokeSuiteLogin`; the SDK adds `suiteCookie` (browser) and `redeemSuiteLogin`/`deriveToken` (Motoko). Tools on a public gateway address (icp0.io, ic0.app, icp.net) keep the ticket hand-off; the cookie is never set there.
+- Sign-in tokens (session, app ticket, suite token, suite login) derive from a per-hub secret seed, a counter and the time instead of a management-canister random call per token: one consensus round less on every sign-in and hand-off. The seed itself comes from `raw_rand` once. Existing sessions and tickets stay valid.
+- Sign-out in the Hub revokes the suite login and clears the cookie; `ssoLogout` revokes it server-side.
+
+## [0.39.1] — 2026-10-09
+
+- Operations and the team-room screen show two counts newer apps add: Assets `deployed` (devices in use at a location without a personal owner, Assets 0.23.1) and Contracts `seatsHeld` (contracts still listing a seat holder who left, Contracts 0.12.1). Both are optional: an older Assets or Contracts remains a valid source and the count reads 0. The display whitelist admits them explicitly; nothing else changes in what a screen may see.
+
+## [0.39.0] — 2026-10-06
+
+- Offboarding seats: a new `hub_syncSeats` broker lets the registered Desk ask every connected Contracts app how many seats a departing person still holds, with the same case shape, caller checks and 15-second bound as the hardware follow-up. No directory or Lunch change; apps that do not implement the call are simply not seat sources. Desk 0.31 and Contracts 0.12 use it.
+
+## [0.38.1] — 2026-10-06
+
+- Team-room screen (`#/tv`): the layout is redrawn only where a number changed, so cards no longer fade in again every minute; a changed number glides to its new value. A quiet backdrop of slowly falling glyphs and soft sparks (canvas, about 24 frames per second, nothing while the tab is hidden), a live pulse beside the status line and an amber beacon on every flagged count make the wall screen feel alive without competing with the numbers. **Where to focus** now sizes to its signals instead of leaving an empty panel, and shows **All clear** when no approved source flags anything. Full screen and Disconnect fade out after six seconds and return on any touch, pointer or key. Trust with no enrolled devices says so instead of "0 of 0". Reduced-motion settings switch all motion off. No change to what the display API shares or to any backend behaviour.
+
 ## [0.38.0] — 2026-10-06
 
 - Lifecycle events now include `created`: a person who appears in the directory (SCIM, Okta, OpenTeam, local, invitation) after the Hub already knew its people. The first observation after this release only records what exists, and a source's joins count only once that source has been observed for 15 minutes, so an upgrade or an initial import (even one that arrives in several chunks) never produces join events. Desk 0.30 turns these into onboarding requests when told to.

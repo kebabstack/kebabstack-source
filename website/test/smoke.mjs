@@ -188,6 +188,12 @@ test("public package contains only intended website files, preserves MIT and dec
   const { version } = JSON.parse(
     await readFile(path.join(root, "package.json"), "utf8"),
   );
+  const recipe = await readFile(path.join(root, "icp.yaml"), "utf8");
+  assert.equal(recipe.match(/name: service:version\s+value: "([^"]+)"/)?.[1], version,
+    "deployed Wasm metadata must match the website package version");
+  for (const filename of ["README.md", "INSTALL.md", "CHANGELOG.md"])
+    assert.ok((await readFile(path.join(root, filename), "utf8")).includes(version),
+      `${filename} must describe this website release`);
   for (const file of ["index.html", "en/index.html"])
     assert.ok(
       (await readFile(path.join(dist, file), "utf8")).includes(
@@ -332,11 +338,12 @@ test('Crumbs integration counts language pages and deliberate actions, not ancho
   const tracker=await readFile(path.join(root,'../crumbs/dist/tracker.js'),'utf8');
   for(const lang of ['de','en']) {
     const dom=await load(lang),w=dom.window,d=w.document,events=[];
+    try {
     w.eval(script);
     const config=d.createElement('script');
     config.dataset.site='kebabstack-dev';config.dataset.endpoint='https://collector.example/api/v1/events';config.dataset.downloads='true';config.dataset.outbound='true';
     Object.defineProperty(d,'currentScript',{get:()=>config});
-    w.fetch=async (url,options)=>{assert.equal(url,config.dataset.endpoint);assert.equal(options.credentials,'omit');events.push(...JSON.parse(options.body));return {ok:true,status:202};};
+    w.fetch=async (url,options)=>{assert.equal(url,config.dataset.endpoint);assert.equal(options.credentials,'omit');const batch=JSON.parse(options.body);events.push(...batch);return {ok:true,status:202,json:async()=>({accepted:batch.length,duplicates:0,ignored:0,durability:'canister',delivery:'committed'})};};
     w.eval(tracker);
     d.getElementById('tab-desk').click();
     d.querySelector('a[download]').dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));
@@ -347,7 +354,7 @@ test('Crumbs integration counts language pages and deliberate actions, not ancho
     assert.equal(events.filter(e=>e.name==='Pilot: Download').length,1);
     assert.equal(events.filter(e=>e.name==='File Download').length,1);
     assert.ok(events.every(e=>!e.properties&&!e.userId));
-    w.close();
+    } finally { w.close(); }
   }
 });
 

@@ -3,7 +3,6 @@
 Use a separate checkout when another editor/deployer is active. Read AGENTS.md.
 
 ```bash
-npm install -g @icp-sdk/icp-cli@1.4.0 @icp-sdk/ic-wasm@0.11.1
 npm ci
 export PATH="$PWD/node_modules/.bin:$PATH"
 npm run check
@@ -82,5 +81,3 @@ as well as appearance. Existing apps are migrated through the
 [adoption plan](design/ADOPTION.md); the target tokens do not silently replace
 `hub/dist/tokens.css`. Run `npm run design:build` and `npm run design:check` for
 standard changes. Keep source, generated docs, versions and changelogs aligned.
-
-Use public pull requests for code and reproducible issues for bugs. Do not include real customer records, access tokens, private keys or production configuration. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). Contributions are under the repository MIT license unless an existing upstream license applies.

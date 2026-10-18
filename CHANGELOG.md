@@ -1,11 +1,22 @@
 # Monorepo changes
 
-## [0.3.0] — 2026-09-23
+## [0.2.6] — 2026-10-18
 
-- Prepare the complete alpha source distribution with a fresh public history, generic operator examples, MIT licensing and retained upstream notices. Internal deployment receipts and configuration remain private.
-- Correct the MCP source-installation guide and synchronize its release metadata; no unpublished npm package is needed.
-- Extend publication guards to Crumbs, correctly distinguish valid Unicode source from binary data, and add regression checks.
-- Document source review, supported build tools and private vulnerability reporting. Business application runtime versions are unchanged by source packaging; the optional game editions replace an unlicensed supplied portrait with the canonical mark.
+- Extend the daily integrity workflow with interactive visual coverage, safe public-source publication and website evidence checks. Keep private reports outside public distribution.
+- Reconcile the adoption-limit overview with current Contracts uploads, Crumbs consent modes and explicit integration/UX/dependency evidence boundaries.
+- Correct the public repository installation URL and remove links to private rollout receipts from public-facing guides.
+- Reconcile publication safeguards from the public upstream: reject private files added to an exported repository, enforce Crumbs placeholders, and distinguish valid Unicode replacement characters from binary data. Exclude dated private integrity receipts.
+- Normalize generated Candid whitespace without changing signatures. Hub/Kitchen browser bindings and MCP dependency updates have independent module releases.
+
+## [0.2.5] — 2026-10-18
+
+- Require stack-wide integrity and dependency tracing for each change, including APIs/SDKs, documentation, versions, integrations, packaged upgrades and explicit verification limits. Define the general bug-check workflow in `docs/INTEGRITY-CHECK.md`.
+- Reject stale served changelogs and mismatched module package/lock/OpenAPI versions in release metadata checks; test both stale and corrected companion files.
+- Refresh the SDK example lockfile for the current SDK dependency graph; the existing locked build gate exposed the stale local dependency hash.
+- Include the independently deployed website build/tests in the suite gate. Update the website integration fixture to acknowledge Crumbs durable receipts and always close its test window on failure.
+- Discover all root Node regression files instead of maintaining a second manual list; this restores the omitted Forms intake tests to the whole-suite gate.
+- Remove the obsolete Contracts relay test path and the stale suite-overview relay claim; Contracts removed email intake in 0.14.0.
+- Align the suite overview with Crumbs' optional consented browser recognition. No application or production permission changes accompany these repository rules.
 
 ## [0.2.4] — 2026-09-18
 

@@ -3,6 +3,7 @@ import { test, before, after } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { PocketIc, PocketIcServer, createIdentity } from '@dfinity/pic';
+import { Principal } from '@icp-sdk/core/principal';
 
 const controller = createIdentity('review-controller').getPrincipal();
 const owner = createIdentity('review-owner').getPrincipal();
@@ -644,7 +645,7 @@ test('audit TR-01/05: re-enrolment with a colleague\'s serial does not hand out 
 // ---- contracts (P16): the acceptance table of docs/CONTRACTS.md, against the real hub Wasm and a mocked AI provider
 const TERMS = { amountMinor: [150000n], currency: 'EUR', taxBasis: 'net', interval: 'year', quantity: [], unitMinor: [], start: '2025-01-01', end: '', renewalRule: 'auto', renewalDate: '2027-01-01', noticeDays: [], noticeMonths: [3n], noticeDate: '', decideBy: '', note: '' };
 const cinput = (over = {}) => ({ title: 'Sunrise Cloud — Team plan', vendor: 'Sunrise Cloud', product: 'Team', customerRef: 'SC-4471', responsible: '', deputy: '', visibility: 'team', viewers: [], seats: [25n], holders: [], tags: [], ...over });
-const mail = (over = {}) => ({ kind: 'relay', mailbox: 'subscriptions@relay.example.test', providerId: 'raw:' + 'a1'.repeat(20), messageId: '<renewal-1@sunrise-cloud.example>', inReplyTo: '', references: '', fromAddr: 'billing@sunrise-cloud.example', fromName: 'Sunrise Cloud Billing', to: ['me@example.test'], cc: ['subscriptions@relay.example.test'], subject: 'Your Team plan renews on 1 January 2027', sentAt: '2026-09-01T08:00:00Z', text: 'Dear customer, your Team plan (account SC-4471) renews automatically on 2027-01-01. The new yearly price is EUR 1,650.00 net (was EUR 1,500.00). You can cancel with two months notice before the renewal date.', html: '', attachments: [], ...over });
+const mail = (over = {}) => ({ kind: 'eml', mailbox: '', providerId: 'raw:' + 'a1'.repeat(20), messageId: '<renewal-1@sunrise-cloud.example>', inReplyTo: '', references: '', fromAddr: 'billing@sunrise-cloud.example', fromName: 'Sunrise Cloud Billing', to: ['me@example.test'], cc: ['subscriptions@relay.example.test'], subject: 'Your Team plan renews on 1 January 2027', sentAt: '2026-09-01T08:00:00Z', text: 'Dear customer, your Team plan (account SC-4471) renews automatically on 2027-01-01. The new yearly price is EUR 1,650.00 net (was EUR 1,500.00). You can cancel with two months notice before the renewal date.', html: '', attachments: [], ...over });
 const aiAnswer = (events) => ({ choices: [{ message: { content: JSON.stringify({ schemaVersion: 1, events }) } }] });
 const field = (f, value, quote, basis = 'explicit') => ({ field: f, value, basis, evidence: quote ? [{ partId: 'body', quote }] : [] });
 async function contractsFixture(pic, { ai = true, hubOptions = {}, appOptions = {} } = {}) {
@@ -893,7 +894,7 @@ async function extractWith(pic, events) {
   await settled(pic);
 }
 
-test('contracts: relay gate, dedupe (redelivery · CC copy · eml upload), a proposal with evidence, revision conflict, routine invoice filed, cancellation stays a person\'s decision', async () => {
+test('contracts: intake needs a session, dedupe (redelivery · CC copy · eml upload), a proposal with evidence, revision conflict, routine invoice filed, cancellation stays a person\'s decision', async () => {
   const pic = await PocketIc.create(server.getUrl(), { application: [{ state: { type: SubnetStateType.New }, costSchedule: CanisterCyclesCostSchedule.Free }] });
   try {
     const { app, adminTok, memberTok, helpdeskTok, memberId } = await contractsFixture(pic);
@@ -910,18 +911,16 @@ test('contracts: relay gate, dedupe (redelivery · CC copy · eml upload), a pro
     rec = (await app.getContract(adminTok, cid))[0]; assert.equal(rec.contract.status, 'active');
     assert.ok(rec.tasks.some((t) => t.kind === 'decide' && t.dueOn === '2026-09-17' && t.assignee === memberId), 'a decide task for the responsible person: ' + JSON.stringify(rec.tasks.map((t) => [t.kind, t.dueOn])));
     assert.equal((await app.addRule(adminTok, 'senderAddress', 'billing@sunrise-cloud.example', cid)).ok, true);
-    // relay gate: only listed principals hand in relay mail, with no session and nothing else
+    // intake gate: no session, no intake (the mail relay was retired in 0.14.0); kinds are eml or manual
     app.setPrincipal(stranger);
-    assert.equal((await app.intakeBegin('', mail())).ok, false, 'an unknown principal is not a relay');
-    assert.equal((await app.setRelayPrincipals(adminTok, [stranger.toText()])).ok, true);
-    assert.equal((await app.setSpaceRelay(adminTok, stranger.toText(), true)).ok, true);
-    assert.equal((await app.intakeBegin('', mail({ kind: 'eml' }))).ok, false, 'the relay hands in relay messages only');
-    assert.deepEqual(await app.listSources('', '', []), [], 'the relay identity reads nothing');
+    assert.equal((await app.intakeBegin('', mail())).ok, false, 'without a session nothing is handed in');
+    assert.equal((await app.intakeBegin(adminTok, mail({ kind: 'relay' }))).ok, false, 'relay deliveries are no longer accepted');
+    assert.deepEqual(await app.listSources('', '', []), [], 'no session reads nothing');
     assert.deepEqual(await app.whoami(''), []);
-    const b = await app.intakeBegin('', mail()); assert.equal(b.ok, true, b.detail);
-    const c1 = await app.intakeCommit('', b.id); assert.equal(c1.ok, true, c1.detail); assert.equal(c1.status, 'received'); const sid = c1.sourceId;
+    const b = await app.intakeBegin(adminTok, mail()); assert.equal(b.ok, true, b.detail);
+    const c1 = await app.intakeCommit(adminTok, b.id); assert.equal(c1.ok, true, c1.detail); assert.equal(c1.status, 'received'); const sid = c1.sourceId;
     // dedupe: the same delivery again (provider id), and the same message handed in by a person as .eml (message id + content)
-    assert.match((await app.intakeBegin('', mail())).detail, /^duplicate/);
+    assert.match((await app.intakeBegin(adminTok, mail())).detail, /^duplicate/);
     app.setPrincipal(member);
     const b2 = await app.intakeBegin(memberTok, mail({ kind: 'eml', providerId: '', mailbox: '' })); assert.equal(b2.ok, true, b2.detail);
     const c2 = await app.intakeCommit(memberTok, b2.id); assert.equal(c2.status, 'duplicate'); assert.equal(c2.sourceId, sid);
@@ -956,8 +955,8 @@ test('contracts: relay gate, dedupe (redelivery · CC copy · eml upload), a pro
     assert.ok(rec.audit.some((a) => /proposal #\d+ confirmed/.test(a.what) && /checked with the invoice/.test(a.what)), 'history line with the note');
     // routine invoice: same amount, same interval, contract active → filed without a proposal or a task
     app.setPrincipal(stranger);
-    const b3 = await app.intakeBegin('', mail({ providerId: 'raw:' + 'b2'.repeat(20), messageId: '<inv-2026-09@sunrise-cloud.example>', subject: 'Invoice 2026-09 — Team plan', text: 'Invoice for your Team plan (account SC-4471): EUR 1,650.00 per year, due 2026-10-01.' }));
-    assert.equal(b3.ok, true, b3.detail); const c3 = await app.intakeCommit('', b3.id); assert.equal(c3.ok, true);
+    const b3 = await app.intakeBegin(adminTok, mail({ providerId: 'raw:' + 'b2'.repeat(20), messageId: '<inv-2026-09@sunrise-cloud.example>', subject: 'Invoice 2026-09 — Team plan', text: 'Invoice for your Team plan (account SC-4471): EUR 1,650.00 per year, due 2026-10-01.' }));
+    assert.equal(b3.ok, true, b3.detail); const c3 = await app.intakeCommit(adminTok, b3.id); assert.equal(c3.ok, true);
     const tasksBefore = (await app.listTasks(adminTok, true, [cid])).length;
     await extractWith(pic, [{ kind: 'invoice', contractCandidates: [String(cid)], effectiveDate: '', proposedFields: [field('amountMinor', '1650.00', 'EUR 1,650.00 per year'), field('interval', 'year', 'per year')], uncertainties: [], summary: 'Yearly invoice' }]);
     const inv = (await app.getSource(adminTok, c3.sourceId))[0];
@@ -965,8 +964,8 @@ test('contracts: relay gate, dedupe (redelivery · CC copy · eml upload), a pro
     assert.equal((await app.listProposals(adminTok, '', [])).length, 0, 'no proposal for a routine invoice');
     assert.equal((await app.listTasks(adminTok, true, [cid])).length, tasksBefore, 'no task for a routine invoice');
     // a cancellation request in the mail is a proposal, never a status change — ending is a person's decision through the task
-    const b4 = await app.intakeBegin('', mail({ providerId: 'raw:' + 'c3'.repeat(20), messageId: '<cancel-1@example.test>', fromAddr: 'me@example.test', fromName: 'Me', subject: 'Cancellation of the Sunrise Cloud Team plan', text: 'We hereby cancel the Sunrise Cloud Team plan with account SC-4471 effective at the end of the current term.' }));
-    assert.equal(b4.ok, true, b4.detail); const c4 = await app.intakeCommit('', b4.id); assert.equal(c4.ok, true);
+    const b4 = await app.intakeBegin(adminTok, mail({ providerId: 'raw:' + 'c3'.repeat(20), messageId: '<cancel-1@example.test>', fromAddr: 'me@example.test', fromName: 'Me', subject: 'Cancellation of the Sunrise Cloud Team plan', text: 'We hereby cancel the Sunrise Cloud Team plan with account SC-4471 effective at the end of the current term.' }));
+    assert.equal(b4.ok, true, b4.detail); const c4 = await app.intakeCommit(adminTok, b4.id); assert.equal(c4.ok, true);
     await extractWith(pic, [{ kind: 'cancellation_request', contractCandidates: [String(cid)], effectiveDate: '', proposedFields: [], uncertainties: [], summary: 'Cancellation requested' }]);
     const cp = await app.listProposals(adminTok, '', []);
     assert.equal(cp.length, 1); assert.equal(cp[0].kind, 'cancellation_request');
@@ -993,10 +992,7 @@ test('contracts: the AI\'s answer is checked — no JSON, a quote that is not in
     const { app, adminTok, memberId } = await contractsFixture(pic);
     const created = await app.createContract(adminTok, cinput({ responsible: memberId })); const cid = created.id;
     assert.equal((await app.addRule(adminTok, 'senderAddress', 'billing@sunrise-cloud.example', cid)).ok, true);
-    assert.equal((await app.setRelayPrincipals(adminTok, [stranger.toText()])).ok, true);
-    assert.equal((await app.setSpaceRelay(adminTok, stranger.toText(), true)).ok, true);
-    app.setPrincipal(stranger);
-    const b = await app.intakeBegin('', mail()); const c = await app.intakeCommit('', b.id); assert.equal(c.ok, true); const sid = c.sourceId;
+    const b = await app.intakeBegin(adminTok, mail()); const c = await app.intakeCommit(adminTok, b.id); assert.equal(c.ok, true); const sid = c.sourceId;
     const status = async () => (await app.getSource(adminTok, sid))[0].source;
     // 1 · prose instead of JSON
     await pic.advanceTime(21_000); await pic.tick(2);
@@ -1039,7 +1035,7 @@ test('contracts: team roles — employee membership isolates content, Hub Admin 
     const a = await app.createContract(adminTok, cinput({ responsible: memberId })); assert.equal(a.ok, true);
     const b = await app.createContract(adminTok, cinput({ title: 'Board minutes tool', vendor: 'Quiet Vendor', product: '', customerRef: '', responsible: adminId, visibility: 'restricted' })); assert.equal(b.ok, true);
     const c = await app.createContract(adminTok, cinput({ title: 'Nimbus', vendor: 'Nimbus', product: 'Pro', customerRef: '', responsible: adminId })); assert.equal(c.ok, true);
-    const titles = async (tok) => (await app.listContracts(tok, { q: '', status: '', responsible: '', onlyIncomplete: false, onlyDue: false, includeArchived: false })).map((r) => r.title).sort();
+    const titles = async (tok) => (await app.listContracts(tok, { q: '', status: '', responsible: '', onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] })).map((r) => r.title).sort();
     assert.deepEqual(await titles(memberTok), ['Nimbus', 'Sunrise Cloud — Team plan'], 'a team editor sees team records except restricted records');
     assert.deepEqual(await titles(helpdeskTok), [], 'hub helpdesk is a plain member here');
     assert.deepEqual(await app.getContract(memberTok, b.id), [], 'a guessed id of a restricted contract gives nothing');
@@ -1048,7 +1044,7 @@ test('contracts: team roles — employee membership isolates content, Hub Admin 
     const mine = await app.createContract(memberRoot, cinput({ title: 'My tool', vendor: 'Small Vendor', responsible: adminId }));
     assert.equal(mine.ok, true); assert.equal((await app.getContract(memberRoot, mine.id))[0].contract.responsible, memberId, 'a member files their own — the responsible person is them, whatever they typed');
     assert.equal((await app.getSettings(memberTok)).length, 0); assert.equal((await app.exportAll(memberTok)).length, 1, 'space members can export authorized contents');
-    assert.deepEqual(await app.getContract(adminRoot, mine.id), [], 'Hub owner has no automatic access to personal files'); assert.equal((await app.setRelayPrincipals(memberTok, [])).ok, false);
+    assert.deepEqual(await app.getContract(adminRoot, mine.id), [], 'Hub owner has no automatic access to personal files');
     assert.equal((await app.connectionStatus(memberTok)).length, 1, 'space editors can inspect their own inbox processing');
     // the editors group in the hub makes helpdesk an editor here: everything except restricted records
     hub.setPrincipal(owner);
@@ -1071,7 +1067,7 @@ test('contracts: team roles — employee membership isolates content, Hub Admin 
     assert.equal(pv.rows.filter((r) => r.exists.length).length, 0, 'the sheet\'s Sunrise row has no customer reference, so it does not match SC-4471 — a new draft, never an overwrite');
     const ic = await app.importCommit(adminTok, csv, ';', mapping, 'sheet 2026-09');
     assert.equal(ic.ok, true, ic.detail); assert.equal(ic.created, 3n);
-    const rocket = (await app.listContracts(adminTok, { q: 'Rocket', status: '', responsible: '', onlyIncomplete: false, onlyDue: false, includeArchived: false }))[0];
+    const rocket = (await app.listContracts(adminTok, { q: 'Rocket', status: '', responsible: '', onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] }))[0];
     const rr = (await app.getContract(adminTok, rocket.id))[0];
     assert.equal(rr.contract.terms.amountMinor[0], 120000n, '1.200,00 → minor units'); assert.equal(rr.contract.responsible, memberId, 'responsible by address'); assert.equal(rr.contract.status, 'draft'); assert.equal(rr.contract.terms.noticeDate, '2026-12-01');
     const out = await app.exportCsv(adminTok);
@@ -1080,11 +1076,8 @@ test('contracts: team roles — employee membership isolates content, Hub Admin 
     const mine2 = await app.exportCsv(memberTok);
     assert.ok(/Rocket Mail/.test(mine2) && !/My tool/.test(mine2) && !/Board minutes/.test(mine2) && /Nimbus/.test(mine2), 'export stays in the team and respects restricted records');
     // a proposal for an unknown vendor becomes a DRAFT contract, never an active one
-    assert.equal((await app.setRelayPrincipals(adminTok, [stranger.toText()])).ok, true);
-    assert.equal((await app.setSpaceRelay(adminTok, stranger.toText(), true)).ok, true);
-    app.setPrincipal(stranger);
-    const ib = await app.intakeBegin('', mail({ fromAddr: 'sales@pixelforge.example', fromName: 'Pixelforge', subject: 'Order confirmation — Studio plan', text: 'Thank you for your order of the Studio plan: EUR 480.00 per month, starting 2026-10-01.', messageId: '<order-1@pixelforge.example>', providerId: 'raw:' + 'd4'.repeat(20) }));
-    const icm = await app.intakeCommit('', ib.id); assert.equal(icm.ok, true);
+    const ib = await app.intakeBegin(adminTok, mail({ fromAddr: 'sales@pixelforge.example', fromName: 'Pixelforge', subject: 'Order confirmation — Studio plan', text: 'Thank you for your order of the Studio plan: EUR 480.00 per month, starting 2026-10-01.', messageId: '<order-1@pixelforge.example>', providerId: 'raw:' + 'd4'.repeat(20) }));
+    const icm = await app.intakeCommit(adminTok, ib.id); assert.equal(icm.ok, true);
     assert.deepEqual((await app.getSource(adminTok, icm.sourceId))[0].source.contractId, [], 'no rule, no vendor match → unfiled');
     const pr = await app.proposeChange(adminTok, c.id, [icm.sourceId], [{ field: 'amountMinor', value: '480.00' }], 'typed from the order');
     assert.equal(pr.ok, true, pr.detail);
@@ -1121,7 +1114,7 @@ test('assets: a device sale — only the buyer accepts the terms, numbers are ga
     assert.equal(c.ok, true, c.detail);
     const login = async (p) => { hub.setPrincipal(p); const t = await hub.mintAppTicket('', c.tileId); assert.equal(t.ok, true, t.detail); const s = (await app.loginWithTicket(t.ticket))[0]; assert.ok(s); return s.token; };
     const adminTok = await login(owner), memberTok = await login(member), otherTok = await login(stranger);
-    const linkSettings = { adminGroup: '', appUrl: 'https://assets.example.test/', tagPrefix: 'INV-', orgName: 'Test company' };
+    const linkSettings = { adminGroup: '', appUrl: 'https://assets.example.test/', orgName: 'Test company' };
     assert.equal((await app.setSettings(memberTok, linkSettings)).ok, false, 'members cannot redirect notifications');
     assert.equal((await app.setSettings(adminTok, linkSettings)).ok, true);
     await settled(pic); await pic.advanceTime(2000); await pic.tick(3); // the id migration timer of a fresh install
@@ -1373,6 +1366,42 @@ test('SCIM attributes: enterprise fields, the work address and custom-schema att
   } finally { await pic.tearDown(); }
 });
 
+test('suite login (hub ≥ 0.40): one Hub sign-in opens a tool without a ticket; connectors only; it ends with the Hub session', async () => {
+  const pic = await PocketIc.create(server.getUrl(), { application: [{ state: { type: SubnetStateType.New }, costSchedule: CanisterCyclesCostSchedule.Free }] });
+  try {
+    const { actor: hub, canisterId: hubId, idlFactory } = await initialized(pic);
+    await settled(pic);
+    const { actor: app, canisterId: appId } = await install(pic, 'assets');
+    app.setPrincipal(controller); await app.setHub(hubId.toText());
+    hub.setPrincipal(owner);
+    const c = await connectTestApp(hub, { name: 'assets', canisterId: appId.toText(), note: '', lanes: ['identity', 'roles', 'groups'], access: { mode: 'everyone', groups: [], roles: [], people: [] }, tile: [{ name: 'assets', kind: 'app', url: 'https://assets.example.test' }] });
+    assert.equal(c.ok, true, c.detail);
+    // the person signs in to the Hub once (OIDC)
+    const provider = await hub.addSsoProvider({ name: 'Test provider', kind: 'google', issuer: '', clientId: 'test-client', clientSecret: 'test-secret' });
+    const seconds = Math.floor((await pic.getTime()) / 1000);
+    const claims = { iss: 'https://accounts.google.com', aud: 'test-client', sub: '123', iat: seconds, exp: seconds + 3600, email: 'member@example.test', email_verified: true, nonce: createHash('sha256').update(verifier).digest('base64url') };
+    const defer = pic.createDeferredActor(idlFactory, hubId);
+    const exchange = await defer.ssoExchange(provider.id, 'code', 'https://hub.example.test', verifier);
+    await answerOutcall(pic, { id_token: jwt(claims) }); await answerOutcall(pic, { keys: [jwk] });
+    const sso = await exchange(); assert.equal(sso.ok, true, sso.detail);
+    // the Hub page mints the suite-login token for the cookie; a second call returns the same token
+    hub.setPrincipal(Principal.anonymous());
+    const first = await hub.mintSuiteLogin(sso.token); assert.equal(first.ok, true, first.detail); assert.match(first.token, /^[0-9a-f]{64}$/);
+    assert.equal((await hub.mintSuiteLogin(sso.token)).token, first.token, 'one token per Hub session');
+    assert.equal((await hub.mintSuiteLogin('no-such-session')).ok, false);
+    // only a registered connector may redeem it — the browser cannot
+    assert.equal((await hub.redeemSuiteLogin(first.token)).ok, false);
+    // the tool redeems it: no ticket, no Hub page
+    const session = (await app.loginWithSuite(first.token))[0]; assert.ok(session, 'suite login opens an app session'); assert.equal(session.email, 'member@example.test'); assert.ok(session.suiteToken.length >= 16);
+    assert.ok((await app.whoami(session.token))[0], 'the app session works');
+    assert.equal((await app.loginWithSuite('ab'.repeat(32)))[0], undefined, 'an unknown token is refused');
+    // sign-out in the Hub ends the automatic sign-in everywhere
+    assert.equal(await hub.ssoLogout(sso.token), true);
+    assert.equal((await app.loginWithSuite(first.token))[0], undefined, 'revoked with the Hub session');
+    assert.equal((await hub.mintSuiteLogin(sso.token)).ok, false, 'no Hub session, no suite login');
+  } finally { await pic.tearDown(); }
+});
+
 test('assets: Apple Business Manager — a browser-signed 180-day assertion (the key never reaches the canister), devices and their device-management service, the gap, adoption as unknown, an MDM sync links by serial', async () => {
   const pic = await PocketIc.create(server.getUrl(), { application: [{ state: { type: SubnetStateType.New }, costSchedule: CanisterCyclesCostSchedule.Free }] });
   try {
@@ -1450,7 +1479,7 @@ test('assets: Apple Business Manager — a browser-signed 180-day assertion (the
     assert.equal(r.detail, '4 devices · 1 in the register · 3 not in the register · 1 without a device-management service · 2 services');
     // the gap, three ways
     const all = await app.listAbmDevices(adminTok, 'all', 0n); assert.equal(all.length, 4);
-    assert.equal(all.find((x) => x.device.serial === 'C02ABM000001').assetTag, 'INV-0001'); assert.equal(all.find((x) => x.device.serial === 'C02ABM000001').device.mdmServer, 'Iru · Group');
+    assert.equal(all.find((x) => x.device.serial === 'C02ABM000001').assetTag, '000001'); assert.equal(all.find((x) => x.device.serial === 'C02ABM000001').device.mdmServer, 'Iru · Group');
     assert.equal((await app.listAbmDevices(adminTok, 'unmatched', 0n)).length, 3);
     const nomdm = await app.listAbmDevices(adminTok, 'nomdm', 0n); assert.equal(nomdm.length, 1); assert.equal(nomdm[0].device.serial, 'F9XQ2ABM0002');
     assert.deepEqual(await app.listAbmDevices(memberTok, 'all', 0n), [], 'members see no Apple list');
@@ -1461,7 +1490,7 @@ test('assets: Apple Business Manager — a browser-signed 180-day assertion (the
     assert.equal(ad.ok, true, ad.detail); assert.equal(ad.created, 2n); assert.match(ad.detail, /2 added · 2 skipped/);
     const rows = await app.listAssets(adminTok, 'F9XQ2ABM0001', '', false);
     assert.equal(rows.length, 1); const a1 = rows[0].asset;
-    assert.equal(a1.status, 'unknown'); assert.equal(a1.vendor, 'Apple'); assert.equal(a1.model, 'iPhone 15 128GB'); assert.equal(a1.kind, 'phone'); assert.match(a1.note, /not seen by any device-management service/);
+    assert.match(a1.tag,/^\d{6}$/,'Apple adoption allocates an inventory tag');assert.equal(a1.status, 'unknown'); assert.equal(a1.vendor, 'Apple'); assert.equal(a1.model, 'iPhone 15 128GB'); assert.equal(a1.kind, 'phone'); assert.match(a1.note, /not seen by any device-management service/);
     const a1d = (await app.getAsset(adminTok, a1.id))[0];
     assert.ok(a1d.events.some((e) => e.kind === 'note' && /ordered 2025-01-20 · order W123 · via reseller · Black/.test(e.detail)), JSON.stringify(a1d.events.map((e) => e.detail)));
     assert.equal((await app.listAbmDevices(adminTok, 'unmatched', 0n)).length, 1, 'only the Mac mini is left in the gap');
@@ -1471,8 +1500,30 @@ test('assets: Apple Business Manager — a browser-signed 180-day assertion (the
     pending = await defer.syncMdm(adminTok, mdm.id);
     const iru = await answerOutcall(pic, { results: [{ device_id: 'k1', serial_number: 'f9xq2abm0001', device_name: "Member's iPhone", model: 'iPhone 15', platform: 'iPhone', os_version: '18.6', last_check_in: '2026-09-07T08:00:00Z', user: { email: 'member@example.test', name: 'Member' } }] });
     assert.match(iru.url, /acme\.api\.kandji\.io\/api\/v1\/devices/);
-    r = await pending(); assert.equal(r.ok, true, r.detail); assert.match(r.detail, /1 matched/); assert.match(r.detail, /1 assigned/);
-    const linked = (await app.getAsset(adminTok, a1.id))[0];
+    // 0.24.0 · the sync follows up with one details call per Iru device and keeps the hardware
+    const details = await answerOutcall(pic, { general: { boot_volume: 'Macintosh HD' }, hardware_overview: { model_name: 'iPhone 15', model_identifier: 'iPhone15,4', processor_name: 'Apple A16', processor_speed: '', number_of_processors: '1', total_number_of_cores: 6, memory: '6 GB LPDDR5' }, volumes: [{ name: 'Data', capacity: '10 GB', available: '1 GB', encrypted: 'No' }, { name: 'Macintosh HD', capacity: '128 GB', available: '61.3 GB', encrypted: 'Yes' }], filevault: { filevault_enabled: false } });
+    assert.match(details.url, /acme\.api\.kandji\.io\/api\/v1\/devices\/k1\/details$/);
+    r = await pending(); assert.equal(r.ok, true, r.detail); assert.match(r.detail, /1 matched/); assert.match(r.detail, /1 assigned/); assert.match(r.detail, /hardware read for 1/);
+    const linked = (await app.getAsset(adminTok, a1.id))[0];assert.equal(linked.asset.tag,a1.tag,'MDM sync preserves the inventory tag');
+    assert.deepEqual({ ...linked.hardware[0], fetchedAt: 0n }, { processor: 'Apple A16', cores: 6n, memoryGb: 6n, storageGb: 137n, storageFreeGb: 66n, encrypted: 'yes', modelId: 'iPhone15,4', source: 'Iru', fetchedAt: 0n }, 'boot volume wins, memory type digits are ignored, Iru GiB become decimal GB');
+    const listed = (await app.listAssets(adminTok, 'f9xq2abm0001', '', false))[0]; assert.equal(listed.hardware[0].memoryGb, 6n); assert.equal(listed.mdmUserName, 'Member');
+    assert.match(await app.exportCsv(adminTok), /,processor,cores,memory gb,storage gb\n/); assert.match(await app.exportCsv(adminTok), /"Apple A16",6,6,137/);
+    // a second sync within a week reads no details again; members cannot refresh; an admin can
+    pending = await defer.syncMdm(adminTok, mdm.id);
+    await answerOutcall(pic, { results: [{ device_id: 'k1', serial_number: 'f9xq2abm0001', device_name: "Member's iPhone", model: 'iPhone 15', platform: 'iPhone', os_version: '18.6', last_check_in: '2026-09-07T08:00:00Z', user: { email: 'member@example.test', name: 'Member' } }] });
+    r = await pending(); assert.equal(r.ok, true, r.detail); assert.doesNotMatch(r.detail, /hardware read/);
+    assert.equal((await app.refreshHardware(memberTok, a1.id)).ok, false, 'members cannot trigger MDM calls');
+    pending = await defer.refreshHardware(adminTok, a1.id);
+    const refreshCall = await answerOutcall(pic, { hardware_overview: { processor_name: 'Apple A16', total_number_of_cores: '6', memory: '8 GB' }, volumes: [] });
+    assert.match(refreshCall.url, /\/devices\/k1\/details$/); r = await pending(); assert.equal(r.ok, true, r.detail);
+    assert.equal((await app.getAsset(adminTok, a1.id))[0].hardware[0].memoryGb, 8n, 'refresh replaces the stored hardware');
+    // the details preview names the sections and quotes hardware/battery sections, stores nothing
+    assert.equal((await app.mdmDetailsPreview(memberTok, a1.id)).ok, false);
+    pending = await defer.mdmDetailsPreview(adminTok, a1.id);
+    await answerOutcall(pic, { general: { device_name: 'x' }, hardware_overview: { memory: '24 GB LPDDR5' }, battery: { cycle_count: 12 }, users: { regular_users: [{ username: 'secret' }] } });
+    const preview = await pending(); assert.equal(preview.ok, true, preview.detail);
+    assert.match(preview.detail, /sections: general, hardware_overview, battery, users/); assert.match(preview.detail, /battery: \{"cycle_count":12\}/); assert.doesNotMatch(preview.detail, /secret/);
+    assert.equal((await app.getAsset(adminTok, a1.id))[0].hardware[0].memoryGb, 8n, 'preview stores nothing');
     assert.equal(linked.asset.status, 'assigned'); assert.equal(linked.assigneeEmail, 'member@example.test'); assert.equal(linked.mdm[0].connName, 'Iru'); assert.equal(linked.abm[0].connName, 'Apple Business Manager · Group');
     assert.equal((await app.listAbmDevices(adminTok, 'matched', 0n)).length, 3);
     assert.deepEqual(await app.listAbmDevices(adminTok, 'sold', 0n), [], 'nothing sold yet — the release backlog is empty');
@@ -1753,7 +1804,7 @@ test('contracts: upgrade keeps legacy records and evidence, freezes former acces
   } finally {await pic.tearDown();}
 });
 
-test('contracts: general agreements need no invented price or expiry; archived spaces block relay intake; rejected draft creation is atomic', async () => {
+test('contracts: general agreements need no invented price or expiry; archived spaces block intake; rejected draft creation is atomic', async () => {
   const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
   try {
     const {app,adminTok,adminId,memberId,memberTok}=await contractsFixture(pic,{ai:false});
@@ -1769,12 +1820,11 @@ test('contracts: general agreements need no invented price or expiry; archived s
     const d=await app.decideProposal(adminTok,p.id,{expectedRevision:0n,target:[],newContract:true,accept:[{field:'amountMinor',value:'-10.00'}],note:''});assert.equal(d.ok,false);
     assert.equal((await app.exportAll(adminTok))[0].contracts.length,before,'invalid decision creates no orphan draft');
     assert.equal((await app.getProposal(adminTok,p.id))[0].status,'open');
-    app.setPrincipal(stranger);assert.equal((await app.setRelayPrincipals(adminTok,[stranger.toText()])).ok,true);assert.equal((await app.setSpaceRelay(adminTok,stranger.toText(),true)).ok,true);
-    const pending=await app.intakeBegin('',mail({providerId:'archive-pending'}));assert.equal(pending.ok,true);
+    const pending=await app.intakeBegin(adminTok,mail({providerId:'archive-pending'}));assert.equal(pending.ok,true);
     const sp=(await app.getSpace(adminTok))[0].space;
     assert.equal((await app.updateSpace(adminTok,sp.revision,sp.name,sp.description,[{pid:adminId,role:{owner:null}},{pid:memberId,role:{editor:null}}],true)).ok,true);
-    assert.equal((await app.intakeCommit('',pending.id)).ok,false,'an archived space cannot accept a pending delivery');
-    assert.equal((await app.intakeBegin('',mail({providerId:'archive-new'}))).ok,false);
+    assert.equal((await app.intakeCommit(adminTok,pending.id)).ok,false,'an archived space cannot accept a pending delivery');
+    assert.equal((await app.intakeBegin(adminTok,mail({providerId:'archive-new'}))).ok,false);
     assert.equal((await app.createContract(memberTok,cinput())).ok,false);
     assert.equal((await app.getContract(memberTok,c.id)).length,1,'archive keeps member read access');
   } finally {await pic.tearDown();}
@@ -1915,23 +1965,20 @@ test('contracts: shared intake follows central Hub app administration; routing p
     assert.equal((await app.openSpace(hubAdminRoot,spaceId)).ok,true,'Hub admin can open every teamspace');
     const personal=(await app.listSpaces(adminRoot)).find(s=>s.kind==='personal').id;
     assert.equal((await app.openSpace(hubAdminRoot,personal)).ok,true,'Hub admin can open another personal space');
-    app.setPrincipal(stranger);
-    assert.equal((await app.setRelayPrincipals(adminRoot,[stranger.toText()])).ok,true);
-    assert.equal((await app.setSpaceRelay(intake.token,stranger.toText(),true)).ok,true);
     const bytes=Buffer.from('The agreement is awaiting signature.');
     const meta=mail({providerId:'shared-intake',messageId:'<shared-intake@test>',attachments:[{name:'agreement.txt',mime:'text/plain',size:BigInt(bytes.length),sha256:createHash('sha256').update(bytes).digest('hex'),textExtract:bytes.toString(),link:''}]});
-    const pending=await app.intakeBegin('',meta);assert.equal(pending.ok,true,pending.detail);
-    assert.equal((await app.intakeChunk('',pending.id,0n,bytes)).ok,true);
-    const received=await app.intakeCommit('',pending.id);assert.equal(received.ok,true,received.detail);
+    const pending=await app.intakeBegin(intake.token,meta);assert.equal(pending.ok,true,pending.detail);
+    assert.equal((await app.intakeChunk(intake.token,pending.id,0n,bytes)).ok,true);
+    const received=await app.intakeCommit(intake.token,pending.id);assert.equal(received.ok,true,received.detail);
     const source=(await app.getSource(hubAdminIntake.token,received.sourceId))[0];assert.ok(source,'second Hub reviewer sees original');
     assert.deepEqual(await app.getSource(memberRoot,received.sourceId),[]);
     assert.equal((await app.moveIncomingSource(memberRoot,received.sourceId,personal)).ok,false,'ordinary member cannot route somebody else source');
     assert.equal((await app.moveIncomingSource(intake.token,received.sourceId,personal)).ok,true,'owner routes complete source');
     assert.deepEqual(await app.getSource(hubAdminIntake.token,received.sourceId),[],'other intake reviewer loses access');
-    const repeat=await app.intakeBegin('',meta);assert.equal(repeat.ok,false);assert.match(repeat.detail,/duplicate/i);assert.equal(repeat.id,0n,'receipt does not disclose private source id');
-    const forwarded=await app.intakeBegin('',{...meta,providerId:'forward-copy'});assert.equal(forwarded.ok,true);
-    assert.equal((await app.intakeChunk('',forwarded.id,0n,bytes)).ok,true);
-    const again=await app.intakeCommit('',forwarded.id);assert.equal(again.ok,true);assert.equal(again.status,'duplicate');assert.equal(again.sourceId,0n);
+    const repeat=await app.intakeBegin(intake.token,meta);assert.equal(repeat.ok,false);assert.match(repeat.detail,/duplicate/i);assert.equal(repeat.id,0n,'receipt does not disclose private source id');
+    const forwarded=await app.intakeBegin(intake.token,{...meta,providerId:'forward-copy'});assert.equal(forwarded.ok,true);
+    assert.equal((await app.intakeChunk(intake.token,forwarded.id,0n,bytes)).ok,true);
+    const again=await app.intakeCommit(intake.token,forwarded.id);assert.equal(again.ok,true);assert.equal(again.status,'duplicate');assert.equal(again.sourceId,0n);
     assert.equal((await app.listSources(intake.token,'',[])).length,0,'duplicate cannot recreate routed content in old intake');
     assert.deepEqual(await app.documentData(hubAdminIntake.token,source.documents[0].id),[],'file bytes also protected');
     assert.deepEqual(Buffer.from((await app.documentData(adminRoot,source.documents[0].id))[0].bytes),bytes,'original retained in destination');
@@ -2098,7 +2145,7 @@ test('contracts: layout evidence keeps SaaS dates, successful rereads replace ol
   try {
     const {app,appId,adminTok,adminRoot,memberTok,helpdeskTok}=await contractsFixture(pic);
     const bytes=Buffer.from('%PDF-1.4 original-layout-fixture');
-    const b=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'layout-order',text:'Uploaded order form',attachments:[{name:'order.pdf',mime:'application/pdf',size:BigInt(bytes.length),sha256:createHash('sha256').update(bytes).digest('hex'),textExtract:'Example Cloud 13/03/2026 Contract Start Date*: 12/03/2027 Contract End Date*: Quantity Monthly/Unit Price 150 USD 4.80',link:''}]}));
+    const b=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'layout-order',text:'Uploaded order form',attachments:[{name:'order.pdf',mime:'application/pdf',size:BigInt(bytes.length),sha256:createHash('sha256').update(bytes).digest('hex'),textExtract:'Example Cloud 13/03/2026 Contract Start Date*: 12/03/2027 Contract End Date*: Quantity Monthly/Unit Price 150 USD 4.80'+' '.repeat(14000)+'Cancellation requires 45 days notice.'+' '.repeat(20000),link:''}]}));
     assert.equal(b.ok,true);assert.equal((await app.intakeChunk(adminTok,b.id,0n,bytes)).ok,true);
     const src=await app.intakeCommit(adminTok,b.id);assert.equal(src.ok,true);
     const doc=(await app.getSource(adminTok,src.sourceId))[0].documents[0];
@@ -2111,6 +2158,7 @@ test('contracts: layout evidence keeps SaaS dates, successful rereads replace ol
     assert.equal((await app.reprocessSource(adminTok,src.sourceId)).ok,true);await pic.advanceTime(16_000);
     req=await pendingContractsAi(pic);
     const payload=JSON.parse(Buffer.from(req.body).toString());assert.match(payload.messages[0].content,/unitInterval|monthly unit price/i);
+    assert.match(JSON.stringify(payload),/Cancellation requires 45 days notice/,'middle clauses must not be dropped from the AI input');
     const fields=[
       visual('recordType','subscription','Order Form'),visual('title','Example Cloud subscription','Order Form','derived'),textField('vendor','Example Cloud','Example Cloud'),
       textField('start','2026-03-13','Contract Start Date*: 13/03/2026'),textField('end','2027-03-12','Contract End Date*: 12/03/2027'),
@@ -2136,6 +2184,12 @@ test('contracts: layout evidence keeps SaaS dates, successful rereads replace ol
     assert.equal((await app.setCommercialDetails(helpdeskTok,saved.contractId,record.contract.revision,[{field:'paymentTerms',value:'Forged'}])).ok,false);
     assert.equal((await app.setCommercialDetails(memberTok,saved.contractId,record.contract.revision,[{field:'renewalTermMonths',value:'-1'}])).ok,false);
     assert.equal((await app.setCommercialDetails(adminTok,saved.contractId,record.contract.revision,[{field:'purchaseOrder',value:'PO-EDITED'}])).ok,true);
+    // 0.18.0 · discounts are commercial fields with their own validation
+    { const rev=(await app.getContract(adminTok,saved.contractId))[0].contract.revision;
+      assert.equal((await app.setCommercialDetails(adminTok,saved.contractId,rev,[{field:'discountPercent',value:'150'}])).ok,false,'a discount above 100 percent is refused');
+      assert.equal((await app.setCommercialDetails(adminTok,saved.contractId,rev,[{field:'listPrice',value:'abc'}])).ok,false,'a list price must be an amount');
+      const d=await app.setCommercialDetails(adminTok,saved.contractId,rev,[{field:'listPrice',value:'23580.00'},{field:'discountPercent',value:'40'},{field:'discountNote',value:'non-profit'}]);assert.equal(d.ok,true,d.detail);
+      const cd=(await app.getContract(adminTok,saved.contractId))[0].commercialDetails;assert.deepEqual(cd.filter(f=>/^(listPrice|discountPercent|discountNote)$/.test(f.field)).map(f=>f.value).sort(),['23580.00','40','non-profit']); }
     assert.equal((await app.setCommercialDetails(adminTok,saved.contractId,record.contract.revision,[{field:'purchaseOrder',value:'STALE'}])).ok,false);
     assert.match(await app.exportCsv(memberTok),/PO-EDITED/);
     await pic.upgradeCanister({upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]},sender:controller,canisterId:appId,wasm:candidateWasm('contracts')});
@@ -2227,7 +2281,17 @@ test('contracts: SaaS keys stay private, group assignments update without sharin
   const filed=await app.createContractFromSource(adminTok,src.sourceId,{proposalId:[],destination:(await app.whoami(adminTok))[0].space,fields});assert.equal(filed.ok,true,filed.detail);const saved=(await app.getContract(adminTok,filed.contractId))[0].contract;assert.equal(saved.status,'active');assert.equal(saved.responsible,memberId);assert.ok(saved.terms.noticeDate,'deadline computed on one-save filing');
   const policy=(await app.portfolio(adminTok))[0].policy;
   assert.equal((await app.setRenewalPolicy(memberTok,policy)).ok,false,'editor cannot change workspace delivery');
-  assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[30n]})).ok,false,'90-day first warning required');
+  assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[30n]})).ok,true,'a workspace may choose its own schedule (0.14.0: 90 days no longer mandatory)');
+  // 0.18.0 · reporting currency and rates: owners only, validated, returned with the portfolio
+  assert.equal((await app.setReporting(memberTok,{currency:'CHF',rates:[['USD',8800n]]})).ok,false,'editors cannot set the reporting currency');
+  assert.equal((await app.setReporting(adminTok,{currency:'ch',rates:[]})).ok,false,'currency code is three capital letters');
+  assert.equal((await app.setReporting(adminTok,{currency:'CHF',rates:[['CHF',10000n]]})).ok,false,'no rate for the reporting currency itself');
+  assert.equal((await app.setReporting(adminTok,{currency:'CHF',rates:[['USD',0n]]})).ok,false,'a zero rate is refused');
+  const rep=await app.setReporting(adminTok,{currency:'chf',rates:[['usd',8800n],['EUR',9400n]]});assert.equal(rep.ok,true,rep.detail);
+  const rp=(await app.portfolio(adminTok))[0].reporting[0];assert.equal(rp.currency,'CHF');assert.deepEqual(rp.rates,[['USD',8800n],['EUR',9400n]],'codes are normalised');
+  assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[]})).ok,false,'at least one mark');
+  assert.equal((await app.setRenewalPolicy(adminTok,{...policy,days:[400n]})).ok,false,'marks within a year');
+  assert.equal((await app.setRenewalPolicy(adminTok,{...policy})).ok,true);
   assert.equal((await app.setRenewalPolicy(adminTok,{...policy,groups:['Design']})).ok,true);
  }finally{await pic.tearDown();}
 });
@@ -2255,11 +2319,162 @@ test('contracts: SaaS reminders warn at 90 days and earlier cancellation deadlin
  }finally{await pic.tearDown();}
 });
 
+test('contracts: contract types — built-ins listed, admin-defined fields validated, list filter and typed date reminders; SaaS reminders name the cancellation deadline',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  await pic.setTime(Date.UTC(2026,8,10,10));
+  const {app,hub,adminTok,memberTok,helpdeskTok,memberId,connector}=await contractsFixture(pic,{ai:false});
+  hub.setPrincipal(owner);await hub.setConnectorLanes(connector.id,['identity','roles','groups','notify']);
+  const config=(await app.getSettings(adminTok))[0];assert.equal((await app.setSettings(adminTok,{...config,appUrl:'https://contracts.example.test/'})).ok,true);
+  const types=await app.listContractTypes(adminTok);
+  assert.ok(types.length>=7&&types.every(t=>t.builtin&&t.enabled),'starter types seeded');
+  const saas=types.find(t=>t.name.startsWith('SaaS')),dc=types.find(t=>t.name.startsWith('Datacenter'));
+  assert.equal(saas.hasSeats,true);assert.equal(dc.hasSeats,false);assert.ok(dc.fields.some(f=>f.key==='site'&&f.required));
+  const fd=(key,title,kind,o={})=>({key,title,kind,options:[],required:false,inList:true,remind:false,...o});
+  const input={id:[],name:'Insurance',icon:'🛡️',description:'Policies and cover',fields:[fd('policyNo','Policy number','text',{required:true}),fd('cover','Cover','select',{options:['basic','full']}),fd('audit','Next audit','date',{remind:true}),fd('broker','Broker contact','person',{inList:false})],hasSeats:false,enabled:true};
+  assert.equal((await app.saveContractType(memberTok,input)).ok,false,'members cannot define types');
+  const saved=await app.saveContractType(adminTok,input);assert.equal(saved.ok,true,saved.detail);
+  assert.equal((await app.saveContractType(adminTok,{...input,fields:[fd('bad key','Bad','text')]})).ok,false,'field keys validated');
+  assert.equal((await app.saveContractType(adminTok,{...input,fields:[fd('plan','Plan','select')]})).ok,false,'select needs options');
+  assert.equal((await app.saveContractType(adminTok,{...input,name:'insurance'})).ok,false,'type names unique');
+  assert.equal((await app.deleteContractType(adminTok,saas.id)).ok,false,'built-in types cannot be deleted');
+  const c=await app.createContract(adminTok,cinput({title:'Office insurance',product:'Policy',seats:[]}));assert.equal(c.ok,true,c.detail);
+  let r=(await app.getContract(adminTok,c.id))[0];assert.equal(r.contractType.id,saas.id,'records default to SaaS, the type every earlier record was');
+  const st=await app.setContractType(adminTok,c.id,r.contract.revision,saved.id);assert.equal(st.ok,true,st.detail);
+  assert.equal((await app.setContractType(helpdeskTok,c.id,st.revision,dc.id)).ok,false,'people without edit access cannot retype a contract');
+  assert.equal((await app.setTypeValues(adminTok,c.id,st.revision,[['cover','gold']])).ok,false,'select values validated');
+  assert.equal((await app.setTypeValues(adminTok,c.id,st.revision,[['audit','soon']])).ok,false,'date values validated');
+  assert.equal((await app.setTypeValues(adminTok,c.id,st.revision,[['nope','x']])).ok,false,'unknown fields rejected');
+  assert.equal((await app.setTypeValues(adminTok,c.id,st.revision,[['broker','p_nobody']])).ok,false,'person fields need an active person');
+  const sv=await app.setTypeValues(adminTok,c.id,st.revision,[['policyNo','P-1'],['cover','full'],['audit','2026-10-05'],['broker',memberId]]);assert.equal(sv.ok,true,sv.detail);
+  r=(await app.getContract(adminTok,c.id))[0];assert.equal(r.contractType.name,'Insurance');const vals=Object.fromEntries(r.typeValues);assert.equal(vals.policyNo,'P-1');assert.equal(vals.broker,memberId);
+  const filter={q:'',status:'',responsible:'',onlyIncomplete:false,onlyDue:false,includeArchived:false};
+  const rows=await app.listContracts(adminTok,{...filter,typeId:[saved.id]});
+  assert.equal(rows.length,1);assert.equal(rows[0].typeName,'Insurance');assert.ok(rows[0].listFields.some(([k,v])=>k==='Policy number'&&v==='P-1'),JSON.stringify(rows[0].listFields));
+  assert.ok(!rows[0].listFields.some(([k])=>k==='Broker contact'),'fields marked not-in-list stay off the list');
+  assert.equal((await app.listContracts(adminTok,{...filter,typeId:[dc.id]})).length,0,'type filter excludes other types');
+  assert.equal((await app.deleteContractType(adminTok,saved.id)).ok,false,'a type in use cannot be deleted');
+  const empty=await app.saveContractType(adminTok,{...input,name:'Unused'});assert.equal((await app.deleteContractType(adminTok,empty.id)).ok,true,'an unused custom type can be deleted');
+  // filing from an upload: the review sends the type and its fields; invalid values are refused before anything is written; person e-mails resolve to directory ids
+  const memberEmail=(await app.whoami(memberTok))[0].email;
+  const up=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'typed-upload',text:'Fleet insurance policy P-77, full cover, broker '+memberEmail}));assert.equal(up.ok,true,up.detail);const src=await app.intakeCommit(adminTok,up.id);assert.equal(src.ok,true,src.detail);await settled(pic);
+  const bad=await app.createContractFromSource(adminTok,src.sourceId,{proposalId:[],destination:(await app.whoami(adminTok))[0].space,fields:[{field:'contractType',value:'Insurance'},{field:'type:cover',value:'gold'},{field:'title',value:'Fleet insurance'},{field:'trackStatus',value:'draft'}]});
+  assert.equal(bad.ok,false,'invalid type value refused');assert.ok(/Cover/.test(bad.detail),bad.detail);
+  const filed=await app.createContractFromSource(adminTok,src.sourceId,{proposalId:[],destination:(await app.whoami(adminTok))[0].space,fields:[{field:'contractType',value:'Insurance'},{field:'type:policyNo',value:'P-77'},{field:'type:cover',value:'full'},{field:'type:broker',value:memberEmail},{field:'title',value:'Fleet insurance'},{field:'trackStatus',value:'draft'}]});
+  assert.equal(filed.ok,true,filed.detail);
+  const fr=(await app.getContract(adminTok,filed.contractId))[0];assert.equal(fr.contractType.name,'Insurance');const fv=Object.fromEntries(fr.typeValues);assert.equal(fv.policyNo,'P-77');assert.equal(fv.cover,'full');assert.equal(fv.broker,memberId,'person e-mail resolved to the directory id');
+  const pf=(await app.portfolio(adminTok))[0];assert.ok(pf.rows.some(r=>r.contract.id===filed.contractId&&r.typeName==='Insurance'),'filed contract appears in the workspace list query');
+  const unknown=await app.createContractFromSource(adminTok,src.sourceId,{proposalId:[],destination:(await app.whoami(adminTok))[0].space,fields:[{field:'contractType',value:'Insurance'},{field:'type:nope',value:'x'},{field:'title',value:'Again'},{field:'trackStatus',value:'draft'}]});assert.equal(unknown.ok,false);
+  // typed date reminder: the audit is 25 days out, the 30-day threshold fires once the contract is active
+  const t2=await app.setTerms(adminTok,c.id,sv.revision,{...TERMS,renewalDate:'2026-12-09',noticeMonths:[],noticeDays:[30n]},'Confirmed');assert.equal(t2.ok,true,t2.detail);
+  r=(await app.getContract(adminTok,c.id))[0];assert.equal(r.contract.terms.noticeDate,'2026-11-09','notice date derived from the notice period');
+  assert.equal((await app.setStatus(adminTok,c.id,t2.revision,'active','Confirmed')).ok,true);
+  await pic.advanceTime(121_000);await settled(pic);await pic.advanceTime(31_000);await settled(pic);
+  hub.setPrincipal(owner);const items=(await hub.myNotifications('',100n)).items;
+  const audit=items.find(n=>n.title.includes('Next audit'));assert.ok(audit,'typed date reminder fires: '+JSON.stringify(items.map(i=>i.title)));
+  assert.ok(audit.title.includes('2026-10-05')&&audit.title.includes('Office insurance'),audit.title);
+  const renewal=items.find(n=>n.title.includes('cancel by'));assert.ok(renewal,'renewal reminder names the cancellation deadline: '+JSON.stringify(items.map(i=>i.title)));
+  assert.ok(renewal.title.includes('2026-11-09')&&renewal.title.includes('renews 2026-12-09')&&renewal.title.includes('EUR'),renewal.title);
+  assert.ok(renewal.url.includes('/c/'+c.id),renewal.url);
+  await pic.advanceTime(6*3600_000);await settled(pic);await pic.advanceTime(31_000);await settled(pic);
+  const again=(await hub.myNotifications('',100n)).items;assert.equal(again.filter(n=>n.title.includes('Next audit')).length,1,'typed reminder not repeated for the same threshold');
+ }finally{await pic.tearDown();}
+});
+
+test('contracts: workspaces — the selector lists memberships only, admins see other people\'s workspaces with content, owners delete empty teamspaces and bound sessions end',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const {app,adminTok,adminRoot,memberRoot,memberTok,memberId,adminId,spaceId}=await contractsFixture(pic,{ai:false});
+  const mine=await app.listSpaces(memberRoot);assert.ok(mine.length>=2&&mine.every(s=>s.member===true),JSON.stringify(mine.map(s=>[s.id,s.member])));assert.ok(mine.some(s=>s.id===spaceId));
+  let adminList=await app.listSpaces(adminRoot);assert.ok(!adminList.some(s=>s.id==='personal:'+memberId),'empty personal workspaces of others are not listed');
+  assert.equal((await app.createContract(memberRoot,cinput({title:'Private policy'}))).ok,true);
+  adminList=await app.listSpaces(adminRoot);const theirs=adminList.find(s=>s.id==='personal:'+memberId);assert.ok(theirs,'personal workspace with content appears for admins');assert.equal(theirs.member,false);assert.equal(theirs.items,1n);assert.ok(theirs.email.includes('@'));
+  assert.equal(adminList.find(s=>s.id==='personal:'+adminId).items,0n);
+  const created=await app.createSpace(adminRoot,'Empty IT','');assert.equal(created.ok,true,created.detail);
+  const fresh=(await app.listSpaces(adminRoot)).find(s=>s.id===created.id);assert.equal(fresh.member,true);assert.equal(fresh.items,0n);
+  const team=(await app.listSpaces(adminRoot)).find(s=>s.id===spaceId);
+  assert.equal((await app.createContract(adminTok,cinput({title:'Team record'}))).ok,true);
+  const full=await app.deleteSpace(adminTok,team.revision);assert.equal(full.ok,false);assert.ok(/record/.test(full.detail),full.detail);
+  assert.equal((await app.deleteSpace(memberTok,team.revision)).ok,false,'editors cannot delete');
+  const bound=(await app.openSpace(adminRoot,created.id)).token;assert.ok(bound);
+  assert.equal((await app.deleteSpace(bound,99n)).ok,false,'stale revision refused');
+  assert.equal((await app.deleteSpace(adminRoot,1n)).ok,false,'a personal workspace cannot be deleted');
+  const gone=await app.deleteSpace(bound,fresh.revision);assert.equal(gone.ok,true,gone.detail);
+  assert.ok(!(await app.listSpaces(adminRoot)).some(s=>s.id===created.id),'deleted space disappears');
+  assert.deepEqual(await app.whoami(bound),[],'session bound to the deleted space ended');
+  assert.equal((await app.openSpace(adminRoot,created.id)).ok,false);
+ }finally{await pic.tearDown();}
+});
+
+test('contracts: AI classifies into a contract type, proposes a new type when none fits, and a forced re-read pins the type',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const {app,adminTok,adminRoot}=await contractsFixture(pic);
+  const types=await app.listContractTypes(adminTok);const services=types.find(t=>t.name.startsWith('Services'));
+  const b=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'move-order',text:'RM Swiss Umzuege Auftragsbestaetigung Nr. 2026-0610/01: Umzug am 2026-11-26, Reinigung bis 2026-11-30, Preisgarantie CHF 3590.00, Tagessatz CHF 120'}));assert.equal(b.ok,true,b.detail);
+  const src=await app.intakeCommit(adminTok,b.id);assert.equal(src.ok,true,src.detail);const sid=src.sourceId;
+  const event=(fields,extra={})=>({kind:'order_confirmation',contractCandidates:[],effectiveDate:'',proposedFields:fields,uncertainties:[],summary:'Order confirmation for a move.',...extra});
+  const body=(key,value,quote,basis='explicit')=>({field:key,value,basis,evidence:[{partId:'body',quote}]});
+  let req=await pendingContractsAi(pic);
+  await respondContractsAi(pic,req,aiAnswer([event([body('vendor','RM Swiss Umzuege','RM Swiss Umzuege'),{field:'contractType',value:'Services / Consulting',basis:'derived',evidence:[]},body('type:dayRate','120.00','Tagessatz CHF 120'),body('type:nope','x','Umzug')])]));await settled(pic);
+  let view=(await app.getSource(adminTok,sid))[0];let pr=view.proposals.find(p=>p.status==='open');assert.ok(pr,'proposal created');
+  assert.ok(pr.changes.some(c=>c.field==='contractType'&&c.newValue==='Services / Consulting'),'type classification kept without evidence: '+JSON.stringify(pr.changes.map(c=>c.field)));
+  assert.ok(pr.changes.some(c=>c.field==='type:dayRate'&&c.newValue==='120.00'),'typed field kept');
+  assert.ok(!pr.changes.some(c=>c.field==='type:nope'),'unknown type field dropped');assert.ok(pr.uncertainties.some(u=>/unknown type field/.test(u)));
+  assert.deepEqual(pr.typeProposal,[],'no proposal when a listed type fits');
+  // second reading: nothing fits, the model proposes a type
+  assert.equal((await app.reprocessSource(adminTok,sid)).ok,true);await pic.advanceTime(16_000);req=await pendingContractsAi(pic);
+  const payload=JSON.parse(Buffer.from(req.body).toString());assert.match(JSON.stringify(payload),/typeProposal/);assert.match(JSON.stringify(payload),/Never default to SaaS/);
+  await respondContractsAi(pic,req,aiAnswer([event([body('vendor','RM Swiss Umzuege','RM Swiss Umzuege'),{field:'contractType',value:'Moving services',basis:'derived',evidence:[]},body('type:moveDate','2026-11-26','Umzug am 2026-11-26')],{typeProposal:{name:'Moving services',icon:'🚚',description:'Moves and end-of-tenancy cleaning.',fields:[{key:'moveDate',title:'Move date',kind:'date',options:[],required:true,inList:true,remind:true},{key:'cleaningBy',title:'Cleaning by',kind:'date',options:[],required:false,inList:false,remind:false},{key:'bad key',title:'x',kind:'text',options:[],required:false,inList:false,remind:false},{key:'tier',title:'Tier',kind:'select',options:[],required:false,inList:false,remind:false}]}})]));await settled(pic);
+  view=(await app.getSource(adminTok,sid))[0];pr=view.proposals.find(p=>p.status==='open');assert.ok(pr);
+  const tp=pr.typeProposal[0];assert.ok(tp,'type proposal surfaced');assert.equal(tp.name,'Moving services');assert.deepEqual(tp.fields.map(f=>f.key),['moveDate','cleaningBy'],'invalid proposed fields filtered');assert.equal(tp.fields[0].remind,true);
+  assert.ok(!pr.changes.some(c=>c.field==='contractType'),'unknown type name is not a change');assert.ok(pr.changes.some(c=>c.field==='type:moveDate'),'values for proposed fields kept for after creation');
+  const created=await app.saveContractType(adminTok,tp);assert.equal(created.ok,true,created.detail);
+  const filed=await app.createContractFromSource(adminTok,sid,{proposalId:[pr.id],destination:'',fields:[{field:'contractType',value:'Moving services'},{field:'type:moveDate',value:'2026-11-26'},{field:'title',value:'Move 2026-11'},{field:'trackStatus',value:'active'}]});assert.equal(filed.ok,true,filed.detail);
+  const rec=(await app.getContract(adminTok,filed.contractId))[0];assert.equal(rec.contractType.name,'Moving services');assert.equal(Object.fromEntries(rec.typeValues).moveDate,'2026-11-26');
+  // forced re-read on another upload: the request names the type and proposals are ignored
+  const b2=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'move-order-2',messageId:'<move-2@test>',text:'Consulting agreement, day rate CHF 1500'}));const src2=await app.intakeCommit(adminTok,b2.id);
+  req=await pendingContractsAi(pic);await respondContractsAi(pic,req,aiAnswer([event([body('vendor','Acme Consulting','Consulting')])]));await settled(pic);
+  assert.equal((await app.reprocessSourceAs(adminTok,src2.sourceId,999n)).ok,false,'unknown type refused');
+  assert.equal((await app.reprocessSourceAs(adminTok,src2.sourceId,services.id)).ok,true);await pic.advanceTime(16_000);req=await pendingContractsAi(pic);
+  assert.match(JSON.parse(Buffer.from(req.body).toString()).messages.map(m=>m.content).join(' '),/contract type is \[Services \/ Consulting\]/);
+  await respondContractsAi(pic,req,aiAnswer([event([body('vendor','Acme Consulting','Consulting'),{field:'contractType',value:'Services / Consulting',basis:'derived',evidence:[]}],{typeProposal:{name:'Ignored',icon:'',description:'',fields:[{key:'x',title:'X',kind:'text',options:[],required:false,inList:false,remind:false}]}})]));await settled(pic);
+  const pr2=(await app.getSource(adminTok,src2.sourceId))[0].proposals.find(p=>p.status==='open');assert.ok(pr2.changes.some(c=>c.field==='contractType'));assert.deepEqual(pr2.typeProposal,[],'a forced type ignores proposals');
+ }finally{await pic.tearDown();}
+});
+
+test('contracts: a document filed to an existing record attaches the source, applies checked fields atomically and closes its suggestions',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const {app,adminTok,memberTok,helpdeskTok}=await contractsFixture(pic,{ai:false});
+  const c=await app.createContract(adminTok,cinput({title:'NTS colocation',vendor:'NTS Workspace AG',product:'Racks'}));assert.equal(c.ok,true);
+  assert.equal((await app.setTerms(adminTok,c.id,1n,TERMS,'Signed')).ok,true);
+  const b=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'amendment-1',text:'Amendment: price rises to CHF 1800 per year from 2027-01-01, 2 racks at Zurich West'}));const src=await app.intakeCommit(adminTok,b.id);assert.equal(src.ok,true);
+  const pr=await app.proposeChange(adminTok,c.id,[src.sourceId],[{field:'amountMinor',value:'170000'}],'manual suggestion');assert.equal(pr.ok,true,pr.detail);
+  const types=await app.listContractTypes(adminTok);const dc=types.find(t=>t.name.startsWith('Datacenter'));
+  assert.equal((await app.fileToContract(helpdeskTok,src.sourceId,c.id,2n,[],'')).ok,false,'outsiders cannot file');
+  assert.equal((await app.fileToContract(adminTok,src.sourceId,c.id,1n,[],'')).ok,false,'stale revision refused');
+  assert.equal((await app.fileToContract(adminTok,src.sourceId,c.id,2n,[{field:'nope',value:'x'}],'')).ok,false,'unknown field refused');
+  const bad=await app.fileToContract(adminTok,src.sourceId,c.id,2n,[{field:'contractType',value:dc.name},{field:'type:rackUnits',value:'two'}],'');assert.equal(bad.ok,false,'typed value validated before writing');
+  assert.equal((await app.getContract(adminTok,c.id))[0].contract.revision,2n,'nothing written on refusal');
+  const ok=await app.fileToContract(adminTok,src.sourceId,c.id,2n,[{field:'amountMinor',value:'180000'},{field:'currency',value:'CHF'},{field:'vendor',value:'NTS Workspace AG'},{field:'contractType',value:dc.name},{field:'type:site',value:'Zurich West'},{field:'type:rackUnits',value:'2'},{field:'ownerId',value:'ignored'},{field:'trackStatus',value:'draft'}],'from the amendment');
+  assert.equal(ok.ok,true,ok.detail);assert.equal(ok.revision,3n);
+  const r=(await app.getContract(adminTok,c.id))[0];
+  assert.equal(r.contract.terms.amountMinor[0],180000n);assert.equal(r.contract.terms.currency,'CHF');assert.equal(r.contract.status,'draft'===r.contract.status?'draft':r.contract.status);
+  assert.equal(r.contractType.name,dc.name);assert.equal(Object.fromEntries(r.typeValues).site,'Zurich West');
+  assert.ok(r.sources.some(x=>x.id===src.sourceId),'document attached to the record');assert.ok(r.documents.length>=0);
+  const sv=(await app.getSource(adminTok,src.sourceId))[0];assert.equal(sv.source.status,'filed');assert.deepEqual(sv.source.contractId,[c.id]);
+  assert.ok(sv.proposals.every(p=>p.status==='superseded'),'open suggestions of the source are closed: '+JSON.stringify(sv.proposals.map(p=>p.status)));
+  assert.ok(r.audit.some(a=>/document filed to the record/.test(a.what)&&/amountMinor/.test(a.after)));
+  assert.equal((await app.fileToContract(memberTok,src.sourceId,c.id,3n,[],'')).ok,true,'an editor may attach again without changes');
+ }finally{await pic.tearDown();}
+});
+
 test('contracts: vendor terms read a public page as supplementary evidence without changing contract fields',async()=>{
  const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
  try{
   const {app,appId,idlFactory,adminTok,helpdeskTok,hub,connector}=await contractsFixture(pic,{ai:false});
-  const b=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'vendor-check-source',text:'Private deal information must not be sent to vendor.'}));assert.equal(b.ok,true);const src=await app.intakeCommit(adminTok,b.id);await settled(pic);
+  const reference=Buffer.from('Private deal information. Terms: www.example.com/agb.');const b=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'vendor-check-source',text:'Private deal information must not be sent to vendor.',attachments:[{name:'order.txt',mime:'text/plain',size:BigInt(reference.length),sha256:createHash('sha256').update(reference).digest('hex'),textExtract:reference.toString(),link:''}]}));assert.equal(b.ok,true);await app.intakeChunk(adminTok,b.id,0n,reference);const src=await app.intakeCommit(adminTok,b.id);await settled(pic);
   assert.equal((await app.lookupVendorTerms(helpdeskTok,src.sourceId,'https://example.com/terms')).ok,false);
   assert.equal((await app.lookupVendorTerms(adminTok,src.sourceId,'https://127.0.0.1/terms')).ok,false);
   assert.equal((await app.lookupVendorTerms(adminTok,src.sourceId,'https://0x7f.0x00.0x00.0x01/terms')).ok,false);
@@ -2276,6 +2491,23 @@ test('contracts: vendor terms read a public page as supplementary evidence witho
   const check=(await app.vendorTermsStatus(adminTok,src.sourceId))[0];assert.equal(check.status,'ready');assert.equal(check.noticeDays[0],30n);
   assert.equal((await app.portfolio(adminTok))[0].rows.length,0,'web lookup never files or confirms a contract');
   assert.deepEqual(await app.vendorTermsStatus(helpdeskTok,src.sourceId),[]);
+  const saved=await app.createContract(adminTok,cinput());assert.equal(saved.ok,true);
+  assert.equal((await app.linkSource(adminTok,src.sourceId,[saved.id],[])).ok,true);
+  await pic.advanceTime(61_000);await settled(pic);
+  const discover=await deferred.lookupVendorTerms(adminTok,src.sourceId,'');
+  request=await pendingContractsAi(pic);
+  const lookupBody=JSON.parse(Buffer.from(request.body).toString());
+  assert.match(lookupBody.messages[1].content,/https:\/\/www\.example\.com\/agb/,'printed www terms link retained without the trailing sentence punctuation');
+  assert.ok(lookupBody.messages[1].content.includes(cinput().vendor),'saved contract supplies vendor after open proposals have been confirmed');
+  assert.ok(!JSON.stringify(lookupBody).includes('Private deal information'));
+  await respondContractsAi(pic,request,{choices:[{message:{content:JSON.stringify({url:'https://example.com/terms'})}}]});
+  request=await pendingContractsAi(pic);assert.equal(request.httpMethod,'GET');
+  await pic.mockPendingHttpsOutcall({requestId:request.requestId,subnetId:request.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from('<p>'+quote+'</p>')}});
+  request=await pendingContractsAi(pic);
+  await respondContractsAi(pic,request,{choices:[{message:{content:JSON.stringify({renewalRule:'auto',noticeDays:'30',quote})}}]});
+  assert.equal((await discover()).ok,true);
+  assert.equal((await app.getContract(adminTok,saved.id))[0].contract.terms.noticeDays.length,0,'web lookup must not silently change confirmed terms');
+
  }finally{await pic.tearDown();}
 });
 
@@ -2318,7 +2550,7 @@ test('assets: external dealroom — scoped links, atomic invoice, receipt, IT ha
     assert.ok(c.ok,c.detail);
     const login = async p => { hub.setPrincipal(p); const t = await hub.mintAppTicket('',c.tileId); assert.ok(t.ok,t.detail); return (await app.loginWithTicket(t.ticket))[0]; };
     let adminSession = await login(owner), adminTok = adminSession.token, memberTok = (await login(member)).token;
-    const settings = {adminGroup:'',appUrl:'https://assets.example.test/',tagPrefix:'INV-',orgName:'Test company'};
+    const settings = {adminGroup:'',appUrl:'https://assets.example.test/',orgName:'Test company'};
     assert.ok((await app.setSettings(adminTok,settings)).ok);
     await settled(pic); await pic.advanceTime(2000); await pic.tick(3);
     const terms = 'Used equipment. Before hand-over the device must be wiped and removed from company management.\n' + 'The buyer has reviewed the equipment and the agreed price. '.repeat(65) + '\nEND OF COMPLETE TERMS';
@@ -2333,9 +2565,10 @@ test('assets: external dealroom — scoped links, atomic invoice, receipt, IT ha
     assert.ok((await app.recordWaiver(adminTok,legacy.sid,'Signed paper held by IT')).ok);
     assert.ok((await app.setSaleChecks(adminTok,legacy.sid,true,true)).ok);
     const oldInvoice=await app.issueInvoice(adminTok,legacy.sid);assert.ok(oldInvoice.ok,oldInvoice.detail);
-    const oldBytes=Buffer.from('%PDF-1.4\n'+ 'legacy archive '.repeat(15));
-    assert.ok((await app.attachSaleDocument(adminTok,legacy.sid,'invoice',oldBytes)).ok);
+    const legacyBytes=Buffer.from('%PDF-1.4\n'+ 'legacy archive '.repeat(15));
+    if((await app.getSale(adminTok,legacy.sid))[0].sale.pdfId===0n) assert.ok((await app.attachSaleDocument(adminTok,legacy.sid,'invoice',legacyBytes)).ok); // 0.19 archives the invoice at issue; the 0.17 baseline needs the browser PDF
     const oldView=(await app.getSale(adminTok,legacy.sid))[0];
+    const oldBytes=Buffer.from((await app.saleDocument(adminTok,oldView.sale.pdfId))[0].bytes);
     const priorLink=await app.createDealLink(adminTok,legacy.sid);assert.ok(priorLink.ok,priorLink.detail);
     const priorKey=priorLink.url.split('.').at(-1);
     await app.dealDocument(legacy.sid,priorKey);
@@ -2469,7 +2702,8 @@ test('assets: unlock PIN is read-only, admin-only, transient and rechecks access
     const mdm=await app.addMdm(adminTok,{kind:'iru',name:'Fixture MDM',url:'https://fixture.api.kandji.io',clientId:'',secret:'fixture-secret'});assert.ok(mdm.ok);
     const deferred=pic.createDeferredActor(idlFactory,appId);
     let pending=await deferred.syncMdm(adminTok,mdm.id);
-    await answerOutcall(pic,{results:[{device_id:'test-device',serial_number:'PIN-TEST-001',device_name:'Test Mac',model:'MacBook Pro',platform:'Mac',os_version:'15.0',last_check_in:'2026-09-17'}]});assert.ok((await pending()).ok);
+    await answerOutcall(pic,{results:[{device_id:'test-device',serial_number:'PIN-TEST-001',device_name:'Test Mac',model:'MacBook Pro',platform:'Mac',os_version:'15.0',last_check_in:'2026-09-17'}]});
+    const noDetails=await answerOutcall(pic,{});assert.match(noDetails.url,/\/devices\/test-device\/details$/);assert.ok((await pending()).ok);
     const id=(await app.listAssets(adminTok,'PIN-TEST-001','',false))[0].asset.id;
     pending=await deferred.deviceUnlockPin(adminTok,id);
     const request=await answerOutcall(pic,{pin:'001234'});
@@ -2641,6 +2875,14 @@ test('Assets photo reading: 503 recovery, secret-safe errors, member rejection a
   const login=async principal=>{hub.setPrincipal(principal);return (await app.loginWithTicket((await hub.mintAppTicket('',c.tileId)).ticket))[0].token};
   hub.setPrincipal(owner);await hub.setPersonRole('helpdesk@example.test','admin');const adminToken=await login(helpdesk),memberToken=await login(member);await settled(pic);
   const photo=Buffer.from([255,216,255,217]);assert.equal((await app.intakeRead(memberToken,photo,'image/jpeg')).ok,false);assert.equal((await pic.getPendingHttpsOutcalls()).length,0);
+  const invalidCreate={tag:'BAD-PHOTO',serial:'BAD-PHOTO',vendor:'Example',model:'Laptop',kind:'laptop',note:''};
+  const beforeInvalid=(await app.stats(adminToken)).total;
+  for(const [bytes,mime] of [[Buffer.alloc(0),'image/jpeg'],[photo,'text/plain'],[Buffer.alloc(900001),'image/jpeg']]){
+   const registered=await app.registerDevice(adminToken,{create:invalidCreate,assignee:'',location:'',status:'',photo:[bytes],mime});assert.equal(registered.ok,false,'invalid evidence rejects registration');
+   const intake=await app.intakeCommit(adminToken,{assetId:[],create:[invalidCreate],action:'returned',to:'',note:'',photo:[bytes],mime});assert.equal(intake.ok,false,'invalid evidence rejects scan commit');
+   assert.equal((await app.stats(adminToken)).total,beforeInvalid,'failed evidence must not create a partial device');
+  }
+  const invalidAction=await app.intakeCommit(adminToken,{assetId:[],create:[invalidCreate],action:'handed_out',to:'missing@example.test',note:'',photo:[photo],mime:'image/jpeg'});assert.equal(invalidAction.ok,false);assert.equal((await app.stats(adminToken)).total,beforeInvalid,'failed action must not create a partial device');
   const defer=pic.createDeferredActor(idlFactory,appId);const ask=()=>defer.intakeRead(adminToken,photo,'image/jpeg');
   for(const [status,retryable] of [[503,true],[401,false],[429,false]]){
    const response=await ask(),req=await pendingContractsAi(pic);assert.equal(req.url,'https://api.anthropic.com/v1/messages');
@@ -2648,6 +2890,118 @@ test('Assets photo reading: 503 recovery, secret-safe errors, member rejection a
   }
   const payload={content:[{type:'text',text:JSON.stringify({reads:[{kind:'serial',value:'EXAMPLE123',confidence:0.9}],vendor:'Example',model:'Laptop',kind:'laptop',sticker:'current',notes:''})}]};
   const ok=await ask();await respondContractsAi(pic,await pendingContractsAi(pic),payload);assert.equal((await ok()).reads[0].value,'EXAMPLE123');assert.equal((await app.stats(adminToken)).total,0n,'reading never creates an asset');
-  const stale=await ask(),req=await pendingContractsAi(pic);hub.setPrincipal(owner);await hub.setPersonRole('helpdesk@example.test','');await app.syncNow(adminToken);await respondContractsAi(pic,req,payload);const denied=await stale();assert.equal(denied.ok,false);assert.deepEqual(denied.reads,[]);
+  // Both provider envelopes recover malformed/truncated responses with the original image.
+  const reading={reads:[{kind:'service_tag',value:'TEST123',confidence:.95},{kind:'asset_tag',value:'000042',confidence:.9}],vendor:'Dell',model:'U4021QW',kind:'monitor',notes:''};
+  for(const provider of ['anthropic','openai']){
+   hub.setPrincipal(owner);assert.ok((await hub.setAi({provider,url:provider==='anthropic'?'https://api.anthropic.com/v1/messages':'https://api.openai.com/v1/chat/completions',model:'fixture-model',visionModel:[],key:'fixture-private-key'})).ok);await app.refreshAi(adminToken);
+   const envelope=(text,stop)=>provider==='anthropic'?{stop_reason:stop,content:[{type:'text',text}]}:{choices:[{finish_reason:stop,message:{content:text}}]};
+   for(const [text,stop] of [['{"reads":[',provider==='anthropic'?'max_tokens':'length'],['not JSON','stop'],['{}','stop'],['{"reads":[]}','stop']]){
+    const response=await ask(),first=await pendingContractsAi(pic),firstBody=JSON.parse(Buffer.from(first.body).toString());assert.equal(firstBody.max_tokens,2048);
+    await respondContractsAi(pic,first,envelope(text,stop));const retry=await pendingContractsAi(pic),secondBody=JSON.parse(Buffer.from(retry.body).toString());assert.equal(secondBody.max_tokens,4096);
+    const image=b=>b.messages.find(m=>m.role==='user').content.find(x=>x.type==='image'||x.type==='image_url');assert.deepEqual(image(secondBody),image(firstBody),'recovery uses the original photo');
+    await respondContractsAi(pic,retry,envelope('```json\n'+JSON.stringify(reading)+'\n```','stop'));const result=await response();assert.ok(result.ok,result.detail);assert.equal(result.reads[0].value,'TEST123');
+   }
+   const failed=await ask();await respondContractsAi(pic,await pendingContractsAi(pic),envelope('fixture-private-key invalid','stop'));await respondContractsAi(pic,await pendingContractsAi(pic),envelope('still invalid','stop'));const result=await failed();assert.equal(result.ok,false);assert.deepEqual(result.retryable,[false]);assert.match(result.detail,/Automatic recovery/);assert.doesNotMatch(result.detail,/clearer photo|fixture-private-key/);assert.equal((await pic.getPendingHttpsOutcalls()).length,0,'recovery is bounded');
+   const split=JSON.stringify(reading),middle=Math.floor(split.length/2),blocks=[{type:'text',text:split.slice(0,middle)},{type:'text',text:split.slice(middle)}];const parts=await ask();await respondContractsAi(pic,await pendingContractsAi(pic),provider==='anthropic'?{content:blocks,stop_reason:'end_turn'}:{choices:[{message:{content:blocks},finish_reason:'stop'}]});assert.ok((await parts()).ok,'text blocks are assembled in order');
+  }
+  hub.setPrincipal(owner);await hub.setAi({provider:'anthropic',url:'https://api.anthropic.com/v1/messages',model:'fixture-model',visionModel:[],key:'fixture-private-key'});await app.refreshAi(adminToken);
+  // 0.26.0: a stored photo can be read again; nothing changes until the admin takes the corrections over
+  const made=await app.intakeCommit(adminToken,{assetId:[],create:[{tag:'',serial:'OLDSERIAL01',vendor:'Example',model:'Laptop',kind:'laptop',note:''}],action:'returned',to:'',note:'',photo:[photo],mime:'image/jpeg'});assert.equal(made.ok,true,made.detail);
+  const bare=await app.intakeCommit(adminToken,{assetId:[],create:[{tag:'',serial:'NOPHOTO0001',vendor:'Example',model:'Laptop',kind:'laptop',note:''}],action:'returned',to:'',note:'',photo:[],mime:''});assert.equal(bare.ok,true,bare.detail);
+  const countBefore=(await app.getAsset(adminToken,made.assetId))[0].photos.length;
+  const rejectedExisting=await app.intakeCommit(adminToken,{assetId:[made.assetId],create:[],action:'loaned',to:'',note:'',photo:[photo],mime:'image/jpeg'});
+  assert.equal(rejectedExisting.ok,false);assert.equal((await app.getAsset(adminToken,made.assetId))[0].photos.length,countBefore,'failed action leaves no orphan photo on an existing asset');
+  const registered=await app.registerDevice(adminToken,{create:{...invalidCreate,serial:'VALID-PHOTO',tag:'VALID-PHOTO'},assignee:'',location:'',status:'',photo:[photo],mime:'image/jpeg'});assert.equal(registered.ok,true,registered.detail);assert.equal((await app.getAsset(adminToken,registered.assetId))[0].photos.length,1,'valid registration keeps its evidence');
+  assert.equal((await app.rereadPhoto(memberToken,made.assetId)).ok,false,'members cannot trigger a vision call');assert.equal((await pic.getPendingHttpsOutcalls()).length,0);
+  assert.match((await app.rereadPhoto(adminToken,bare.assetId)).detail,/no photo/);assert.match((await app.rereadPhoto(adminToken,999999n)).detail,/no such device/);assert.equal((await pic.getPendingHttpsOutcalls()).length,0);
+  const again=await defer.rereadPhoto(adminToken,made.assetId);
+  await respondContractsAi(pic,await pendingContractsAi(pic),{stop_reason:'max_tokens',content:[{type:'text',text:'{"reads":['}]});
+  const recovery=await pendingContractsAi(pic);assert.equal(JSON.parse(Buffer.from(recovery.body).toString()).max_tokens,4096);
+  await respondContractsAi(pic,recovery,payload);const reread=await again();
+  assert.equal(reread.ok,true,reread.detail);assert.equal(reread.result.reads[0].value,'EXAMPLE123');assert.ok(reread.photoId>0n);
+  assert.equal((await app.getAsset(adminToken,made.assetId))[0].asset.serial,'OLDSERIAL01','reading alone changes nothing');
+  const fix={tag:(await app.getAsset(adminToken,made.assetId))[0].asset.tag,serial:'EXAMPLE123',vendor:'Example',model:'Laptop',kind:'laptop',note:''};
+  assert.equal((await app.applyReading(memberToken,made.assetId,reread.photoId,fix)).ok,false);
+  assert.match((await app.applyReading(adminToken,bare.assetId,reread.photoId,fix)).detail,/another device/,'a photo of one device cannot vouch for another');
+  assert.match((await app.applyReading(adminToken,made.assetId,424242n,fix)).detail,/no such photo/);
+  assert.equal((await app.applyReading(adminToken,made.assetId,reread.photoId,fix)).ok,true);
+  const fixed=(await app.getAsset(adminToken,made.assetId))[0];assert.equal(fixed.asset.serial,'EXAMPLE123');assert.ok(fixed.events.some(e=>e.kind==='edited'&&/read again with AI/.test(e.detail)&&e.photoId===reread.photoId),'the history names the photo');
+  // A populated upgrade restores AI for an existing session without a fresh login/settings click.
+  await pic.upgradeCanister({sender:controller,canisterId:appId,wasm:candidateWasm('assets'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+  await pic.advanceTime(2000);await settled(pic);
+  assert.equal((await app.whoami(adminToken))[0].aiOn,true,'startup refresh restores AI to an existing session');
+  assert.equal((await app.getAsset(adminToken,made.assetId))[0].asset.serial,'EXAMPLE123','asset survives populated upgrade');
+  assert.ok((await app.photo(adminToken,reread.photoId))[0].bytes.length,'stored evidence survives upgrade');
+  const stale=await ask(),req=await pendingContractsAi(pic);hub.setPrincipal(owner);await hub.setPersonRole('helpdesk@example.test','');await app.syncNow(adminToken);await respondContractsAi(pic,req,{stop_reason:'max_tokens',content:[]});const denied=await stale();assert.equal(denied.ok,false);assert.deepEqual(denied.reads,[]);assert.equal((await pic.getPendingHttpsOutcalls()).length,0,'revoked access cannot start recovery');
  }finally{await pic.tearDown()}
+});
+
+
+test('Assets automatic tags: atomic sequence, immutable edits/imports and populated legacy repair', {timeout:120000}, async()=>{
+ const pic=await PocketIc.create(server.getUrl());try{
+  const {actor:hub,canisterId:hubId}=await initialized(pic);await settled(pic);
+  const baseline=process.env.KEBAB_ASSETS_TAG_BASELINE;
+  const {actor:app,canisterId:appId}=await install(pic,'assets',baseline?{wasm:baseline}:{});
+  app.setPrincipal(controller);await app.setHub(hubId.toText());hub.setPrincipal(owner);
+  const connected=await connectTestApp(hub,{name:'assets',canisterId:appId.toText(),note:'',lanes:['identity','roles'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[{name:'Assets',kind:'app',url:'https://assets.example.test'}]});assert.ok(connected.ok);
+  const login=async p=>{hub.setPrincipal(p);return (await app.loginWithTicket((await hub.mintAppTicket('',connected.tileId)).ticket))[0].token};
+  const tok=await login(owner),memberTok=await login(member);await settled(pic);
+  const input=(serial,tag='EXTERNAL-999999')=>({tag,serial,vendor:'Test',model:'Device',kind:'laptop',note:''});
+  const read=async id=>(await app.getAsset(tok,id))[0];
+  let legacy;
+  if(baseline){
+   const existing=await app.createAsset(tok,input('EXISTING','INV-001000'));assert.ok(existing.ok);
+   assert.ok((await app.archiveAsset(tok,existing.id,true)).ok);
+   const blank=await app.createAsset(tok,input('BLANK',''));assert.ok(blank.ok);assert.equal((await read(blank.id)).asset.tag,'');
+   legacy={existing,blank};
+   await pic.upgradeCanister({sender:controller,canisterId:appId,wasm:candidateWasm('assets'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+   assert.equal((await read(existing.id)).asset.tag,'INV-001000');
+   assert.equal((await read(blank.id)).asset.tag,'001001');
+   assert.ok((await read(blank.id)).events.some(e=>e.detail.includes('automatic inventory tag assigned')));
+  }
+  const start=BigInt((await app.registerOptions(tok))[0].nextTag);
+  assert.equal((await app.createAsset(memberTok,input('DENIED'))).ok,false);
+  assert.equal((await app.registerOptions(tok))[0].nextTag,String(start).padStart(6,'0'));
+  const made=await Promise.all(Array.from({length:8},(_,i)=>app.registerDevice(tok,{create:input('CONCURRENT-'+i),assignee:'',location:'',status:'',photo:[],mime:''})));
+  assert.ok(made.every(r=>r.ok));
+  assert.deepEqual(made.map(r=>BigInt(r.tag)).sort((a,b)=>a<b?-1:1),Array.from({length:8},(_,i)=>start+BigInt(i)));
+  const first=await read(made[0].assetId),original=first.asset;
+  for(const tag of ['', 'MANUAL',made[1].tag])assert.equal((await app.updateAsset(tok,original.id,{...input(original.serial,tag),note:'must not save'})).ok,false);
+  assert.equal((await read(original.id)).asset.note,'');
+  assert.ok((await app.updateAsset(tok,original.id,{...input(original.serial,original.tag),note:'allowed'})).ok);
+  assert.equal((await app.setTagScheme(tok,{prefix:'RESET-',digits:3n})).ok,false);
+  const csv='tag,serial,vendor,model\nMANUAL-123,CSV-1,Test,Imported\n'+made[0].tag+',CSV-2,Test,Other\nCHANGED,'+original.serial+',Test,Updated\n';
+  const imported=await app.importCsv(tok,csv);assert.equal(imported.created,2n);assert.equal(imported.updated,1n);
+  assert.equal((await read(original.id)).asset.tag,original.tag);
+  const csvRows=await app.listAssets(tok,'CSV-','',false);assert.equal(csvRows.length,2);
+  assert.deepEqual(csvRows.map(r=>BigInt(r.asset.tag)).sort((a,b)=>a<b?-1:1),[start+8n,start+9n]);
+  const retry=await app.importCsv(tok,csv);assert.equal(retry.created,0n);assert.equal(retry.updated,3n);
+  assert.equal((await app.importCsv(tok,'tag,model\nMANUAL,Device')).ok,false);
+  const disposable=await app.createAsset(tok,{...input('DISPOSABLE'),note:'sample device'});assert.ok(disposable.ok);
+  const afterDisposable=(await app.registerOptions(tok))[0].nextTag;assert.ok((await app.removeDemo(tok)).ok);assert.equal((await app.registerOptions(tok))[0].nextTag,afterDisposable,'removed numbers are never reused');
+  const before=(await app.registerOptions(tok))[0].nextTag;
+  await pic.upgradeCanister({sender:controller,canisterId:appId,wasm:candidateWasm('assets'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+  assert.equal((await app.registerOptions(tok))[0].nextTag,before,'repeat upgrades neither renumber nor consume tags');
+  if(legacy)assert.equal((await read(legacy.blank.id)).asset.tag,'001001');
+  const next=await app.createAsset(tok,input('AFTER-UPGRADE'));assert.ok(next.ok);assert.equal((await read(next.id)).asset.tag,before);
+ }finally{await pic.tearDown()}
+});
+
+test('contracts: current populated upgrade preserves agreements, source bytes and workspace boundaries',{skip:!process.env.KEBAB_CONTRACTS_CURRENT_BASELINE_WASM},async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const f=await contractsFixture(pic,{ai:false,appOptions:{wasm:process.env.KEBAB_CONTRACTS_CURRENT_BASELINE_WASM}});
+  const {app,adminTok}=f;const created=await app.createContract(adminTok,cinput());assert.equal(created.ok,true);
+  assert.equal((await app.setTerms(adminTok,created.id,1n,TERMS,'Before upgrade')).ok,true);
+  const bytes=Buffer.from('Signed agreement fixture: EUR 1500');
+  const begin=await app.intakeBegin(adminTok,mail({kind:'manual',providerId:'current-upgrade',attachments:[{name:'agreement.txt',mime:'text/plain',size:BigInt(bytes.length),sha256:createHash('sha256').update(bytes).digest('hex'),textExtract:bytes.toString(),link:''}]}));
+  await app.intakeChunk(adminTok,begin.id,0n,bytes);const source=await app.intakeCommit(adminTok,begin.id);await app.linkSource(adminTok,source.sourceId,[created.id],[]);
+  const doc=(await app.getSource(adminTok,source.sourceId))[0].documents[0].id;
+  await pic.upgradeCanister({upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]},sender:controller,canisterId:f.appId,wasm:candidateWasm('contracts')});
+  await settled(pic);f.hub.setPrincipal(owner);const ticket=await f.hub.mintAppTicket('',f.connector.tileId);const token=(await app.loginWithTicket(ticket.ticket))[0].token;const scoped=(await app.openSpace(token,f.spaceId)).token;
+  assert.equal((await app.info()).version,'0.19.0');
+  const kept=(await app.getContract(scoped,created.id))[0];assert.equal(kept.contract.terms.amountMinor[0],TERMS.amountMinor[0]);assert.equal(kept.documents[0].id,doc);
+  assert.deepEqual(Buffer.from((await app.documentData(scoped,doc))[0].bytes),bytes);
+  assert.deepEqual(await app.documentData('invalid-session',doc),[]);
+ }finally{await pic.tearDown();}
 });

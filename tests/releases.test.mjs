@@ -65,6 +65,18 @@ test('release update preserves populated backend, custom sign-in origin, asset s
  const again=await f.k.actor.verifyInstalled('fixture');assert.equal((await f.wait(again.jobId)).state,'done');
  f.k.actor.setPrincipal(stranger);assert.equal((await f.start()).ok,false);
  }finally{await f.pic.tearDown();}});
+test('installation files: a Hub owner places a /.well-known/ file on an installed frontend; other keys, unknown apps and strangers are refused; a release update keeps it',async()=>{const f=await fixture();try{
+ const {k,text,start,wait}=f;
+ const r=await k.actor.setInstallationFile('fixture','/.well-known/ic-domains','text/plain',Buffer.from('app.example.test\n'));assert.equal(r.ok,true,r.detail);
+ assert.equal(await text('/.well-known/ic-domains'),'app.example.test\n');
+ assert.equal(await text('/app.js'),f.original,'nothing else on the frontend changes');
+ assert.equal((await k.actor.setInstallationFile('fixture','/app.js','text/javascript',Buffer.from('x'))).ok,false,'only /.well-known/ keys');
+ assert.equal((await k.actor.setInstallationFile('fixture','/.well-known/ic-domains','text/html',Buffer.from('x'))).ok,false,'plain text or JSON only');
+ assert.equal((await k.actor.setInstallationFile('nope','/.well-known/ic-domains','text/plain',Buffer.from('x'))).ok,false,'unknown app');
+ k.actor.setPrincipal(stranger);assert.equal((await k.actor.setInstallationFile('fixture','/.well-known/ic-domains','text/plain',Buffer.from('evil'))).ok,false,'Hub owners only');k.actor.setPrincipal(owner);
+ assert.equal(await text('/.well-known/ic-domains'),'app.example.test\n','a refused write changes nothing');
+ const j=await wait((await start()).jobId);assert.notEqual(j.state,'running');assert.equal(await text('/.well-known/ic-domains'),'app.example.test\n','a release update keeps the installation file');
+}finally{await f.pic.tearDown();}});
 test('changed review and corrupt package fail before altering either component',async()=>{const f=await fixture();try{
  assert.equal((await f.k.actor.applyRelease({id:'fixture',releaseId:'stale',install:false})).ok,false);
  await f.store(f.source,'/recipes/fixture/frontend/app.js','tampered','text/javascript');const r=await f.start();assert.equal(r.ok,true);const j=await f.wait(r.jobId);assert.equal(j.state,'failed');assert.match(j.steps.find(s=>s.name==='verify release').detail,/checksum/);

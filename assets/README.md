@@ -21,8 +21,9 @@ event. Without an AI key everything but the reading step works.
 - **History**: append-only events per device (hand-over, return, sale, scrapping, note, photo, edit, import, hub reassignment) with who and when.
 - **People from the hub**: sign-in by hub ticket, directory for the person picker, roles from the hub (active Hub owners/admins and Hub-assigned app Admins run the register), notifications on hand-over, `hub_ownedObjects` for inventory context. Physical devices are handed over in Assets; generic Hub reassignment is retired.
 - **AI from the hub**: lane `ai` → `hub_aiCredentials`; the vision call leaves the engine as a single-node (non-replicated) HTTPS request; the vendor receives the picture, including any personal details visible in it.
-- **Device management**: Iru (formerly Kandji), Jamf Pro and Microsoft Intune as sources — sync every six hours or on demand; the MDM fills gaps and creates missing devices, the register keeps the hand-overs; disagreements are shown as mismatches, never applied.
-- **Import / export**: CSV both ways; devices known by serial or tag are updated, never duplicated.
+- **Device management**: Iru (formerly Kandji), Jamf Pro and Microsoft Intune as sources — sync every six hours or on demand; the MDM fills gaps and creates missing devices, the register keeps the hand-overs; disagreements are shown as mismatches, never applied. Since 0.24.0 the sync also brings the hardware (processor, cores, memory, storage and free space, encryption) onto the device page, the list and the CSV export; Iru needs one detail call per device, bounded per run.
+- **Needs attention** (0.24.0): one tile on Devices with MDM mismatches, Apple devices missing from the register, devices without a serial and open offboarding follow-ups, each with its one-click answer.
+- **Import / export**: CSV both ways; devices known by serial are updated; imported tags are ignored.
 - **Apple Business Manager (0.8.0)**: Apple's purchase register as a source — every Mac, iPhone and iPad the company bought and which device-management service holds it. Serials are joined with the register; the *Apple* page shows the gap (owned but not in the register, or held by no MDM at all) and takes devices in as *unknown* until someone finds them. The key Apple issued never leaves the browser — it signs a 180-day client assertion there; nothing is written back to Apple.
 - **Selling devices**: purchase-based pricing, offers, numbered invoices with Swiss QR-bills, immutable PDF archives, credit notes and finance exports. Colleagues accept through their Hub account on the same three-step page the external dealroom uses (review & accept → invoice → payment & hand-over); they see price, terms and their invoice, never the company's purchase price or pricing rule. IT is told through the Hub when a colleague accepts or declines. **External buyers use a private dealroom (0.9.0)**: review and accept without an account, receive an automatically generated invoice, download it and confirm receipt. IT gets notified, confirms actual payment and records preparation and hand-over. Buyer receipt confirmation stays separate: a paid, prepared device can be handed over while receipt is pending, without inventing a buyer confirmation. A declined offer is cancelled; cancelling an issued invoice requires a credit note. Payment reconciliation and the books remain with finance.
 - **Sample register** to try the intake on.
@@ -102,3 +103,91 @@ provider's billing or usage limit. The app displays sanitized guidance and the
 HTTP status, not provider response bodies. No automatic vendor/model switch is
 made. The one transient retry can make a second provider request; ordinary
 employees remain unable to invoke photo recognition.
+
+## Device labels
+
+Open a device and choose **Label**, or **Print labels** on a filtered device list; with devices selected, both label buttons print the selection only (the head button says how many are selected). Pick the label size (Brother DK-11209 62 × 29 mm, DK-11201 90 × 29 mm, DK-11221 23 × 23 mm or DK-22205 62 mm continuous) and the fields to show; the QR code always links to the device page. Printing uses the browser's print dialog: select the label printer and the matching media size once, then every label prints 1:1. Any printer the operating system knows works; nothing is sent to a cloud print service. An admin can save the current layout as the default for the register.
+
+## Registering a new device
+
+Scan a device → photo of the factory label (or **Find or add manually**) → **Not in the list — add a new device**. Serial, vendor and model are prefilled from the photo and can be corrected. The backend assigns the next inventory tag when saving; it cannot be entered or changed. Optionally pick the person who receives the device or one of the admin-defined locations. **Register device & show label** creates the device, records the hand-out, keeps the photo as evidence and opens the label ready to print.
+
+## Reading photos again
+
+Open an asset → **Label photos → Read photo again with AI**. The newest stored
+photo is sent to the company's configured vision model. No photo yet? Add the
+label photo first. The action stays visible for admins even if a restored session
+has an outdated AI status; missing configuration or a failed request is explained.
+Select multiple devices in the register for the same workflow in a batch.
+
+Choose **View photo & edit** to enlarge the evidence and correct the proposal.
+Current values remain visible for comparison. **Keep corrections** only updates
+the review; **Apply corrections** writes the selected assets and records the
+photo in their history. Duplicate serials remain rejected by the backend; AI cannot change inventory tags.
+A check before applying detects changes to the proposed fields since the reading;
+this is not an atomic lock against simultaneous edits by another operator.
+
+## Registering many devices from photos
+
+Devices → **Add from photos**. Choose up to 60 label photos or take photos one at
+a time. Use one label photo per asset, with the serial readable and in focus.
+**Read with AI** produces an editable table on desktop and labelled cards on
+phones. For Dell, the Service Tag becomes the serial and the long S/N is retained
+in the note. **View & edit** opens a larger photo with zoom controls and editable
+fields; **Read again** proposes another reading without silently replacing edits.
+
+Set location, kind, status or recipient for the batch in the optional defaults.
+Known devices start unticked. Failed readings show a reason and remain available
+for retry or correction. A serial/Service Tag and a successfully prepared photo
+are required for this photo-registration workflow; manual registration is still
+available separately. Confirm **Register n devices** after checking the rows.
+Photos are attached as evidence; partial failures retain their rows, and already
+successful rows are not submitted again. Labels can be printed after saving.
+
+Drafts survive switching between Assets pages within the same session, but are
+not durable storage: closing or reloading the tab loses them. Photos go to the
+configured AI provider when read; no guarantee of accurate recognition is made.
+For an IT operator, the intended saving is fewer transcription and correction
+steps. No measured time or cost saving is claimed; AI usage and human review remain.
+
+The 0.27.1 local regression review also covers registration integrity, recipient
+clearing, AI correction edge cases and mobile Apple reconciliation. See the
+[scoped review and remaining release gates](../design/reviews/2026-10-14-assets-general-audit.md).
+
+
+## Automatic reading recovery (0.27.2)
+
+Single intake, photo batches and stored-photo re-reading use the same backend
+recovery. A truncated, malformed or empty reading triggers one new request with
+the original photo and a larger response allowance (2048 → 4096 tokens). This
+can add provider usage and latency. An earlier transient HTTP failure may also
+receive the existing single frontend retry: at most three provider calls for a
+photo in that combined case. Persistent configuration, billing and refusal
+errors do not trigger format recovery. No provider or model is switched.
+
+A failed response is not proof of an unreadable photo. Assets reports the error,
+keeps the evidence available and does not save partial codes. Successful readings
+still require review before changes are applied. This improves response handling;
+it does not guarantee every identifier is correctly recognized. Verify real
+label recognition with representative photos on the configured provider.
+
+## Automatic, permanent inventory tags (0.28.0)
+
+Every creation path uses the same persistent sequence. The number is allocated
+when the device is saved, not when a photo is read or a preview is shown. New
+CSV rows receive numbers in file order; simultaneous requests receive numbers
+in backend processing order. Archiving or removing sample data never reuses a
+number. Prefix and padding can be configured before the first allocation and
+are fixed afterwards.
+
+CSV requires a serial column and matches existing active devices by serial.
+Tag columns are ignored: foreign inventory numbers cannot overwrite or select
+an unrelated device. Rows without serials are skipped. Use single registration
+with a model for a device whose serial is unavailable. Photo stickers remain
+useful matching evidence, but cannot set or overwrite the inventory number.
+
+On upgrade, existing tags (including archived devices) remain unchanged. Missing
+tags receive successive numbers in device-id order above the highest existing
+numeric suffix. Each repair is recorded in history. No old labels are renumbered;
+previously issued invoice snapshots remain unchanged. Test a populated upgrade
+before production; this source change alone does not alter the live register.
