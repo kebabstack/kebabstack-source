@@ -38,3 +38,6 @@ rows; app filters, totals and exports retain their existing scope. Reset restore
 the original order. Editable grids and existing app-owned queue sorting stay with
 their workflows. Long marked selectors keep native selection and add an option
 search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
+
+The submission review drawer stays below the shared navigation. Scroll inside the
+review to reach notes and actions; company menus remain available while it is open.

@@ -1,9 +1,9 @@
 {
   "format": "kebab-public-source-v1",
-  "sourceCommit": "7d2de06526e825a0bde423cb9ff100cb06f1f647",
+  "sourceCommit": "1652c5f7a9d466ccb0c6043823c87009a0df51b5",
   "historyIncluded": false,
   "marketplaceReady": false,
-  "retainedPublicSource": "f83e8aa026f96120e2193caa1b62dee916e6001c",
+  "retainedPublicSource": "dae5b2940b38d0f57cda5d3cfb1e36be2a55bc4a",
   "files": [
     {
       "path": ".gitattributes",
@@ -3977,12 +3977,12 @@
     },
     {
       "path": "forms/CHANGELOG.md",
-      "sha256": "6692ed91abc8f596f1c80f86ee38a0c2212fdd77a5802ee7d62018f0e8ed3d77",
+      "sha256": "19b32275bbaa0248a38a8b898c93976768b70b10ace0989044c264f895852f18",
       "mode": "100644"
     },
     {
       "path": "forms/INSTALL.md",
-      "sha256": "ef41aa8149fd70a85401a80189a6fba4961e42bea6097bf166f065bc79c4be06",
+      "sha256": "5fcd8903bde8d0f5787a99d604ed464e5a88d5986271200dde28514562ddb4f6",
       "mode": "100644"
     },
     {
@@ -3992,7 +3992,7 @@
     },
     {
       "path": "forms/README.md",
-      "sha256": "fa083b6d198cfc991e67f4d7c9192cf031a049146662f355ef0a21b64380e03f",
+      "sha256": "6fb81fd4ed2071e470bf8c02f7c65f88ef9b3fe945bcf9c5707f619fd0bd06dd",
       "mode": "100644"
     },
     {
@@ -4012,12 +4012,12 @@
     },
     {
       "path": "forms/backend/main.mo",
-      "sha256": "cb276f09bec6e8db6811331040964c5d8f6774a5b76ca97145cf988daf7cdcd0",
+      "sha256": "c03efba3eeb2be01408cdba3750332c7920baa9e25426f9f4be466ede71f1f89",
       "mode": "100644"
     },
     {
       "path": "forms/dist/CHANGELOG.md",
-      "sha256": "6692ed91abc8f596f1c80f86ee38a0c2212fdd77a5802ee7d62018f0e8ed3d77",
+      "sha256": "19b32275bbaa0248a38a8b898c93976768b70b10ace0989044c264f895852f18",
       "mode": "100644"
     },
     {
@@ -4062,7 +4062,7 @@
     },
     {
       "path": "forms/dist/index.html",
-      "sha256": "c7c96cf273116450289f223c89af5260e48f90397eab15056979cc136f400b3a",
+      "sha256": "0bf9ea2b82f9b614ca37277d288fa001e439d0e2d0424010cc1787dc46423fda",
       "mode": "100644"
     },
     {
@@ -4102,7 +4102,7 @@
     },
     {
       "path": "forms/mops.toml",
-      "sha256": "204eea4f247df5245b33425d37e6b037235235d2d80beedb6473d29289ca4600",
+      "sha256": "8433255d15f390a7461fb46bbb26c8a689c02deb800867c6e4a4c37e5f25bd78",
       "mode": "100644"
     },
     {
@@ -4132,7 +4132,7 @@
     },
     {
       "path": "hub/CHANGELOG.md",
-      "sha256": "1ed18e103d7616480a3a2bf094ff0ab57a8d709f83aaf52809815505be9d324e",
+      "sha256": "7f456d7c93b91eaf36a95aec8f7b6094cf8746cb5678419a0f313478f5c6c06a",
       "mode": "100644"
     },
     {
@@ -4172,7 +4172,7 @@
     },
     {
       "path": "hub/backend/main.mo",
-      "sha256": "96caaf59dc5c43564a45701bc29365d8189c883e125b6c611dc8b05a7c510d1b",
+      "sha256": "03774d029217ee7ccd97b316c197625515936991942afec7a9bc35fca8cd7748",
       "mode": "100644"
     },
     {
@@ -4182,7 +4182,7 @@
     },
     {
       "path": "hub/dist/CHANGELOG.md",
-      "sha256": "1ed18e103d7616480a3a2bf094ff0ab57a8d709f83aaf52809815505be9d324e",
+      "sha256": "7f456d7c93b91eaf36a95aec8f7b6094cf8746cb5678419a0f313478f5c6c06a",
       "mode": "100644"
     },
     {
@@ -4577,7 +4577,7 @@
     },
     {
       "path": "hub/dist/index.html",
-      "sha256": "ec121957bb0d2fde4dec709c27711142f185fe340ca6f4499d6f2773ebe543d0",
+      "sha256": "aae0ede5bcd7698e4a1cb502ba5c5455eedad2b2bc188444993392f30e7ceb05",
       "mode": "100644"
     },
     {
@@ -4642,7 +4642,7 @@
     },
     {
       "path": "hub/dist/sdk/VERSION",
-      "sha256": "a2c689630191d9794f39cfcea94f5353abba8a0c354a96152c0247a12431b122",
+      "sha256": "4b66674d737e3b38190ec48ac2ab4db41236e34d2c4acfcf538dd25e4e1ba309",
       "mode": "100644"
     },
     {
@@ -4737,7 +4737,7 @@
     },
     {
       "path": "hub/mops.toml",
-      "sha256": "0dd1980365af58ac99e80256b92e261ed51659ca97394a444034c33a567cfa40",
+      "sha256": "ecdc0687254dbdd498a8fd05f47c201cc1593ba91cdd9b70124528906e86609f",
       "mode": "100644"
     },
     {

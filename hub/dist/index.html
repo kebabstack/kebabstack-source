@@ -1141,7 +1141,7 @@ city^=Remote"></textarea>
 
       <div class="stabs" data-tabs="backups"><button class="stab active" data-tab="canisters">Services</button><button class="stab" data-tab="schedules">Schedules</button><button class="stab" data-tab="journal">Activity</button><button class="stab" data-tab="setup">Connection</button></div>
       <div class="spane active" data-pane="backups-canisters">
-        <div id="bkNoVault" class="warnbox hidden" style="margin:0 0 14px">Backups are not switched on yet. Switching them on is a one-time IT task (terminal, about five minutes): send your IT person the <b>Setup (IT)</b> tab.</div>
+        <div id="bkNoVault" class="warnbox hidden" style="margin:0 0 14px">Backups are not switched on yet. Switching them on is a one-time IT task (terminal, about five minutes): send your IT person the <b>Connection</b> tab.</div>
         <div class="card flat">
           <div class="btnrow" style="margin:0 0 8px"><button id="bkRefresh" class="sm">Re-check all</button><button id="bkSnapAll" class="sm primary">Snapshot everything now</button><span id="bkStatus" class="status"></span></div>
           <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table data-ks-table><thead><tr><th>Service</th><th>Protected</th><th>State</th><th>Snapshots</th><th>Schedule</th><th></th></tr></thead><tbody id="bkRows"></tbody></table></div>
@@ -1373,7 +1373,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.41.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.41.1"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -2906,7 +2906,7 @@ async function refreshBackups() {
   const gen = ++bkGen;
   const ok = await vaultConnect();
   if (gen !== bkGen) return;
-  if (!ok) { $("bkRows").innerHTML = '<tr><td colspan="6" class="kv">Not switched on yet — see the Setup (IT) tab.</td></tr>'; $("bkCommands").textContent = "connect a vault first"; return; }
+  if (!ok) { $("bkRows").innerHTML = '<tr><td colspan="6" class="kv">Not switched on yet — see the Connection tab.</td></tr>'; $("bkCommands").textContent = "connect a vault first"; return; }
   setStatus("bkStatus", "", "checking every service… (a few seconds, in parallel)");
   const targets = await bkBuildTargets();
   if (gen !== bkGen) return;

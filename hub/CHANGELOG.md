@@ -1,5 +1,9 @@
 # Changelog — kebab-stack hub
 
+## [0.41.1] — 2026-10-19
+
+- Point the disconnected-backup help to the existing Connection tab instead of the removed Setup (IT) label. No backup behavior or permissions change.
+
 ## [0.41.0] — 2026-10-18
 
 - Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.

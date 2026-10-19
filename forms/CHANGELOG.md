@@ -1,5 +1,9 @@
 # Changelog — kebab-stack forms
 
+## [0.8.1] — 2026-10-19
+
+- Keep the submission review drawer below the shared navigation and global menus, including narrow and short screens. Review content scrolls independently; response data and permissions are unchanged.
+
 ## [0.8.0] — 2026-10-18
 
 - Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.

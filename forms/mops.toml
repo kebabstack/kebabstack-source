@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-forms"
-version = "0.8.0"
+version = "0.8.1"
 description = "kebab-stack forms — forms in, decisions out: a builder with public links and a review pipeline for what comes in"
 
 [toolchain]
