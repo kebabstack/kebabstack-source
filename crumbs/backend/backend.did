@@ -1,3 +1,11 @@
+type Value =
+ record {
+   asn: text;
+   city: text;
+   country: text;
+   network: text;
+   region: text;
+ };
 type User =
  record {
    displayName: text;
@@ -74,41 +82,37 @@ type Row =
 type Result_9 =
  variant {
    err: Error;
-   ok: vec record {
-             text;
-             text;
-             nat;
-           };
+   ok: vec Key;
  };
 type Result_8 =
  variant {
    err: Error;
-   ok: vec Key;
+   ok: Report;
  };
 type Result_7 =
  variant {
    err: Error;
-   ok: Report;
+   ok: SavedReport;
  };
 type Result_6 =
  variant {
    err: Error;
-   ok: SavedReport;
+   ok;
  };
 type Result_5 =
  variant {
    err: Error;
-   ok;
+   ok: Site;
  };
 type Result_4 =
  variant {
    err: Error;
-   ok: Site;
+   ok: vec SavedReport;
  };
 type Result_3 =
  variant {
    err: Error;
-   ok: vec SavedReport;
+   ok: Connection;
  };
 type Result_22 =
  variant {
@@ -134,7 +138,7 @@ type Result_20 =
 type Result_2 =
  variant {
    err: Error;
-   ok: Connection;
+   ok: opt SearchSnapshot;
  };
 type Result_19 =
  variant {
@@ -198,14 +202,9 @@ type Result_13 =
 type Result_12 =
  variant {
    err: Error;
-   ok: nat;
- };
-type Result_11 =
- variant {
-   err: Error;
    ok: vec ImportRow;
  };
-type Result_10 =
+type Result_11 =
  variant {
    err: Error;
    ok: record {
@@ -213,15 +212,24 @@ type Result_10 =
          duplicates: nat;
        };
  };
+type Result_10 =
+ variant {
+   err: Error;
+   ok: vec record {
+             text;
+             text;
+             nat;
+           };
+ };
 type Result_1 =
  variant {
    err: Error;
-   ok: opt SearchSnapshot;
+   ok: AccessView;
  };
 type Result =
  variant {
    err: Error;
-   ok: AccessView;
+   ok: nat;
  };
 type ReportRequest =
  record {
@@ -268,7 +276,7 @@ type Metrics =
    visitors: nat;
    visits: nat;
  };
-type Manifest =
+type Manifest__1 =
  record {
    description: text;
    name: text;
@@ -276,11 +284,27 @@ type Manifest =
    version: text;
    wants: vec text;
  };
+type Manifest =
+ record {
+   expiresAt: int;
+   id: text;
+   kind: Kind;
+   publishedAt: int;
+   rows: nat;
+   source: text;
+   values: nat;
+ };
 type LegacyGrant =
  record {
    email: text;
    role: text;
    source: text;
+ };
+type Kind =
+ variant {
+   geo;
+   hosting;
+   network;
  };
 type Key =
  record {
@@ -370,6 +394,7 @@ type Event =
    campaign: text;
    city: text;
    content: text;
+   context: opt Context;
    country: text;
    currency: text;
    device: text;
@@ -422,6 +447,17 @@ type DirectoryRow =
    lastName: text;
    source: text;
  };
+type Context =
+ record {
+   asn: text;
+   automation: bool;
+   geoSource: text;
+   hosting: bool;
+   hostingSource: text;
+   network: text;
+   networkSource: text;
+   screen: text;
+ };
 type Connection =
  record {
    clientId: text;
@@ -456,7 +492,10 @@ type AccessPerson =
  };
 service : {
   accessPeople: (token: text, site: text, search: text) -> (Result_22) query;
+  activateTrafficDataset: (id: text) -> (Result_6);
   annotations: (token: text, site: text) -> (Result_21) query;
+  beginTrafficDataset: (m: Manifest) -> (Result_6);
+  cancelTrafficDataset: (id: text) -> (Result_6);
   collectorSites: () -> (vec Site) query;
   configureCollectors: (collectors: vec principal) -> ();
   createKey: (token: text, site: text, name: text, scope:
@@ -465,15 +504,15 @@ service : {
      read;
      share;
    }, days: nat) -> (Result_20);
-  deleteGoal: (token: text, site: text, id: text) -> (Result_5);
+  deleteGoal: (token: text, site: text, id: text) -> (Result_6);
   deleteReport: (token: text, site: text, id: text, revision: nat) ->
-   (Result_5);
-  deleteSite: (token: text, id: text) -> (Result_5);
+   (Result_6);
+  deleteSite: (token: text, id: text) -> (Result_6);
   exportEvents: (token: text, site: text, after: text, limit: nat) ->
    (Result_19) query;
   funnel: (token: text, request: ReportRequest, steps: vec FunnelStep) ->
    (Result_18) query;
-  getSiteAccess: (token: text, site: text) -> (Result) query;
+  getSiteAccess: (token: text, site: text) -> (Result_1) query;
   goalReport: (token: text, request: ReportRequest, id: text) ->
    (Result_17) query;
   goalRows: (token: text, request: ReportRequest, id: text) ->
@@ -484,13 +523,13 @@ service : {
   http_request: (_req: HttpRequest) -> (HttpResponse) query;
   http_request_update: (req: HttpRequest) -> (HttpResponse);
   hub_deactivate: (emails: vec text) -> (nat);
-  hub_manifest: () -> (Manifest) query;
+  hub_manifest: () -> (Manifest__1) query;
   hub_permissionStatus: () -> (PermissionStatus);
   hub_ping: () -> (text) query;
   hub_upsert: (rows: vec DirectoryRow) -> (nat);
-  importAggregates: (token: text, rows: vec ImportRow) -> (Result_12);
+  importAggregates: (token: text, rows: vec ImportRow) -> (Result);
   imported: (token: text, site: text, from: int, until: int) ->
-   (Result_11) query;
+   (Result_12) query;
   info: () ->
    (record {
       hubId: text;
@@ -499,9 +538,9 @@ service : {
       orgName: text;
       version: text;
     }) query;
-  ingestBatch: (batch: vec Event) -> (Result_10);
-  journeys: (token: text, request: ReportRequest) -> (Result_9) query;
-  listKeys: (token: text) -> (Result_8) query;
+  ingestBatch: (batch: vec Event) -> (Result_11);
+  journeys: (token: text, request: ReportRequest) -> (Result_10) query;
+  listKeys: (token: text) -> (Result_9) query;
   listSites: (token: text) -> (vec SiteView) query;
   loginWithSuite: (token: text) ->
    (opt
@@ -521,22 +560,26 @@ service : {
        suiteToken: text;
        token: text;
      });
-  report: (token: text, request: ReportRequest) -> (Result_7) query;
-  revokeKey: (token: text, id: text) -> (Result_5);
-  saveAnnotation: (token: text, item: Annotation) -> (Result_5);
-  saveGoal: (token: text, goal: Goal) -> (Result_5);
-  saveReport: (token: text, item: SavedReport) -> (Result_6);
+  report: (token: text, request: ReportRequest) -> (Result_8) query;
+  revokeKey: (token: text, id: text) -> (Result_6);
+  saveAnnotation: (token: text, item: Annotation) -> (Result_6);
+  saveGoal: (token: text, goal: Goal) -> (Result_6);
+  saveReport: (token: text, item: SavedReport) -> (Result_7);
   saveSearchConnection: (token: text, site: text, config: Connection) ->
-   (Result_2);
+   (Result_3);
   saveSearchSnapshot: (token: text, revision: nat, snapshot:
-   SearchSnapshot) -> (Result_5);
-  saveSite: (token: text, site: Site) -> (Result_4);
-  savedReports: (token: text, site: text) -> (Result_3) query;
-  searchConnection: (token: text, site: text) -> (Result_2) query;
-  searchSnapshot: (token: text, site: text) -> (Result_1) query;
+   SearchSnapshot) -> (Result_6);
+  saveSite: (token: text, site: Site) -> (Result_5);
+  savedReports: (token: text, site: text) -> (Result_4) query;
+  searchConnection: (token: text, site: text) -> (Result_3) query;
+  searchSnapshot: (token: text, site: text) -> (Result_2) query;
   setHub: (id: text) -> ();
   setSiteAccess: (token: text, site: text, expectedRevision: nat, readers:
-   vec text, managers: vec text) -> (Result);
+   vec text, managers: vec text) -> (Result_1);
   signOut: (token: text) -> ();
+  trafficDatasetChunk: (id: text, offset: nat, data: blob) -> (Result);
+  trafficDatasetValues: (id: text, offset: nat, values: vec Value) ->
+   (Result);
+  trafficDatasets: () -> (vec Manifest) query;
   whoami: (token: text) -> (opt User) query;
 }

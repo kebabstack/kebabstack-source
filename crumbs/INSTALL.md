@@ -18,7 +18,7 @@ After installation, open Settings → Tracking script. The collection API defaul
 
 Use the verified gateway domain, not a `.raw` bypass. The canister returns `upgrade=true` from `http_request`, then commits via `http_request_update`. No raw IP or full User-Agent is stored in analytics state, but both pass through replicated ingress execution. On the supported ICP gateway, `X-Real-IP` comes from the gateway's connection metadata; confirm the same behavior when replacing that gateway. Direct Candid clients can forge headers, so these are counting inputs, never authorization. Missing/duplicate address headers are rejected; `X-Forwarded-For` is ignored.
 
-A native `202` contains `{accepted,duplicates,ignored,durability:"canister",delivery:"committed"}`. Only accepted/duplicate records are confirmed stored; excluded paths, privacy signals and bots are acknowledged as ignored. A batch is atomic. Retry identical event IDs/payloads after failures; conflicts return 409. First successful receipt assigns the timestamp/order; retries preserve them across midnight and upgrades while retained and within the seven-day ingestion window. The browser keeps only a bounded memory queue: loss before acknowledgment remains possible. No native disk backlog exists. The daily random secret survives upgrades within its day and is replaced at UTC day boundaries. Raw IP/UA never enter stored event fields. Native GeoIP is not implemented.
+A native `202` contains `{accepted,duplicates,ignored,durability:"canister",delivery:"committed"}`. Only accepted/duplicate records are confirmed stored; excluded paths, privacy signals and bots are acknowledged as ignored. A batch is atomic. Retry identical event IDs/payloads after failures; conflicts return 409. First successful receipt assigns the timestamp/order; retries preserve them across midnight and upgrades while retained and within the seven-day ingestion window. The browser keeps only a bounded memory queue: loss before acknowledgment remains possible. No native disk backlog exists. The daily random secret survives upgrades within its day and is replaced at UTC day boundaries. Raw IP/UA never enter stored event fields. Native GeoIP/network lookup requires the operator-loaded datasets described in [TRAFFIC.md](TRAFFIC.md). No runtime lookup server is required.
 
 Native bounds: 48 KiB request body, 50 events/batch, 300 events per IP/minute, 30,000 events total/minute and at most 5,000 active HMAC IP buckets/minute. Requests over limits fail explicitly; 429/503 include Retry-After. Direct Candid abuse can evade per-IP counting but not the global event budget. Platform ingress limits still apply. These are safety bounds, not benchmarked throughput promises.
 
@@ -79,6 +79,9 @@ API & exports creates read/manage/share credentials (1–365 days). Website Mana
 
 ## Historical migration
 
+For Matomo use [MATOMO.md](MATOMO.md): read-only export, validation and explicit send with a manage key. Matomo aggregate dates/definitions remain separate from native reports.
+
+
 Export and extract Plausible CSVs locally. Keep an immutable private source copy according to your retention policy. Confirm the source timezone is UTC. First validate without transmitting:
 
 ```sh
@@ -109,7 +112,7 @@ Use Settings → Search Console for the guided setup. Create your organisation's
 
 API & exports links the downloadable [Data Studio connector and integration guide](dist/integrations.html). Deploy it in your own Apps Script project, replace publisher/policy details, fix `CRUMBS_API_ORIGIN` and its manifest `urlFetchWhitelist`, then provide an expiring website Read key through Google's credential prompt. Every viewer uses their own credential. It is not an installed or Google-approved marketplace connector. Test with your actual Google account before relying on it.
 
-For optional Node datacenter filtering, set `CRUMBS_NETWORK_DB=/private/GeoIP2-Anonymous-IP.mmdb` (or the Anonymous Plus database). Obtain/license and update the database separately, use restrictive file permissions, replace it atomically and restart the collector to load the update. A missing or wrong database fails startup. No database or license is bundled. Classification uses `is_hosting_provider` from the [provider's schema](https://dev.maxmind.com/geoip/docs/databases/anonymous-ip/); it can exclude real people behind hosting-based proxies. Do not enable it merely to suppress unexplained visits. Native mode uses UA/referrer heuristics only.
+For optional Node datacenter filtering, set `CRUMBS_NETWORK_DB=/private/GeoIP2-Anonymous-IP.mmdb` (or the Anonymous Plus database). Obtain/license and update the database separately, use restrictive file permissions, replace it atomically and restart the collector to load the update. A missing or wrong database fails startup. No database or license is bundled. Classification uses `is_hosting_provider` from the [provider's schema](https://dev.maxmind.com/geoip/docs/databases/anonymous-ip/); it can exclude real people behind hosting-based proxies. Do not enable it merely to suppress unexplained visits. Native hosting classification uses operator-loaded public ranges; see TRAFFIC.md.
 
 The tracker’s `window.crumbs?.status()` explains `privacy-signal`, `consent-required`, `paused` or `ready` plus delivery state. `accepted` confirms the collection endpoint acknowledged delivery; `ignored` means exclusion, `rejected` a permanent request error, and rate/network/server errors retain the bounded memory queue for retry. A blocker may stop the script itself, leaving `crumbs` undefined. Never bypass a visitor's privacy setting to increase counts.
 
@@ -117,7 +120,7 @@ Upgrade 0.5.x with the new versioned migration; it copies existing goals into th
 
 ## Optional cookies and visitor choice (0.9.0)
 
-Settings → Tracking script links the [capability comparison](dist/consent.html#comparison), consent setup and [API examples](dist/api.html#collection-modes). Cookie mode improves same-browser recognition across days and IP changes; it does not add geography, personal identity or session replay. Report and export APIs support both modes.
+Settings → Tracking script links the [capability comparison](dist/consent.html#comparison), consent setup and [API examples](dist/api.html#collection-modes). Cookie mode improves same-browser recognition across days and IP changes; geography is available independently in both modes with current datasets. Neither mode adds personal identity or session replay. Report and export APIs support both modes.
 
 Settings → Tracking script offers cookieless, cookieless after consent, and cookie after consent. The selection generates code only: replace the old website embed with the new one. Consent modes require the visitor's approval before analytics. The included panel has equal Allow/Reject controls, a privacy notice link and a persistent withdrawal button. Alternatively disable that panel and connect the CMP as described in [consent setup](dist/consent.html). Publish the correct notice URL and test accept/reject/withdrawal on an isolated site ID before deployment. Default cookieless embeds remain unchanged.
 
@@ -131,3 +134,5 @@ rows; app filters, totals and exports retain their existing scope. Reset restore
 the original order. Editable grids and existing app-owned queue sorting stay with
 their workflows. Long marked selectors keep native selection and add an option
 search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
+
+Report navigation: point at or tap the traffic chart for exact values; keyboard users can focus the chart and use arrow keys. Breakdown lists scroll after ten rows. See [Exploring reports](README.md#exploring-reports) for comparison and accessible table controls. No tracking-script or API changes are required for this update.

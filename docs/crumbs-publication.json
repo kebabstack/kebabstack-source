@@ -1,0 +1,308 @@
+{
+  "module": "crumbs",
+  "version": "0.11.2",
+  "sourceCommit": "dc55a7198cf676fae3551674ce308a006d9adbc1",
+  "historyIncluded": false,
+  "files": [
+    {
+      "path": "crumbs/CHANGELOG.md",
+      "sha256": "28b28ba18c8330e776259000ea71a834efa0ae92ab55b8079d82ab76dfe3aa3c",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/INSTALL.md",
+      "sha256": "34c106dcda3a756262484b4829d640d5a4f44db32c3a24d3dc8f25bda747807c",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/MATOMO.md",
+      "sha256": "631812d62362d3282524299ae1a188cfceba9269e58c88ebeae8e224f45a5fb2",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/METRICS.md",
+      "sha256": "2b4c68f53691a6893abf4d2a9b80777d2aba81b0289a43488afbb56f27349713",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/PARITY.md",
+      "sha256": "6db6079e47a8d3a10266b3e8f8e414c089ef8ef85d16ecbf6a68581c0d03d15b",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/PRIVACY.md",
+      "sha256": "48e55bf23b15d4463acb723b417e788c3f828bfb25c7e48f957ff70570033784",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/README.md",
+      "sha256": "9d833cf726ffe2d100df0940eb7aeb9293ae4cb0338298ccb843f8ba4c96cca2",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/TRAFFIC.md",
+      "sha256": "83dcfae17a420511cfe7830b1b042775f5898f9acfe7da48f31714ea09ec7b50",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/backend.did",
+      "sha256": "128c088389e4361927a456d8a18894e4758a238ed495584c5c5451f2de94e830",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/lib/Analytics.mo",
+      "sha256": "98f854a9f04cda751e7cedbc78e00412dc1e68da818ab06aee60b427885c73ac",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/lib/HttpJson.mo",
+      "sha256": "b55bc20903908d8cf3fb53bff25c46f98a92a990d08ab0c1d901c1c75e274a0f",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/lib/NativeEvent.mo",
+      "sha256": "60a47f429ca3c4e16981faa1816574625313bda1d208aa0b67141a7a5edde0b0",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/lib/Traffic.mo",
+      "sha256": "72a564fb2926f484d8ece014e1cb852f12d9f7acb66fad457914825424a6b140",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/lib/Validation.mo",
+      "sha256": "eb46f9a24237714d7b6b90376f004f977d115ed51e2fca6979061a1be36905ec",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/main.mo",
+      "sha256": "2ac7f887420aa5b185a147d70cd679eecf67ddd02e0198802d78c23690925804",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/migrations/20261019_110000.mo",
+      "sha256": "194efd5b53ddfae8ed05f1677b3dcfb093d3ad2217d562b3834f6bc55b216bf1",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/mixins/Native.mo",
+      "sha256": "b97942765ac42737020285c118b703b55aed69130e9a70c7f2750910c71e5075",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/mixins/Traffic.mo",
+      "sha256": "4aa08912817d025dfad17e319eb5e8412f396ea8799d5687929ccd2be8bf3db9",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/trafficTypes.mo",
+      "sha256": "72e8459dd81a1bb7b1ade5355ed12f78aadf29735a239af2098a3102be33e60b",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/backend/types.mo",
+      "sha256": "8ee46d55a8a5414212314c66eec116717c2e57169693770360932b6a0126ff7f",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/collector/privacy.mjs",
+      "sha256": "99c3c418a6a1137b26b03460dea8b4da50bd53daa2733816128d1de5f9f1c2eb",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/collector/store.mjs",
+      "sha256": "dfceddfaa9ac7b95de24eb751d7485c8e8a21dcfb81c6c0809ef1b121025dbc7",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/CHANGELOG.md",
+      "sha256": "28b28ba18c8330e776259000ea71a834efa0ae92ab55b8079d82ab76dfe3aa3c",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/api.html",
+      "sha256": "5094e5234cc65f9b10f82ee364492b8f0c938f88ffef6f2396b1c0d4371f9187",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/app.js",
+      "sha256": "16cf778f86bce9a07f32f617a44ab774ffbcf37d5dd40ee1303aad72c92c85ea",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/consent.html",
+      "sha256": "b31d283fa31a89873b4dbe15ddd5a6457ad6c6a0d746f83457f54a08a60af589",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/idl.js",
+      "sha256": "1071836cb02c55a0170a6d41e24eeb5f5c534f7ab0f31a771fa37546ca1718b1",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/index.html",
+      "sha256": "c92d0cea93f053883943840861ec5c0c701217237878d044e725919c47b095d8",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/integrations.html",
+      "sha256": "1a9120e78cd8db18cbee1849cc73135ebed6141496dc50e2c8c7542cab9335da",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/openapi.json",
+      "sha256": "5255010e616866a6b524651d41d396bda9db66a13a572a9fc858d2b7d88db345",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/privacy.html",
+      "sha256": "f96b10699e9127e875a60b65754d2ff053f4c90198abf0c32e5607dd69fd558e",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/shared.js",
+      "sha256": "9b95794db509b1da562dc4ee45f3fa4ba73ce98b60a815517562701806b2dc79",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/style.css",
+      "sha256": "aed2b440323e1b1593dd38dfb3d73f6b1183f71667a7118ab91e21b6032a344c",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/tracker.js",
+      "sha256": "07c5e2d7d0fc9ec0fe88fda684216546cd9669e01483716aedb8c21955d95521",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/traffic.html",
+      "sha256": "b8bf14a42d670bed4224691eb73dea60b1dc3dddab7f67ee0203c713631f3f5c",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/view.js",
+      "sha256": "2976a76a2558993deac7616eea4da7a9a31640de1fbadb0df3866cc6d8aed15a",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/mops.toml",
+      "sha256": "98f05eb804fab10080dcadd4ea54dca8e09ebfd9b87fdad76c2145ad6b588ddf",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/package.json",
+      "sha256": "e3728bbec93877a7e4a13c129a38d7ec61b9b181ba21eacf33c6505981348098",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/sdk/client.d.mts",
+      "sha256": "785a4a6dd9da3efbf34b0192581adceaf3a77de444a15f1c309887d439f4058e",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/collector.test.mjs",
+      "sha256": "fa43c4654a243315502a52683b316ac31192f7639734390105c15d2cd75832ed",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/fixture.mjs",
+      "sha256": "e3d984cd430e14809c861a814b4208a6f61892d8c94d3b5be05703ea9f3aedbd",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/matomo-export.test.mjs",
+      "sha256": "97f4c3aef5e1b60d6b78fb46dc6bb4d300cd8a425bdcc1dee225fd5d6fa8ea71",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/matomo.test.mjs",
+      "sha256": "e50d0a8e628b71d9e5c470be765d05cd3649200a41d03423768038184a4c6601",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/motoko/native.test.mo",
+      "sha256": "32f57139ec4de7de2c161df2d6e42edd890cb2c03713ac3fe5b4b9be2de924b0",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/preview.mjs",
+      "sha256": "a744c154949790f46ea5c9b9526fc2c281876fd8d30b2b34b133c0dea6095247",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/tracker.test.mjs",
+      "sha256": "b3a15a12287648eea9cdaf96870f44c3e74791010c5647be0d7ef77485e2b2a2",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/ui-smoke.mjs",
+      "sha256": "65d885dc93e24cbeb24297db2055c648e1d586cf8bb3780842186959e8c1b1d7",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/uploader-cli.mjs",
+      "sha256": "9aeee846a38afd71176184abbf0938bd256ae8a19c2c53f59753b85403fd3082",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/view.test.mjs",
+      "sha256": "8ea0f609280aed369d7cb0edfb191b9ba0156c30f6bc65f95645dba2754f8cfd",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/tools/api-docs.mjs",
+      "sha256": "6421e83272bcdbf6a67ba6fc461c94d769d7aecbd0a86a5c603af371ff9cb30a",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/tools/export-matomo.mjs",
+      "sha256": "75a05ab3f7ab5222fca76b132e4ceebd571ff70db7877814169a550c9f363ce6",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/tools/import-matomo.mjs",
+      "sha256": "fdb168e94453067d3329ea19dd1cd053875fa3167fd70fe6475f8fc5263ffdbd",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/tools/prepare-hosting.py",
+      "sha256": "a5550e09c691447f2deafa1351528a27ebd6fd4bbac9a67c939aadfe57c772cd",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/tools/prepare-traffic.py",
+      "sha256": "ba97bee0e762051967b0095c84f5060013cebce67a583bda3aa06a73e2c40a2b",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/tools/traffic-docs.py",
+      "sha256": "141139eb08e020e9cab52e012214afd6d67c4866929f36c1adb0aa1a743c7ff3",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/tools/upload-traffic.mjs",
+      "sha256": "a8abe0433c863bfb6afb275859f4b89b1c7477e1a56c0c20caea2f23e2726e01",
+      "mode": "100644"
+    },
+    {
+      "path": "design/reviews/2026-10-19-crumbs-native-matomo.md",
+      "sha256": "f5d22898fbeed567235814c281a126d776477e752a598150b1e9c604ddcbf354",
+      "mode": "100644"
+    },
+    {
+      "path": "design/reviews/2026-10-20-crumbs-chart-tables.md",
+      "sha256": "fe18bb24baf060cf9ecc9792bc0c3fec70f4d04a007da35d18f16fc1fb77130b",
+      "mode": "100644"
+    },
+    {
+      "path": "tests/crumbs.test.mjs",
+      "sha256": "d78257872bef9a954b21f10adfea8841315061831ba22d52182ba49b1f9a6214",
+      "mode": "100644"
+    },
+    {
+      "path": "tests/test_crumbs_traffic.py",
+      "sha256": "22a246678dde76ec74ffb09e31d5e0f14266c6951ff31d18b82fc792eea1d211",
+      "mode": "100644"
+    }
+  ]
+}

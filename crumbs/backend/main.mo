@@ -1,3 +1,5 @@
+import TrafficTypes "trafficTypes";
+import TrafficApi "mixins/Traffic";
 import T "types";
 import B "businessTypes";
 import BusinessApi "mixins/Business";
@@ -9,12 +11,13 @@ import Principal "mo:core/Principal";
 import AccessApi "mixins/Access";
 
 persistent actor Crumbs {
-  transient let BUILD_VERSION : Text = "0.10.0";
+  transient let BUILD_VERSION : Text = "0.11.2";
   let auth : T.AuthState;
   let db : T.Store;
   let siteAccess : Map.Map<Text, T.SiteAccess>;
   let native : T.NativeState;
   let business : B.State;
+  let traffic : TrafficTypes.State;
   transient let lease : T.Lease = {
     var at = 0;
     var epoch = 0;
@@ -24,6 +27,7 @@ persistent actor Crumbs {
   include AnalyticsApi(auth, lease, db, siteAccess, cleanBusiness);
   include AccessApi(auth, lease, db, siteAccess);
   include BusinessApi(auth, lease, db, siteAccess, business);
-  include NativeApi(db,native,func() : Principal { Principal.fromActor(Crumbs) });
+  include TrafficApi(traffic);
+  include NativeApi(db,native,traffic,func() : Principal { Principal.fromActor(Crumbs) });
   do { startNative<system>(); startAuth<system>(); startAnalytics<system>() };
 };

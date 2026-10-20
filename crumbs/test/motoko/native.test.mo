@@ -1,3 +1,4 @@
+import Traffic "../../backend/lib/Traffic";
 import Hash "../../backend/lib/NativeHash";
 import H "../../backend/lib/HttpUtil";
 import Array "mo:core/Array";
@@ -12,3 +13,11 @@ assert H.parse("{\"value\":\"\\ud800\"}") != null;
 assert H.parse("[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]") == null;
 assert H.path("/customer/alice%40example.test/123456") == ?"/customer/:email/:id";
 assert H.path("/%ZZ") == null;
+
+// IPv4, IPv6 and mapped IPv4 lookup boundaries use the same canonical address space.
+assert Traffic.address("203.0.113.42") == Traffic.address("::ffff:203.0.113.42");
+assert Traffic.address("203.0.113.42") == Traffic.address("::ffff:cb00:712a");
+assert Traffic.address("2001:db8::1") == Traffic.address("2001:0db8:0000:0000:0000:0000:0000:0001");
+assert Traffic.address("256.0.0.1") == null;
+assert Traffic.address("1::2::3") == null;
+assert Traffic.address("::") == ?0;

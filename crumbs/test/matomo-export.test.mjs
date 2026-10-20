@@ -1,0 +1,16 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,writeFileSync,readFileSync,existsSync,statSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+const exporter=new URL('../tools/export-matomo.mjs',import.meta.url).pathname;
+function run({scenario='',from='2020-01-01',until='2020-01-02'}={}){
+ const dir=mkdtempSync(join(tmpdir(),'crumbs-matomo-export-')),out=join(dir,'archive.json'),stub=join(dir,'transport.mjs');
+ writeFileSync(stub,`import assert from 'node:assert/strict';globalThis.fetch=async(url,options)=>{assert.equal(String(url),'https://matomo.example/index.php');assert.equal(options.method,'POST');assert.equal(options.redirect,'error');assert.equal(options.body.get('token_auth'),'synthetic-test-token');const method=options.body.get('method');if(method==='SitesManager.getSiteFromId')return new Response(JSON.stringify([{timezone:process.env.SCENARIO==='timezone'?'Europe/Zurich':'UTC'}]));assert.equal(options.body.get('flat'),'1');assert.equal(options.body.get('filter_limit'),'-1');if(process.env.SCENARIO==='error')return new Response(JSON.stringify({result:'error',message:'private server details'}));return new Response(JSON.stringify(method==='Actions.getPageUrls'?[{label:'/pricing',nb_hits:12,nb_visits:8}]:{nb_visits:8,nb_uniq_visitors:7}));};`);
+ const result=spawnSync(process.execPath,['--import',stub,exporter,'--url','https://matomo.example/index.php','--site','2','--from',from,'--until',until,'--timezone','UTC','--methods','VisitsSummary.get,Actions.getPageUrls','--out',out],{encoding:'utf8',env:{...process.env,MATOMO_TOKEN:'synthetic-test-token',SCENARIO:scenario}});
+ return {dir,out,result,close:()=>rmSync(dir,{recursive:true,force:true})};
+}
+test('Matomo exporter archives complete flat days through token-safe POST and importer validates the file',()=>{const f=run();try{assert.equal(f.result.status,0,f.result.stderr);assert.doesNotMatch(f.result.stdout+f.result.stderr,/synthetic-test-token/);const archive=JSON.parse(readFileSync(f.out));assert.equal(archive.reports.length,2);assert.equal(archive.timezone,'UTC');assert.equal(statSync(f.out).mode&0o777,0o600);const imported=spawnSync(process.execPath,[new URL('../tools/import-matomo.mjs',import.meta.url).pathname,'--file',f.out,'--site','main'],{encoding:'utf8'});assert.equal(imported.status,0,imported.stderr);assert.match(imported.stdout,/validation only/);}finally{f.close();}});
+test('Matomo exporter fails closed on source timezone/API errors and creates no partial archive',()=>{for(const scenario of ['timezone','error']){const f=run({scenario});try{assert.equal(f.result.status,1);assert.equal(existsSync(f.out),false);assert.doesNotMatch(f.result.stderr,/private server details|synthetic-test-token/);}finally{f.close();}}});
+test('Matomo exporter refuses the still-changing current source day',()=>{const from=new Date().toISOString().slice(0,10),until=new Date(Date.parse(from+'T00:00:00Z')+86400000).toISOString().slice(0,10);const f=run({from,until});try{assert.equal(f.result.status,1);assert.match(f.result.stderr,/completed days/);assert.equal(existsSync(f.out),false);}finally{f.close();}});

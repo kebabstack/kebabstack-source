@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Crumbs API",
-    "version": "0.10.0",
-    "description": "Website analytics on a Cloud Engine, cookieless by default with optional consented cookie recognition. Base URL is your native backend HTTPS origin (or optional Node collector). Report/resource integers from Candid are decimal strings; collection acknowledgments and collector-health counters are JSON numbers. Native acceptance commits directly to the canister; Node acceptance confirms a local queue. Native mode requires stable event IDs and has no GeoIP. Native raw HTTP requests including IP/UA enter replicated processing but are excluded from persisted analytics event fields. Sending an event requires a registered website, not a secret browser key. Public collection is not proof of a human visitor. Report credentials are always server-side authorized. UTC day/hour buckets and rotating daily visitor estimates; see metric definitions. Query/auth credentials do not grant the signed collector lane."
+    "version": "0.11.2",
+    "description": "Website analytics on a Cloud Engine, cookieless by default with optional consented cookie recognition. Base URL is your native backend HTTPS origin (or optional Node collector). Report/resource integers from Candid are decimal strings; collection acknowledgments and collector-health counters are JSON numbers. Native acceptance commits directly to the canister; Node acceptance confirms a local queue. Native mode requires stable event IDs and supports operator-loaded expiring GeoIP/ASN/hosting datasets. Native raw HTTP requests including IP/UA enter replicated processing but are excluded from persisted analytics event fields. Sending an event requires a registered website, not a secret browser key. Public collection is not proof of a human visitor. Report credentials are always server-side authorized. UTC day/hour buckets and rotating daily visitor estimates; see metric definitions. Query/auth credentials do not grant the signed collector lane."
   },
   "servers": [
     {
@@ -662,7 +662,7 @@
                   },
                   "dimension": {
                     "type": "string",
-                    "description": "trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+                    "description": "asn, network, screen, trafficClass, geoSource, networkSource, hostingSource, trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
                   },
                   "filters": {
                     "type": "array",
@@ -944,7 +944,7 @@
                   },
                   "dimension": {
                     "type": "string",
-                    "description": "trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+                    "description": "asn, network, screen, trafficClass, geoSource, networkSource, hostingSource, trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
                   },
                   "filters": {
                     "type": "array",
@@ -1990,6 +1990,20 @@
       "Event": {
         "type": "object",
         "properties": {
+          "screenWidth": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 16384
+          },
+          "screenHeight": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 16384
+          },
+          "automation": {
+            "type": "boolean",
+            "description": "Browser-reported automation signal, not authenticated bot detection."
+          },
           "id": {
             "type": "string",
             "description": "Stable random ID for retry deduplication; UUID recommended."
@@ -2085,7 +2099,7 @@
           },
           "dimension": {
             "type": "string",
-            "description": "trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
+            "description": "asn, network, screen, trafficClass, geoSource, networkSource, hostingSource, trackingMode (cookie/cookieless), channel, aiSource, minute, path, source, medium, campaign, content, term, country, region, city, device, browser, os, hostname, entryPath, exitPath, event, day, hour, or prop:ALLOWED_NAME. Empty = totals."
           },
           "filters": {
             "type": "array",
@@ -2710,6 +2724,53 @@
       "StoredEvent": {
         "type": "object",
         "properties": {
+          "context": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string"
+                  },
+                  "automation": {
+                    "type": "boolean"
+                  },
+                  "asn": {
+                    "type": "string"
+                  },
+                  "network": {
+                    "type": "string"
+                  },
+                  "hosting": {
+                    "type": "boolean"
+                  },
+                  "geoSource": {
+                    "type": "string"
+                  },
+                  "networkSource": {
+                    "type": "string"
+                  },
+                  "hostingSource": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "screen",
+                  "automation",
+                  "asn",
+                  "network",
+                  "hosting",
+                  "geoSource",
+                  "networkSource",
+                  "hostingSource"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
           "id": {
             "type": "string"
           },
@@ -2830,6 +2891,7 @@
           }
         },
         "required": [
+          "context",
           "id",
           "site",
           "path",

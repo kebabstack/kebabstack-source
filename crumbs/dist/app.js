@@ -2,7 +2,7 @@ import {businessWorkspace} from './business.js';
 import {websiteAccess} from './access.js';
 import {idlFactory} from './idl.js';
 import {appSignIn,takeHubTicket,session,suiteCookie,mountTopbar,topbarIdlFactory} from './hub-client.js';
-import {displayError,esc,num,metricCards,table,chart,money,dimensionLabel,journeyLabel} from './view.js';
+import {historicalRow,displayError,esc,num,metricCards,table,chart,bindChart,money,dimensionLabel,journeyLabel} from './view.js';
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
 const HUB_URL = "__HUB_URL__";
 const $=id=>document.getElementById(id);
@@ -38,7 +38,7 @@ function controls(){
  $('workspaceSub').textContent=current&&!creating&&view!=='all'?current.domain:'';$('workspaceSub').hidden=!(current&&!creating&&view!=='all');
  document.body.classList.toggle('creating',creating);document.querySelector('.settings-access').hidden=creating;
  $('navHistory').hidden=!historyAvailable;
- $('shareReport').hidden=!hasSite||creating||!reportViews.includes(view)||view==='all'||!canManage();if($('shareReport').hidden)$('shareResult').hidden=true;
+ $('shareReport').hidden=!hasSite||creating||!reportViews.includes(view)||['all','history'].includes(view)||!canManage();if($('shareReport').hidden)$('shareResult').hidden=true;
  $('websiteControls').hidden=!hasSite||creating||view==='all';$('nav').hidden=!hasSite||creating;
  $('reportTools').hidden=!hasSite||creating||!reportViews.includes(view);
  const savedVisible=hasSite&&!creating&&['overview','acquisition','goals','journeys'].includes(view);
@@ -63,7 +63,7 @@ function setRange(from,through){
  if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start)throw new Error('Choose a valid start date on or before the end date.');
  if(end-start>1827*86400000+3600000)throw new Error('Choose a period of 1827 days or less.');
  range={from:BigInt(Math.floor(start/1000)),until:BigInt(Math.floor(end/1000)),fromLabel:from,untilLabel:through,dayStarts:dayStartsBetween(from,through,tz)};
- $('fromDate').value=from;$('toDate').value=through;$('rangeLabel').textContent=from===through?from:from+' – '+through;$('tzLabel').textContent=tz;
+ $('fromDate').value=from;$('toDate').value=through;$('rangeLabel').textContent=from===through?from:from+' – '+through;$('tzLabel').textContent=tz;$('tzLabel').title='Days in this report start at midnight in the website time zone';
 }
 function request(dimension='',limit=100){return {site:current.id,from:range.from,until:range.until,filters:[...filters],dimension,limit:BigInt(limit),dayStarts:dimension==='day'?[(range.dayStarts||[]).map(BigInt)]:[]};}
 async function report(dimension='',custom){return unwrap(await backend.report(session.load(),custom??request(dimension)));}
@@ -96,10 +96,10 @@ async function overview(run){
  const starts=timeDimension==='day'?(range.dayStarts||[]):(()=>{const a=[];for(let t=Math.floor(Number(r.from)/interval)*interval;t<Number(r.until);t+=interval)a.push(t);return a;})();
  const prevStarts=timeDimension==='day'?oldStarts:starts.map(t=>t-Number(length));
  const previous=data[9]?{byKey:new Map(data[9].rows.map(x=>[Number(x.value),Number(x.metrics[$('chartMetric').value]??0)])),starts:prevStarts}:null;
- $('activity').textContent='';$('chart').innerHTML=chart(data[2].rows,Number(r.from),Number(r.until),{metric:$('chartMetric').value,interval,labels:bucketLabels(starts,interval,tz),previous});
+ $('activity').textContent='';$('chart').innerHTML=chart(data[2].rows,Number(r.from),Number(r.until),{metric:$('chartMetric').value,interval,labels:bucketLabels(starts,interval,tz),previous});bindChart($('chart'));
  $('chartCaption').innerHTML=`<span>${esc(range.fromLabel)}</span><span>${esc(range.untilLabel)}</span>`;
  [['pages','path',3],['sources','source',4],['countries','country',5],['devices','device',6],['breakdown',dimension,7]].forEach(([id,d,i])=>{$(id).innerHTML=table(data[i].rows,d);});
- if(!data[5].rows.some(row=>row.value))$('countries').innerHTML='<p class="empty-report">No location data available.<br><span class="subtle">Native collection does not add geolocation.</span></p>';
+ if(!data[5].rows.some(row=>row.value))$('countries').innerHTML='<p class="empty-report">No location data available.<br><span class="subtle">Location appears for new visits after a current location dataset is activated.</span></p>';
  $('realtime').textContent=num(data[8].totals.visitors)+' live';$('realtime').title=num(data[8].totals.visitors)+' visitors with a pageview in the last 5 minutes, independent of dates and filters. Click to watch live.';
  if(data.some(r=>r.truncated))notice('Showing the top results. Metric totals include the entire selected period.','info');
 }
@@ -115,7 +115,8 @@ async function goals(run){
 }
 function renderSavedFunnels(list){$('savedFunnels').innerHTML=list.length?'<p class="subtle">Saved funnels</p>'+list.map(r=>`<div class="data-row"><span>${esc(r.name)}</span><span class="access-add"><button type="button" data-run-funnel="${esc(r.id)}">Run</button>${canManage()?`<button type="button" data-delete-funnel="${esc(r.id)}" data-name="${esc(r.name)}">Remove</button>`:''}</span></div>`).join(''):'';$('savedFunnels').dataset.list=JSON.stringify(list.map(r=>({id:r.id,site:r.site,name:r.name,steps:r.steps.map(x=>({kind:Object.keys(x.kind)[0],value:x.value})),revision:String(r.revision)})));}
 async function journeys(run){const rows=unwrap(await backend.journeys(session.load(),request()));if(!isCurrent(run))return;$('journeys').innerHTML=rows.length?rows.map(([from,to,count])=>`<div class="data-row"><span class="journey-path">${esc(journeyLabel(from))} <span aria-label="to">→</span> ${esc(journeyLabel(to))}</span><span class="number">${num(count)}</span></div>`).join(''):'<p class="empty-report">No page transitions in this period.</p>';}
-async function historyView(run){const r=request(),rows=unwrap(await backend.imported(session.load(),current.id,r.from,r.until));if(!isCurrent(run))return;$('historyRows').innerHTML=rows.length?rows.map(row=>`<div class="data-row"><span class="access-name"><strong>${esc(row.value||'Total')}</strong><span class="subtle">${new Date(Number(row.day)*1000).toISOString().slice(0,10)} · ${esc(dimensionLabel(row.dimension))}</span></span><span class="number">${num(row.metrics.visitors)} visitors · ${num(row.metrics.pageviews)} views</span></div>`).join(''):'<p class="empty-report">No imported data in this period.</p>';}
+async function trafficStatus(){const el=$('trafficDataStatus');if(!el)return;try{const datasets=await backend.trafficDatasets();el.textContent=datasets.length?datasets.map(d=>Object.keys(d.kind)[0]+': '+d.source+' · expires '+new Date(Number(d.expiresAt)*1000).toISOString().slice(0,10)+(Number(d.expiresAt)*1000<Date.now()?' (expired; new matches unavailable)':'')).join(' | '):'Location/network datasets are not installed. Ask the operator to load current data.';}catch{el.textContent='Dataset status unavailable.';}}
+async function historyView(run){$('tzLabel').textContent='Source calendar dates';$('tzLabel').title='Original daily labels; each row shows its source timezone';const from=BigInt(Date.parse(range.fromLabel+'T00:00:00Z')/1000),until=BigInt(Date.parse(range.untilLabel+'T00:00:00Z')/1000)+86400n,rows=unwrap(await backend.imported(session.load(),current.id,from,until));if(!isCurrent(run))return;$('historyRows').innerHTML=rows.length?rows.map(historicalRow).join(''):'<p class="empty-report">No imported data in this period.</p>';}
 function settings(site){
  const form=$('siteForm');form.reset();dirty=false;form.elements.id.readOnly=!!site;
  for(const key of ['id','name','domain'])form.elements[key].value=site?.[key]??'';
@@ -152,6 +153,7 @@ async function route(){clearTimeout(trackingTimer);
  if(!user)return;const run=++epoch;creating=location.hash==='#/new'&&user.role==='admin';
  const path=location.hash.replace(/^#\/?/,'').split('/');view=creating?'settings':path[0]||'overview';setting=['general','tracking','access','search'].includes(path[1])?path[1]:'general';
  if(![...reportViews,'settings','api'].includes(view)||(['settings','api'].includes(view)&&!canManage()&&!creating))view='overview';
+ if(view==='history'&&$('period').value==='realtime')$('period').value='7';
  if(reportViews.includes(view)&&$('period').value!=='custom'){if($('period').value==='realtime'){const now=Math.floor(Date.now()/1000);range={from:BigInt(now-1800),until:BigInt(now+1),fromLabel:'Last 30 minutes',untilLabel:'Now'};$('rangeLabel').textContent='Last 30 minutes';}else setPeriod(Number($('period').value));}
  $('empty').hidden=!!current||creating;controls();renderFilters();notice('');
  document.querySelectorAll('.view').forEach(el=>el.hidden=el.id!=='v-'+view||(!current&&!creating));
@@ -170,7 +172,7 @@ async function route(){clearTimeout(trackingTimer);
   else if(view==='history')await historyView(run);
   else if(view==='settings'){
    if(creating||setting==='general')settings(creating?null:current);
-   else if(setting==='tracking'){snippet();$('copyStatus').textContent='';void trackingStatus(run);}
+   else if(setting==='tracking'){snippet();$('copyStatus').textContent='';void trafficStatus();void trackingStatus(run);}
    else if(setting==='search')await business.searchSettings(run);
    else await websiteAccess({actor:backend,token:()=>session.load(),site:current.id,mount:$('accessPanel'),hubUrl:HUB_URL.startsWith('__')?'':HUB_URL,isCurrent:()=>isCurrent(run),onDirty:value=>{dirty=value;},onSaved:async()=>{dirty=false;await loadSites();await route();notice('Website access saved.','success');}});
   }else await apiView(run);

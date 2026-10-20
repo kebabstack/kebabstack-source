@@ -36,6 +36,7 @@ module {
     if (e.hostname != s.domain or not e.path.startsWith(#text "/") or not safe(e.path, 512) or e.path.contains(#char '?') or e.path.contains(#char '#')) return ?"Invalid hostname or unsanitized path";
     if (s.excludedPaths.values().any(func p = e.path.startsWith(#text p))) return ?"Excluded page";
     for (t in [e.source, e.medium, e.campaign, e.content, e.term, e.region, e.city, e.device, e.browser, e.os, e.name].values()) if (not safe(t, 160)) return ?"Invalid dimension";
+    switch(e.context){case (?c){for(t in [c.screen,c.asn,c.network,c.geoSource,c.networkSource,c.hostingSource].values())if(not safe(t,244))return ?"Invalid traffic context"};case null {}};
     if (e.props.size() > 20 or e.props.values().any(func(k, v) = not s.allowedProperties.values().any(func p = k == p) or not safe(v, 160))) return ?"Property not allowed";
     if (e.country != "" and (e.country.size() != 2 or not e.country.chars().all(func c = c >= 'A' and c <= 'Z'))) return ?"Invalid country";
     if (e.currency != "" and (e.currency.size() != 3 or not e.currency.chars().all(func c = c >= 'A' and c <= 'Z'))) return ?"Invalid currency";

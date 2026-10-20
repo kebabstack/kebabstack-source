@@ -1,3 +1,5 @@
+import G "../trafficTypes";
+import Traffic "../lib/Traffic";
 import T "../types";
 import H "../lib/HttpUtil";
 import E "../lib/NativeEvent";
@@ -15,7 +17,7 @@ import Iter "mo:core/Iter";
 import List "mo:core/List";
 import Timer "mo:core/Timer";
 import Principal "mo:core/Principal";
-mixin(db:T.Store,native:T.NativeState,self:()->Principal) {
+mixin(db:T.Store,native:T.NativeState,traffic:G.State,self:()->Principal) {
   transient var preparingSalt=false;
   func response(status:Nat16,body:H.J):T.HttpResponse {
     {status_code=status;body=if(status==204) "" else H.serialize(body).encodeUtf8();headers=(if(status==429 or status==503)[("Retry-After","60")] else []).concat([("Content-Type","application/json; charset=utf-8"),("Cache-Control","no-store"),("Access-Control-Allow-Origin","*"),("Access-Control-Allow-Methods","GET, POST, PUT, DELETE, OPTIONS"),("Access-Control-Allow-Headers","Authorization, Content-Type"),("X-Content-Type-Options","nosniff")]);upgrade=null;streaming_strategy=null}
@@ -72,11 +74,11 @@ mixin(db:T.Store,native:T.NativeState,self:()->Principal) {
         let cookie=H.str(raw,"cookieId","");
         if(cookie!="" and (not H.bool(raw,"cookieConsent",false) or not V.cookieId(cookie)))return failure(#invalid("Cookie identity requires explicit consent and a random UUID"));
         order+=1;let visitor=if(cookie=="")Hash.hmac(native.salt,H.serialize(#array([#string(site.id),#string(ip),#string(ua)]))) else "c:"#Hash.hmac("crumbs-cookie-v1".encodeUtf8(),H.serialize(#array([#string(site.id),#string(cookie)])));
-        let normalized=switch(E.normalize(raw,site,ua,visitor,now,order)){case (#err(e))return failure(e);case (#ok(null)){ignored+=1;continue};case (#ok(?e))e};
+        let normalized=switch(E.normalize(raw,site,ua,visitor,now,order)){case (#err(e))return failure(e);case (#ok(null)){ignored+=1;continue};case (#ok(?e))Traffic.enrich(traffic,e,ip,now)};
         let key=site.id#":"#normalized.id;
         let old=switch(pending.get(key)){case (?e)?e;case null switch(db.eventIds.get(key)){case (?k)db.events.get(k);case null null}};
         // Retries retain the first timestamp/order/visitor, including across midnight or IP changes.
-        let event=switch old {case (?e){if((e.visitor.startsWith(#text "c:") or normalized.visitor.startsWith(#text "c:")) and e.visitor!=normalized.visitor)return failure(#conflict("Cookie identity changed for an existing event"));let retried={normalized with at=e.at;order=e.order;visitor=e.visitor};if(retried!=e)return failure(#conflict("Event id already used with different data"));e};case null normalized};
+        let event=switch old {case (?e){if((e.visitor.startsWith(#text "c:") or normalized.visitor.startsWith(#text "c:")) and e.visitor!=normalized.visitor)return failure(#conflict("Cookie identity changed for an existing event"));switch(e.context,normalized.context){case (?a,?b){if(a.screen!=b.screen or a.automation!=b.automation)return failure(#conflict("Event measurements changed"))};case _ {}};let retried={normalized with at=e.at;order=e.order;visitor=e.visitor;country=e.country;region=e.region;city=e.city;context=e.context};if(retried!=e)return failure(#conflict("Event id already used with different data"));e};case null normalized};
         pending.add(key,event);events.add(event)
       };
       if(events.size()==0)return accepted(0,0,ignored);

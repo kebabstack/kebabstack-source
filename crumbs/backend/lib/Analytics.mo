@@ -11,7 +11,7 @@ import Int "mo:core/Int";
 import Time "mo:core/Time";
 
 module {
-  public let scanLimit : Nat = 100_000;
+  public let scanLimit : Nat = 50_000;
   public func now() : Int { Time.now() / 1_000_000_000 };
   public func key(site : Text, at : Int, id : Text) : Text {
     var t = at.toText();
@@ -32,6 +32,13 @@ module {
       case "campaign" e.campaign;
       case "content" e.content;
       case "term" e.term;
+      case "asn" switch(e.context){case (?c)c.asn;case null ""};
+      case "network" switch(e.context){case (?c)c.network;case null ""};
+      case "screen" switch(e.context){case (?c)c.screen;case null ""};
+      case "trafficClass" switch(e.context){case (?c)if(c.automation)"automation-signal" else if(c.hosting)"hosting-network" else "unclassified";case null "unknown"};
+      case "geoSource" switch(e.context){case (?c)c.geoSource;case null ""};
+      case "networkSource" switch(e.context){case (?c)c.networkSource;case null ""};
+      case "hostingSource" switch(e.context){case (?c)c.hostingSource;case null ""};
       case "country" e.country;
       case "region" e.region;
       case "city" e.city;
@@ -51,7 +58,7 @@ module {
     };
   };
   public func validDimension(d : Text, site : T.Site) : Bool {
-    if (["", "trackingMode", "channel", "aiSource", "minute", "path", "hostname", "source", "medium", "campaign", "content", "term", "country", "region", "city", "device", "browser", "os", "event", "day", "hour", "entryPath", "exitPath"].values().any(func x = x == d)) return true;
+    if (["", "asn", "network", "screen", "trafficClass", "geoSource", "networkSource", "hostingSource", "trackingMode", "channel", "aiSource", "minute", "path", "hostname", "source", "medium", "campaign", "content", "term", "country", "region", "city", "device", "browser", "os", "event", "day", "hour", "entryPath", "exitPath"].values().any(func x = x == d)) return true;
     site.allowedProperties.values().any(func p = d == "prop:" # p);
   };
   public func matches(e : T.Event, filters : [T.Filter]) : Bool {
@@ -66,7 +73,7 @@ module {
     let out = List.empty<T.Event>();
     for ((_, e) in db.events.entriesFrom(key(r.site, start, ""))) {
       if (e.site != r.site or e.at >= r.until) break;
-      if (out.size() >= scanLimit) return #err(#capacity("Report exceeds 100000 events. Narrow the interval; totals were not sampled."));
+      if (out.size() >= scanLimit) return #err(#capacity("Report exceeds 50000 events. Narrow the interval; totals were not sampled."));
       out.add(e);
     };
     #ok(out.toArray());
@@ -156,9 +163,11 @@ module {
     var size = 2048;
     for (t in [e.id,e.site,e.visitor,e.path,e.hostname,e.source,e.medium,e.campaign,e.content,e.term,e.country,e.region,e.city,e.device,e.browser,e.os,e.name,e.currency].values()) size += 4 * t.size();
     for ((k,v) in e.props.values()) size += 128 + 4 * (k.size() + v.size());
+    switch(e.context){case (?c){size+=256;for(t in [c.screen,c.asn,c.network,c.geoSource,c.networkSource,c.hostingSource].values())size+=4*t.size()};case null {}};
     size;
   };
   public func importDimension(d : Text) : Bool {
+    if(["VisitsSummary.get","Actions.get","Actions.getPageUrls","Actions.getEntryPageUrls","Actions.getExitPageUrls","Referrers.getWebsites","Referrers.getCampaigns","UserCountry.getCountry","UserCountry.getCity","DevicesDetection.getType","DevicesDetection.getBrowsers","DevicesDetection.getOs","Resolution.getResolution","Provider.getProvider","Goals.get"].values().any(func t=d=="matomo:"#t))return true;
     ["visitors","sources","pages","entry_pages","exit_pages","custom_events","locations","devices","browsers","operating_systems"].values().any(func t = d == "import:" # t);
   };
   type Acc = {

@@ -40,7 +40,7 @@ export class Store {
   maintain(now){this.salt(now);this.db.prepare("DELETE FROM events WHERE state!='pending' AND created < ?").run(now-86400);}
   close(){this.db.close();}
 }
-export function candidEvent(e){return {...e,at:BigInt(e.at),order:BigInt(e.order),revenueMinor:BigInt(e.revenueMinor),engagementMs:BigInt(e.engagementMs),scrollDepth:BigInt(e.scrollDepth)};}
+export function candidEvent(e){return {...e,context:e.context??[],at:BigInt(e.at),order:BigInt(e.order),revenueMinor:BigInt(e.revenueMinor),engagementMs:BigInt(e.engagementMs),scrollDepth:BigInt(e.scrollDepth)};}
 export async function flush(store,actor) {
   const batch=store.pending();if(!batch.length)return;
   const result=await actor.ingestBatch(batch.map(candidEvent));

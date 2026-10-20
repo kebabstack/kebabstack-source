@@ -29,6 +29,7 @@
   try{previousRef=document.referrer?new URL(document.referrer).origin:'';}catch{previousRef='';}
   function payload(kind,name,options){var e={id:id(),site:site,domain:domain,url:pageUrl(),referrer:previousRef,kind:kind,name:name||''};
     ['id','props','interactive','revenueMinor','currency'].forEach(function(k){if(options&&options[k]!==undefined)e[k]=options[k];});
+    e.screenWidth=Math.min(16384,Math.max(0,Math.round(window.screen?.width||0)));e.screenHeight=Math.min(16384,Math.max(0,Math.round(window.screen?.height||0)));e.automation=navigator.webdriver===true;
     if(cookieMode&&allowed()){cookieId=identity();if(cookieId){e.cookieId=cookieId;e.cookieConsent=true;}}return e;}
   function batchOf(){var batch=[],size=2;for(var e of queue){var bytes=new TextEncoder().encode(JSON.stringify(e)).length+1;if(size+bytes>45000||batch.length>=(smallBatch?1:20))break;batch.push(e);size+=bytes;}return batch;}
   function receiptValid(receipt,count){if(!receipt||typeof receipt!=='object')return false;

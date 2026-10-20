@@ -1,4 +1,4 @@
-# Plausible replacement acceptance
+# Plausible / Matomo replacement acceptance
 
 The target is operational replacement of the Plausible features actually used by a company. Version 0.6.0 establishes a tested core and an evaluation deployment; it is not a claim of full Plausible parity. Current baseline: [Plausible documentation](https://plausible.io/docs), [CSV format](https://plausible.io/docs/csv-import), reviewed September 2026.
 
@@ -6,7 +6,7 @@ The target is operational replacement of the Plausible features actually used by
 |---|---|
 | Pageviews, visitors, visits, bounce, duration, realtime | Implemented; daily/UTC estimates with rolling minute view |
 | Pages, sources, UTM campaigns, channels and AI referrals | Implemented; deterministic first-event attribution, recognized hostnames, exact filters |
-| Geography | Optional Node GeoIP; native location fields remain empty |
+| Geography | Native expiring operator-loaded GeoIP/ASN ranges; optional Node GeoIP remains available; accuracy and coverage depend on source |
 | Scroll depth and codeless goals | Implemented; page, event, 1–100% threshold; per-visit scroll deduplication |
 | Downloads, outbound clicks, form events, custom properties | Implemented; allowlisted properties; form submission is an attempt, not confirmed success |
 | Revenue / ecommerce attribution | Event revenue UI/API by channel/source/campaign/landing; currencies separate; no order, refund or accounting engine |
@@ -15,12 +15,12 @@ The target is operational replacement of the Plausible features actually used by
 | Five-year retention | Configurable to 1,827 days; default 365; no rollups or unlimited volume guarantee |
 | Search Console | Implemented on-demand OAuth + saved aggregate snapshot; requires Google client/property setup and live acceptance test |
 | Data Studio connector | Downloadable operator-deployed Apps Script connector; daily aggregates; live Google deployment still required |
-| Bot / spam / datacenter filtering | UA heuristic and small explicit spam list; hosting-range filtering requires optional Node + licensed local database; native datacenter classification absent |
-| Stats API, export, history | Candid/REST/OpenAPI/JS types; ten Plausible CSV tables; imported history stays separate |
+| Bot / spam / datacenter filtering | UA heuristic and small explicit spam list; automatic hosting-range exclusion is optional Node + licensed local database; native expiring operator-loaded hosting ranges and browser automation signals; no human/bot guarantee |
+| Stats API, export, history | Candid/REST/OpenAPI/JS types; ten Plausible CSV tables plus Matomo daily aggregate archives; imported history stays separate |
 | Saved filters and funnels | Shared site configuration with revision checks; not exported metric snapshots |
 | Cookie-free collection | Implemented; privacy signals honored; no persistent visitor IDs; not automatic legal consent exemption |
 | Scheduled email reports / spike alerts | Not implemented in this release |
-| Arbitrary timezone / returning-person identity | UTC reporting; persistent cross-day identity deliberately absent |
+| Arbitrary timezone / returning-person identity | client-supplied local daily boundaries; optional consented cookie browser recognition, not personal identity |
 | Large-volume analytics | Capacity errors, no sampling; sharding and aggregate rollups not implemented |
 | Matomo heatmaps/replay/tag manager/AB testing | Not implemented; not a claim of full Matomo parity |
 
@@ -33,4 +33,4 @@ The target is operational replacement of the Plausible features actually used by
 5. Verify the legal basis, site event schema, proxy logs, retention, backups, controller access and actual hosting jurisdictions. Test configured consent withdrawal if required.
 6. Approve the identical tested format-2 bundle (and collector artifact when using Node), then retire the old subscription only after the operator signs off. Deployment and real-site collection need explicit authorization.
 
-Current safeguards are not production benchmarks: backend scans ≤100,000 events/report; storage ≤256 MiB logical event charge (2048 bytes plus conservative field charge per event) and ≤2 million events, whichever comes first; imports ≤100,000 rows and ≤5,000/read; optional Node queue ≤100,000 pending events; HTTP ≤48 KiB and ≤50 events/request; native intake ≤300 events/IP/minute and ≤30,000 events total/minute. Normal records hit the byte charge before the count ceiling. These limits deliberately reject excess work rather than falsify totals. Larger target workloads require partitioning/rollups and repeatable capacity evidence before cutover.
+Current safeguards are not production benchmarks: backend scans ≤50,000 events/report; storage ≤256 MiB logical event charge (2048 bytes plus conservative field charge per event) and ≤2 million events, whichever comes first; imports ≤100,000 rows and ≤5,000/read; optional Node queue ≤100,000 pending events; HTTP ≤48 KiB and ≤50 events/request; native intake ≤300 events/IP/minute and ≤30,000 events total/minute. Normal records hit the byte charge before the count ceiling. These limits deliberately reject excess work rather than falsify totals. Larger target workloads require partitioning/rollups and repeatable capacity evidence before cutover.

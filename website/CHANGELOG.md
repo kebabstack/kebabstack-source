@@ -1,5 +1,12 @@
 # Product website changes
 
+## [0.5.8] — 2026-10-20
+
+- Explain native location/network enrichment, operator dataset refreshes and the limits of automation signals in German and English.
+- Document supported Matomo aggregate migration with separate history, timezone and capacity limits.
+- Describe chart inspection and ten-row scrolling breakdowns in the analytics guide.
+
+
 ## [0.5.7] — 2026-10-18
 
 - Explain read-only Brex imports, per-space card selection, individual payment assignments and guided completion in German and English.

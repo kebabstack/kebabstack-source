@@ -1,5 +1,26 @@
 # Crumbs changelog
 
+## [0.11.2] - 2026-10-20
+
+- Traffic over time now shows the exact bucket date and selected metric on hover or tap, including the comparison value. Arrow keys, Home and End inspect the chart without a mouse.
+- Pages, sources, countries, devices and detail breakdowns show up to ten rows before scrolling. All loaded rows remain available and clickable as report filters; totals, exports and APIs are unchanged.
+
+
+## [0.11.1] — 2026-10-19
+
+- Batch operator uploads of up to 16,384 IP ranges while retaining bounded 1,024-range lookup chunks, full validation before mutation and atomic activation. Reduces setup round trips without a runtime server or state/API schema change.
+- Correct the empty location report guidance: native location data applies to new visits after dataset activation.
+
+## [0.11.0] — 2026-10-19
+
+- Bound native report scans to 50,000 events: the previous 100,000-event bound can exceed the query instruction limit. Larger ranges return an actionable capacity error without sampling; event export and historical aggregate storage limits are unchanged.
+
+- Add native local IP range lookup with staged, controller-authorized dataset activation, provenance and expiration. No runtime IP lookup service or Node process is required. Operators prepare/update separately licensed public datasets.
+- Add screen size, network/ASN and hosting/automation-signal report dimensions for cookie and cookieless collection. Unknown does not mean human; existing UA exclusions remain.
+- Add read-only Matomo archive export and idempotent historical aggregate import preserving original dates, timezone and missing-metric information. History remains separate from native reports.
+- Migrate existing events with unknown traffic context; preserve website access, keys, collection identities and report definitions.
+
+
 ## [0.10.0] — 2026-10-18
 
 - Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.

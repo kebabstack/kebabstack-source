@@ -62,3 +62,13 @@ main{max-width:1240px;padding:30px 32px 24px}h1{font-size:25px;letter-spacing:-.
 /* Mode comparison keeps each capability and both answers together on phones. */
 .mode-comparison{width:100%;border-collapse:collapse;table-layout:fixed}.mode-comparison th,.mode-comparison td{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid var(--ks-rule);overflow-wrap:anywhere}.mode-comparison tbody th{font-weight:600}
 @media(max-width:560px){.mode-comparison,.mode-comparison tbody,.mode-comparison tr,.mode-comparison th,.mode-comparison td{display:block;width:100%}.mode-comparison thead{display:none}.mode-comparison tr{padding:12px 0;border-bottom:1px solid var(--ks-rule)}.mode-comparison th,.mode-comparison td{padding:6px 0;border:0}.mode-comparison td:before{content:attr(data-label);display:block;font-size:var(--ks-text-sm);font-weight:600;color:var(--ks-fg-secondary)}}
+
+.history-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,auto);align-items:start}.history-row .access-name{min-width:0}.history-row .number{white-space:normal;max-width:24ch}.history-row summary{cursor:pointer;min-height:44px;padding-block:10px}.history-row pre{white-space:pre-wrap;overflow-wrap:anywhere}.history-row .subtle{overflow-wrap:anywhere}@media(max-width:560px){.history-row{grid-template-columns:minmax(0,1fr)}.history-row .number{max-width:none}}
+
+/* Bounded report lists retain every loaded row and filter action. */
+.breakdown-scroll{--report-row-size:max(44px,calc(1.6em + 16px));font-size:14px;max-height:calc(10 * var(--report-row-size));overflow-y:auto;scrollbar-gutter:stable;padding:0 4px;scroll-padding:4px}
+.breakdown-scroll .data-row{height:var(--report-row-size);min-height:var(--report-row-size);margin:0;line-height:1.6}
+.breakdown-scroll .name{min-width:0}.breakdown-scroll:focus-visible,.interactive-chart:focus-visible{outline:3px solid var(--ks-focus);outline-offset:3px}
+.breakdown-scroll .data-row:focus-visible{outline-offset:-3px}.breakdown-hint{margin:8px 0 0}
+.interactive-chart{position:relative;min-width:0}.chart-tooltip{position:absolute;top:0;z-index:1;max-width:100%;padding:6px 10px;border:1px solid var(--ks-rule);border-radius:8px;background:var(--ks-bg-elev);color:var(--ks-fg);font-size:13px;font-variant-numeric:tabular-nums;pointer-events:none;box-shadow:0 2px 8px #0002}
+.chart-announcement{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}

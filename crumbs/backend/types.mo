@@ -1,3 +1,4 @@
+import Traffic "trafficTypes";
 import Map "mo:core/Map";
 import Hub "mo:motoko";
 
@@ -27,6 +28,7 @@ module {
   public type AccessPerson = { id : Text; email : Text; displayName : Text; active : Bool; eligible : Bool; automatic : Bool };
   public type AccessView = { site : Text; revision : Nat; readers : [AccessPerson]; managers : [AccessPerson]; legacyAllReaders : Bool; updatedBy : Text; updatedAt : Int };
   public type Event = {
+    context : ?Traffic.Context;
     id : Text;
     site : Text;
     visitor : Text;

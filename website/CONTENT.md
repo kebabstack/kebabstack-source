@@ -204,3 +204,7 @@ Brex tests in tests/security.test.mjs. Split groups require manual review of new
 payments. No live banking connection, automatic term changes, payment initiation or
 measured savings is demonstrated by the public website. Deployment is recorded
 privately and must precede publication of this capability update.
+
+## 20 October 2026: Crumbs 0.11.2 reconciliation
+
+Website 0.5.8 adds bilingual analytics-guide sections grounded in `crumbs/TRAFFIC.md`, `crumbs/MATOMO.md`, `crumbs/README.md`, native traffic tests and the 0.11.2 scoped GUI review. Native lookup requires current operator-uploaded datasets; no external per-visitor lookup is implied. Location remains estimated, hosting/automation signals are not bot proof, and old events are not retroactively enriched. Matomo aggregate history stays separate; original timezone, metric availability and retention/query limits matter. Chart/list changes affect display only. These descriptions do not claim a completed tenant migration or modify the marketing site's collection configuration.

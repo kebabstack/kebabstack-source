@@ -7,7 +7,7 @@ const ids=Object.fromEntries(['controller','owner','alice','bob','global','outsi
 const wasmPath=name=>process.env["CRUMBS_PACKAGED_"+name.toUpperCase()+"_WASM"]??resolve(name,"backend/dist/backend.wasm");
 let server;
 before(async()=>server=await PocketIcServer.start());after(async()=>server?.stop());
-async function install(pic,name,baseline=false){const dir=baseline==='native'?process.env.CRUMBS_NATIVE_BASELINE:baseline?process.env.CRUMBS_ACCESS_BASELINE:resolve(name,'backend/dist');const js=execFileSync('python3',['sdk/tools/did2idl.py',dir+'/backend.did'],{encoding:'utf8'});const {idlFactory}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));return {...await pic.setupCanister({sender:ids.controller,controllers:[ids.controller],wasm:baseline?dir+'/backend.wasm':wasmPath(name),idlFactory,environmentVariables:name==='hub'?[{name:'KEBAB_CLAIM_CODE',value:'cd'.repeat(32)}]:[]}),idlFactory};}
+async function install(pic,name,baseline=false){const dir=baseline==='traffic'?process.env.CRUMBS_TRAFFIC_BASELINE:baseline==='native'?process.env.CRUMBS_NATIVE_BASELINE:baseline?process.env.CRUMBS_ACCESS_BASELINE:resolve(name,'backend/dist');const js=execFileSync('python3',['sdk/tools/did2idl.py',dir+'/backend.did'],{encoding:'utf8'});const {idlFactory}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));return {...await pic.setupCanister({sender:ids.controller,controllers:[ids.controller],wasm:baseline?dir+'/backend.wasm':wasmPath(name),idlFactory,environmentVariables:name==='hub'?[{name:'KEBAB_CLAIM_CODE',value:'cd'.repeat(32)}]:[]}),idlFactory};}
 async function setup(live=false,baseline=false){const pic=await PocketIc.create(server.getUrl(),live?{nns:{state:{type:'new'}},application:[{state:{type:'new'}}]}:undefined);await pic.setTime(live?new Date():new Date('2026-09-19T12:00:00Z'));const h=await install(pic,'hub'),c=await install(pic,'crumbs',baseline),hub=h.actor,app=c.actor;
  hub.setPrincipal(ids.owner);assert.equal((await hub.claimHubWithCode('cd'.repeat(32),{email:'owner@crumbs.test',displayName:'Owner',orgName:'Crumbs test'})).ok,true);
  for(const name of ['alice','bob','global']){hub.setPrincipal(ids.owner);assert.equal(await hub.addLocalUser(name+'@crumbs.test',name,'',''),true);const [invite]=await hub.createInvite(name+'@crumbs.test');hub.setPrincipal(ids[name]);assert.equal(await hub.claimInvite(invite),true);}hub.setPrincipal(ids.owner);assert.equal((await hub.setPersonRole('global@crumbs.test','admin')).ok,true);await pic.tick(2);
@@ -21,7 +21,7 @@ async function setup(live=false,baseline=false){const pic=await PocketIc.create(
  const site={id:'main',name:'Example',domain:'example.test',timezone:'UTC',retentionDays:365n,enabled:true,allowedProperties:['plan'],excludedPaths:['/private'],viewers:[]};assert.ok('ok'in await app.saveSite(owner.token,site));
  if(baseline!==true){const p=ok(await app.getSiteAccess(owner.token,'main'));ok(await app.setSiteAccess(owner.token,'main',p.revision,[alice],[]));}
  const now=BigInt(Math.floor(Number(await pic.getTime())/1000));
- const event=(id,extra={})=>({id,site:'main',visitor:'a'.repeat(64),at:now-100n,order:1n,kind:{pageview:null},path:'/',hostname:'example.test',source:'google.com',medium:'',campaign:'',content:'',term:'',country:'CH',region:'',city:'',device:'Desktop',browser:'Firefox',os:'Linux',name:'',props:[],interactive:true,revenueMinor:0n,currency:'',engagementMs:0n,scrollDepth:0n,...extra});
+ const event=(id,extra={})=>({context:[],id,site:'main',visitor:'a'.repeat(64),at:now-100n,order:1n,kind:{pageview:null},path:'/',hostname:'example.test',source:'google.com',medium:'',campaign:'',content:'',term:'',country:'CH',region:'',city:'',device:'Desktop',browser:'Firefox',os:'Linux',name:'',props:[],interactive:true,revenueMinor:0n,currency:'',engagementMs:0n,scrollDepth:0n,...extra});
  const request=(extra={})=>({site:'main',from:now-1000n,until:now+100n,filters:[],dimension:'',limit:100n,dayStarts:[],...extra});
  return {pic,h,c,hub,app,owner,viewer,site,now,event,request,conn,alice,bob,login};}
 function ok(r){assert.ok('ok'in r,JSON.stringify(r,(_,v)=>typeof v==='bigint'?v.toString():v));return r.ok;}
@@ -73,9 +73,9 @@ test('Crumbs: acquisition attribution, engagement isolation, import conflicts an
  const fresh=await s.login('owner');assert.ok(fresh);assert.equal(ok(await app.health(fresh.token)).storedEvents,0n);assert.equal(ok(await app.health(fresh.token)).storageChargeBytes,0n);
  }finally{await s.pic.tearDown();}});
 test('Crumbs: multi-batch dataset preserves exact unique counts and ordering',async()=>{const s=await setup();try{const {app,owner,event,request,now}=s;app.setPrincipal(ids.collector);const count=Number(process.env.CRUMBS_LOAD_EVENTS??50000),start=performance.now();assert.ok(Number.isInteger(count)&&count>=1000&&count<=50000);
- for(let offset=0;offset<count;offset+=50){const batch=Array.from({length:Math.min(50,count-offset)},(_,j)=>{const i=offset+j;return event('load-'+i,{visitor:(i%1000).toString(16).padStart(64,'0'),order:BigInt(i+1),at:now-300n,path:i%2?'/pricing':'/'});});assert.equal(ok(await app.ingestBatch(batch)).accepted,BigInt(batch.length));}
+ for(let offset=0;offset<count;offset+=50){const batch=Array.from({length:Math.min(50,count-offset)},(_,j)=>{const i=offset+j;return event('load-'+i,{visitor:(i%1000).toString(16).padStart(64,'0'),order:BigInt(i+1),at:now-300n,path:i%2?'/pricing':'/',...(process.env.CRUMBS_TRAFFIC_LOAD?{context:[{screen:'1920x1080',automation:false,asn:'AS'+(64500+i%1000),network:'Synthetic network '+i%1000,hosting:i%3===0,geoSource:'Synthetic load',networkSource:'Synthetic load',hostingSource:'Synthetic load'}]}:{})});});assert.equal(ok(await app.ingestBatch(batch)).accepted,BigInt(batch.length));}
  const queryStart=performance.now(),r=ok(await app.report(owner.token,request({dimension:'path'})));assert.equal(r.totals.visitors,1000n);assert.equal(r.totals.pageviews,BigInt(count));assert.equal(r.totals.visits,1000n);assert.equal(r.rows.reduce((n,row)=>n+row.metrics.pageviews,0n),BigInt(count));
- for(const dimension of ['channel','aiSource','campaign']) {const report=ok(await app.report(owner.token,request({dimension,filters:[{dimension:'source',values:['google.com'],exclude:false}]})));assert.equal(report.totals.pageviews,BigInt(count));assert.equal(report.totals.visitors,1000n);assert.equal(report.rows.reduce((n,row)=>n+row.metrics.pageviews,0n),BigInt(count));}
+ for(const dimension of ['channel','aiSource','campaign',...(process.env.CRUMBS_TRAFFIC_LOAD?['network','asn','trafficClass']:[])]) {const report=ok(await app.report(owner.token,request({dimension,limit:1000n,filters:[{dimension:'source',values:['google.com'],exclude:false}]})));assert.equal(report.totals.pageviews,BigInt(count));assert.equal(report.totals.visitors,1000n);assert.equal(report.rows.reduce((n,row)=>n+row.metrics.pageviews,0n),BigInt(count));}
  console.log(JSON.stringify({environment:'local PocketIC, not a production SLA',events:count,ingestMs:Math.round(queryStart-start),reportMs:Math.round(performance.now()-queryStart)}));
  }finally{await s.pic.tearDown();}});
 
@@ -255,6 +255,7 @@ test('Crumbs native: actual populated prior release upgrades with website grants
  const js=execFileSync('python3',['sdk/tools/did2idl.py','crumbs/backend/dist/backend.did'],{encoding:'utf8'}),{idlFactory}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));s.app=s.pic.createActor(idlFactory,s.c.canisterId);await s.pic.advanceTime(31000);await s.pic.tick(4);
  assert.deepEqual(ok(await s.app.goals(s.owner.token,'main')),[oldGoal]);assert.equal(ok(await s.app.goalReport(key.token,s.request(),oldGoal.id)).completions,1n);
  assert.deepEqual(ok(await s.app.getSiteAccess(s.owner.token,'main')),access);assert.deepEqual(ok(await s.app.report(key.token,s.request())),before);assert.equal((await nativePost(s,nativeEvent('after-release-upgrade'))).data.accepted,1);assert.equal((await nativeApi(s,'/query',key.token,'POST',s.request())).data.totals.pageviews,'2');
+ s.c.actor.setPrincipal(ids.collector);assert.equal(ok(await s.c.actor.ingestBatch([s.event('old-wire-client')])).accepted,1n,'pre-context Candid clients remain wire compatible');const legacy=ok(await s.app.exportEvents(s.owner.token,'main','',100n)).events.find(e=>e.id==='old-wire-client');assert.deepEqual(legacy.context,[]);
  }finally{await s.pic.tearDown();}});
 
 test('Crumbs native end-to-end: HTTP gateway query upgrade and authenticated REST over real transport',async()=>{const s=await setup(true);try{
@@ -360,4 +361,96 @@ test('Crumbs cookie visits split at UTC midnight even within thirty minutes',asy
  await s.pic.setTime(new Date('2026-09-20T00:01:00Z'));await s.pic.tick(5);assert.equal((await nativePost(s,nativeEvent('after-midnight',{cookieId,cookieConsent}))).status,202);const owner=await s.login('owner');
  const from=BigInt(Date.parse('2026-09-19T23:58:00Z')/1000),until=BigInt(Date.parse('2026-09-20T00:02:00Z')/1000);const r=ok(await s.app.report(owner.token,s.request({from,until})));assert.equal(r.totals.visitors,1n);assert.equal(r.totals.visits,2n);assert.equal(r.totals.pageviews,2n);
  const today=ok(await s.app.report(owner.token,s.request({from:BigInt(Date.parse('2026-09-20T00:00:00Z')/1000),until})));assert.equal(today.totals.visits,1n);assert.equal(today.totals.pageviews,1n);
+ }finally{await s.pic.tearDown();}});
+
+test('Crumbs traffic: atomic dataset activation, scoped ingestion, both identity modes, metadata retries and expiry',async()=>{const s=await setup(false,process.env.CRUMBS_TRAFFIC_BASELINE?'traffic':false);try{
+ const {app,now,owner,viewer,request}=s;
+ const manifest=(id,kind,rows=1n)=>({id,kind:{[kind]:null},source:'Synthetic test data',publishedAt:now-60n,expiresAt:now+3600n,rows,values:1n});
+ const value={country:'CH',region:'Zurich',city:'Zurich',asn:'AS64500',network:'Example Network'};
+ const chunk=(start,end,index=0)=>{const b=Buffer.alloc(36);const put=(v,o,n)=>{v=BigInt(v);for(let i=n-1;i>=0;i--){b[o+i]=Number(v&255n);v>>=8n;}};put(start,0,16);put(end,16,16);put(index,32,4);return b;};
+ const ip=281470681743360n+203n*16777216n+113n*256n+42n;
+ app.setPrincipal(ids.outsider);assert.ok('unauthorized'in(await app.beginTrafficDataset(manifest('deny','geo'))).err);
+ for(const result of [await app.trafficDatasetValues('deny',0n,[value]),await app.trafficDatasetChunk('deny',0n,chunk(ip,ip)),await app.activateTrafficDataset('deny'),await app.cancelTrafficDataset('deny')])assert.ok('unauthorized'in result.err);
+ app.setPrincipal(ids.controller);ok(await app.beginTrafficDataset(manifest('geo-first','geo')));
+ assert.ok('invalid'in(await app.activateTrafficDataset('geo-first')).err);assert.deepEqual(await app.trafficDatasets(),[]);
+ ok(await app.trafficDatasetValues('geo-first',0n,[value]));assert.ok('invalid'in(await app.trafficDatasetChunk('geo-first',0n,chunk(ip+1n,ip))).err);
+ assert.ok('invalid'in(await app.trafficDatasetChunk('geo-first',0n,chunk(ip,ip,1))).err);
+ ok(await app.trafficDatasetChunk('geo-first',0n,chunk(ip,ip)));ok(await app.activateTrafficDataset('geo-first'));
+ for(const kind of ['network','hosting']){ok(await app.beginTrafficDataset(manifest(kind,kind)));ok(await app.trafficDatasetValues(kind,0n,[value]));ok(await app.trafficDatasetChunk(kind,0n,chunk(ip,ip)));ok(await app.activateTrafficDataset(kind));}
+ app.setPrincipal(ids.outsider);
+ const cookieless=nativeEvent('geo-daily',{screenWidth:1920,screenHeight:1080}),cookie=nativeEvent('geo-cookie',{cookieId:'12345678-1234-4234-8234-123456789abc',cookieConsent:true,screenWidth:800,screenHeight:600,automation:true});
+ assert.equal((await nativePost(s,[cookieless,cookie])).data.accepted,2);
+ let exported=ok(await app.exportEvents(owner.token,'main','',100n)).events;assert.ok(exported.every(e=>e.country==='CH'&&e.context[0].asn==='AS64500'&&e.context[0].hosting));assert.deepEqual(exported.map(e=>e.context[0].screen).sort(),['1920x1080','800x600']);
+ const report=ok(await app.report(viewer.token,request({dimension:'trafficClass'})));assert.equal(report.totals.pageviews,2n);assert.deepEqual(report.rows.map(r=>r.value).sort(),['automation-signal','hosting-network']);
+ assert.equal(ok(await app.report(viewer.token,request({filters:[{dimension:'network',values:['Example Network'],exclude:true}]}))).totals.pageviews,0n);
+ assert.ok('unauthorized'in(await app.report('',request({dimension:'asn'}))).err);
+ assert.equal((await nativePost(s,nativeEvent('bad-screen',{screenWidth:'1920'}))).status,400);
+ app.setPrincipal(ids.controller);ok(await app.beginTrafficDataset(manifest('geo-next','geo')));ok(await app.trafficDatasetValues('geo-next',0n,[{...value,country:'DE',city:'Berlin'}]));ok(await app.trafficDatasetChunk('geo-next',0n,chunk(ip,ip)));ok(await app.activateTrafficDataset('geo-next'));
+ assert.equal((await nativePost(s,cookieless)).data.duplicates,1,'retry retains original derived context after database update');
+ assert.equal((await nativePost(s,{...cookieless,screenWidth:1024})).status,409);
+ assert.equal((await nativePost(s,nativeEvent('after-refresh'))).data.accepted,1);
+ exported=ok(await app.exportEvents(owner.token,'main','',100n)).events;assert.equal(exported.find(e=>e.id==='geo-daily').country,'CH');assert.equal(exported.find(e=>e.id==='after-refresh').country,'DE');
+ await s.pic.upgradeCanister({sender:ids.controller,canisterId:s.c.canisterId,wasm:wasmPath('crumbs'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});await s.pic.tick(4);
+ assert.equal((await app.trafficDatasets()).length,3);assert.equal((await nativePost(s,cookieless)).data.duplicates,1);
+ await s.pic.advanceTime(3601000);await s.pic.tick(4);assert.equal((await nativePost(s,nativeEvent('expired-data'))).data.accepted,1);
+ const refreshed=await s.login('owner');exported=ok(await app.exportEvents(refreshed.token,'main','',100n)).events;assert.equal(exported.find(e=>e.id==='expired-data').country,'');
+ }finally{await s.pic.tearDown();}});
+
+test('Crumbs traffic capacity: complete real IPv4/IPv6 datasets, native lookup and populated upgrade',{skip:!process.env.CRUMBS_TRAFFIC_DATA_DIR},async()=>{const s=await setup();try{
+ const {readFileSync}=await import('node:fs');const {join}=await import('node:path');
+ await s.pic.setTime(new Date('2026-10-19T12:00:00Z'));await s.pic.tick(4);s.owner=await s.login('owner');
+ const started=performance.now();let total=0;
+ for(const folder of ['city-v2','asn','hosting']){const dir=join(process.env.CRUMBS_TRAFFIC_DATA_DIR,folder),pack=JSON.parse(readFileSync(join(dir,'manifest.json'))),m=pack.manifest,values=JSON.parse(readFileSync(join(dir,'values.json')));s.app.setPrincipal(ids.controller);
+ ok(await s.app.beginTrafficDataset({...m,kind:{[m.kind]:null},publishedAt:BigInt(m.publishedAt),expiresAt:BigInt(m.expiresAt),rows:BigInt(m.rows),values:BigInt(m.values)}));
+ for(let i=0;i<values.length;i+=500)ok(await s.app.trafficDatasetValues(m.id,BigInt(i),values.slice(i,i+500)));
+ let offset=0;for(let i=0;i<pack.chunks.length;i+=16){const batch=pack.chunks.slice(i,i+16);ok(await s.app.trafficDatasetChunk(m.id,BigInt(offset),Buffer.concat(batch.map(part=>readFileSync(join(dir,part.file))))));offset+=batch.reduce((n,part)=>n+part.rows,0);if(i%1024===0)console.log(JSON.stringify({dataset:folder,uploaded:offset}));}
+ ok(await s.app.activateTrafficDataset(m.id));total+=offset;console.log(JSON.stringify({dataset:folder,rows:offset,elapsedMs:Math.round(performance.now()-started)}));
+ }
+ const requests=['8.8.8.8','2001:4860:4860::8888','::ffff:8.8.8.8'];
+ for(let i=0;i<requests.length;i++){const r=await nativePost(s,nativeEvent('full-'+i),nativeHeaders.map(([k,v])=>[k,k==='X-Real-IP'?requests[i]:v]));assert.equal(r.status,202,JSON.stringify(r));}
+ const all=ok(await s.app.exportEvents(s.owner.token,'main','',100n)).events;assert.equal(all.length,3);for(const e of all){assert.equal(e.context[0].asn,'AS15169');assert.ok(e.country);assert.match(e.context[0].network,/Google/i);}
+ assert.equal(all[0].country,all[2].country);
+ const batch=Array.from({length:50},(_,i)=>nativeEvent('full-batch-'+i));const ingestStart=performance.now();assert.equal((await nativePost(s,batch,nativeHeaders.map(([k,v])=>[k,k==='X-Real-IP'?'8.8.8.8':v]))).data.accepted,50);const ingestMs=performance.now()-ingestStart;
+ await s.pic.upgradeCanister({sender:ids.controller,canisterId:s.c.canisterId,wasm:wasmPath('crumbs'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});assert.equal((await s.app.trafficDatasets()).length,3);assert.equal((await nativePost(s,nativeEvent('full-0'),nativeHeaders.map(([k,v])=>[k,k==='X-Real-IP'?requests[0]:v]))).data.duplicates,1);
+ const status=await s.pic.canisterStatus({sender:ids.controller,canisterId:s.c.canisterId});console.log(JSON.stringify({memoryBytes:status.memorySize.toString(),environment:'local PocketIC, not production SLA',ranges:total,fiftyEventMs:Math.round(ingestMs),elapsedMs:Math.round(performance.now()-started)}));
+ }finally{await s.pic.tearDown();}});
+
+test('Crumbs Matomo: native REST import authorization, retry, original metrics and conflicting corrections',async()=>{const s=await setup();try{
+ const {convertMatomo}=await import('../crumbs/tools/import-matomo.mjs');const day=new Date(Number(s.now)*1000).toISOString().slice(0,10);const rows=convertMatomo({format:'crumbs-matomo-v1',source:'https://matomo.example',idSite:2,timezone:'America/Los_Angeles',reports:[{method:'Actions.getPageUrls',period:'day',date:day,complete:true,data:[{label:'/page',nb_hits:12,nb_visits:8}]}]},'main');
+ const read=ok(await s.app.createKey(s.owner.token,'main','Read',{read:null},7n)),manage=ok(await s.app.createKey(s.owner.token,'main','Import',{manage:null},7n));
+ assert.equal((await nativeApi(s,'/imports',read.token,'POST',rows)).status,403);assert.equal((await nativeApi(s,'/imports',manage.token,'POST',rows)).data,'1');assert.equal((await nativeApi(s,'/imports',manage.token,'POST',rows)).data,'0');
+ const saved=ok(await s.app.imported(read.token,'main',s.now-86400n,s.now+86400n));assert.equal(saved.length,1);assert.equal(saved[0].metrics.pageviews,12n);const meta=JSON.parse(saved[0].value);assert.equal(meta.timezone,'America/Los_Angeles');assert.ok(!meta.available.includes('visitors'));
+ assert.equal((await nativeApi(s,'/imports',manage.token,'POST',[{...rows[0],metrics:{...rows[0].metrics,pageviews:'13'}}])).status,409);assert.equal(ok(await s.app.report(read.token,s.request())).totals.pageviews,0n,'historical aggregates do not inflate native measurements');
+ }finally{await s.pic.tearDown();}});
+
+test('Crumbs predeployment: migrate 100000 prior-release events without losing data',{skip:!process.env.CRUMBS_UPGRADE_LOAD||!process.env.CRUMBS_NATIVE_BASELINE},async()=>{const s=await setup(false,'native');try{
+ s.app.setPrincipal(ids.collector);const count=100000;
+ for(let offset=0;offset<count;offset+=50){const batch=Array.from({length:50},(_,j)=>{const i=offset+j;return s.event('upgrade-load-'+i,{visitor:(i%1000).toString(16).padStart(64,'0'),order:BigInt(i+1),at:i%2?s.now-300n:s.now-86400n,path:i%2?'/pricing':'/'});});assert.equal(ok(await s.app.ingestBatch(batch)).accepted,50n);}
+ const before=ok(await s.app.health(s.owner.token)),report=ok(await s.app.report(s.owner.token,s.request()));assert.equal(before.storedEvents,BigInt(count));
+ assert.equal(report.totals.pageviews,50000n);const started=performance.now();await s.pic.upgradeCanister({sender:ids.controller,canisterId:s.c.canisterId,wasm:wasmPath('crumbs'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+ const js=execFileSync('python3',['sdk/tools/did2idl.py','crumbs/backend/dist/backend.did'],{encoding:'utf8'}),{idlFactory}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));s.app=s.pic.createActor(idlFactory,s.c.canisterId);await s.pic.advanceTime(31000);await s.pic.tick(4);
+ const after=ok(await s.app.health(s.owner.token));for(const field of ['accepted','storedEvents','storageChargeBytes','duplicates'])assert.equal(after[field],before[field]);assert.deepEqual(ok(await s.app.report(s.owner.token,s.request())),report);
+ const tooLarge=await s.app.report(s.owner.token,s.request({from:s.now-90000n}));assert.match(tooLarge.err.capacity,/50000/);
+ const page=ok(await s.app.exportEvents(s.owner.token,'main','',100n));assert.equal(page.events.length,100);assert(page.events.every(e=>e.context.length===0));
+ s.app.setPrincipal(ids.collector);assert.equal(ok(await s.app.ingestBatch([s.event('upgrade-load-0',{visitor:'0'.repeat(64),order:1n,at:s.now-86400n})])).duplicates,1n);
+ console.log(JSON.stringify({priorReleaseEvents:count,upgradeAndVerificationMs:Math.round(performance.now()-started)}));
+ }finally{await s.pic.tearDown();}});
+
+test('Crumbs traffic bulk upload: invalid tail is atomic; chunk boundaries and gaps survive upgrade',async()=>{const s=await setup(false,process.env.CRUMBS_TRAFFIC_BASELINE?'traffic':false);try{
+ const {app,now}=s;app.setPrincipal(ids.controller);const base=281470681743360n+3405803776n; // 203.0.113.0
+ const row=i=>{const b=Buffer.alloc(36),ip=base+BigInt(i*2);b.writeBigUInt64BE(ip>>64n,0);b.writeBigUInt64BE(ip&((1n<<64n)-1n),8);b.copy(b,16,0,16);b.writeUInt32BE(i%2,32);return b;};
+ const m={id:'bulk-test',kind:{geo:null},source:'Synthetic bulk test',publishedAt:now-1n,expiresAt:now+3600n,rows:16385n,values:2n};ok(await app.beginTrafficDataset(m));
+ ok(await app.trafficDatasetValues(m.id,0n,['CH','DE'].map(country=>({country,region:'',city:'',asn:'',network:''}))));
+ if(process.env.CRUMBS_TRAFFIC_BASELINE)await s.pic.upgradeCanister({sender:ids.controller,canisterId:s.c.canisterId,wasm:wasmPath('crumbs'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+ const data=Buffer.concat(Array.from({length:16384},(_,i)=>row(i))),bad=Buffer.from(data);bad.writeUInt32BE(2,bad.length-4);
+ assert.ok('invalid'in(await app.trafficDatasetChunk(m.id,0n,Buffer.concat([data,row(16384)]))).err);
+ assert.ok('invalid'in(await app.trafficDatasetChunk(m.id,0n,bad)).err);
+ assert.equal(ok(await app.trafficDatasetChunk(m.id,0n,data)),16384n,'invalid batches committed no prefix');
+ assert.ok('invalid'in(await app.activateTrafficDataset(m.id)).err);
+ await s.pic.upgradeCanister({sender:ids.controller,canisterId:s.c.canisterId,wasm:wasmPath('crumbs'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});await s.pic.tick(4);
+ assert.equal(ok(await app.trafficDatasetChunk(m.id,16384n,row(16384))),16385n);ok(await app.activateTrafficDataset(m.id));
+ for(const i of [0,1023,1024,16383,16384]){const ip=3405803776+i*2,addr=[24,16,8,0].map(n=>(ip>>>n)&255).join('.');const h=nativeHeaders.map(([k,v])=>[k,k==='X-Real-IP'?addr:v]);assert.equal((await nativePost(s,nativeEvent('bulk-'+i),h)).data.accepted,1);}
+ const gap=nativeHeaders.map(([k,v])=>[k,k==='X-Real-IP'?'203.0.113.1':v]);assert.equal((await nativePost(s,nativeEvent('bulk-gap'),gap)).data.accepted,1);
+ const owner=await s.login('owner'),events=ok(await app.exportEvents(owner.token,'main','',100n)).events;
+ for(const i of [0,1023,1024,16383,16384])assert.equal(events.find(e=>e.id==='bulk-'+i).country,i%2?'DE':'CH');assert.equal(events.find(e=>e.id==='bulk-gap').country,'');
  }finally{await s.pic.tearDown();}});
