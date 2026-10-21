@@ -21,3 +21,9 @@ test('subtasks save atomically with the task; incomplete children block Done wit
 test('board shows subtask progress; archived tasks keep their checklist read-only',async()=>{const f=fixture({workboardTasks:async()=>[{rows:[{...task,subtaskCount:3n,subtasksDone:1n}],total:1n,checkedAt:now}],workboardTask:async()=>[{task:{...task,archived:true},subtasks:[{id:101n,title:'Check room',done:true}],people:[],history:[],readOnly:false}]});try{await f.view.show();assert.match(f.root.textContent,/1 of 3 subtasks complete/);await f.view.show('task','1');assert.equal(f.root.querySelector('[data-add-subtask]'),null);assert.equal(f.root.querySelector('[data-subtask-row] input').checked,true);assert.equal(f.root.querySelector('fieldset').disabled,true);}finally{f.close();}});
 
 test('editing an unassigned team task does not silently take ownership',async()=>{const f=fixture({workboardTask:async()=>[{task:{...task,projectId:[p.id],assignee:'',assigneeName:''},subtasks:[],people:[{id:'agent',name:'Alex'}],history:[],readOnly:false}]});try{await f.view.show('task','1');assert.equal(f.root.querySelector('form').elements.owner.value,'');}finally{f.close();}});
+
+test('Operations entry clears restrictive saved filters without persisting changes',async()=>{
+ let writes=0,seen;
+ const f=fixture({workboardHome:async()=>[{projects:[p],groups:['IT'],preferences:{projectId:[1n],mine:true,tickets:true,sales:true,completed:true}}],saveWorkboardPreferences:async()=>{writes++;return true;},workboardTasks:async(_,filter)=>{seen=filter;return [{rows:[task],total:1n,checkedAt:now}];}});
+ try{await f.view.show('operations');assert.deepEqual(seen.projectId,[]);assert.equal(seen.mine,false);assert.equal(seen.completed,false);assert.equal(writes,0);assert.equal(f.root.querySelector('[data-source=sales]').checked,false);assert.equal(f.root.querySelector('[data-source=tickets]').checked,false);assert.match(f.root.textContent,/Replace meeting room switch/);}finally{f.close();}
+});

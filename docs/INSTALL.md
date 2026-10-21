@@ -254,3 +254,7 @@ Hub owner to create an invitation under People. Accept that invitation with the
 intended passkey; the linked key inherits the existing central role. No new app
 administrator list or role override is needed. Preserve the controller recovery
 identity. This release does not make company SSO tokens console credentials.
+
+### Additional TV sharing (Hub 0.43)
+
+The Owner who paired a screen can open Operations → Screens → Sharing details to include onboarding/offboarding counts, asset-sale stages and personal Workboard totals from one explicitly selected active Desk administrator. These choices are off on existing approvals until explicitly saved. Personal tasks require Workboard; no task text, names, buyers or amounts are shared. Saving preserves the screen key, source selection and expiry. Reload an existing TV once after this update to load the new renderer. Other owners can revoke the screen but cannot change whose personal totals it shares.

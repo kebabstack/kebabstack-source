@@ -60,7 +60,7 @@ knew (rare, from data older than 0.6.0).
 
 | Do | Call |
 |---|---|
-| the queue | `listTickets(tok, { view : all|open|mine|unassigned|waiting|breached|done; status; queue; assignee; q })` |
+| the queue | `listTickets(tok, { view : all|open|mine|unassigned|waiting|breached|onboarding|offboarding|done; status; queue; assignee; q })` |
 | numbers | `stats(tok)` |
 | file on behalf | `agentCreate(tok, { typeId; subject; body; fields; requester; priority; channel })` — set `channel` to where it came from (`chat`, `phone`, `email`, your app slug) |
 | take / assign | `assign(tok, id, email)` — `""` unassigns; only agents/admins are accepted |
@@ -107,3 +107,9 @@ assign · queue · priority · field · file · approval · task · link · ai;
 `who` is an e-mail, `system` or `ai`; `meta` carries structured details
 (`status`, `assignee`, `decision`, …). Timelines are append-only: this is
 the audit trail.
+
+## Background completion review
+
+Desk 0.36.0 reviews existing open internal requests every 15 minutes in bounded batches when AI assistance is enabled. The existing API is unchanged; comments and status actions retain their permissions. Only the latest public staff comment is eligible, and later requester replies, private notes or status changes block old evidence. See [setup, limits and retry behavior](../../desk/INSTALL.md#periodic-completion-review-0360).
+
+Lifecycle queue views `onboarding` and `offboarding` require Desk 0.35+. Verify `info().version` first when using generic Candid calls: older releases treat unknown view values as all tickets. Kebab MCP 0.4 checks this before querying.

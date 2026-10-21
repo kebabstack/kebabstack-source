@@ -1,5 +1,9 @@
 # Changelog — kebab-mcp
 
+## [0.4.0] — 2026-10-19
+
+- Add onboarding/offboarding queue views to `kebab_tickets`. Verify Desk 0.35+ before querying; older servers must not silently return every ticket for an unknown view. Existing permissions and the 500-row bound remain. This local connector is updated separately from the canister rollout.
+
 ## [0.3.1] — 2026-10-18
 
 - Update the MCP SDK and affected transitive dependencies to patched compatible releases. The connector remains a local stdio server with unchanged app permissions and update retry rules.

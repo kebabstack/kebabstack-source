@@ -10,7 +10,7 @@ module {
   public type Source = { cid : Nat; app : Text };
   public type Pending = { keyHash : Text; expiresAt : Int };
   public type Grant = { id : Nat; name : Text; by : Principal; personId : Text; createdAt : Int; expiresAt : Int; scopes : [Scope] };
-  public type View = { id : Nat; name : Text; createdAt : Int; expiresAt : Int; sources : [Source]; active : Bool };
+  public type View = { id : Nat; name : Text; createdAt : Int; expiresAt : Int; sources : [Source]; active : Bool; personalEmail : ?Text };
   public type State = { #pending : Int; #ready : { id : Nat; name : Text; expiresAt : Int; checkedAt : Int; sources : [Source] }; #ended };
   public type PairResult = { #ok : Int; #invalid; #busy };
   public type Approval = { #ok : Nat; #denied; #invalid; #missing; #limit };
@@ -19,13 +19,23 @@ module {
     value.size() == size and value.chars().all(func c = (c >= '0' and c <= '9') or (c >= 'a' and c <= 'f'));
   };
   public func sources(grant : Grant) : [Source] { grant.scopes.map(func s = { cid = s.cid; app = s.app }) };
-  // Fixed metric keys only. No future source field becomes public by accident.
-  // Personnel departures and employee sales are intentionally absent from a shared screen.
-  public func sourceApp(app : Text) : Text = if (app == "desk-workboard") "desk" else app;
+  public type Options = { workboard : Bool; lifecycle : Bool; sales : Bool; personal : Bool; personalEmail : ?Text };
+  public let defaults : Options = { workboard = false; lifecycle = false; sales = false; personal = false; personalEmail = null };
+  let deskModes = ["desk", "desk-workboard", "desk-lifecycle", "desk-workboard-lifecycle", "desk-workboard-personal", "desk-workboard-lifecycle-personal"];
+  public func sourceApp(app : Text) : Text {
+    if (deskModes.any(func a = a == app)) "desk" else if (app == "assets-sales") "assets" else app
+  };
+  public func scopeApp(app : Text, options : Options) : Text {
+    if (app == "desk") "desk" # (if (options.workboard) "-workboard" else "") # (if (options.lifecycle) "-lifecycle" else "") # (if (options.personal) "-personal" else "")
+    else if (app == "assets" and options.sales) "assets-sales" else app
+  };
+  // Fixed keys and explicit per-screen scope. Existing approvals never gain new details.
   public func keys(app : Text) : [Text] {
-    switch app {
-      case "desk-workboard" ["active", "unassigned", "breached", "workProjects", "workOpen", "workWaiting", "workOverdue", "workUnowned", "workSteps", "workStepsDone"];
-      case "desk" ["active", "unassigned", "breached"];
+    switch (sourceApp(app)) {
+      case "desk" {
+        let base = ["active", "unassigned", "breached"];
+        if (Text.contains(app, #text "-workboard")) Array.concat(base, ["workProjects", "workOpen", "workWaiting", "workOverdue", "workUnowned", "workSteps", "workStepsDone"]) else base
+      };
       case "trust" ["total", "passing", "attention", "unverified", "assessed", "score"];
       case "assets" ["total", "stock", "assigned", "preparing"];
       case "contracts" ["total", "due", "overdue", "unknown", "unowned"];
@@ -33,9 +43,15 @@ module {
       case _ [];
     };
   };
-  /// Counts added by newer app releases: shown when present, never required (an older app stays a valid source).
+  // New source fields are optional: absent means unavailable, never a fabricated zero.
   public func optional(app : Text) : [Text] {
+    if (sourceApp(app) == "desk") {
+      let lifecycle = if (Text.contains(app, #text "-lifecycle")) ["onboarding", "offboardingOpen"] else [];
+      let personal = if (Text.contains(app, #text "-personal")) ["personalOpen", "personalWaiting", "personalOverdue", "personalUnowned", "personalSteps", "personalStepsDone"] else [];
+      return Array.concat(lifecycle, personal);
+    };
     switch (app) {
+      case "assets-sales" ["deployed", "sales", "salesPaid", "salesArchive", "salesPreparation", "salesHandover", "salesInvoice", "salesOverdue", "salesBuyer", "salesDraft", "salesAccepted"];
       case "assets" ["deployed"];
       case "contracts" ["seatsHeld"];
       case _ [];

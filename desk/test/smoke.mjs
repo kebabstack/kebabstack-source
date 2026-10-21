@@ -93,9 +93,13 @@ check(!window.location.hash.includes("uht="), "ticket stripped from URL");
 const go = async (h) => { window.location.hash = h; window.dispatchEvent(new window.Event("hashchange")); for (let i = 0; i < 4; i++) await tick(); };
 await go("#/queue"); if (role !== "requester") check(document.querySelectorAll("#qRows tr").length === 2, "queue rows: " + document.querySelectorAll("#qRows tr").length);
 if(role!=='requester'){
+ await go('#/queue/onboarding');check(document.querySelector('#viewSeg [data-v=onboarding]').classList.contains('active'),'Operations opens onboarding filter');
+ await go('#/queue/offboarding');check(document.querySelector('#viewSeg [data-v=offboarding]').classList.contains('active'),'Operations opens offboarding filter');
  document.getElementById('qSelectAll').click();check(/2 selected/.test(document.getElementById('queueBulk').textContent),'queue selection available');
  document.getElementById('fStatus').dispatchEvent(new window.Event('change'));for(let i=0;i<4;i++)await tick();
  check(!document.getElementById('queueBulk').textContent.includes('selected'),'changing filters clears bulk selection');
+ await go('#/queue/onboarding');check(document.querySelector('#viewSeg [data-v=onboarding]').classList.contains('active'),'Operations opens onboarding filter');
+ await go('#/queue/offboarding');check(document.querySelector('#viewSeg [data-v=offboarding]').classList.contains('active'),'Operations opens offboarding filter');
  document.getElementById('qSelectAll').click();
 }
 const beforeWorkboard=calls.filter(x=>x==='workboardHome').length;

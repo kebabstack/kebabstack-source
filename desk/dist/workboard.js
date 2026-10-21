@@ -35,6 +35,8 @@ export function createWorkboard({root,api,session,getMe}) {
     try {
       const h=one(await call('workboardHome'));if(!valid(n))return;if(!h){lock('Your Desk access could not be confirmed.');return;}
       home=h;prefs={...h.preferences};
+      // Operations opens the unfiltered task board without changing saved preferences.
+      if(arg==='operations') prefs={...prefs,projectId:[],mine:false,completed:false,tickets:false,sales:false};
       if(/^\d+$/.test(arg)) prefs.projectId=[BigInt(arg)];
       if(arg==='projects') await projects(n);
       else if(arg==='project') await projectEditor(n,detail);
@@ -62,7 +64,7 @@ export function createWorkboard({root,api,session,getMe}) {
     project=currentId()?one(await call('workboardProject',currentId()))?.project:null;
     if(!valid(n))return;
     if(currentId()&&(!project||project.archived)){lock('This project is unavailable or archived. Open Projects to restore it.');return;}
-    await savePrefs();if(!valid(n))return;
+    if(route!=='operations') await savePrefs();if(!valid(n))return;
     root.innerHTML=shell('Workboard',`
       <p class="wb-intro">Your projects, support requests and next steps in one place.</p>
       <div class="wb-toolbar"><div class="wb-field"><label for="wb-project">Project</label><select id="wb-project">${projectOptions(currentId())}</select></div>

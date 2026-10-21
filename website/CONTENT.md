@@ -208,3 +208,7 @@ privately and must precede publication of this capability update.
 ## 20 October 2026: Crumbs 0.11.2 reconciliation
 
 Website 0.5.8 adds bilingual analytics-guide sections grounded in `crumbs/TRAFFIC.md`, `crumbs/MATOMO.md`, `crumbs/README.md`, native traffic tests and the 0.11.2 scoped GUI review. Native lookup requires current operator-uploaded datasets; no external per-visitor lookup is implied. Location remains estimated, hosting/automation signals are not bot proof, and old events are not retroactively enriched. Matomo aggregate history stays separate; original timezone, metric availability and retention/query limits matter. Chart/list changes affect display only. These descriptions do not claim a completed tenant migration or modify the marketing site's collection configuration.
+
+## Desk periodic completion review — 0.5.9
+
+The bilingual Desk entry follows Desk 0.36.0 README/INSTALL and `tests/desk-slack.test.mjs`. The background sweep evaluates at most four eligible public staff comments per 15-minute batch, visiting up to 200 ticket IDs. This is automatic resolution, distinct from the existing resolved-to-closed policy. Current staff permission, revision checks and manual workflow gates apply. Later requester replies, notes or status changes require new evidence. AI may misclassify; no guarantee of complete autonomy, exact queue latency or live Slack qualification is implied. The website is a separate deployment; publish this content with or after the matching Desk capability.

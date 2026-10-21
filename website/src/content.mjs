@@ -55,9 +55,10 @@ export const content = {
         features: [
           "Automatischer Prüffall statt vergessener Nacharbeit",
           "Hardware-Fortschritt aus Assets statt doppelter Checklisten",
+          "Optional: KI prüft offene interne Tickets regelmäßig auf eindeutige Lösungskommentare",
           "Auch Kundenprojekte, Rufbereitschaft und HR/Finance-Berichte",
         ],
-        note: "Nach Eingang im Hub; Synchronisation und App-Verfügbarkeit können verzögern. Bestätigte mobile Alarmierung ist weiterhin geplant.",
+        note: "KI benötigt einen verbundenen Anbieter und aktivierte Assistenz. Alle 15 Minuten werden kleine Pakete geprüft; größere Warteschlangen dauern länger. Nur öffentliche Team-Antworten zählen, spätere Rückfragen oder manuelle Statusänderungen sperren alte Belege. Checklisten und Freigaben bleiben verbindlich; Entscheidungen sind protokolliert und Tickets wieder öffnbar. Interne Notizen und Kundenprojekte sind ausgenommen. KI kann sich irren. Bestätigte mobile Alarmierung bleibt geplant.",
       },
       {
         id: "assets",
@@ -443,9 +444,10 @@ export const content = {
         features: [
           "Automatic review instead of forgotten follow-up",
           "Hardware progress from Assets instead of duplicate checklists",
+          "Optional AI periodically reviews open internal tickets for clear completion comments",
           "Also customer projects, on-call and HR/Finance reporting",
         ],
-        note: "After the change reaches Hub; synchronization and app availability can cause delays. Verified mobile alerting remains planned.",
+        note: "AI requires a connected provider and enabled assistance. Small batches run every 15 minutes; larger queues take longer. Only public staff replies qualify; later replies or manual status changes block old evidence. Checklists and approvals remain binding; decisions are recorded and tickets can be reopened. Internal notes and customer projects are excluded. AI can misclassify. Verified mobile alerting remains planned.",
       },
       {
         id: "assets",

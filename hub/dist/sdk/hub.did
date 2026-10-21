@@ -5,6 +5,7 @@ type View =
    expiresAt: int;
    id: nat;
    name: text;
+   personalEmail: opt text;
    sources: vec Source__1;
  };
 type UserView =
@@ -262,6 +263,14 @@ type OwnedObject =
    meta: text;
    title: text;
    updatedAt: int;
+ };
+type Options =
+ record {
+   lifecycle: bool;
+   personal: bool;
+   personalEmail: opt text;
+   sales: bool;
+   workboard: bool;
  };
 type OpenTeamRow =
  record {
@@ -1381,8 +1390,11 @@ service : {
     }) query;
   operationsDisplayApprove: (code: text, name: text, cids: vec nat, days:
    nat) -> (Approval);
+  operationsDisplayApproveWithOptions: (code: text, name: text, cids:
+   vec nat, days: nat, options: Options) -> (Approval);
   operationsDisplayApproveWithWorkboard: (code: text, name: text, cids:
    vec nat, days: nat, workboard: bool) -> (Approval);
+  operationsDisplayConfigure: (id: nat, options: Options) -> (Approval);
   operationsDisplayForget: (secret: text) -> ();
   operationsDisplayPair: (code: text, keyHash: text) -> (PairResult);
   operationsDisplayRevoke: (id: nat) -> (bool);

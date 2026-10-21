@@ -278,3 +278,42 @@ rows; app filters, totals and exports retain their existing scope. Reset restore
 the original order. Editable grids and existing app-owned queue sorting stay with
 their workflows. Long marked selectors keep native selection and add an option
 search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
+
+## Periodic completion review (0.36.0)
+
+With **Settings → AI → AI assistance** enabled and a working AI connection, Desk
+checks open internal tickets in the background, including existing tickets and
+public replies written in Desk. Every 15 minutes it visits at most 200 ticket IDs
+and requests at most four AI reviews; larger queues take several runs. This is
+independent of the browser and does not fetch older Slack history that was never
+synchronized into Desk.
+
+The newest public comment must be from an active, currently authorized Desk staff
+member other than the requester. A newer requester reply, internal note or status
+change requires a new public staff confirmation. A manually reopened ticket is
+therefore not resolved again from its old completion comment. Clear completed work
+may resolve; plans, partial fixes and ambiguity stay open. Checklists, approvals and
+hardware/offboarding gates are the same as manual Resolve. The ticket activity
+quotes the evidence; connected Slack threads receive the status notice. Reopen
+remains available. AI classifications are not guaranteed to be correct.
+
+Unchanged evaluated revisions are not repeatedly sent to AI. Failed or invalid
+responses retry after increasing 15–60 minute delays plus queue rotation; Settings
+→ Log records deferrals. A later ticket change permits another review. Decisions,
+retry times and the scan cursor survive upgrades. Customer projects are excluded.
+Internal notes are never transmitted. Requests over 6,000 characters, comments
+over 4,000 characters and activity tails over 100 events remain manual to avoid
+making decisions from a silently truncated conversation. The provider receives the
+original request and latest public staff comment. Existing title/triage/follow-up
+assistance uses the same switch. Disabling it stops new reviews and prevents
+in-flight completion decisions from applying while disabled.
+
+Operator check: use a disposable internal request, add an explicit public staff
+completion comment, and inspect its activity after a background cycle. An ordinary
+unresolved request or incomplete checklist must remain open. Existing resolved
+requests still follow the separately configured automatic *close* policy; this
+feature sets **resolved**, not closed. No new Hub lane or Slack scope is needed.
+
+### Operations summaries (2026-10-19)
+
+Deploy this release before Hub 0.42 using the shared Kitchen update workflow. Existing central app Admin permissions remain required; no additional service or configuration is needed. Older Hub/TV clients keep their previous aggregate scope. See [Operations definitions](../docs/HUB-OPERATIONS.md).

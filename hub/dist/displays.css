@@ -47,11 +47,12 @@ html[data-surface="display"] body{background:#0c1d17}
  #tv .tv-grid[data-count="4"]{grid-template-columns:repeat(3,minmax(0,1fr))}
  #tv .tv-grid[data-count="5"]{grid-template-columns:repeat(4,minmax(0,1fr))}
  #tv .tv-grid[data-count="7"]{grid-template-columns:repeat(6,minmax(0,1fr))}
- #tv .tv-card{padding:1.3vw}
- #tv .tv-card h2{font-size:1.05vw;min-height:2.5em}
- #tv .tv-card p{min-height:3em}
- #tv .tv-number{font-size:4.5vw;margin:2vh 0 1vh}
- #tv .tv-rows{gap:1vh}
+ #tv .tv-grid[data-count="8"]{grid-template-columns:repeat(7,minmax(0,1fr))}
+ #tv .tv-card{padding:1vw}
+ #tv .tv-card h2{font-size:1.05vw;min-height:0}
+ #tv .tv-card p{min-height:0;margin:1vh 0}
+ #tv .tv-number{font-size:3.8vw;margin:1vh 0}
+ #tv .tv-rows{gap:.8vh}
  #tv .tv-focus{grid-column:1/-1;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:0 1.4vw;padding:1vh 1.3vw}
  #tv .tv-focus>.tv-kicker{display:none}
  #tv .tv-focus>h2{font-size:1.45vw;min-height:0;margin:0;white-space:nowrap}
@@ -64,3 +65,6 @@ html[data-surface="display"] body{background:#0c1d17}
 @media(min-width:1200px) and (max-width:1599px){#tv{height:auto;min-height:100vh}}
 #layout #screens form label{margin:0}#screens fieldset{min-width:0}
 @media(min-width:1300px){#screens fieldset{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px}#screens fieldset legend{grid-column:1/-1}#screens .screen-scope{align-items:flex-start}#screens .screen-scope input{margin-top:3px}}
+
+/* Short wall-screen windows scroll rather than obscure follow-up totals. */
+@media(min-width:1600px) and (max-height:900px){#tv{height:auto;min-height:100vh}}

@@ -72,7 +72,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.29.0";
+  transient let BUILD_VERSION : Text = "0.30.0";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -3291,8 +3291,26 @@ persistent actor Assets {
         if (a.assignee != "" and a.status != "sold" and a.status != "scrapped") assigned += 1;
       };
     };
-    for (s in sales.values()) { let phase = salePhase(s); if (phase != "complete" and phase != "cancelled") saleOpen += 1 };
-    Operations.ready([("total", total), ("stock", stock), ("assigned", assigned), ("handover", pending), ("preparing", preparing), ("sales", saleOpen), ("deployed", deployed)]);
+    var paid = 0; var archive = 0; var preparation = 0; var handover = 0;
+    var invoice = 0; var overdue = 0; var draft = 0; var accepted = 0; var buyer = 0;
+    for (s in sales.values()) {
+      let phase = salePhase(s);
+      if (phase == "complete" or phase == "cancelled") continue;
+      saleOpen += 1;
+      if (phase == "paid") {
+        paid += 1;
+        // Same ordered next step as the source Workboard projection; no readiness promise.
+        if (s.pdfId == 0) archive += 1
+        else if (not s.wiped or not s.mdmRemoved) preparation += 1
+        else handover += 1;
+      } else if (phase == "invoice") {
+        invoice += 1;
+        if ((parseIso(s.dueOn) ?? todayDays()) < todayDays()) overdue += 1;
+      } else if (s.status == "accepted") accepted += 1
+      else if (s.status == "offered") buyer += 1
+      else draft += 1;
+    };
+    Operations.ready([("total", total), ("stock", stock), ("assigned", assigned), ("handover", pending), ("preparing", preparing), ("sales", saleOpen), ("salesPaid", paid), ("salesArchive", archive), ("salesPreparation", preparation), ("salesHandover", handover), ("salesInvoice", invoice), ("salesOverdue", overdue), ("salesDraft", draft), ("salesAccepted", accepted), ("salesBuyer", buyer), ("deployed", deployed)]);
   };
 
   transient let _tagRepair : () = repairTags();

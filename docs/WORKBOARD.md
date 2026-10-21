@@ -139,10 +139,10 @@ but does not claim measured savings or replace a dedicated project planning tool
 
 ## Operations overview
 
-With Hub 0.37 and Desk 0.26, **Hub → Operations** includes a separate Workboard
-card for shared projects: open tasks, overdue target dates, waiting work, missing
+With Hub 0.42 and Desk 0.35, **Hub → Operations** includes a separate Workboard
+card for shared projects and your personal work: open tasks, overdue target dates, waiting work, missing
 or unavailable owners and subtask progress. It uses current aggregate counts;
-open Workboard projects to act. Personal work, archived projects/tasks, completed
+open Workboard to act. Other people’s personal work, archived projects/tasks, completed
 tasks and linked source records are excluded. Tickets and hardware sales retain
 their Desk/Assets counts rather than being counted twice. Target dates use UTC in
 this company overview; an empty date is not overdue.

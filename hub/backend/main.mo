@@ -119,7 +119,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.41.1";
+  transient let BUILD_VERSION : Text = "0.43.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -7477,6 +7477,9 @@ persistent actor UserHub {
   // Approved screens persist through compatible upgrades. Pairing requests and call
   // budgets are transient; an interrupted pairing can safely be started again.
   let operationsDisplays : Map.Map<Text, Displays.Grant> = Map.empty<Text, Displays.Grant>();
+  // Separate map preserves the original grant state contract. Only an approving
+  // Owner may explicitly select an active Desk administrator's numeric totals.
+  let operationsDisplayPeople : Map.Map<Nat, Text> = Map.empty<Nat, Text>();
   var operationsDisplayNext : Nat = 0;
   transient let operationsPairs : Map.Map<Text, Displays.Pending> = Map.empty<Text, Displays.Pending>();
   transient var operationsPairWindow : Int = 0;
@@ -7504,16 +7507,31 @@ persistent actor UserHub {
     if (conn.canisterId != scope.canisterId or policy.policy.app != Displays.sourceApp(scope.app)) return null;
     ?scope;
   };
+  func displayPersonAllowed(pid : Text, scopes : [Displays.Scope]) : Bool {
+    let person = personOf(pid) ?? (return false);
+    if (person.sealedAt != 0 or pidForEmail(person.email) != pid or accessOf(person.email) != #active) return false;
+    let scope = scopes.find(func s = Displays.sourceApp(s.app) == "desk") ?? (return false);
+    let policy = appPermissionPolicies.get(scope.cid) ?? (return false);
+    policy.policy.app == "desk" and accessForConn(person.email, scope.cid) == #active and permissionDecision(scope.cid, policy.policy, person.email).role == "admin"
+  };
+  func displayPerson(options : Displays.Options, own : Text) : Text {
+    switch (options.personalEmail) { case (?email) { if (email == "") own else pidForEmail(Text.toLower(email)) }; case null own }
+  };
+  func displayViewer(grant : Displays.Grant, scope : Displays.Scope) : ?Text {
+    if (not Text.contains(scope.app, #text "-personal")) return ?grant.personId;
+    let pid = operationsDisplayPeople.get(grant.id) ?? grant.personId;
+    if (displayPersonAllowed(pid, grant.scopes)) ?pid else null
+  };
   func displayPrune() {
     let now = Time.now();
     for ((code, p) in operationsPairs.entries().toArray().vals()) if (p.expiresAt <= now) ignore operationsPairs.delete(code);
-    for ((hash, g) in operationsDisplays.entries().toArray().vals()) if (g.expiresAt + 30 * DISPLAY_DAY < now) ignore operationsDisplays.delete(hash);
+    for ((hash, g) in operationsDisplays.entries().toArray().vals()) if (g.expiresAt + 30 * DISPLAY_DAY < now) { ignore operationsDisplays.delete(hash); ignore operationsDisplayPeople.delete(g.id) };
     for ((key, at) in operationsDisplayReads.entries().toArray().vals()) if (now - at > DISPLAY_MINUTE) ignore operationsDisplayReads.delete(key);
   };
   public shared query ({ caller }) func operationsDisplayAdmin() : async { canManage : Bool; displays : [Displays.View] } {
     if (displayOwner(caller) == null) return { canManage = false; displays = [] };
     let out = List.empty<Displays.View>();
-    for ((_, g) in operationsDisplays.entries()) out.add({ id = g.id; name = g.name; createdAt = g.createdAt; expiresAt = g.expiresAt; sources = Displays.sources(g); active = displayActive(g) });
+    for ((_, g) in operationsDisplays.entries()) out.add({ id = g.id; name = g.name; createdAt = g.createdAt; expiresAt = g.expiresAt; sources = Displays.sources(g); active = displayActive(g); personalEmail = switch (operationsDisplayPeople.get(g.id)) { case (?pid) switch (personOf(pid)) { case (?p) ?p.email; case null null }; case null null } });
     { canManage = true; displays = out.toArray() };
   };
   // No authority is granted here. Approval is a separate authenticated Owner action.
@@ -7537,12 +7555,15 @@ persistent actor UserHub {
     #ok(expiresAt);
   };
   public shared ({ caller }) func operationsDisplayApprove(code : Text, name : Text, cids : [Nat], days : Nat) : async Displays.Approval {
-    approveDisplay(caller, code, name, cids, days, false)
+    approveDisplay(caller, code, name, cids, days, Displays.defaults)
   };
   public shared ({ caller }) func operationsDisplayApproveWithWorkboard(code : Text, name : Text, cids : [Nat], days : Nat, workboard : Bool) : async Displays.Approval {
-    approveDisplay(caller, code, name, cids, days, workboard)
+    approveDisplay(caller, code, name, cids, days, { Displays.defaults with workboard })
   };
-  func approveDisplay(caller : Principal, code : Text, name : Text, cids : [Nat], days : Nat, workboard : Bool) : Displays.Approval {
+  public shared ({ caller }) func operationsDisplayApproveWithOptions(code : Text, name : Text, cids : [Nat], days : Nat, options : Displays.Options) : async Displays.Approval {
+    approveDisplay(caller, code, name, cids, days, options)
+  };
+  func approveDisplay(caller : Principal, code : Text, name : Text, cids : [Nat], days : Nat, options : Displays.Options) : Displays.Approval {
     let personId = displayOwner(caller) ?? (return #denied);
     if (not Displays.hex(code, 10) or name.size() == 0 or name.size() > 60 or name.chars().any(func c = c < ' ') or cids.size() == 0 or cids.size() > 5 or (days != 1 and days != 7 and days != 30)) return #invalid;
     displayPrune();
@@ -7555,21 +7576,48 @@ persistent actor UserHub {
       let c = connectors.get(cid) ?? (return #invalid);
       let policy = appPermissionPolicies.get(cid) ?? (return #invalid);
       if (scopes.values().any(func s = s.cid == cid or Displays.sourceApp(s.app) == policy.policy.app)) return #invalid;
-      scopes.add({ cid; app = if (workboard and policy.policy.app == "desk") "desk-workboard" else policy.policy.app; canisterId = c.canisterId });
+      scopes.add({ cid; app = Displays.scopeApp(policy.policy.app, options); canisterId = c.canisterId });
     };
-    if (workboard and not scopes.values().any(func s = s.app == "desk-workboard")) return #invalid;
+    if (not validDisplayOptions(scopes.toArray(), options)) return #invalid;
+    let personalPid = displayPerson(options, personId);
+    if (options.personal and not displayPersonAllowed(personalPid, scopes.toArray())) return #denied;
     ignore operationsPairs.delete(codeHash);
     operationsDisplayNext += 1;
     let id = operationsDisplayNext;
     let now = Time.now();
+    if (options.personal) operationsDisplayPeople.add(id, personalPid);
     operationsDisplays.add(pending.keyHash, { id; name; by = caller; personId; createdAt = now; expiresAt = now + days * DISPLAY_DAY; scopes = scopes.toArray() });
     journal("display", "Screen " # id.toText() # " approved: " # name # " (" # cids.size().toText() # " sources, " # days.toText() # " days)", caller);
     #ok(id);
+  };
+  func validDisplayOptions(scopes : [Displays.Scope], options : Displays.Options) : Bool {
+    (not options.personal or options.workboard) and
+    (not (options.workboard or options.lifecycle or options.personal) or scopes.any(func s = Displays.sourceApp(s.app) == "desk")) and
+    (not options.sales or scopes.any(func s = Displays.sourceApp(s.app) == "assets"))
+  };
+  // Only the original approving owner can select personal totals for a screen. Keep the
+  // same sources, connector identities, secret and expiry; never transfer a grant.
+  public shared ({ caller }) func operationsDisplayConfigure(id : Nat, options : Displays.Options) : async Displays.Approval {
+    let personId = displayOwner(caller) ?? (return #denied);
+    for ((hash, grant) in operationsDisplays.entries()) if (grant.id == id) {
+      if (grant.by != caller or grant.personId != personId or not displayActive(grant)) return #denied;
+      if (not validDisplayOptions(grant.scopes, options)) return #invalid;
+      for (scope in grant.scopes.vals()) if (displayScope(grant, scope.cid) == null) return #denied;
+      let scopes = grant.scopes.map(func scope = { scope with app = Displays.scopeApp(Displays.sourceApp(scope.app), options) });
+      let personalPid = displayPerson(options, personId);
+      if (options.personal and not displayPersonAllowed(personalPid, scopes)) return #denied;
+      if (options.personal) operationsDisplayPeople.add(id, personalPid) else ignore operationsDisplayPeople.delete(id);
+      operationsDisplays.add(hash, { grant with scopes });
+      journal("display", "Screen " # id.toText() # " sharing details updated", caller);
+      return #ok(id);
+    };
+    #missing
   };
   public shared ({ caller }) func operationsDisplayRevoke(id : Nat) : async Bool {
     if (displayOwner(caller) == null) return false;
     for ((hash, g) in operationsDisplays.entries()) if (g.id == id) {
       ignore operationsDisplays.delete(hash);
+      ignore operationsDisplayPeople.delete(g.id);
       journal("display", "Screen " # id.toText() # " revoked: " # g.name, caller);
       return true;
     };
@@ -7595,7 +7643,7 @@ persistent actor UserHub {
     if (not Displays.hex(secret, 64)) return;
     let hash = scimHash(secret);
     switch (operationsDisplays.get(hash)) {
-      case (?g) { ignore operationsDisplays.delete(hash); journal("display", "Screen " # g.id.toText() # " disconnected on device", Principal.anonymous()) };
+      case (?g) { ignore operationsDisplays.delete(hash); ignore operationsDisplayPeople.delete(g.id); journal("display", "Screen " # g.id.toText() # " disconnected on device", Principal.anonymous()) };
       case null {};
     };
     for ((code, p) in operationsPairs.entries().toArray().vals()) if (p.keyHash == hash) ignore operationsPairs.delete(code);
@@ -7605,6 +7653,7 @@ persistent actor UserHub {
     let hash = scimHash(secret);
     let grant = operationsDisplays.get(hash) ?? (return Operations.denied());
     let scope = displayScope(grant, cid) ?? (return Operations.denied());
+    let viewer = displayViewer(grant, scope) ?? (return Operations.denied());
     let c = connectors.get(cid) ?? (return Operations.denied());
     let policy = appPermissionPolicies.get(cid);
     displayPrune();
@@ -7612,8 +7661,8 @@ persistent actor UserHub {
     if (Time.now() - (operationsDisplayReads.get(readKey) ?? 0) < 10_000_000_000) return Operations.unavailable();
     operationsDisplayReads.add(readKey, Time.now());
     let source : actor { hub_operations : shared query Text -> async Operations.Snapshot } = actor (c.canisterId.toText());
-    let result = try { await (with timeout = 15) source.hub_operations(grant.personId) } catch (_) { Operations.unavailable() };
-    if (operationsDisplays.get(hash) != ?grant or displayScope(grant, cid) != ?scope or connectors.get(cid) != ?c or appPermissionPolicies.get(cid) != policy) return Operations.denied();
+    let result = try { await (with timeout = 15) source.hub_operations(viewer) } catch (_) { Operations.unavailable() };
+    if (operationsDisplays.get(hash) != ?grant or displayViewer(grant, scope) != ?viewer or displayScope(grant, cid) != ?scope or connectors.get(cid) != ?c or appPermissionPolicies.get(cid) != policy) return Operations.denied();
     if (result.schema != 1 or result.metrics.size() > 32 or result.metrics.any(func (key, value) = key.size() > 32 or value > 9_007_199_254_740_991) or result.checkedAt > Time.now() or Time.now() - result.checkedAt > DISPLAY_MINUTE) return Operations.unavailable();
     Displays.filter(scope.app, result);
   };

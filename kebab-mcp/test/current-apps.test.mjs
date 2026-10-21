@@ -47,3 +47,15 @@ test('ambiguous or partial request types never file a ticket; explicit backend d
  assert.equal((await invoke('kebab_new_request',{requestType:'Hel',subject:'Test'})).isError,true);assert.equal(writes,0);
  assert.equal((await invoke('kebab_new_request',{requestType:'1',subject:'Test'})).isError,true);assert.equal(writes,1);
 });
+
+test('lifecycle queue views reject old or unknown Desk versions instead of returning all tickets',async()=>{
+ for(const version of ['0.34.0','','unknown','0.35.0','1.0.0']) {
+  const calls=[],tools=new Map();registerTools({registerTool:(n,def,fn)=>tools.set(n,{def,fn})},{query:async(...args)=>{calls.push(args);return args[1]==='info'?{version}:[];}});
+  for(const view of ['onboarding','offboarding']) {
+   calls.length=0;const tool=tools.get('kebab_tickets');const result=await tool.fn(z.object(tool.def.inputSchema).parse({view}));
+   assert.deepEqual(calls[0],['desk','info',[],false]);
+   if(['0.35.0','1.0.0'].includes(version)){assert.notEqual(result.isError,true);assert.equal(calls[1][2][0].view,view);}
+   else {assert.equal(result.isError,true);assert.equal(calls.length,1);}
+  }
+ }
+});

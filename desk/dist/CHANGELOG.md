@@ -1,5 +1,16 @@
 # Changelog — kebab-stack desk
 
+## [0.36.0] — 2026-10-21
+
+- Open internal tickets now receive a server-side completion review every 15 minutes in bounded batches (up to 200 ticket IDs and four AI reviews per run). This includes tickets and public Desk replies recorded before the upgrade; no browser needs to remain open.
+- Reviews require the latest public comment to be from a currently authorized staff member. Later requester replies, internal notes or status changes prevent using older completion evidence. Ambiguous work stays open; the existing approval, checklist and offboarding gates still apply.
+- Persisted decisions avoid repeated calls for unchanged tickets. Failed/invalid AI responses retry with increasing 15–60 minute delays, subject to queue rotation. Reopening is respected; audit notes explain successful and blocked decisions. Internal notes never go to AI.
+- Settings and served help explain the shared AI-assistance switch, limits and recovery. No public API or Hub permission change.
+
+## [0.35.0] — 2026-10-19
+
+- Operations adds onboarding/offboarding counts and filtered queue links, plus viewer-owned personal tasks alongside existing shared-project totals. Completed, archived and other people’s personal work stay excluded from the personal totals. Existing TV counts and permissions retain their scope.
+
 ## [0.34.0] — 2026-10-18
 
 - Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.

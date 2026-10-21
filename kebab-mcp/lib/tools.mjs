@@ -99,10 +99,17 @@ export function registerTools(server, rt) {
 
   server.registerTool("kebab_tickets", {
     title: "Service-desk queue (agents)",
-    description: "For agents/admins: tickets by view — open | mine | unassigned | waiting | breached | done | all — optionally filtered by status, queue, assignee (address) or a search text.",
-    inputSchema: { view: z.enum(["open", "mine", "unassigned", "waiting", "breached", "done", "all"]).default("open"), status: z.string().default(""), queue: z.string().default(""), assignee: z.string().default("").describe("address"), q: z.string().default("").describe("search text") },
+    description: "For agents/admins: tickets by view — open | mine | unassigned | waiting | breached | onboarding | offboarding | done | all — lifecycle views require Desk 0.35+. Optionally filtered by status, queue, assignee (address) or a search text.",
+    inputSchema: { view: z.enum(["open", "mine", "unassigned", "waiting", "breached", "onboarding", "offboarding", "done", "all"]).default("open"), status: z.string().default(""), queue: z.string().default(""), assignee: z.string().default("").describe("address"), q: z.string().default("").describe("search text") },
     annotations: RO,
-  }, wrap(({ view, status, queue, assignee, q }) => rt.query("desk", "listTickets", [{ view, status, queue, assignee, q }])));
+  }, wrap(async ({ view, status, queue, assignee, q }) => {
+    if (["onboarding", "offboarding"].includes(view)) {
+      const info = await rt.query("desk", "info", [], false);
+      const version = /^(\d+)\.(\d+)\.(\d+)$/.exec(info?.version || "");
+      if (!version || !(Number(version[1]) > 0 || Number(version[2]) >= 35)) throw Error("Lifecycle queue filters require Desk 0.35 or newer. Update Desk before using this view.");
+    }
+    return rt.query("desk", "listTickets", [{ view, status, queue, assignee, q }]);
+  }));
 
   server.registerTool("kebab_ticket", {
     title: "One ticket in full",

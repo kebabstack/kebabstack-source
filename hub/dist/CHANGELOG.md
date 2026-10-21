@@ -1,5 +1,13 @@
 # Changelog — kebab-stack hub
 
+## [0.43.0] — 2026-10-19
+
+- Extend TV screens with explicitly approved asset-sale stages, onboarding/offboarding counts and personal Workboard totals from one explicitly selected active Desk administrator. Existing approvals keep their original scope. The approving owner can adjust sharing details without re-pairing or extending expiry; record contents remain private. Missing newer source totals stay unavailable.
+
+## [0.42.0] — 2026-10-19
+
+- Show all current follow-ups before inventory cards, including paid asset sales and separate onboarding/offboarding queues. Include viewer-owned personal Workboard tasks; label older source coverage explicitly. TV sharing scopes remain unchanged.
+
 ## [0.41.1] — 2026-10-19
 
 - Point the disconnected-backup help to the existing Connection tab instead of the removed Setup (IT) label. No backup behavior or permissions change.

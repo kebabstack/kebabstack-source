@@ -8,9 +8,10 @@
     contracts: {name:'Contracts', category:'RENEWALS & OWNERSHIP', path:'', icon:'M14 2H4v20h16V8l-6-6Zm0 0v6h6M8 13h8m-8 4h5', keys:['total','due','overdue','unknown','unowned'], optional:['seatsHeld']},
     watch: {name:'Watch', category:'DOMAIN MONITORING', path:'#/overview', icon:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z', keys:['enabled','alerts','warnings','stale','expiring','unknown','expiryDays']}
   };
-  APPS.workboard={...APPS.desk,name:'Workboard',category:'SHARED IT PROJECTS',path:'#/workboard/projects'};
+  APPS.workboard={...APPS.desk,name:'Workboard',category:'TASKS & PROJECTS',path:'#/workboard/operations'};
+  APPS.sales={...APPS.assets,name:'Asset sales',category:'PAYMENT & HANDOVER',path:'#/sales'};
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const number = n => n.toLocaleString('en');
+  const number = n => n == null ? '—' : n.toLocaleString('en');
   function link(source, path) {
     try { const u = new URL(source.url); if(u.protocol !== 'https:' || u.username || u.password) return ''; u.search=''; u.hash=path ?? APPS[source.app].path; return u.href; } catch { return ''; }
   }
@@ -28,22 +29,31 @@
     return {state:'ready', at, values};
   }
   function presentation(app, m) {
+    const personalKnown=['personalOpen','personalWaiting','personalOverdue','personalUnowned','personalSteps','personalStepsDone'].every(k=>k in m);
+    const work=k=>m['work'+k]+(personalKnown?m['personal'+k]:0);
     switch(app) {
-      case 'desk': return {value:m.active, unit:'open requests', context:'Internal tickets · customer projects stay separate', rows:[[m.breached,'past their service target'],[m.unassigned,'without an agent']], note:`${number(m.offboarding)} confirmed offboardings · ${number(m.departureReview)} to review`, work:[
-        [m.breached,'Review overdue requests','Check the service target and next response.'],
+      case 'desk': return {value:m.active, unit:'open requests', context:'Internal tickets · customer projects stay separate', rows:[[m.onboarding,'onboarding requests'],[m.offboardingOpen,'offboarding requests'],[m.breached,'past their service target'],[m.unassigned,'without an agent']], note:`Lifecycle requests are included in open requests. ${number(m.offboarding)} confirmed departures · ${number(m.departureReview)} account changes to review.${m.onboarding==null?' Update Desk for lifecycle totals.':''}`, work:[
+        [m.breached,'Review overdue requests','Check the service target and next response.','#/queue/breached'],
         [m.departureReview,'Review account changes','Confirm departure or pause offboarding.'],
-        [m.unassigned,'Assign an agent','Give incoming work a clear owner.'],
+        [m.onboarding,'Prepare onboarding','Review the onboarding requests and their target dates.','#/queue/onboarding'],
+        [m.offboardingOpen,'Follow up offboarding','Check outstanding departure work; account changes still need review.','#/queue/offboarding'],
+        [m.unassigned,'Assign an agent','Give incoming work a clear owner.','#/queue/unassigned'],
         [m.lifecycleUnverified,'Check directory follow-up','Desk has not verified recent directory changes.'] ]};
-      case 'workboard': return {value:m.workOpen, unit:'open project tasks', context:`${number(m.workProjects)} shared projects · own tasks only`, rows:[[m.workOverdue,'past their target date'],[m.workWaiting,'waiting on something'],[m.workUnowned,'without an available owner']], note:`${number(m.workStepsDone)} of ${number(m.workSteps)} subtasks complete on open tasks · dates use UTC`, work:[
-        [m.workOverdue,'Review project target dates','Open Workboard projects to review outstanding tasks.'],
-        [m.workUnowned,'Give project tasks an owner','Review unassigned tasks and unavailable owners.'],
-        [m.workWaiting,'Unblock waiting project work','Check the recorded waiting reasons.'] ]};
+      case 'workboard': return {value:work('Open'), unit:personalKnown?'open tasks':'open shared-project tasks', context:`${number(m.workOpen)} shared · ${personalKnown?number(m.personalOpen)+' personal to you':'personal totals unavailable'} · ${number(m.workProjects)} shared projects`, rows:[[work('Overdue'),'past their target date'],[work('Waiting'),'waiting on something'],[work('Unowned'),'without an available owner']], note:`${number(work('StepsDone'))} of ${number(work('Steps'))} subtasks complete · linked tickets and sales count in their source cards.${personalKnown?'':' Update Desk to include your personal work.'}`, work:[
+        [work('Overdue'),'Review task target dates','Review overdue shared-project tasks and your personal work.'],
+        [work('Unowned'),'Give tasks an owner','Review unassigned tasks and unavailable owners.'],
+        [work('Waiting'),'Unblock waiting work','Check the recorded waiting reasons.'] ]};
       case 'trust': return {value:m.assessed ? m.score : '—', unit:'average verified score', context:`${number(m.assessed)} of ${number(m.total)} real devices fully assessed`, rows:[[m.attention,'with failing checks'],[m.unverified,'not fully verified']], note:'Samples excluded · evidence must be current within 24h', bar:m.total ? m.assessed/m.total : null, barLabel:'Full assessment coverage', work:[
         [m.attention,'Investigate failing checks','Open Trust for evidence and the next step.'],
         [m.unverified,'Restore device reporting','Check stale, missing or failed assessments.'] ]};
-      case 'assets': return {value:m.stock, unit:'devices in stock', context:`${number(m.total)} registered · ${number(m.assigned)} assigned${m.deployed?` · ${number(m.deployed)} deployed at a location`:''}`, rows:[[m.handover,'hardware handovers open'],[m.sales,'sales to finish']], note:`${number(m.preparing)} received by IT, still in preparation`, work:[
-        [m.handover,'Complete hardware handovers','Use the Offboarding filter in Assets.'],
-        [m.sales,'Finish outstanding sales','Payment alone does not confirm handover.','#/sales'] ]};
+      case 'assets': return {value:m.stock, unit:'devices in stock', context:`${number(m.total)} registered · ${number(m.assigned)} assigned${m.deployed?` · ${number(m.deployed)} deployed at a location`:''}`, rows:[[m.handover,'hardware handovers open'],[m.preparing,'received, awaiting preparation']], note:'A return is not reuse readiness; preparation stays recorded in Assets.', work:[
+        [m.handover,'Complete hardware handovers','Use the Offboarding filter in Assets.'] ]};
+      case 'sales': return {value:m.salesPaid??'—', unit:'paid · IT follow-up needed', context:`${number(m.sales)} unfinished sales · payment follows the Finance record`, rows:[[m.salesArchive,'next: archive invoice PDF'],[m.salesPreparation,'next: prepare device'],[m.salesHandover,'next: verify release and hand over'],[m.salesInvoice,'awaiting payment'],[m.salesOverdue,'payment target passed'],[m.salesBuyer,'awaiting buyer acceptance']], note:m.salesPaid==null?'Update Assets for payment and handover details.':`${number(m.salesDraft)} draft offers · ${number(m.salesAccepted)} accepted, invoice pending. Paid stages are exclusive; handover still requires the source checks.`, work:[
+        [m.salesPaid,'Continue paid sales','IT: archive invoices, prepare devices and record physical handover.','#/sales/paid'],
+        [m.salesOverdue,'Follow up overdue payments','Finance: reconcile payments against the invoice.','#/sales/invoice'],
+        [m.salesAccepted,'Invoice accepted offers','IT: issue the invoice for accepted offers.','#/sales/offer'],
+        [m.salesDraft,'Prepare draft offers','IT: complete and send the offer.','#/sales/offer'],
+        [m.salesPaid==null?m.sales:0,'Review outstanding sales','Detailed payment stages are unavailable; open Assets to check.','#/sales'] ]};
       case 'contracts': return {value:m.due, unit:'decisions in the next 30 days', context:`${number(m.total)} active or cancelling contracts`, rows:[[m.overdue,'decision dates passed'],[m.unowned,'without an active owner'],[m.seatsHeld,'with seats held by departed people']], note:`${number(m.unknown)} with an unknown decision date`, work:[
         [m.seatsHeld,'Release seats of departed people','Open License assignments on the contract; Desk asked the owner at offboarding.'],
         [m.overdue,'Review overdue contract decisions','Check the recorded terms before renewing.'],
@@ -65,25 +75,26 @@
     root.classList.add('ops-workspace');
     root.innerHTML=`<header class="ops-heading"><div><div class="ops-eyebrow">OPERATIONS</div><h2>Your IT, in the picture.</h2><p class="lead">A shared view of the work that needs you.</p></div><div class="ops-heading-actions">${options.manageDisplays?.()?'<a href="#/screens">Screens ↗</a>':''}<button type="button" data-refresh>Refresh</button></div></header>
       <div class="ops-coverage"><span class="ops-dot" aria-hidden="true"></span><span data-coverage role="status">Checking your connected apps…</span><span class="ops-cadence">Refreshes every minute</span></div>
-      <div data-error role="status"></div><div class="ops-grid" data-grid></div>
-      <section class="ops-next"><div class="ops-section-heading"><h3>Where to focus</h3><span>Continue in the app that owns the work</span></div><div data-work class="ops-work"></div></section>
-      <details class="ops-explain"><summary>What these numbers cover</summary><p>Only connected apps where you have Admin access in Hub appear here. Each app calculates its own current totals; records and personal details stay in that app. Changes to your access are checked again on every refresh.</p><p>These are current snapshots, not historical trends. An unavailable app is never counted as healthy. Trust scores cover fully assessed real devices; coverage is shown separately. In-stock hardware excludes open handovers. Contract dates come from recorded terms, not a vendor billing system. Workboard includes open own tasks in unarchived shared projects; personal work, completed tasks and linked tickets/sales are excluded. Subtask progress covers those open tasks. Target dates become overdue on the following UTC day.</p></details>`;
+      <div data-error role="status"></div>
+      <section class="ops-next"><div class="ops-section-heading"><h3>Where to focus</h3><span>Continue in the app that owns the work</span></div><div data-work class="ops-work"></div></section><div class="ops-grid" data-grid></div>
+      <details class="ops-explain"><summary>What these numbers cover</summary><p>Only connected apps where you have Admin access in Hub appear here. Each app calculates its own current totals; records and personal details stay in that app. Changes to your access are checked again on every refresh.</p><p>These are current snapshots, not historical trends. An unavailable app is never counted as healthy. Trust scores cover fully assessed real devices; coverage is shown separately. In-stock hardware excludes open handovers. Contract dates come from recorded terms, not a vendor billing system. Workboard includes open tasks in unarchived shared projects plus your own personal tasks and projects. Other people’s personal work, completed tasks and linked tickets/sales are excluded. Onboarding and offboarding are subsets of internal requests. Sales payment counts reflect Finance records, not a bank feed. Follow-up categories can overlap; they are not a total workload. Subtask progress covers those open tasks. Target dates become overdue on the following UTC day.</p></details>`;
     const $=s=>root.querySelector(s);
     $('[data-refresh]').onclick=()=>refresh();
     function clearTimer(){clearTimeout(timer);clearInterval(ageTimer);}
     function paint() {
       if(!active) return;
       const ready=entries.filter(e=>e.data.state==='ready');
-      const views=entries.flatMap(e=>e.source.app==='desk'?[e,{...e,source:{...e.source,app:'workboard',name:'Workboard'}}]:[e]);
+      const views=entries.flatMap(e=>e.source.app==='desk'?[e,{...e,source:{...e.source,app:'workboard',name:'Workboard'}}]:e.source.app==='assets'?[e,{...e,source:{...e.source,app:'sales',name:'Asset sales'}}]:[e]);
       $('[data-coverage]').textContent=entries.length ? `${ready.length} of ${entries.length} connected sources checked${busy?' · refreshing…':''}` : busy ? 'Checking your connected apps…' : 'No Operations sources available';
       $('[data-refresh]').disabled=busy;
       root.dataset.complete=String(entries.length>0 && ready.length===entries.length);
       $('[data-grid]').innerHTML=views.map(e=>card(e)).join('');
       const actions=[];
       for(const e of views.filter(e=>e.data.state==='ready')) {
-        const first=presentation(e.source.app,e.data.values).work.find(([count])=>count>0);
-        if(first) { const [count,title,detail,path]=first; actions.push({e,count,title,detail,path}); }
+        for(const [count,title,detail,path] of presentation(e.source.app,e.data.values).work) if(count>0) actions.push({e,count,title,detail,path});
       }
+      // Confirmed payments need IT attention even when other apps have many flags.
+      actions.sort((a,b)=>Number(b.title==='Continue paid sales')-Number(a.title==='Continue paid sales'));
       $('[data-work]').innerHTML=actions.length ? actions.map(({e,count,title,detail,path})=>{
         const href=link(e.source,path);const tag=href?'a':'div';
         return `<${tag} class="ops-action" ${href?`href="${esc(href)}"`:''}><span class="ops-action-count">${number(count)}</span><span><small>${esc(e.source.name)}</small><strong>${esc(title)}</strong><span>${esc(detail)}</span></span>${href?'<b aria-hidden="true">↗</b>':''}</${tag}>`;

@@ -384,3 +384,7 @@ rows; app filters, totals and exports retain their existing scope. Reset restore
 the original order. Editable grids and existing app-owned queue sorting stay with
 their workflows. Long marked selectors keep native selection and add an option
 search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
+
+### Operations summaries (2026-10-19)
+
+Deploy this release before Hub 0.42 using the shared Kitchen update workflow. Existing central app Admin permissions remain required; no additional service or configuration is needed. Older Hub/TV clients keep their previous aggregate scope. See [Operations definitions](../docs/HUB-OPERATIONS.md).

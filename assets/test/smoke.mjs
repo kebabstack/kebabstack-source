@@ -40,7 +40,7 @@ const abmPair = generateKeyPairSync("ec", { namedCurve: "P-256" });
 const abmPemPkcs8 = abmPair.privateKey.export({ type: "pkcs8", format: "pem" });
 const abmPemSec1 = abmPair.privateKey.export({ type: "sec1", format: "pem" });
 let attached = null;
-const calls = [];
+const calls = []; let lastSalesRequest;
 let role = process.argv[2] || "admin";
 let aiOn = process.argv[3] !== "noai";
 const flow = process.argv[4] || "";
@@ -102,7 +102,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "saleOfDevice": return { purchase: [{ priceMinor: 299900n, currency: "CHF", date: "2024-03-01", note: "shop", by: ME, at: now }], sale: [], proposal: [{ proposedMinor: 62000n, basis: "purchase price 2'999.00 CHF on 2024-03-01 · 30 of 36 months elapsed" }], billingReady: "" };
     case "priceProposal": return [{ proposedMinor: 62000n, basis: "rule" }];
     case "createSale": return { ok: true, id: 7n, detail: "" };
-    case "salesBoard": { const rows = [saleView(), saleView({ id:8n,status:"paid",invoiceNo:"IT-2026-0002",pdfId:3n })].map(v => ({...v.sale, buyerName:v.sale.buyer.name, deviceName:v.deviceName, deviceTag:v.deviceTag, phase:v.sale.status === "paid" ? "paid" : v.sale.status === "issued" ? "invoice" : "offer", receiptPending:false})); return {counts:[["offer",1n],["paid",1n]],total:2n,matched:2n,rows,hasMore:false}; }
+    case "salesBoard": { lastSalesRequest=a; const rows = [saleView(), saleView({ id:8n,status:"paid",invoiceNo:"IT-2026-0002",pdfId:3n })].map(v => ({...v.sale, buyerName:v.sale.buyer.name, deviceName:v.deviceName, deviceTag:v.deviceTag, phase:v.sale.status === "paid" ? "paid" : v.sale.status === "issued" ? "invoice" : "offer", receiptPending:false})); return {counts:[["offer",1n],["paid",1n]],total:2n,matched:2n,rows,hasMore:false}; }
     case "deviceUnlockPin": return {ok:true,pin:"001234",detail:"Visible for 30 seconds"};
     case "listSales": return [saleView(), saleView({ id: 8n, status: "paid", invoiceNo: "IT-2026-0002", pdfId: 3n, pdfHash: "ab".repeat(32) })];
     case "getSale": return [saleView()];
@@ -344,6 +344,9 @@ if (role === "admin") {
   // sales list + export
   await go("#/d/1"); for (let i = 0; i < 3; i++) await tick(); check(!$("dAbm").classList.contains("hidden") && /Apple Business Manager · Group/.test($("dAbm").textContent) && /Iru · Group/.test($("dAbm").textContent) && /2024-03-12/.test($("dAbm").textContent), "device card shows the Apple Business Manager box");
   await go("#/sales"); check($("v-sales").classList.contains("active") && document.querySelectorAll("#saleRows .dev").length === 2 && /IT-2026-0002/.test($("saleRows").textContent), "sales list rows: " + document.querySelectorAll("#saleRows .dev").length);
+  $("salesQ").value='Old restrictive search';
+  await go('#/sales/paid');check(lastSalesRequest[1]==='paid'&&lastSalesRequest[2]===''&&lastSalesRequest[3]===0n,'Operations paid link clears search and pagination');
+  check(document.querySelector('#saleFilters [data-st="paid"]').getAttribute('aria-pressed')==='true','Paid phase is visibly selected');
   $("salesCsv").click(); for (let i = 0; i < 3; i++) await tick(); check(calls.includes("salesExportCsv"), "finance export");
   await go("#/import"); $("impText").value = "tag,serial\nINV-1,ABC"; $("impRun").click(); for (let i = 0; i < 4; i++) await tick(); check(/2 created/.test($("impStatus").textContent), "import status: " + $("impStatus").textContent);
   await go("#/settings"); check(!$("sGroup") && !!document.querySelector("[data-hub-permissions-link]") && $("sAiPill").textContent === (aiOn ? "on" : "off"), "settings loaded, ai pill " + $("sAiPill").textContent);

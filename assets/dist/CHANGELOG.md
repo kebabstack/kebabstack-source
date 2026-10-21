@@ -1,5 +1,9 @@
 # Changelog — kebab-stack assets
 
+## [0.30.0] — 2026-10-19
+
+- Operations distinguishes confirmed payments awaiting IT, invoice archive, device preparation, handover review, unpaid invoices, overdue payment targets and offer stages. Paid sales remain open until physical handover; filtered Sales links open the appropriate phase. No payment, custody or authorization changes.
+
 ## [0.29.0] — 2026-10-18
 
 - Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.

@@ -90,7 +90,13 @@ async function route() {
   try {
   if (v === "me") await loadMe();
   if (v === "new") await showNew(arg);
-  if (v === "queue") await loadQueue();
+  if (v === "queue") {
+    if (["onboarding","offboarding","breached","unassigned"].includes(arg)) {
+      qView=arg; $("fStatus").value=""; $("fQueue").value=""; $("fQ").value="";
+      $("viewSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.v===qView));
+    }
+    await loadQueue();
+  }
   if(v === "service-status") await serviceStatus.show();
   if (v === "reporting") await reporting.show(arg || "");
   if (v === "workboard") await workboard.show(arg || "", mode || "");

@@ -92,7 +92,7 @@ function route() {
   if (v === "d") loadDevice(Number(arg));
   if (v === "apple") loadApple();
   if (v === "import") {}
-  if (v === "sales") loadSales();
+  if (v === "sales") { if (["open","offer","invoice","paid","complete","cancelled"].includes(arg)) { saleFilter = arg; salesOffset = 0; $("salesQ").value = ""; } loadSales(); }
   if (v === "sale") loadSale(Number(arg));
   if (v === "offers") loadOffers(arg);
   if (v === "settings") { selectSettings(arg); loadSettings(); }

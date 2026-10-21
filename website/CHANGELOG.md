@@ -1,5 +1,10 @@
 # Product website changes
 
+## [0.5.9] — 2026-10-21
+
+- Explain Desk's optional periodic completion review in German and English: public staff evidence, bounded background batches, normal workflow gates, recorded decisions and manual reopening.
+- Clarify that AI assistance needs a configured provider and does not guarantee correct classification; internal notes and customer-project tickets are excluded.
+
 ## [0.5.8] — 2026-10-20
 
 - Explain native location/network enrichment, operator dataset refreshes and the limits of automation signals in German and English.

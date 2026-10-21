@@ -12,9 +12,17 @@ function fixture(api){
 }
 const source=(app='desk',cid=1n)=>({cid,app,name:'Team '+app,url:'https://'+app+'.test/?discard=secret'});
 const result=(metrics=desk,at=Date.now())=>({schema:1n,state:{ready:null},checkedAt:BigInt(at)*1000000n,metrics:Object.entries(metrics).map(([k,v])=>[k,BigInt(v)])});
+test('paid sales remain visible alongside handovers, with a direct paid-phase link',async()=>{
+ const f=fixture({operationsSources:async()=>[source('assets')],operationsSnapshot:async()=>result({total:20,stock:3,assigned:10,handover:2,preparing:1,sales:5,salesPaid:3,salesArchive:1,salesPreparation:1,salesHandover:1,salesInvoice:1,salesOverdue:1,salesDraft:0,salesAccepted:1,salesBuyer:0})});
+ try {await f.ui.start();const actions=[...f.root.querySelectorAll('.ops-action')];assert.ok(actions.some(a=>a.textContent.includes('Complete hardware handovers')));assert.ok(actions.some(a=>a.textContent.includes('3')&&a.textContent.includes('Continue paid sales')&&a.hash==='#/sales/paid'));assert.ok(f.root.querySelector('[data-area="sales"]'));assert.ok(f.root.innerHTML.indexOf('data-work')<f.root.innerHTML.indexOf('data-grid'));}finally{f.close();}
+});
+test('personal standalone work and lifecycle requests are visible without changing shared totals',async()=>{
+ const f=fixture({operationsSources:async()=>[source()],operationsSnapshot:async()=>result({...desk,onboarding:4,offboardingOpen:3,personalOpen:1,personalWaiting:0,personalOverdue:1,personalUnowned:0,personalSteps:2,personalStepsDone:1})});
+ try{await f.ui.start();const card=f.root.querySelector('[data-area="workboard"]');assert.match(card.textContent,/8open tasks/);assert.match(card.textContent,/7 shared.*1 personal/);assert.match(f.root.textContent,/4onboarding requests/);assert.match(f.root.textContent,/3offboarding requests/);}finally{f.close();}
+});
 test('real totals, actionable links, escaped labels and no personal-data inputs',async()=>{
  const f=fixture({operationsSources:async()=>[{...source(),name:'Desk <img src=x onerror=bad()> '},source('trust',2n)],operationsSnapshot:async id=>id===1n?result():result({total:4,passing:0,attention:0,unverified:4,assessed:0,score:0})});
- try{await f.ui.start();assert.equal(f.root.querySelector('img'),null);assert.match(f.root.textContent,/18open requests/);assert.match(f.root.textContent,/—average verified score/);assert.match(f.root.textContent,/0 of 4 real devices fully assessed/);assert.match(f.root.textContent,/2 of 2 connected sources checked/);assert.equal(f.root.querySelector('a.ops-action').href,'https://desk.test/#/queue');assert.equal(f.root.querySelectorAll('[data-source]').length,3);}finally{f.close();}
+ try{await f.ui.start();assert.equal(f.root.querySelector('img'),null);assert.match(f.root.textContent,/18open requests/);assert.match(f.root.textContent,/—average verified score/);assert.match(f.root.textContent,/0 of 4 real devices fully assessed/);assert.match(f.root.textContent,/2 of 2 connected sources checked/);assert.equal(f.root.querySelector('a.ops-action').href,'https://desk.test/#/queue/breached');assert.equal(f.root.querySelectorAll('[data-source]').length,3);}finally{f.close();}
 });
 test('failure, denial, expired and malformed snapshots never appear as healthy zero',async()=>{
  for(const fail of [async()=>{throw Error('offline')},async()=>({schema:1n,state:{denied:null}}),async()=>result(desk,Date.now()-100000),async()=>result({active:999}),async()=>({...result(),schema:2n})]){
@@ -40,7 +48,7 @@ test('a partial outage stays unverified even when the responding source has no f
  try{await f.ui.start();assert.equal(f.root.dataset.complete,'false');assert.match(f.root.textContent,/Other sources are still unverified/);assert.match(f.root.textContent,/Source unavailable/);}finally{f.close();}
 });
 
-test('Workboard is distinct from tickets and links to its project list',async()=>{
+test('Workboard is distinct from tickets and opens its task board and labels older source coverage',async()=>{
  const f=fixture({operationsSources:async()=>[source()],operationsSnapshot:async()=>result()});
- try{await f.ui.start();const card=f.root.querySelector('[data-area="workboard"]');assert.match(card.textContent,/7open project tasks/);assert.match(card.textContent,/3 of 5 subtasks/);assert.equal(card.querySelector('a').href,'https://desk.test/#/workboard/projects');assert.equal(f.root.querySelectorAll('.ops-action').length,2);assert.doesNotMatch(card.textContent,/18open requests/);}finally{f.close();}
+ try{await f.ui.start();const card=f.root.querySelector('[data-area="workboard"]');assert.match(card.textContent,/7open shared-project tasks/);assert.match(card.textContent,/3 of 5 subtasks/);assert.equal(card.querySelector('a').href,'https://desk.test/#/workboard/operations');assert.equal(f.root.querySelectorAll('.ops-action').length,6);assert.doesNotMatch(card.textContent,/18open requests/);}finally{f.close();}
 });

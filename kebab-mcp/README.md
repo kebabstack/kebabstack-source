@@ -94,3 +94,5 @@ ambiguous/rebound apps, strict inputs, parser limits, local credential handling,
 and curated calls checked against all current committed app interfaces. Hub
 self-revocation/concurrent-code tests run separately in `tests/security.test.mjs`
 on isolated local canisters. No test sends real support messages or alarms.
+
+Lifecycle views `onboarding` and `offboarding` in `kebab_tickets` require Desk 0.35+. The connector verifies the server version before reading those views; older servers return an explicit upgrade requirement.

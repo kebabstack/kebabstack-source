@@ -264,7 +264,7 @@ test('slack AI: summarized title, authorized completion, uncertainty, stale deci
   let full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.notEqual(full.ticket.status,'resolved');assert.ok(full.events.some(e=>e.kind==='ai'&&/checklist/.test(e.body)));
   for(let i=0;i<full.tasks.length;i++)unwrap(await c.desk.setTask(c.tokens.beta,row.id,BigInt(i),'done'));
   await post(pic,c.desk,message('done','UBETA','1700000020.000160','Renewed and verified, everything works now.',anchor));await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Renewed and verified, everything works now.'}));await quiet(pic);
-  full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.equal(full.ticket.status,'resolved');assert.ok(full.events.some(e=>e.kind==='ai'&&/Slack completion comment/.test(e.body)));
+  full=(await c.desk.getTicket(c.tokens.owner,row.id))[0];assert.equal(full.ticket.status,'resolved');assert.ok(full.events.some(e=>e.kind==='ai'&&/completion comment/.test(e.body)));
   unwrap(await c.desk.setStatus(c.tokens.beta,row.id,'open',''));
   await c.desk.setAiTriage(c.tokens.owner,false);
   await post(pic,c.desk,message('disabled','UBETA','1700000020.000170','Everything is fixed.',anchor));await quiet(pic);
@@ -322,5 +322,91 @@ test('slack upgrade: published baseline retains ticket, file, thread and central
   await post(pic,c.desk,message('upgraded-thread','UEMP','1700000010.000170','Still in the original thread',anchor));await quiet(pic);
   assert.ok((await c.desk.getTicket(c.tokens.owner,row.id))[0].events.some(e=>e.body==='Still in the original thread'));
   assert.deepEqual(Buffer.from((await c.desk.fileData(c.tokens.employee,file.id))[0].data),Buffer.from('existing attachment'));
+ }finally{await pic.tearDown();}
+});
+
+// Advance real canister timers while the Hub directory refresh continues normally.
+async function completionCycle(pic){for(let i=0;i<47;i++){await pic.advanceTime(20000);await pic.tick(12);if((await pic.getPendingHttpsOutcalls()).some(r=>r.url.includes("ai.example.test")))return;}}
+async function completionFixture(pic,baseline=false){
+ const c=await setup(pic,baseline);await c.desk.setAiTriage(c.tokens.owner,false);
+ const type=(await c.desk.catalog(c.tokens.owner)).find(t=>t.enabled&&t.approval==='none'&&t.fields.every(f=>!f.required));assert.ok(type);
+ c.newRequest=async(body='Please renew the subscription.')=>{
+  const r=await c.desk.agentCreate(c.tokens.beta,{typeId:type.id,subject:'Renew subscription',body,fields:[],requester:'employee@customer.test',priority:'normal',channel:'agent'});unwrap(r);return r.id;
+ };
+ return c;
+}
+const ticket=async(c,id)=>(await c.desk.getTicket(c.tokens.owner,id))[0];
+
+test('periodic AI: old Desk replies resolve without browser or new Slack event; reopen and later messages are respected',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await completionFixture(pic);const good=await c.newRequest(),later=await c.newRequest(),privateNote=await c.newRequest(),requester=await c.newRequest();
+  for(const id of [good,later,privateNote])unwrap(await c.desk.comment(c.tokens.beta,id,'Renewed and verified, everything works now.'));
+  unwrap(await c.desk.comment(c.tokens.employee,later,'Still broken.'));
+  unwrap(await c.desk.addNote(c.tokens.beta,privateNote,'PRIVATE: still investigating.'));
+  unwrap(await c.desk.comment(c.tokens.employee,requester,'Everything is fixed.'));
+  await enableAI(c);await c.desk.setAiTriage(c.tokens.owner,true);await completionCycle(pic);
+  const req=await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Renewed and verified, everything works now.'}));assert.doesNotMatch(text(req.body),/PRIVATE/);await quiet(pic);
+  assert.equal((await ticket(c,good)).ticket.status,'resolved');
+  for(const id of [later,privateNote,requester])assert.notEqual((await ticket(c,id)).ticket.status,'resolved');
+  unwrap(await c.desk.setStatus(c.tokens.beta,good,'open',''));
+  await completionCycle(pic);await noOutcall(pic);assert.equal((await ticket(c,good)).ticket.status,'open','manual reopen must not recycle old completion evidence');
+ }finally{await pic.tearDown();}
+});
+
+test('periodic AI: invalid response retries after upgrade; unchanged keep decisions do not spend again',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await completionFixture(pic);const id=await c.newRequest();unwrap(await c.desk.comment(c.tokens.beta,id,'I will try tomorrow.'));
+  await enableAI(c);await c.desk.setAiTriage(c.tokens.owner,true);await completionCycle(pic);
+  await answer(pic,'ai.example.test',{choices:[{message:{content:'invalid'}}]});await quiet(pic);assert.notEqual((await ticket(c,id)).ticket.status,'resolved');
+  await pic.upgradeCanister({sender:identity.controller,canisterId:c.b.canisterId,wasm:process.env.KEBAB_CUSTOMER_WASM||'desk/backend/dist/backend.wasm',upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+  await completionCycle(pic);await answer(pic,'ai.example.test',aiResult({kind:'keep',evidence:''}));await quiet(pic);
+  await pic.upgradeCanister({sender:identity.controller,canisterId:c.b.canisterId,wasm:process.env.KEBAB_CUSTOMER_WASM||'desk/backend/dist/backend.wasm',upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+  await completionCycle(pic);await noOutcall(pic);
+  unwrap(await c.desk.comment(c.tokens.beta,id,'Renewed and verified.'));await completionCycle(pic);
+  const pending=await outcall(pic,'ai.example.test');unwrap(await c.desk.comment(c.tokens.employee,id,'The license still fails.'));
+  await pic.mockPendingHttpsOutcall({requestId:pending.requestId,subnetId:pending.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from(JSON.stringify(aiResult({kind:'resolved',evidence:'Renewed and verified.'})))}});await quiet(pic);
+  assert.notEqual((await ticket(c,id)).ticket.status,'resolved','periodic review must discard stale evidence');await completionCycle(pic);await noOutcall(pic);
+ }finally{await pic.tearDown();}
+});
+
+test('periodic AI: bounded batches rotate fairly, checklist blocks and disabled assistance stops work',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await completionFixture(pic);const ids=[];
+  for(let i=0;i<6;i++){const id=await c.newRequest();ids.push(id);unwrap(await c.desk.comment(c.tokens.beta,id,'Done, renewed.'));}
+  unwrap(await c.desk.addTask(c.tokens.beta,ids[0],'Verify license'));
+  await enableAI(c);await c.desk.setAiTriage(c.tokens.owner,true);await completionCycle(pic);
+  for(let i=0;i<4;i++){await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Done, renewed.'}));await quiet(pic);}
+  await noOutcall(pic);assert.notEqual((await ticket(c,ids[0])).ticket.status,'resolved');assert.ok((await ticket(c,ids[0])).events.some(e=>/checklist/.test(e.body)));
+  for(const id of ids.slice(1,4))assert.equal((await ticket(c,id)).ticket.status,'resolved');
+  for(const id of ids.slice(4))assert.notEqual((await ticket(c,id)).ticket.status,'resolved','four-review budget');
+  await completionCycle(pic);for(let i=0;i<2;i++){await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Done, renewed.'}));await quiet(pic);}
+  unwrap(await c.desk.setTask(c.tokens.beta,ids[0],0n,'done'));await c.desk.setAiTriage(c.tokens.owner,false);await completionCycle(pic);await noOutcall(pic);
+  await c.desk.setAiTriage(c.tokens.owner,true);await completionCycle(pic);await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Done, renewed.'}));await quiet(pic);assert.equal((await ticket(c,ids[0])).ticket.status,'resolved');
+ }finally{await pic.tearDown();}
+});
+
+test('periodic AI upgrade: published Desk retains an old public completion and reviews it after upgrade',{skip:!process.env.KEBAB_CUSTOMER_BASELINE},async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await completionFixture(pic,true);const id=await c.newRequest();unwrap(await c.desk.comment(c.tokens.beta,id,'Renewed and verified.'));await enableAI(c);await c.desk.setAiTriage(c.tokens.owner,true);
+  const before=await ticket(c,id);
+  await pic.upgradeCanister({sender:identity.controller,canisterId:c.b.canisterId,wasm:process.env.KEBAB_CUSTOMER_WASM||'desk/backend/dist/backend.wasm',upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+  assert.deepEqual((await ticket(c,id)).ticket,before.ticket);assert.equal((await c.desk.whoami(c.tokens.beta))[0].role,'agent');
+  await completionCycle(pic);await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Renewed and verified.'}));await quiet(pic);assert.equal((await ticket(c,id)).ticket.status,'resolved');
+ }finally{await pic.tearDown();}
+});
+
+test('periodic AI: scan continues beyond the 200-ID boundary without sending requester-only tickets',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await completionFixture(pic);let target;
+  for(let i=0;i<201;i++)target=await c.newRequest();
+  unwrap(await c.desk.comment(c.tokens.beta,target,'Renewed and verified.'));
+  await enableAI(c);await c.desk.setAiTriage(c.tokens.owner,true);
+  await completionCycle(pic);await noOutcall(pic);assert.notEqual((await ticket(c,target)).ticket.status,'resolved');
+  await completionCycle(pic);await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Renewed and verified.'}));await quiet(pic);assert.equal((await ticket(c,target)).ticket.status,'resolved');
  }finally{await pic.tearDown();}
 });

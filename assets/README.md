@@ -200,3 +200,7 @@ rows; app filters, totals and exports retain their existing scope. Reset restore
 the original order. Editable grids and existing app-owned queue sorting stay with
 their workflows. Long marked selectors keep native selection and add an option
 search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
+
+## Operations follow-up
+
+Hub 0.42 with Assets 0.30 shows confirmed payments awaiting IT separately from hardware handovers. The Sales card distinguishes invoice archive, preparation and physical-handover follow-up; unpaid invoices and overdue targets remain separate. Open the paid-phase link to finish work in Assets. Finance records remain the authority; the dashboard does not change payment or custody. See [Operations definitions](../docs/HUB-OPERATIONS.md).
