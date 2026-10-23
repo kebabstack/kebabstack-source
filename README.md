@@ -8,7 +8,7 @@ share its sign-in and navigation. Kitchen installs and updates the modules, and
 Vault takes and restores canister snapshots.
 
 Hub **Permissions** centrally defines roles for Assets, Contracts, Desk, Forms,
-Trust, Watch and Crumbs. Global Hub owners/admins inherit app administration; employees
+Trust, Watch, Crumbs and Doku. Global Hub owners/admins inherit app administration; employees
 receive their own and explicitly shared content. See the [permission model and
 upgrade sequence](docs/APP-PERMISSIONS.md) before rolling out these releases.
 
@@ -45,6 +45,7 @@ chosen operators, jurisdictions, controllers and external data flows.
 | Module | Role | Status |
 |---|---|---|
 | [Hub](docs/INSTALL.md) | Directory, passkey/SSO sign-in (several providers), groups, access policies, SCIM input from several sources, Okta pull, optional OpenTeam directory input, notifications; OIDC provider for external software | alpha |
+| [Doku](knowledge/README.md) | Reviewed documentation from confirmed internal Desk solutions or manual drafts, rich-text editor, immutable published history and version-scoped external links; one internal library | alpha |
 | [Desk](desk/README.md) | Internal and customer support, connected offboarding, project workflows, on-call schedules, incident response, service status and scoped HR/Finance reports | alpha |
 | [Assets](assets/README.md) | Device inventory, MDM/Apple imports, assignment history and hardware sales; employee offers and external magic-link dealrooms with invoices | alpha |
 | [Watch](watch/README.md) | DNS/domain monitoring, posture and expiry evidence; optional notifications | alpha |
@@ -117,3 +118,7 @@ standard changes. Keep source, generated docs, versions and changelogs aligned.
 OpenSaaS interoperability: Hub can use OpenTeam as an optional directory source. See the [setup and verified compatibility scope](docs/OPENTEAM.md). Authentication and Kebabstack roles remain Hub-managed; no OpenSaaS-wide certification is claimed.
 
 Desk also includes an alpha [IT Workboard](docs/WORKBOARD.md) for project tasks, linked internal tickets and optional hardware sales, with existing Hub and source permissions.
+
+## Documentation milestone
+
+[Doku](knowledge/README.md) adds a human-reviewed internal documentation workflow from confirmed Desk solutions. Alpha 0.2 provides a WYSIWYG editor, direct manual creation, reviewed proposals, published history and optional password-protected external version links with expiry/revocation. AI suggestions, Slack review reminders and scoped spaces remain planned; no automatic documentation update is shipped.

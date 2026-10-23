@@ -65,8 +65,8 @@ function stackOverview(c) {
   const de = c === content.de,
     t = (a, b) => (de ? a : b);
   const roles = de
-    ? { desk: "Support", assets: "Inventar", trust: "Gerätestatus", contracts: "Verträge", forms: "Formulare", watch: "Domains", crumbs: "Analytics" }
-    : { desk: "Support", assets: "Inventory", trust: "Device posture", contracts: "Agreements", forms: "Submissions", watch: "Domains", crumbs: "Analytics" };
+    ? { knowledge: "Dokumentation", desk: "Support", assets: "Inventar", trust: "Gerätestatus", contracts: "Verträge", forms: "Formulare", watch: "Domains", crumbs: "Analytics" }
+    : { knowledge: "Documentation", desk: "Support", assets: "Inventory", trust: "Device posture", contracts: "Agreements", forms: "Submissions", watch: "Domains", crumbs: "Analytics" };
   const apps = c.modules.filter((m) => m.id !== "hub" && !m.planned);
   const hub = c.modules.find((m) => m.id === "hub");
   return `<aside class="hero-stack" aria-labelledby="stack-overview-title">

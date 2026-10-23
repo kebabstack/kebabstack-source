@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Crumbs API",
-    "version": "0.11.2",
+    "version": "0.11.3",
     "description": "Website analytics on a Cloud Engine, cookieless by default with optional consented cookie recognition. Base URL is your native backend HTTPS origin (or optional Node collector). Report/resource integers from Candid are decimal strings; collection acknowledgments and collector-health counters are JSON numbers. Native acceptance commits directly to the canister; Node acceptance confirms a local queue. Native mode requires stable event IDs and supports operator-loaded expiring GeoIP/ASN/hosting datasets. Native raw HTTP requests including IP/UA enter replicated processing but are excluded from persisted analytics event fields. Sending an event requires a registered website, not a secret browser key. Public collection is not proof of a human visitor. Report credentials are always server-side authorized. UTC day/hour buckets and rotating daily visitor estimates; see metric definitions. Query/auth credentials do not grant the signed collector lane."
   },
   "servers": [

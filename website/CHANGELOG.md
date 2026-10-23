@@ -1,5 +1,10 @@
 # Product website changes
 
+## [0.5.10] — 2026-10-23
+
+- Add Doku to the German/English product overview and explorer with a clearly labelled synthetic draft-to-publication example.
+- Explain reviewed Desk solutions, manual authoring, Hub roles and version-scoped external sharing. Keep one-library limits, unrecoverable reader copies and planned AI/images/Slack features explicit.
+
 ## [0.5.9] — 2026-10-21
 
 - Explain Desk's optional periodic completion review in German and English: public staff evidence, bounded background batches, normal workflow gates, recorded decisions and manual reopening.

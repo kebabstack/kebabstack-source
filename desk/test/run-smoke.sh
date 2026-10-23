@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
-cp dist/queue-bulk.js dist/queue-bulk.css dist/assignment.js dist/workboard.js dist/workboard.css dist/oncall-navigation.js dist/compensation.js dist/oncall-regional.js dist/oncall-regional-editor.js dist/oncall-reminders.js dist/service-status.js dist/service-status.css dist/oncall-status.js dist/oncall-calendar.js dist/reporting.js dist/reporting.css dist/oncall-alerts.js dist/oncall-response.js dist/oncall.js dist/oncall-planning.js dist/oncall.css dist/customer-workflows.js dist/customer-privacy.js dist/customer-projects.js dist/index.html dist/app.js dist/idl.js dist/hub-client.js dist/canonical-url.js dist/ticket-view.js dist/person-context.js dist/message-format.js dist/desk.css dist/profile-pictures.js "$T/"
+cp dist/knowledge.js dist/queue-bulk.js dist/queue-bulk.css dist/assignment.js dist/workboard.js dist/workboard.css dist/oncall-navigation.js dist/compensation.js dist/oncall-regional.js dist/oncall-regional-editor.js dist/oncall-reminders.js dist/service-status.js dist/service-status.css dist/oncall-status.js dist/oncall-calendar.js dist/reporting.js dist/reporting.css dist/oncall-alerts.js dist/oncall-response.js dist/oncall.js dist/oncall-planning.js dist/oncall.css dist/customer-workflows.js dist/customer-privacy.js dist/customer-projects.js dist/index.html dist/app.js dist/idl.js dist/hub-client.js dist/canonical-url.js dist/ticket-view.js dist/person-context.js dist/message-format.js dist/desk.css dist/profile-pictures.js "$T/"
 cp test/agent-bundle.stub.js "$T/agent-bundle.js"
 cp test/smoke.mjs "$T/"
 [ -d node_modules ] && ln -s "$(pwd)/node_modules" "$T/node_modules" || true

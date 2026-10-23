@@ -246,3 +246,7 @@ feature sets **resolved**, not closed. No new Hub lane or Slack scope is needed.
 ## Operations follow-up
 
 Hub 0.42 with Desk 0.35 separates onboarding/offboarding requests and includes your personal Workboard tasks alongside shared-project tasks. Lifecycle links open matching internal queue filters; closed work and linked records are excluded from task totals. TV sharing stays unchanged. See [Operations definitions](../docs/HUB-OPERATIONS.md).
+
+## Documentation handoff (0.37.0)
+
+On a resolved internal ticket, confirm a reusable solution under Documentation, then create a Doku proposal. Requires Hub 0.44 and Doku 0.1 with Author/Reviewer access; publication is a separate human decision. Reopening invalidates the confirmation. Customer-project tickets and automatic AI proposals are excluded. See [Doku](../knowledge/README.md).

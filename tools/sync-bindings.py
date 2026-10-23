@@ -10,7 +10,7 @@ def put(path,data):
     if path.exists() and path.read_text()==data:return
     if check:bad.append(str(path.relative_to(ROOT)))
     else:path.write_text(data)
-modules = ['hub','desk','assets','watch','crumbs','trust','forms','bug','contracts','vault','kitchen']
+modules = ['knowledge','hub','desk','assets','watch','crumbs','trust','forms','bug','contracts','vault','kitchen']
 selected = [arg for arg in sys.argv[1:] if not arg.startswith('--')]
 if any(module not in modules for module in selected): sys.exit('Unknown module')
 for module in selected or modules:
@@ -18,7 +18,7 @@ for module in selected or modules:
     if not built.exists():sys.exit(f'build {module} first')
     put(ROOT/module/'backend/backend.did','\n'.join(line.rstrip() for line in built.read_text().splitlines())+'\n')
     generated=subprocess.check_output(['python3',str(ROOT/'sdk/tools/did2idl.py'),str(built)],text=True)
-    if module in ['desk','assets','watch','crumbs','trust','forms','bug','contracts']:put(ROOT/module/'dist/idl.js',generated)
+    if module in ['knowledge','desk','assets','watch','crumbs','trust','forms','bug','contracts']:put(ROOT/module/'dist/idl.js',generated)
     elif module in ['hub','kitchen']:
         name='idlFactory' if module=='hub' else 'idl'
         replacement=generated[generated.index('export const'):].replace('export const idlFactory',f'const {name}',1).strip()

@@ -45,6 +45,7 @@ export const idlFactory = ({ IDL }) => {
   const Column = IDL.Variant({ active: IDL.Null, done: IDL.Null, planned: IDL.Null, waiting: IDL.Null });
   const TaskView = IDL.Record({ archived: IDL.Bool, assignee: IDL.Text, assigneeAvailable: IDL.Bool, assigneeName: IDL.Text, column: Column, createdAt: IDL.Int, createdBy: IDL.Text, dueOn: IDL.Text, id: IDL.Nat, note: IDL.Text, projectId: IDL.Opt(IDL.Nat), projectName: IDL.Text, revision: IDL.Nat, subtaskCount: IDL.Nat, subtasksDone: IDL.Nat, title: IDL.Text, updatedAt: IDL.Int, waitingFor: IDL.Text });
   const TaskInput = IDL.Record({ assignee: IDL.Text, column: Column, dueOn: IDL.Text, note: IDL.Text, projectId: IDL.Opt(IDL.Nat), title: IDL.Text, waitingFor: IDL.Text });
+  const Target = IDL.Record({ cid: IDL.Nat, desk: IDL.Nat, name: IDL.Text, url: IDL.Text });
   const SwapState = IDL.Variant({ accepted: IDL.Null, cancelled: IDL.Null, declined: IDL.Null, pending: IDL.Null });
   const Swap = IDL.Record({ decidedAt: IDL.Int, decidedBy: IDL.Text, fromPersonId: IDL.Text, id: IDL.Nat, planId: IDL.Nat, reason: IDL.Text, requestedAt: IDL.Int, requestedBy: IDL.Text, shift: IDL.Nat, state: SwapState, toName: IDL.Text, toPersonId: IDL.Text });
   const Subtask = IDL.Record({ done: IDL.Bool, id: IDL.Nat, title: IDL.Text });
@@ -64,6 +65,8 @@ export const idlFactory = ({ IDL }) => {
   const Region = IDL.Record({ backup: IDL.Vec(IDL.Text), backupMode: IDL.Variant({ always: IDL.Null, none: IDL.Null, nonworking: IDL.Null }), days: IDL.Vec(IDL.Nat), endMinute: IDL.Nat, holidays: IDL.Vec(IDL.Text), name: IDL.Text, primary: IDL.Vec(IDL.Text), startMinute: IDL.Nat, timezone: IDL.Text });
   const Recipe = IDL.Record({ regions: IDL.Vec(Region), requirement: IDL.Variant({ continuous: IDL.Null, regional: IDL.Null }), rotationDays: IDL.Nat, startDate: IDL.Text, timezone: IDL.Text, weeks: IDL.Nat });
   const Saved = IDL.Record({ edited: IDL.Bool, recipe: Recipe });
+  const Evidence = IDL.Record({ backend: IDL.Text, confirmed: IDL.Bool, confirmedAt: IDL.Int, confirmedBy: IDL.Text, key: IDL.Text, revision: IDL.Nat, summary: IDL.Text, ticketId: IDL.Nat, title: IDL.Text, url: IDL.Text });
+  const Result__2 = IDL.Variant({ err: IDL.Text, ok: Evidence });
   const Error__1 = IDL.Variant({ denied: IDL.Null, invalid: IDL.Text, limit: IDL.Text, missing: IDL.Null, stale: IDL.Null, unavailable: IDL.Null });
   const Result__1 = IDL.Variant({ err: Error__1, ok: IDL.Record({ id: IDL.Nat, revision: IDL.Nat }) });
   const Error = IDL.Variant({ denied: IDL.Null, invalid: IDL.Text, limit: IDL.Text, missing: IDL.Null, stale: IDL.Null });
@@ -180,6 +183,7 @@ export const idlFactory = ({ IDL }) => {
     claimAdmin: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     clearAiKey: IDL.Func([IDL.Text], [IDL.Bool], []),
     comment: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    confirmKnowledgeSolution: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text], [Result__2], []),
     confirmReportingRecord: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Nat, IDL.Bool, IDL.Text], [Result], []),
     confirmServiceStatus: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Nat], [Result], []),
     createCustomerKey: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Vec(IDL.Text), IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool, secret: IDL.Text })], []),
@@ -208,6 +212,7 @@ export const idlFactory = ({ IDL }) => {
     fileData: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ data: IDL.Vec(IDL.Nat8), mime: IDL.Text, name: IDL.Text }))], ["query"]),
     formsSourceInfo: IDL.Func([IDL.Nat, IDL.Nat], [IDL.Opt(IDL.Record({ deskUrl: IDL.Text, name: IDL.Text }))], []),
     getAutoAssignment: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ config: Config, people: IDL.Vec(Person), requestTypes: IDL.Vec(IDL.Record({ enabled: IDL.Bool, id: IDL.Nat, name: IDL.Text })), warnings: IDL.Vec(IDL.Text) }))], ["query"]),
+    getKnowledgeSolution: IDL.Func([IDL.Text, IDL.Nat], [Result__2], ["query"]),
     getSettings: IDL.Func([IDL.Text], [IDL.Opt(Settings)], ["query"]),
     getTicket: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(TicketFull)], ["query"]),
     handoffOncallIncident: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text], [Result], []),
@@ -216,6 +221,7 @@ export const idlFactory = ({ IDL }) => {
     http_request_update: IDL.Func([HttpGwRequest], [HttpGwResponse], []),
     hub_deactivate: IDL.Func([IDL.Vec(IDL.Text)], [IDL.Nat], []),
     hub_hardwareCase: IDL.Func([IDL.Nat], [IDL.Opt(Case)], ["query"]),
+    hub_knowledgeEvidence: IDL.Func([IDL.Text, IDL.Nat], [Result__2], ["query"]),
     hub_manifest: IDL.Func([], [Manifest], ["query"]),
     hub_operations: IDL.Func([IDL.Text], [Snapshot], ["query"]),
     hub_permissionStatus: IDL.Func([], [PermissionStatus], []),
@@ -225,6 +231,7 @@ export const idlFactory = ({ IDL }) => {
     hub_usesGroup: IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], ["query"]),
     info: IDL.Func([], [IDL.Record({ appUrl: IDL.Text, hubId: IDL.Text, hubSet: IDL.Bool, orgName: IDL.Text, version: IDL.Text })], ["query"]),
     internalQueuePage: IDL.Func([IDL.Text, Filter__1, IDL.Opt(IDL.Nat)], [IDL.Opt(QueuePage)], ["query"]),
+    knowledgeTargets: IDL.Func([IDL.Text], [IDL.Vec(Target)], []),
     lifecycleHealth: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ checkedAt: IDL.Int, detail: IDL.Text, gap: IDL.Bool }))], ["query"]),
     linkWorkItem: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, Link, IDL.Bool], [Result__1], []),
     listCustomerProjects: IDL.Func([IDL.Text], [IDL.Vec(CustomerProject)], ["query"]),

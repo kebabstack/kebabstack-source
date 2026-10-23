@@ -61,6 +61,20 @@ export const content = {
         note: "KI benötigt einen verbundenen Anbieter und aktivierte Assistenz. Alle 15 Minuten werden kleine Pakete geprüft; größere Warteschlangen dauern länger. Nur öffentliche Team-Antworten zählen, spätere Rückfragen oder manuelle Statusänderungen sperren alte Belege. Checklisten und Freigaben bleiben verbindlich; Entscheidungen sind protokolliert und Tickets wieder öffnbar. Interne Notizen und Kundenprojekte sind ausgenommen. KI kann sich irren. Bestätigte mobile Alarmierung bleibt geplant.",
       },
       {
+        id: "knowledge",
+        name: "Doku",
+        category: "Wissen & Dokumentation",
+        icon: "open-book",
+        title: "Die Lösung behalten. Nicht jedes Mal neu suchen.",
+        text: "Eine bestätigte Lösung aus einem internen Desk-Ticket als Artikel aufbereiten oder direkt in Doku schreiben. Entwürfe werden ausdrücklich geprüft und als nachvollziehbare Version veröffentlicht.",
+        features: [
+          "Texteditor, Suche und veröffentlichte Versionsgeschichte",
+          "Reader, Author, Reviewer und Admin über Hub-Berechtigungen",
+          "Eine veröffentlichte Version per widerrufbarem Link teilen; Passwort und Ablauf optional",
+        ],
+        note: "Alpha: eine interne Bibliothek für alle berechtigten Leser, keine getrennten Wissensbereiche. Externe Links teilen genau eine Version; bereits gelesene Kopien lassen sich nicht zurückholen. KI-Vorschläge, Bilder und Slack-Erinnerungen sind geplant. Desk-Entwürfe benötigen weiterhin Zugriff auf die Quelle.",
+      },
+      {
         id: "assets",
         name: "Assets",
         category: "Geräte & Inventar",
@@ -448,6 +462,20 @@ export const content = {
           "Also customer projects, on-call and HR/Finance reporting",
         ],
         note: "AI requires a connected provider and enabled assistance. Small batches run every 15 minutes; larger queues take longer. Only public staff replies qualify; later replies or manual status changes block old evidence. Checklists and approvals remain binding; decisions are recorded and tickets can be reopened. Internal notes and customer projects are excluded. AI can misclassify. Verified mobile alerting remains planned.",
+      },
+      {
+        id: "knowledge",
+        name: "Doku",
+        category: "Knowledge & documentation",
+        icon: "open-book",
+        title: "Keep the solution. Stop searching from scratch.",
+        text: "Turn a confirmed solution from an internal Desk ticket into an article, or write directly in Doku. Drafts are explicitly reviewed and published as traceable versions.",
+        features: [
+          "Rich-text editor, search and published version history",
+          "Reader, Author, Reviewer and Admin roles through Hub permissions",
+          "Share one published version through a revocable link; optional password and expiry",
+        ],
+        note: "Alpha: one internal library for all authorized readers, without separate knowledge spaces. External links share exactly one version; copies already read cannot be recalled. AI proposals, images and Slack reminders are planned. Desk drafts still require access to their source.",
       },
       {
         id: "assets",

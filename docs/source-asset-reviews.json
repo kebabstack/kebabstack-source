@@ -670,5 +670,29 @@
       "canister-reference"
     ],
     "reason": "Bundled official agent SDK contains the public ICP ledger principal; not an installation identifier."
+  },
+  {
+    "path": "design/logos/png/knowledge.png",
+    "sha256": "4acc03d7425927290962e15d1a30f633980a417c106fb90297fa052cf9f481ec",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed canonical open-book mark generated from the product registry; PNG contains only image/physical-size chunks, no personal metadata. Original project logo under the repository license."
+  },
+  {
+    "path": "hub/dist/design/logos/png/knowledge.png",
+    "sha256": "4acc03d7425927290962e15d1a30f633980a417c106fb90297fa052cf9f481ec",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed canonical open-book mark generated from the product registry; PNG contains only image/physical-size chunks, no personal metadata. Original project logo under the repository license."
+  },
+  {
+    "path": "kitchen/art/knowledge.png",
+    "sha256": "4acc03d7425927290962e15d1a30f633980a417c106fb90297fa052cf9f481ec",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Visually reviewed canonical open-book mark generated from the product registry; PNG contains only image/physical-size chunks, no personal metadata. Original project logo under the repository license."
   }
 ]

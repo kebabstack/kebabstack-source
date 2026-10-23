@@ -55,6 +55,13 @@ type TdTeamInfo =
    standard: text;
    version: text;
  };
+type Target =
+ record {
+   cid: nat;
+   desk: nat;
+   name: text;
+   url: text;
+ };
 type SyncStat =
  record {
    at: int;
@@ -191,6 +198,11 @@ type Review =
    startedAt: int;
    startedBy: text;
    state: text;
+ };
+type Result =
+ variant {
+   err: text;
+   ok: Evidence;
  };
 type ReportingScope =
  record {
@@ -456,6 +468,19 @@ type FinanceBinding =
  record {
    canisterId: principal;
    cid: nat;
+ };
+type Evidence =
+ record {
+   backend: text;
+   confirmed: bool;
+   confirmedAt: int;
+   confirmedBy: text;
+   key: text;
+   revision: nat;
+   summary: text;
+   ticketId: nat;
+   title: text;
+   url: text;
  };
 type Event =
  record {
@@ -1051,6 +1076,8 @@ service : {
       revision: nat;
     }) query;
   hub_hardwareCheck: (deskId: text, ticket: nat, viewer: text) -> (opt Case);
+  hub_knowledgeEvidence: (viewer: text, cid: nat, ticketId: nat) -> (Result);
+  hub_knowledgeTargets: (viewer: text) -> (vec Target) query;
   hub_lifecycleEvents: (after: nat) -> (Batch) query;
   /// CONTRACT (return lane): a registered connector notifies a person.
   /// Admins may call too (testing). Recipient must be ACTIVE and inside the

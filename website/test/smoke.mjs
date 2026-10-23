@@ -30,7 +30,7 @@ for (const lang of ["de", "en"]) {
       d = dom.window.document;
     assert.equal(d.documentElement.lang, lang);
     assert.equal(d.querySelectorAll("h1").length, 1);
-    assert.equal(d.querySelectorAll(".module-panel:not([hidden])").length, 9);
+    assert.equal(d.querySelectorAll(".module-panel:not([hidden])").length, 10);
     assert.equal(d.querySelectorAll(".faq-list details").length, 7);
     const ids = [...d.querySelectorAll("[id]")].map((e) => e.id);
     assert.equal(new Set(ids).size, ids.length, "unique anchor/control ids");
@@ -100,8 +100,8 @@ for (const lang of ["de", "en"]) {
     desk.dispatchEvent(
       new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
     );
-    assert.equal(selected().id, "tab-assets");
-    assert.equal(d.activeElement.id, "tab-assets");
+    assert.equal(selected().id, "tab-knowledge");
+    assert.equal(d.activeElement.id, "tab-knowledge");
     selected().dispatchEvent(
       new w.KeyboardEvent("keydown", { key: "End", bubbles: true }),
     );

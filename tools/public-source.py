@@ -50,7 +50,7 @@ NON_WAIVABLE = {'private-key', 'github-token', 'slack-token', 'aws-access-key',
 FRONTENDS = {
     'hub/dist/index.html': {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__', 'CANONICAL_ORIGIN': ''},
     **{f'{m}/dist/app.js': {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__', 'HUB_URL': '__HUB_URL__'}
-       for m in ['desk', 'assets', 'watch', 'crumbs', 'trust', 'forms', 'bug', 'bug2d', 'contracts']},
+       for m in ['knowledge', 'desk', 'assets', 'watch', 'crumbs', 'trust', 'forms', 'bug', 'bug2d', 'contracts']},
     'desk/dist/support.js': {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__'},
 }
 

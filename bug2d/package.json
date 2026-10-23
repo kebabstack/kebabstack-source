@@ -1,6 +1,6 @@
 {
   "name": "kebabstack-bug2d",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "private": true,
   "type": "module",
   "description": "A playable 2D pixel arcade edition of DFINITY's Ship the Bug.",

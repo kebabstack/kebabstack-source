@@ -1,3 +1,4 @@
+import {createKnowledge} from "./knowledge.js";
 import { paintCustomerWorkflow } from './customer-workflows.js';
 import { ticketPrivacy } from './customer-privacy.js';
 import { createPersonContext } from './person-context.js';
@@ -18,6 +19,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
   const clearPreview = () => { if (previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = null; $("tFilePreview").replaceChildren(); $("tFilePreview").classList.add("hidden"); };
   let agents = []; const drafts = new Map(), dirty = new Set();
   const api = () => getBackend();
+  const knowledge = createKnowledge({root: $("tKnowledge"),api,session});
   const personContext = createPersonContext({root: $("tPersonContext"), lifecycleRoot: $("tLifecycle"), api, getMe, session, reload: id => load(id)});
   const same = id => activeId === String(id) && !!getMe();
   const draftKey = (id, mode = kind) => `${getMe()?.id}:${id}:${mode}`;
@@ -191,7 +193,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     if (!/^\d+$/.test(textId) || !getMe()) { toggle('tWrap',false); toggle('tMissing',true); return; }
     if (background && (pending || loading || !same(id))) return;
     const fresh = activeId !== textId;
-    if (fresh) { clearPreview(); paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); remember(); activeId = textId; current = null; kind = 'comment'; checklistOpen = false; aiSuggestion = null; dirty.clear(); toggle('tWrap',false); toggle('tMissing',false); }
+    if (fresh) { clearPreview(); paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); remember(); activeId = textId; current = null; kind = 'comment'; checklistOpen = false; aiSuggestion = null; dirty.clear(); toggle('tWrap',false); toggle('tMissing',false); }
     const stamp = ++generation, person = getMe().id; loading = true;
     if (!background) sync('Loading request…');
     try {
@@ -200,11 +202,11 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
       agents = people;
       const value = opt(full);
       toggle('tWrap',!!value); toggle('tMissing',!value);
-      if (!value) { forget(textId); clearTicketData(); customerSignature=''; privacySignature=''; personContext.reset(); $('tMissing').textContent = 'This request is unavailable. It may not exist, or your account may not have access.'; current = null; sync('Request unavailable',true); return; }
+      if (!value) { forget(textId); clearTicketData(); customerSignature=''; privacySignature=''; personContext.reset(); knowledge.clear(); $('tMissing').textContent = 'This request is unavailable. It may not exist, or your account may not have access.'; current = null; sync('Request unavailable',true); return; }
       if(opt(value.customer)) {
         agents = await api().customerProjectAgents(session.load(),opt(value.customer).projectId);
         if(stamp!==generation || !same(textId) || getMe()?.id!==person)return;
-        personContext.reset();
+        personContext.reset(); knowledge.clear();
         $('tBack').href = '#/customers/'+opt(value.customer).projectId;
         $('tBack').textContent = '← '+opt(value.customer).projectName;
         $('tBack').onclick = e => {e.preventDefault();location.hash='#/customers/'+opt(value.customer).projectId;};
@@ -215,6 +217,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
       }
       paint(value, fresh); sync('Up to date');
       if(!opt(value.customer))void personContext.load(value, !background);
+      void knowledge.show(value);
     } catch (e) {
       if (stamp !== generation || !same(textId)) return;
       sync('Updates paused · retry',true);
@@ -319,5 +322,5 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
   const refresh = () => { if (activeId && !document.hidden && getMe()) return load(activeId,{background:true}); };
   setInterval(refresh,7000); document.addEventListener('visibilitychange',refresh);
   window.addEventListener('beforeunload',e => { remember(); if ([...drafts.values()].some(Boolean)) { e.preventDefault(); e.returnValue=''; } });
-  return {load, refresh, leave(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); remember(); activeId=null; generation++; loading=false; current=null;}, reset(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); activeId=null; current=null; generation++; loading=false; drafts.clear(); dirty.clear(); $('cBody').value=''; toggle('tWrap',false);}};
+  return {load, refresh, leave(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); remember(); activeId=null; generation++; loading=false; current=null;}, reset(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); activeId=null; current=null; generation++; loading=false; drafts.clear(); dirty.clear(); $('cBody').value=''; toggle('tWrap',false);}};
 }

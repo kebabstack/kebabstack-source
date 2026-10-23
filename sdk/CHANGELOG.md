@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.17.0] — 2026-10-21
+
+- Add the Doku permission vocabulary, typed Desk evidence bridge and canonical open-book logo. Existing session, directory and external-app contracts remain unchanged.
+
 ## [0.16.0] — 2026-10-11
 
 - Add the Hub 0.40.0 suite-login contract: browser `suiteCookie` helpers and Motoko `redeemSuiteLogin`, allowing configured company-domain apps to establish their own session from a Hub suite-login token. Cookie domain selection excludes gateway suffixes and bare hosts.

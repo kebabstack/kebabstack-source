@@ -40,7 +40,7 @@ misrepresenting results or bypassing the repository's deployment rules.
 | `brand/registry.json` | Suite skewer, wordmark specification and generated variants |
 | `adoption.json` | Stage-two review order and acceptance gates |
 | `site/` | Documentation UI source; examples are clearly labelled, fictitious demos |
-| `logos/registry.json` | Existing permanent product marks, separately versioned 1.0.0 |
+| `logos/registry.json` | Existing permanent product marks, separately versioned 1.1.0 |
 | `../hub/dist/tokens.css` | Canonical generated runtime tokens |
 | `../hub/dist/components.css` | Shared workspace controls and navigation measures |
 | `runtime/sync.mjs` | Generate runtime values and check identical app copies |

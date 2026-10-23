@@ -18,6 +18,13 @@ Dependencies installed at build time retain their own notices in their packages.
 | postal-mime 2.7.6 | `contracts/dist/vendor/postal-mime.js` and mail relay | [MIT-0](third-party/licenses/postal-mime-MIT-0.txt); Andris Reinman |
 | unpdf 1.8.1 and PDF.js | `contracts/dist/vendor/pdf-text.js` | [Build notice](contracts/dist/vendor/pdf-text-NOTICE.txt), [MIT](contracts/dist/vendor/unpdf-LICENSE.txt), [Apache-2.0](contracts/dist/vendor/pdfjs-LICENSE.txt) |
 
+## Bundled documentation editor
+
+Doku bundles Tiptap 3.32.0 and its ProseMirror dependencies locally. Exact package
+versions and complete upstream licenses are generated from the pinned lockfile
+in [Doku editor notices](knowledge/dist/third-party-notices.txt). The build fails
+if an included dependency has no license file.
+
 ## Bundled game fonts
 
 The following Latin-subset fonts are served locally from `bug/src/assets/fonts/`

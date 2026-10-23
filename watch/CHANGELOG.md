@@ -1,5 +1,10 @@
 # Changelog — kebab-stack watch
 
+## [0.12.1] — 2026-10-21
+
+- Synchronize the canonical browser logo registry for Doku. Existing application behavior is unchanged. This source update does not by itself deploy this app.
+
+
 ## [0.12.0] — 2026-10-18
 
 - Adopt shared opt-in table controls (loaded-row search, accessible sorting, column visibility and reset), form validation feedback and searchable long native selections. Preserve application-owned filtering, exports, permissions and editable grids.

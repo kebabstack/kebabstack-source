@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-bug2d"
-version = "0.2.5"
+version = "0.2.6"
 description = "kebab-stack bug — Ship the Bug: 2D pixel arcade with public play and an opt-in global scoreboard"
 
 [toolchain]

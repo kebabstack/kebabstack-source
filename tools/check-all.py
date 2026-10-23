@@ -5,10 +5,12 @@ import os, subprocess
 ROOT=Path(__file__).resolve().parents[1]
 ENV={**os.environ,'PATH':str(ROOT/'node_modules/.bin')+os.pathsep+os.environ.get('PATH',''),'NODE_PATH':str(ROOT/'node_modules')}
 def run(args,cwd=ROOT):subprocess.run(args,cwd=cwd,env=ENV,check=True)
+run(['npm','ci','--ignore-scripts'],ROOT/'knowledge')
+run(['npm','run','build'],ROOT/'knowledge')
 run(['node','design/logos/sync.mjs','--check'])
 run(['npm','run','design:check'])
 run(['npm','run','runtime:check'])
-for module in ['hub','desk','assets','watch','crumbs','trust','forms','bug','contracts','vault','kitchen','sdk/example']:
+for module in ['knowledge','hub','desk','assets','watch','crumbs','trust','forms','bug','contracts','vault','kitchen','sdk/example']:
     cwd=ROOT/module
     print(f'Checking/building {module}',flush=True)
     run(['mops','install','--locked'],cwd);run(['mops','check'],cwd);run(['mops','build'],cwd)
@@ -20,7 +22,7 @@ run(['python3','tools/check-release.py','--placeholders-from-index']) # the work
 run(['python3','sdk/tools/check-sdk.py'])
 print('Installing pinned game dependencies for frontend checks',flush=True)
 run(['npm','ci','--ignore-scripts'],ROOT/'bug')
-for module in ['hub','desk','assets','watch','crumbs','trust','forms','bug','contracts']:run(['bash',module+'/test/run-smoke.sh'])
+for module in ['knowledge','hub','desk','assets','watch','crumbs','trust','forms','bug','contracts']:run(['bash',module+'/test/run-smoke.sh'])
 print('Checking the Crumbs collector and tracker',flush=True)
 run(['npm','ci','--ignore-scripts'],ROOT/'crumbs/collector')
 run(['node','crumbs/tools/api-docs.mjs','--check'])

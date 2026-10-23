@@ -1,4 +1,5 @@
 import Operations "mo:kebab-hub/Operations";
+import Knowledge "mo:kebab-hub/Knowledge";
 import Workboard "mo:kebab-hub/Workboard";
 import WorkTypes "workboard/Types";
 import WorkLogic "workboard/Logic";
@@ -128,11 +129,52 @@ persistent actor Desk {
     if (hubId != expectedHub or workActor(tok) != ?before) return Workboard.denied();
     result
   };
+  type KnowledgeSolution = { revision : Nat; summary : Text; confirmedBy : Text; confirmedAt : Int; resolvedAt : ?Int };
+  let knowledgeSolutions : Map.Map<Nat, KnowledgeSolution> = Map.empty();
+  func knowledgeEvidence(id : Nat) : Knowledge.Result {
+    let t = tickets.get(id) ?? (return #err("Ticket unavailable"));
+    if (projectOf(id) != 0) return #err("Only internal tickets are supported");
+    let s = knowledgeSolutions.get(id) ?? ({ revision = 0; summary = ""; confirmedBy = ""; confirmedAt = 0; resolvedAt = null });
+    #ok({ ticketId = id; key = t.key; title = capText(t.subject, 500); summary = s.summary; revision = s.revision;
+      confirmed = s.revision > 0 and s.resolvedAt != null and s.resolvedAt == t.resolvedAt and (t.status == "resolved" or t.status == "closed");
+      confirmedBy = s.confirmedBy; confirmedAt = s.confirmedAt; backend = Principal.fromActor(Desk).toText(); url = appUrl })
+  };
+  public shared query func getKnowledgeSolution(tok : Text, id : Nat) : async Knowledge.Result {
+    if (staff(tok) == null) return #err("Desk staff access required");
+    knowledgeEvidence(id)
+  };
+  public shared func confirmKnowledgeSolution(tok : Text, id : Nat, expectedRevision : Nat, summary : Text) : async Knowledge.Result {
+    let m = staff(tok) ?? (return #err("Desk staff access required"));
+    let t = tickets.get(id) ?? (return #err("Ticket unavailable"));
+    if (projectOf(id) != 0 or (t.status != "resolved" and t.status != "closed") or t.resolvedAt == null) return #err("Resolve this internal request first");
+    let old = knowledgeSolutions.get(id);
+    let rev = switch (old) { case (?s) s.revision; case null 0 };
+    if (rev != expectedRevision) return #err("Another person changed the solution. Reload first.");
+    let clean = norm(summary);
+    if (clean.size() < 10 or clean.size() > 12000) return #err("Use between 10 and 12,000 characters");
+    knowledgeSolutions.add(id, { revision = rev + 1; summary = clean; confirmedBy = m.id; confirmedAt = now(); resolvedAt = t.resolvedAt });
+    knowledgeEvidence(id)
+  };
+  public shared query ({ caller }) func hub_knowledgeEvidence(viewer : Text, id : Nat) : async Knowledge.Result {
+    assert Hub.isHub(caller, hubId);
+    let email = emailOfPid(viewer);
+    if (not Hub.directoryFresh(lastDirectoryPull) or not Hub.isActive(people, email) or pidOf(email) != viewer or not isStaff(roleOf(email))) return #err("Current Desk staff access required");
+    knowledgeEvidence(id)
+  };
+  public shared func knowledgeTargets(tok : Text) : async [Knowledge.Target] {
+    let m = staff(tok) ?? (return []); let expectedHub = hubId;
+    if (expectedHub == "") return [];
+    let hub : Knowledge.Broker = actor (expectedHub);
+    let result = try { await (with timeout = 20) hub.hub_knowledgeTargets(m.id) } catch (_) { return [] };
+    if (hubId != expectedHub or staff(tok) != ?m) return [];
+    result
+  };
+
   // =====================================================================
   // config
   // =====================================================================
   var hubId : Text = ""; // hub BACKEND canister id
-  transient let BUILD_VERSION : Text = "0.36.0"; // = mops.toml version = CHANGELOG section
+  transient let BUILD_VERSION : Text = "0.37.0"; // = mops.toml version = CHANGELOG section
   var owner : ?Principal = null; // controller who ran setHub (CLI bootstrap)
   var appUrl : Text = ""; // this desk's frontend URL (deep links in notifications)
   var orgName : Text = "";

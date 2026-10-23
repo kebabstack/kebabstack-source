@@ -226,3 +226,7 @@ never authorize administrative API calls. The Hub's own console sets the Hub-onl
 Use the [shared workspace controls](WORKSPACE-UI.md) for operational tables,
 form validation and original-document review. The browser components are served
 beside the SDK; they do not change the Motoko SDK, Candid or permission contract.
+
+## Documentation evidence (SDK 0.17)
+
+`Knowledge.mo` defines the narrow confirmed-solution projection and Hub broker. A registered Doku connector needs current personal Author/Reviewer/Admin access plus current Desk staff access. Hub rechecks source identity and rights after the source call. Desk exposes only explicitly confirmed internal solutions, not ticket bodies or notes. This contract does not provide automatic AI matching or notifications.

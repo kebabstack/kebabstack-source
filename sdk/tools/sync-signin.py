@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse
 ROOT=Path(__file__).resolve().parents[2]
 args=argparse.ArgumentParser();args.add_argument('--check',action='store_true');check=args.parse_args().check
-apps=['assets','contracts','desk','forms','trust','watch','crumbs']
+apps=['knowledge','assets','contracts','desk','forms','trust','watch','crumbs']
 problems=[]
 def sync(path,data):
  if check:
@@ -13,7 +13,7 @@ def sync(path,data):
 for app in apps:
  sync(ROOT/app/'dist/signin.css',(ROOT/'hub/dist/signin.css').read_bytes())
  target=ROOT/app/'dist/index.html';html=target.read_text();start=html.index('<section id="login"');end=html.index('</section>\n  </div>\n</section>',start)+len('</section>\n  </div>\n</section>')
- markup=(ROOT/'sdk/ui/signin.html').read_text().strip().replace('__APP_NAME__',app.title())
+ markup=(ROOT/'sdk/ui/signin.html').read_text().strip().replace('__APP_NAME__',('Doku' if app=='knowledge' else app.title()))
  updated=html[:start]+markup+html[end:]
  if check:
   if html!=updated:problems.append(app+'/dist/index.html sign-in markup')

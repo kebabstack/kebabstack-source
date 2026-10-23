@@ -246,6 +246,13 @@ type Task =
    state: text;
    title: text;
  };
+type Target =
+ record {
+   cid: nat;
+   desk: nat;
+   name: text;
+   url: text;
+ };
 type SwapState =
  variant {
    accepted;
@@ -472,6 +479,11 @@ type Rule =
    withdrawnAt: int;
    work: Rates;
    workUnit: Unit;
+ };
+type Result__2 =
+ variant {
+   err: text;
+   ok: Evidence;
  };
 type Result__1 =
  variant {
@@ -1265,6 +1277,19 @@ type Example =
    title: text;
    unit: Unit;
  };
+type Evidence =
+ record {
+   backend: text;
+   confirmed: bool;
+   confirmedAt: int;
+   confirmedBy: text;
+   key: text;
+   revision: nat;
+   summary: text;
+   ticketId: nat;
+   title: text;
+   url: text;
+ };
 type Event__1 =
  record {
    actorKind: text;
@@ -1694,6 +1719,8 @@ service : {
       detail: text;
       ok: bool;
     });
+  confirmKnowledgeSolution: (tok: text, id: nat, expectedRevision: nat,
+   summary: text) -> (Result__2);
   confirmReportingRecord: (tok: text, id: nat, recordId: nat, revision:
    nat, confirm: bool, reason: text) -> (Result);
   confirmServiceStatus: (tok: text, id: nat, revision: nat, services:
@@ -1820,6 +1847,7 @@ service : {
                          };
        warnings: vec text;
      }) query;
+  getKnowledgeSolution: (tok: text, id: nat) -> (Result__2) query;
   getSettings: (tok: text) -> (opt Settings) query;
   getTicket: (tok: text, id: nat) -> (opt TicketFull) query;
   handoffOncallIncident: (tok: text, id: nat, revision: nat, to: text,
@@ -1833,6 +1861,7 @@ service : {
   http_request_update: (req: HttpGwRequest) -> (HttpGwResponse);
   hub_deactivate: (emails: vec text) -> (nat);
   hub_hardwareCase: (id: nat) -> (opt Case) query;
+  hub_knowledgeEvidence: (viewer: text, id: nat) -> (Result__2) query;
   hub_manifest: () -> (Manifest) query;
   /// Aggregate-only read for Hub Operations; no session or records leave this app.
   hub_operations: (viewer: text) -> (Snapshot) query;
@@ -1854,6 +1883,7 @@ service : {
     }) query;
   internalQueuePage: (tok: text, f: Filter__1, before: opt nat) ->
    (opt QueuePage) query;
+  knowledgeTargets: (tok: text) -> (vec Target);
   lifecycleHealth: (tok: text) ->
    (opt record {
           checkedAt: int;

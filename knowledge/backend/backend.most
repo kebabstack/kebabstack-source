@@ -1,0 +1,99 @@
+// Version: 1.0.0
+type ConnectorUser__173861307 =
+  {
+    active : Bool;
+    attributes : [(Text, Text)];
+    displayName : Text;
+    email : Text;
+    externalId : Text;
+    firstName : Text;
+    lastName : Text;
+    source : Text
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Evidence__924545820 =
+  {
+    backend : Text;
+    confirmed : Bool;
+    confirmedAt : Int;
+    confirmedBy : Text;
+    key : Text;
+    revision : Nat;
+    summary : Text;
+    ticketId : Nat;
+    title : Text;
+    url : Text
+  };
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type Map__13625999<K, V> =
+  {var root : Node__430031793<K, V>; var size : Nat__58649523};
+type Map__386906547<K, V> = Map__670138087<K, V>;
+type Map__670138087<K, V> = Map__13625999<K, V>;
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type Proposal__751482120 =
+  {
+    article : ?Nat;
+    baseRevision : Nat;
+    createdAt : Int;
+    createdBy : Text;
+    desk : Nat;
+    document : Text;
+    id : Nat;
+    plain : Text;
+    publishedArticle : ?Nat;
+    revision : Nat;
+    source : Evidence__924545820;
+    state : Text;
+    title : Text;
+    updatedAt : Int;
+    updatedBy : Text
+  };
+type Session__739831475 =
+  {createdAt : Int; displayName : Text; email : Text; expiresAt : Int};
+type Version__173731999 =
+  {
+    article : Nat;
+    document : Text;
+    plain : Text;
+    proposal : Nat;
+    publishedAt : Int;
+    publishedBy : Text;
+    revision : Nat;
+    title : Text
+  };
+actor {
+  stable former :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable var hubId : Text;
+  stable ids :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable people :
+    {
+      var root : Node__430031793<Text, ConnectorUser__173861307>;
+      var size : Nat__58649523
+    };
+  stable var seed : ?Blob;
+  stable var sequence : Nat;
+  stable sessions :
+    {
+      var root : Node__430031793<Text, Session__739831475>;
+      var size : Nat__58649523
+    };
+  stable state :
+    {
+      articles : Map__386906547<Nat, Version__173731999>;
+      var nextArticle : Nat;
+      var nextProposal : Nat;
+      proposals : Map__386906547<Nat, Proposal__751482120>;
+      requests : Map__386906547<Text, Nat>;
+      versions : Map__386906547<Nat, [Version__173731999]>
+    }
+};

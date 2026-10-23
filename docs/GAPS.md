@@ -30,3 +30,9 @@ These are explicit adoption boundaries, not features promised for the next relea
 See [operations](OPERATIONS.md), [positioning](POSITIONING.md) and each module's
 current setup guide. A public source update does not mean that every installation
 has been upgraded.
+
+## Doku first milestone
+
+Doku 0.2 is one internal library with manual authoring, Desk-based proposals, explicit publication and version-scoped external links. AI detection/generation, Slack reminders, spaces, images, retention/deletion and full accessibility certification remain outside this milestone. Roles and source checks do not make already published text confidential from library readers or infrastructure operators.
+
+The current installer validates only Hub/Kitchen version dependencies. Doku installation also requires an explicit running Desk 0.37.0 check; generic app-to-app dependency enforcement remains a future installer improvement.

@@ -1,0 +1,17 @@
+{
+  "name": "kebabstack-knowledge",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.32.0",
+    "@tiptap/starter-kit": "3.32.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

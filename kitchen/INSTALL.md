@@ -90,3 +90,7 @@ and controller identity; it never grants itself an app role. Vault uses the Hub'
 served `/brand/vault.svg`. Kitchen uses its release-store frontend's favicon;
 update that bootstrap asset separately without replacing the stored recipes,
 domain declarations, permissions or other bootstrap files.
+
+## Scoped source builds
+
+`pack-recipes.py --build --apps hub,desk,knowledge --out /private/release/recipes` builds only the named recipes (including Hub provides the asset module). Before publishing, merge these reviewed recipes into the existing catalogue in a private staging directory and retain/download every referenced immutable file. The publisher still validates the complete catalogue and refuses immutable-path changes. A subset must never replace unrelated current catalogue entries.

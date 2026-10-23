@@ -1,5 +1,9 @@
 # Crumbs changelog
 
+## [0.11.3] — 2026-10-23
+
+- Synchronize the canonical Hub client with the Doku logo registry. Existing behavior is unchanged; this source maintenance release does not imply a production rollout.
+
 ## [0.11.2] - 2026-10-20
 
 - Traffic over time now shows the exact bucket date and selected metric on hover or tap, including the comparison value. Arrow keys, Home and End inspect the chart without a mouse.

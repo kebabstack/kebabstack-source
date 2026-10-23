@@ -13,18 +13,19 @@ module {
   public let model : Text = "1";
 
   public func supported(app : Text) : Bool {
-    app == "assets" or app == "contracts" or app == "desk" or app == "forms" or app == "trust" or app == "watch" or app == "crumbs";
+    app == "knowledge" or app == "assets" or app == "contracts" or app == "desk" or app == "forms" or app == "trust" or app == "watch" or app == "crumbs";
   };
   public func valid(app : Text, role : Text) : Bool {
     if (not supported(app)) return false;
     if (role == "none" or role == "admin") return true;
+    if (app == "knowledge") return role == "reader" or role == "author" or role == "reviewer";
     if (app == "watch" or app == "crumbs") return role == "viewer";
     role == "member" or (app == "assets" and role == "finance") or (app == "desk" and role == "agent") or (app == "trust" and role == "viewer");
   };
   public func rank(role : Text) : Nat {
-    switch (role) { case "admin" 4; case "agent" 3; case "viewer" 2; case "finance" 2; case "member" 1; case _ 0 };
+    switch (role) { case "reader" 1; case "author" 2; case "reviewer" 3; case "admin" 4; case "agent" 3; case "viewer" 2; case "finance" 2; case "member" 1; case _ 0 };
   };
-  public func defaultRole(app : Text) : Text { if (app == "watch" or app == "crumbs") "none" else "member" };
+  public func defaultRole(app : Text) : Text { if (app == "knowledge" or app == "watch" or app == "crumbs") "none" else "member" };
   public func roles(app : Text) : [Role] {
     if (not supported(app)) return [];
     let none : Role = { id = "none"; name = "No access"; can = []; cannot = ["Open the app or read its protected data"] };
@@ -36,6 +37,7 @@ module {
       case "contracts" ({ id = "member"; name = "Employee"; can = ["Manage own personal workspace", "Use shared teamspaces within their membership and record permissions"]; cannot = ["Read other personal or unshared team workspaces", "Manage app settings"] });
       case _ ({ id = "member"; name = "Employee"; can = ["See own devices and their check results", "Read the published check catalogue"]; cannot = ["Read colleagues' device results", "Change checks or enrolment settings"] });
     };
+    if (app == "knowledge") return [none, { id = "reader"; name = "Reader"; can = ["Read published internal documentation"]; cannot = ["Read proposals or publish changes"] }, { id = "author"; name = "Author"; can = ["Read published documentation", "Create and edit own proposals with current Desk access"]; cannot = ["Publish changes or grant access"] }, { id = "reviewer"; name = "Reviewer"; can = ["Review, edit and publish proposals with current Desk access"]; cannot = ["Grant app access"] }, admin];
     if (app == "crumbs") return [none, { id = "viewer"; name = "Analyst"; can = ["Read analytics for sites shared with this person"]; cannot = ["Change sites, collection settings or API keys"] }, admin];
     if (app == "watch") return [none, { id = "viewer"; name = "Viewer"; can = ["Read ALL monitored domains, events and reports"]; cannot = ["Change monitoring, accept DNS changes or manage settings"] }, admin];
     if (app == "desk") return [none, member, { id = "agent"; name = "Agent"; can = ["Read and work on ALL tickets"]; cannot = ["Manage app settings or Hub permissions"] }, admin];

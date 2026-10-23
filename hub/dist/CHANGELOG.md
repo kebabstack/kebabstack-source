@@ -1,5 +1,10 @@
 # Changelog — kebab-stack hub
 
+## [0.44.0] — 2026-10-21
+
+- Add the permission-checked Doku evidence bridge and central Reader, Author and Reviewer roles. Preserve existing Operations, TV, directory and external-app behavior.
+
+
 ## [0.43.0] — 2026-10-19
 
 - Extend TV screens with explicitly approved asset-sale stages, onboarding/offboarding counts and personal Workboard totals from one explicitly selected active Desk administrator. Existing approvals keep their original scope. The approving owner can adjust sharing details without re-pairing or extending expiry; record contents remain private. Missing newer source totals stay unavailable.

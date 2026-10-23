@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.6] — 2026-10-23
+
+- Synchronize the canonical Hub client with the Doku logo registry. Existing behavior is unchanged; this source maintenance release does not imply a production rollout.
+
 ## [0.2.5] — 2026-09-23
 - Keep score payload compatibility separate from the displayed app version so cosmetic releases do not prevent publishing valid flights. Exercise the browser payload version against the local backend.
 

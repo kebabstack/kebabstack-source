@@ -1,13 +1,14 @@
-kebab-hub SDK · synced 2026-10-19 15:14 UTC · repo c210f0d
+kebab-hub SDK · synced 2026-10-23 17:51 UTC · repo 2aecfe4
+Knowledge.mo     be058fd6e632  ← sdk/motoko/src/Knowledge.mo
 WORKSPACE-UI.md  f95a1733238d  ← sdk/WORKSPACE-UI.md
 Workboard.mo     7d5eee948d43  ← sdk/motoko/src/Workboard.mo
 Operations.mo    998efd87366d  ← sdk/motoko/src/Operations.mo
 Hardware.mo      2f87e15685ad  ← sdk/motoko/src/Hardware.mo
 Support.mo       0a0335de424f  ← sdk/motoko/src/Support.mo
-Permissions.mo   4702ab3ac1e2  ← sdk/motoko/src/Permissions.mo
+Permissions.mo   50006bc80a9d  ← sdk/motoko/src/Permissions.mo
 kebab-hub.mo     2936e6c3c802  ← sdk/motoko/src/lib.mo
-hub-client.js    22816c9fa788  ← sdk/js/hub-client.js
+hub-client.js    43a09aedb461  ← sdk/js/hub-client.js
 onboard-app.md   519b9f42ff93  ← docs/agent/onboard-app.md
 mcp.md           eff3d120d467  ← docs/agent/mcp.md
-README.md        648078a8eb8d  ← sdk/README.md
-hub.did          58ddb1566738  ← hub/backend/backend.did
+README.md        78617202d507  ← sdk/README.md
+hub.did          affe86e80dda  ← hub/backend/backend.did

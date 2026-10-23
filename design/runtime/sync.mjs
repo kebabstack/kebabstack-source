@@ -45,7 +45,7 @@ ${palette('dark')}
 
 ${base.replace('color: #ffffff;','color: var(--ks-on-accent);').replace('outline: 2px solid var(--ks-focus);','outline: 3px solid var(--ks-focus);').replace('outline-offset: 2px;','outline-offset: 4px;').replace('/* Headings carry the mono display face: the terminal is the brand. */','/* Readable UI headings; monospace is reserved for identifiers and code. */')}`;
 await emit('hub/dist/tokens.css',css);
-const apps=['assets','contracts','desk','forms','trust','watch','crumbs','bug','bug2d','kitchen'];
+const apps=['knowledge','assets','contracts','desk','forms','trust','watch','crumbs','bug','bug2d','kitchen'];
 for(const app of apps)await emit(app+'/dist/tokens.css',css);
 const components=await read('hub/dist/components.css');
 for(const app of apps)await emit(app+'/dist/components.css',components);

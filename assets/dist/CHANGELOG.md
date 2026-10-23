@@ -1,5 +1,10 @@
 # Changelog — kebab-stack assets
 
+## [0.30.1] — 2026-10-21
+
+- Synchronize the canonical browser logo registry for Doku. Existing application behavior is unchanged. This source update does not by itself deploy this app.
+
+
 ## [0.30.0] — 2026-10-19
 
 - Operations distinguishes confirmed payments awaiting IT, invoice archive, device preparation, handover review, unpaid invoices, overdue payment targets and offer stages. Paid sales remain open until physical handover; filtered Sales links open the appropriate phase. No payment, custody or authorization changes.

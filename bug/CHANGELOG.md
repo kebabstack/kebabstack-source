@@ -1,5 +1,9 @@
 # Changelog — kebab-stack bug (Ship the Bug)
 
+## [0.20.3] — 2026-10-23
+
+- Synchronize the canonical Hub client with the Doku logo registry. Existing behavior is unchanged; this source maintenance release does not imply a production rollout.
+
 ## [0.20.2] — 2026-10-18
 
 - Synchronize the bundled canonical Hub client with the suite source. Standalone sign-in, game rules and score compatibility remain unchanged; no production rollout is implied by this source maintenance release.

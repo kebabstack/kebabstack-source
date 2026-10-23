@@ -1,5 +1,10 @@
 # Changelog — kebab-stack desk
 
+## [0.37.0] — 2026-10-21
+
+- Confirm a reusable solution on resolved internal tickets and create a Doku proposal. Reopening invalidates source confirmation; customer-project tickets are excluded.
+
+
 ## [0.36.0] — 2026-10-21
 
 - Open internal tickets now receive a server-side completion review every 15 minutes in bounded batches (up to 200 ticket IDs and four AI reviews per run). This includes tickets and public Desk replies recorded before the upgrade; no browser needs to remain open.

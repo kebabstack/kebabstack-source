@@ -212,3 +212,13 @@ Website 0.5.8 adds bilingual analytics-guide sections grounded in `crumbs/TRAFFI
 ## Desk periodic completion review — 0.5.9
 
 The bilingual Desk entry follows Desk 0.36.0 README/INSTALL and `tests/desk-slack.test.mjs`. The background sweep evaluates at most four eligible public staff comments per 15-minute batch, visiting up to 200 ticket IDs. This is automatic resolution, distinct from the existing resolved-to-closed policy. Current staff permission, revision checks and manual workflow gates apply. Later requester replies, notes or status changes require new evidence. AI may misclassify; no guarantee of complete autonomy, exact queue latency or live Slack qualification is implied. The website is a separate deployment; publish this content with or after the matching Desk capability.
+
+## Doku — 0.5.10
+
+The bilingual module card, overview and synthetic scenario describe Doku 0.2.0,
+Hub 0.44.0 and Desk 0.37.0. Evidence: `knowledge/README.md`, `knowledge/INSTALL.md`,
+`knowledge/backend/main.mo`, `tests/knowledge.test.mjs` and the Knowledge entries
+in `hub/backend/` and `desk/backend/main.mo`. Manual and Desk-sourced drafts require
+explicit review. External links expose one published version, not the library or
+later edits. The single internal library and planned AI/images/Slack features
+are stated explicitly. No automatic knowledge generation or private-space claim.

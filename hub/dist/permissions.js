@@ -2,7 +2,7 @@
 (() => {
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const opt = xs => xs?.[0] ?? null;
-  const apps = ["assets", "contracts", "desk", "forms", "trust", "watch", "crumbs"];
+  const apps = ["knowledge", "assets", "contracts", "desk", "forms", "trust", "watch", "crumbs"];
   const title = s => s ? s[0].toUpperCase() + s.slice(1) : "App";
   const clone = p => ({app:p.app, defaultRole:p.defaultRole, people:p.people.map(x=>({...x})), groups:p.groups.map(x=>({...x}))});
   const key = p => JSON.stringify(p, (_, v) => typeof v === "bigint" ? String(v) : v);

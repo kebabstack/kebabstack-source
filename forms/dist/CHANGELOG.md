@@ -1,5 +1,10 @@
 # Changelog — kebab-stack forms
 
+## [0.8.2] — 2026-10-21
+
+- Synchronize the canonical browser logo registry for Doku. Existing application behavior is unchanged. This source update does not by itself deploy this app.
+
+
 ## [0.8.1] — 2026-10-19
 
 - Keep the submission review drawer below the shared navigation and global menus, including narrow and short screens. Review content scrolls independently; response data and permissions are unchanged.

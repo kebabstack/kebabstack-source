@@ -1,0 +1,235 @@
+type Version =
+ record {
+   article: nat;
+   document: text;
+   plain: text;
+   proposal: nat;
+   publishedAt: int;
+   publishedBy: text;
+   revision: nat;
+   title: text;
+ };
+type User =
+ record {
+   displayName: text;
+   email: text;
+   id: text;
+   role: text;
+ };
+type ShareView =
+ record {
+   article: nat;
+   code: text;
+   createdAt: int;
+   expiresAt: opt int;
+   id: nat;
+   name: text;
+   passwordProtected: bool;
+   revision: nat;
+   revokedAt: opt int;
+ };
+type ShareInput =
+ record {
+   article: nat;
+   days: opt nat;
+   name: text;
+   password: opt Password;
+   requestId: text;
+   revision: nat;
+ };
+type Result =
+ variant {
+   err: text;
+   ok: Evidence;
+ };
+type ProposalView =
+ record {
+   article: opt nat;
+   baseRevision: nat;
+   createdAt: int;
+   createdBy: text;
+   desk: nat;
+   document: text;
+   id: nat;
+   plain: text;
+   publishedArticle: opt nat;
+   revision: nat;
+   source: opt Evidence;
+   state: text;
+   title: text;
+   updatedAt: int;
+   updatedBy: text;
+ };
+type PermissionStatus =
+ record {
+   app: text;
+   directoryAt: int;
+   legacy: vec LegacyGrant;
+   legacyGroups: vec record {
+                       name: text;
+                       role: text;
+                     };
+   model: nat;
+   revision: text;
+ };
+type Password =
+ record {
+   salt: blob;
+   verifier: blob;
+ };
+type Outcome =
+ variant {
+   err: text;
+   ok: nat;
+ };
+type Manifest =
+ record {
+   description: text;
+   name: text;
+   needs: vec text;
+   version: text;
+   wants: vec text;
+ };
+type Login =
+ record {
+   suiteToken: text;
+   token: text;
+ };
+type LegacyGrant =
+ record {
+   email: text;
+   role: text;
+   source: text;
+ };
+type Input =
+ record {
+   article: opt nat;
+   desk: nat;
+   requestId: text;
+   ticket: nat;
+ };
+type Evidence =
+ record {
+   backend: text;
+   confirmed: bool;
+   confirmedAt: int;
+   confirmedBy: text;
+   key: text;
+   revision: nat;
+   summary: text;
+   ticketId: nat;
+   title: text;
+   url: text;
+ };
+type DirectoryRow =
+ record {
+   active: bool;
+   attributes: vec record {
+                     text;
+                     text;
+                   };
+   displayName: text;
+   email: text;
+   externalId: text;
+   firstName: text;
+   id: opt text;
+   lastName: text;
+   source: text;
+ };
+type Content =
+ record {
+   document: text;
+   title: text;
+ };
+service : {
+  article: (tok: text, id: nat) -> (opt Version) query;
+  articleVersion: (tok: text, id: nat, revision: nat) -> (opt Version) query;
+  articles: (tok: text, search: text, after: nat) ->
+   (record {
+      next: opt nat;
+      rows:
+       vec record {
+             article: nat;
+             publishedAt: int;
+             revision: nat;
+             title: text;
+           };
+    }) query;
+  createManualProposal: (tok: text, article: opt nat, requestId: text) ->
+   (Outcome);
+  createProposal: (tok: text, input: Input) -> (Outcome);
+  createShare: (tok: text, input: ShareInput) ->
+   (variant {
+      err: text;
+      ok: ShareView;
+    });
+  discardProposal: (tok: text, id: nat, revision: nat) -> (Outcome);
+  history: (tok: text, id: nat) ->
+   (vec
+     record {
+       publishedAt: int;
+       publishedBy: text;
+       revision: nat;
+       title: text;
+     }) query;
+  hub_deactivate: (emails: vec text) -> (nat);
+  hub_manifest: () -> (Manifest) query;
+  hub_permissionStatus: () -> (PermissionStatus);
+  hub_ping: () -> (text) query;
+  hub_upsert: (rows: vec DirectoryRow) -> (nat);
+  loginWithSuite: (token: text) -> (opt Login);
+  loginWithTicket: (ticket: text) -> (opt Login);
+  proposal: (tok: text, id: nat) ->
+   (variant {
+      err: text;
+      ok:
+       record {
+         base: opt Version;
+         currentSource: opt Evidence;
+         proposal: ProposalView;
+       };
+    });
+  proposals: (tok: text, after: nat) ->
+   (vec record {
+          id: nat;
+          manual: bool;
+          own: bool;
+          state: text;
+          updatedAt: int;
+        }) query;
+  publishProposal: (tok: text, id: nat, revision: nat) -> (Outcome);
+  readShared: (code: text, proof: blob) ->
+   (variant {
+      err: record {
+             kind: text;
+             retryAfterSeconds: nat;
+           };
+      ok:
+       record {
+         document: text;
+         expiresAt: opt int;
+         publishedAt: int;
+         revision: nat;
+         title: text;
+       };
+    });
+  revokeShare: (tok: text, id: nat) -> (Outcome);
+  saveProposal: (tok: text, id: nat, revision: nat, content: Content) ->
+   (Outcome);
+  setHub: (id: text) -> (bool);
+  shareLinks: (tok: text, article: nat) -> (vec ShareView) query;
+  sharedInfo: (code: text) ->
+   (opt record {
+          expiresAt: opt int;
+          iterations: nat;
+          salt: opt blob;
+        });
+  signOut: (tok: text) -> ();
+  source: (tok: text, desk: nat, ticket: nat) -> (Result);
+  whoami: (tok: text) ->
+   (opt record {
+          hubId: text;
+          user: User;
+          version: text;
+        }) query;
+}

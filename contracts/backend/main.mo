@@ -117,7 +117,7 @@ persistent actor Contracts {
   var relayPrincipals : [Principal] = []; // retired 0.14.0 (mail relay removed); kept for the stable state contract, never consulted
   var mailboxAddress : Text = ""; // the contracts address, for the Connection page
   var aiDailyBudget : Nat = 200; // extraction calls per day; beyond it sources wait as "ready for review"
-  transient let BUILD_VERSION : Text = "0.21.0";
+  transient let BUILD_VERSION : Text = "0.21.1";
   transient let H : Int = 3_600_000_000_000;
   transient let D : Int = 24 * H;
 

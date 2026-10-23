@@ -3,7 +3,7 @@ import { newGhost, stepGhost, ghostTarget, hitGhost } from './ghost.js';
 import { burnRate } from './scoring.js';
 import { makeMines } from './mines.js';
 import { newFlow, flowCoin, breakFlow, flowNearMiss, stepFlow } from './overdrive.js';
-export const VERSION = '0.2.5';
+export const VERSION = '0.2.6';
 // Payload compatibility follows gameplay rules, not cosmetic app releases.
 export const SCORE_VERSION = '0.2.0';
 export const PROMPT_BOOSTS = 5;

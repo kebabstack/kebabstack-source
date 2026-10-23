@@ -8,6 +8,7 @@ Open [the visual library](index.html). Download [SVG originals](svg/) or [128 px
 | --- | --- |
 | Hub | People |
 | Desk | Ticket |
+| Doku | Open book |
 | Assets | Laptop |
 | Trust | Shield with check |
 | Contracts | Folded document |
@@ -67,7 +68,7 @@ For an existing company, run `node kitchen/tools/sync-console-brand.mjs --kitche
 
 ## Complete product standard
 
-This logo contract remains version 1.0.0. The broader [Brand & Product System](../README.md)
+This logo contract remains version 1.1.0. The broader [Brand & Product System](../README.md)
 defines the visual, interaction and behavior rules for the whole suite. Browse
 [the full standard](../index.html) for tokens, navigation, components, workflows,
 SSO, privacy, accessibility and the staged app review plan.

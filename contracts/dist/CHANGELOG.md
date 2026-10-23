@@ -1,5 +1,10 @@
 # Changelog — kebab-stack contracts
 
+## [0.21.1] — 2026-10-21
+
+- Synchronize the canonical browser logo registry for Doku. Existing application behavior is unchanged. This source update does not by itself deploy this app.
+
+
 ## [0.21.0] — 2026-10-18
 
 - Assign individual Brex payments, or up to 50 selected payments, to different contracts within the same merchant/card/currency group. Existing assignments are retained, each payment has a decision history, and stale or cross-space batches are rejected atomically.

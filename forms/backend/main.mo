@@ -49,7 +49,7 @@ persistent actor Forms {
   var adminGroup : Text = "forms-admins"; // hub group → admins (settings only; everyone in the directory builds forms)
   var adminEmails : [Text] = [];
   var adminClaimed : Bool = false;
-  transient let BUILD_VERSION : Text = "0.8.1";
+  transient let BUILD_VERSION : Text = "0.8.2";
   transient let H : Int = 3_600_000_000_000;
 
   // =====================================================================

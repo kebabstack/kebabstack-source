@@ -317,3 +317,7 @@ feature sets **resolved**, not closed. No new Hub lane or Slack scope is needed.
 ### Operations summaries (2026-10-19)
 
 Deploy this release before Hub 0.42 using the shared Kitchen update workflow. Existing central app Admin permissions remain required; no additional service or configuration is needed. Older Hub/TV clients keep their previous aggregate scope. See [Operations definitions](../docs/HUB-OPERATIONS.md).
+
+## Optional Doku integration
+
+Install Hub 0.44 and Doku 0.1 through Kitchen, save Doku permissions and check enforcement. Agents with Doku Author/Reviewer/Admin access receive a handoff link after confirming a resolved internal ticket solution. Existing Desk roles and Slack behavior are unchanged. No AI or Slack notification is added by this first milestone.

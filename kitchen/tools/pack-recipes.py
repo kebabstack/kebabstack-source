@@ -19,6 +19,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = pathlib.Path(sys.argv[sys.argv.index("--out") + 1]) if "--out" in sys.argv else ROOT / "kitchen/dist/recipes"
 
 RECIPES = [
+    dict(id="knowledge", name="Doku", kind="app", icon="", app="knowledge",
+         description="Reviewed documentation from Desk or a blank page. Rich-text drafts, version history and optional password-protected sharing.",
+         patch=[{"file": "/app.js", "from": "__BACKEND_CANISTER_ID__", "to": "${backend}"},
+                {"file": "/app.js", "from": "__HUB_URL__", "to": "${hubUrl}"}],
+         post=[{"method": "setHub", "arg": "${hubId}"}], tile={"kind": "app", "note": "reviewed team knowledge"}),
     dict(id="kitchen", name="Update service", kind="installer", icon="", app="kitchen", frontend=False,
          description="Installs and verifies releases for this company. Maintained through the release CLI.", patch=[], post=[], tile=None),
     dict(id="hub", name="kebab-stack hub", kind="hub", icon="", app="hub",
@@ -91,7 +96,12 @@ def version_of(app):
     return m.group(1) if m else "0.0.0"
 
 def main():
-    global OUT
+    global OUT, RECIPES
+    if "--apps" in sys.argv:
+        selected = sys.argv[sys.argv.index("--apps") + 1].split(",")
+        if not selected or len(set(selected)) != len(selected) or any(x not in [r["id"] for r in RECIPES] for x in selected):
+            sys.exit("--apps requires unique known recipe IDs")
+        RECIPES = [r for r in RECIPES if r["id"] in selected]
     destination = OUT.resolve()
     expected = ROOT / "kitchen/dist/recipes"
     if OUT.is_symlink() or (destination != expected and (ROOT == destination or ROOT in destination.parents or destination.name != "recipes")):
@@ -173,7 +183,8 @@ def main():
         sections = re.split(r"(?m)^## ", changelog)
         notes = next((section.split("\n", 1)[1].strip() for section in sections if section.startswith(f"[{ver}]")), "")
         requires = ([{"id": "kitchen", "minVersion": "0.7.0"}] if app == "hub" else
-                    [{"id": "hub", "minVersion": "0.31.0"}] if app == "desk" else
+                    [{"id": "hub", "minVersion": "0.44.0"}] if app == "knowledge" else
+                    [{"id": "hub", "minVersion": "0.44.0"}] if app == "desk" else
                     [{"id": "hub", "minVersion": "0.34.0"}] if app == "assets" else
                     [{"id": "hub", "minVersion": "0.30.0"}] if app == "crumbs" else
                     [{"id": "hub", "minVersion": "0.23.0"}] if app in ["contracts", "forms", "trust", "watch"] else [])

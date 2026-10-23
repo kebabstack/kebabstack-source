@@ -72,7 +72,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.30.0";
+  transient let BUILD_VERSION : Text = "0.30.1";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;

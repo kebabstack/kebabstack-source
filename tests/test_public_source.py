@@ -27,6 +27,13 @@ class PublicSource(unittest.TestCase):
         domain = ('https://crumbs.' + 'kebabstack.com').encode()
         self.assertIn('deployment-domain', {f['rule'] for f in public.findings_for('config.txt', domain, [])})
 
+    def test_doku_requires_portable_configuration(self):
+        good = b'const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__"; const HUB_URL = "__HUB_URL__";'
+        self.assertEqual(public.findings_for('knowledge/dist/app.js', good, []), [])
+        for placeholder in [b'__BACKEND_CANISTER_ID__', b'__HUB_URL__']:
+            bad = good.replace(placeholder, b'private-installation')
+            self.assertIn('frontend-placeholder', {f['rule'] for f in public.findings_for('knowledge/dist/app.js', bad, [])})
+
     def test_literal_unicode_replacement_character_is_valid_source(self):
         source = 'const replacementCharacter = "\ufffd";'.encode('utf-8')
         self.assertEqual(public.findings_for('parser.js', source, []), [])

@@ -2,7 +2,7 @@
 """Check release metadata and deployment placeholders; --staged checks Git's index."""
 import argparse, json, pathlib, re, subprocess, sys, tomllib
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-FRONTENDS = {'hub/dist/index.html': {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__', 'CANONICAL_ORIGIN': ''}, **{f'{m}/dist/app.js': {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__', 'HUB_URL': '__HUB_URL__'} for m in ['desk','assets','watch','crumbs','trust','forms','bug','bug2d','contracts']}}
+FRONTENDS = {'hub/dist/index.html': {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__', 'CANONICAL_ORIGIN': ''}, **{f'{m}/dist/app.js': {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__', 'HUB_URL': '__HUB_URL__'} for m in ['knowledge','desk','assets','watch','crumbs','trust','forms','bug','bug2d','contracts']}}
 
 FRONTENDS['crumbs/dist/shared.js'] = {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__'}
 FRONTENDS['desk/dist/support.js'] = {'BACKEND_CANISTER_ID': '__BACKEND_CANISTER_ID__'}
@@ -46,7 +46,7 @@ def main():
         else: data = (ROOT/path).read_text()
         errors += placeholder_errors(path, data)
     if not options.staged:
-        for module in ['hub','desk','assets','watch','crumbs','trust','forms','bug','bug2d','contracts','vault','kitchen']:
+        for module in ['knowledge','hub','desk','assets','watch','crumbs','trust','forms','bug','bug2d','contracts','vault','kitchen']:
             config = tomllib.loads((ROOT/module/'mops.toml').read_text()); version = config['package']['version']
             errors += companion_errors(ROOT/module, version)
             source = (ROOT/module/'backend/main.mo').read_text()

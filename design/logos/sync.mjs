@@ -14,7 +14,7 @@ async function output(file,content){
  if(check){failures.push(file);return;}
  await mkdir(path.dirname(dest),{recursive:true});await writeFile(dest,bytes);
 }
-const products=['hub','desk','assets','trust','contracts','forms','watch','crumbs','kitchen','vault','bug'];
+const products=['knowledge','hub','desk','assets','trust','contracts','forms','watch','crumbs','kitchen','vault','bug'];
 const attrs=`viewBox="${registry.viewBox}" fill="none" stroke="currentColor" stroke-width="${registry.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
 const marks=Object.fromEntries(Object.entries(registry.apps).map(([id,a])=>[id,a.path]));
 function svg(id,adaptive=true){return `<svg xmlns="http://www.w3.org/2000/svg" ${attrs} color="${registry.colors.sage}">${adaptive?`<style>@media(prefers-color-scheme:dark){:root{color:${registry.colors.dark}}}</style>`:''}<path d="${marks[id]}"/></svg>\n`;}

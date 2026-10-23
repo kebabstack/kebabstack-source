@@ -3,6 +3,7 @@ import Displays "Displays";
 import Brand "Brand";
 import HubClient "../../sdk/motoko/src/lib";
 import Operations "../../sdk/motoko/src/Operations";
+import Knowledge "../../sdk/motoko/src/Knowledge";
 import Workboard "../../sdk/motoko/src/Workboard";
 /// kebab-stack hub — people, sign-in, apps and backups on a cloud engine
 ///
@@ -119,7 +120,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.43.0";
+  transient let BUILD_VERSION : Text = "0.44.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -7302,7 +7303,7 @@ persistent actor UserHub {
   public shared query ({ caller }) func hub_supportSources(viewer : Text) : async [Support.Source] {
     assert supportViewer(caller, viewer);
     let out = List.empty<Support.Source>();
-    for ((cid, policy) in appPermissionPolicies.entries()) if (policy.policy.app != "desk") {
+    for ((cid, policy) in appPermissionPolicies.entries()) if (policy.policy.app != "desk" and policy.policy.app != "knowledge") {
       switch (connectors.get(cid)) {
         case (?c) {
           var url = "";
@@ -7364,6 +7365,51 @@ persistent actor UserHub {
       if (result.rows.size() > 100) return Workboard.unavailable();
       result
     } catch (_) { Workboard.unavailable() }
+  };
+
+  // Documentation bridge: both application memberships remain independently required.
+  func knowledgeViewer(caller : Principal, viewer : Text) : Bool {
+    let c = connectorByPrincipal(caller) ?? (return false);
+    let p = appPermissionPolicies.get(c.id) ?? (return false);
+    let person = personOf(viewer) ?? (return false);
+    if (p.policy.app != "knowledge" or person.sealedAt != 0 or pidForEmail(person.email) != viewer or accessForConn(person.email, c.id) != #active) return false;
+    let role = permissionDecision(c.id, p.policy, person.email).role;
+    role == "author" or role == "reviewer" or role == "admin"
+  };
+  public shared query ({ caller }) func hub_knowledgeTargets(viewer : Text) : async [Knowledge.Target] {
+    if (not supportViewer(caller, viewer)) return [];
+    let desk = deskConnector(caller) ?? (return []);
+    let person = personOf(viewer) ?? (return []);
+    let out = List.empty<Knowledge.Target>();
+    for ((cid, policy) in appPermissionPolicies.entries()) if (policy.policy.app == "knowledge" and accessForConn(person.email, cid) == #active) {
+      let role = permissionDecision(cid, policy.policy, person.email).role;
+      if (role == "author" or role == "reviewer" or role == "admin") {
+        let c = connectors.get(cid) ?? (continue);
+        for ((tid, tile) in appLinks.entries()) if (out.size() < 20 and connectorOfTile(tid) == cid and Text.startsWith(tile.url, #text "https://")) out.add({ cid; name = c.name; url = tile.url; desk = desk.id });
+      };
+    };
+    out.toArray()
+  };
+  public shared ({ caller }) func hub_knowledgeEvidence(viewer : Text, cid : Nat, ticketId : Nat) : async Knowledge.Result {
+    if (not knowledgeViewer(caller, viewer)) return #err("Documentation author access required");
+    let person = personOf(viewer) ?? (return #err("Person unavailable"));
+    let c = connectors.get(cid) ?? (return #err("Desk connection unavailable"));
+    let policy = appPermissionPolicies.get(cid) ?? (return #err("Desk permission unavailable"));
+    if (policy.policy.app != "desk" or accessForConn(person.email, cid) != #active) return #err("Desk access required");
+    let role = permissionDecision(cid, policy.policy, person.email).role;
+    if (role != "agent" and role != "admin") return #err("Desk staff access required");
+    let source : actor { hub_knowledgeEvidence : shared query (Text, Nat) -> async Knowledge.Result } = actor (c.canisterId.toText());
+    let result = try { await (with timeout = 15) source.hub_knowledgeEvidence(viewer, ticketId) } catch (_) { return #err("Desk could not be reached. Retry later.") };
+    if (not knowledgeViewer(caller, viewer) or connectors.get(cid) != ?c or appPermissionPolicies.get(cid) != ?policy or accessForConn(person.email, cid) != #active or pidForEmail(person.email) != viewer or permissionDecision(cid, policy.policy, person.email).role != role) return #err("Access changed; reload");
+    switch (result) {
+      case (#err e) #err(e);
+      case (#ok e) {
+        if (e.summary.size() > 12000 or e.title.size() > 500 or e.ticketId != ticketId or e.backend != c.canisterId.toText()) return #err("Invalid source response");
+        var url = "";
+        for ((tid, tile) in appLinks.entries()) if (connectorOfTile(tid) == cid and Text.startsWith(tile.url, #text "https://")) url := tile.url;
+        #ok({ e with url })
+      };
+    }
   };
 
   type HardwareDesk = actor { hub_hardwareCase : shared query Nat -> async ?Hardware.Case };

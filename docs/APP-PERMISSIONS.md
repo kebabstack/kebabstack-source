@@ -76,3 +76,7 @@ Hub 0.31.0 additionally assigns project-scoped `time_review`, `compensation`, `r
 ## Central Finance team
 
 Hub 0.34.0 and Assets 0.16.0 add an Assets Finance role derived from **Settings → Company teams**. Only Owners manage it. Explicit individual No access wins; global Owner/Admin and individual Admin keep Admin. Finance supplements Employee access, including an individual Employee assignment. Other group roles retain their normal precedence. The app binding includes the backend identity, so replacing a connector cannot transfer Finance rights to another service. Other apps receive no Finance grant merely because someone belongs to this team. Existing Desk project reporting remains separately scoped. See [Finance](FINANCE.md).
+
+## Doku (Knowledge) 0.2
+
+Hub 0.44 recognizes `knowledge`: Reader reads the internal published library; Author creates and edits own proposals; Reviewer reviews/edits/publishes proposals; Admin has all Doku content rights. Default is No access; global Hub owners/admins inherit Admin. Desk-sourced draft access also requires current Desk staff access; manual drafts are independent of Desk. Reviewer/Admin can create and revoke external read-only links to a selected published version. Guests use only that capability (plus an optional password), with backend-enforced expiry/revocation; company role removal does not revoke company-owned links. Publishing expands access to all Doku readers. Self-approval is permitted explicitly; two-person review and separately scoped spaces are planned.

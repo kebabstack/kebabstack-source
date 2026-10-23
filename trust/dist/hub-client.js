@@ -14,7 +14,8 @@ const APP_LOGO_PATHS = Object.freeze({
   "phone": "M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm2 0v3h6V2m-4 16h2",
   "kebab-mcp": "m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z",
   "sdk": "m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18",
-  "bug": "M9 3l1 3m5-3-1 3M8 9a4 4 0 0 1 8 0v7a4 4 0 0 1-8 0V9Zm0 1h8m-4 0v10M4 9l4 2m8 0 4-2M3 15h5m8 0h5M5 21l4-3m6 0 4 3"
+  "bug": "M9 3l1 3m5-3-1 3M8 9a4 4 0 0 1 8 0v7a4 4 0 0 1-8 0V9Zm0 1h8m-4 0v10M4 9l4 2m8 0 4-2M3 15h5m8 0h5M5 21l4-3m6 0 4 3",
+  "knowledge": "M12 5v16M12 5C9 3 5 3 2 4v15c3-1 7-1 10 2 3-3 7-3 10-2V4c-3-1-7-1-10 1ZM5 8h4m-4 4h4m6-4h4m-4 4h4"
 });
 export function appLogoHtml(id) { const d=Object.hasOwn(APP_LOGO_PATHS,id)?APP_LOGO_PATHS[id]:null; return d ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+d+'"/></svg>' : ''; }
 /* END GENERATED APP LOGOS */
