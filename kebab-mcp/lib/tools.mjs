@@ -238,9 +238,22 @@ export function registerTools(server, rt) {
     title: "Website traffic, acquisition and conversions",
     description: "An aggregate Crumbs report for one accessible site and an explicit UTC time range (end exclusive). Backend totals/truncated flags are preserved. No individual visitor records, cookies or new tracking are requested.",
     inputSchema: { app: appName.default("crumbs"), site: z.string().min(1).max(100), from: z.string().datetime(), until: z.string().datetime(), dimension: z.string().min(1).max(100).default("channel"), filters: z.array(z.object({ dimension: z.string().min(1).max(100), exclude: z.boolean().default(false), values: z.array(z.string().max(200)).min(1).max(25) }).strict()).max(10).default([]), limit: paging.limit }, annotations: RO,
-  }, wrap(({ app, site, from, until, dimension, filters, limit }) => {
+  }, wrap(async ({ app, site, from, until, dimension, filters, limit }) => {
     const start = Date.parse(from), end = Date.parse(until);
     if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) throw new Error("choose a valid time range with from before until");
-    return rt.query(app, "report", [{ site, from: String(Math.floor(start / 1000)), until: String(Math.floor(end / 1000)), dimension, filters, limit }]);
+    const args = [{ site, from: String(Math.floor(start / 1000)), until: String(Math.floor(end / 1000)), dimension, filters, limit }];
+    let result;
+    try { result = await rt.query(app, "report", args); }
+    catch (error) {
+      if (!/instruction.*limit|limit.*instruction|IC0522/i.test(String(error?.message ?? error))) throw error;
+      result = {err: {capacity: "Report exceeds 50000 events."}};
+    }
+    if (!/^Report exceeds \d+ events\./.test(result?.err?.capacity ?? "")) return result;
+    const info = await rt.query(app, "info", [], false);
+    const v = /^(\d+)\.(\d+)\.(\d+)$/.exec(info?.version ?? "");
+    if (info?.name !== "Crumbs" || !v || !(Number(v[1]) > 0 || Number(v[2]) >= 12)) return result;
+    // This specific endpoint calculates aggregates without changing app records.
+    // Generic query-only enforcement remains unchanged; never replay the update.
+    return rt.call(app, "reportFull", args);
   }));
 }

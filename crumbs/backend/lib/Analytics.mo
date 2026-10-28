@@ -12,6 +12,9 @@ import Time "mo:core/Time";
 
 module {
   public let scanLimit : Nat = 50_000;
+  // Ingest charges at least 2048 bytes/event against a 256 MiB store.
+  // Full reports run only in update execution, never in the query fast path.
+  public let fullScanLimit : Nat = 131_072;
   public func now() : Int { Time.now() / 1_000_000_000 };
   public func key(site : Text, at : Int, id : Text) : Text {
     var t = at.toText();
@@ -65,6 +68,9 @@ module {
     filters.values().all(func f { let yes = f.values.values().any(func v = dimension(e, f.dimension) == v); if (f.exclude) not yes else yes });
   };
   public func load(db : T.Store, r : T.ReportRequest) : T.Result<[T.Event]> {
+    loadWithLimit(db, r, scanLimit);
+  };
+  func loadWithLimit(db : T.Store, r : T.ReportRequest, maxEvents : Nat) : T.Result<[T.Event]> {
     let site = db.sites.get(r.site) ??(return #err(#notFound));
     if (r.from < 0 or r.until <= r.from or r.until - r.from > 1827 * 86400 or r.filters.size() > 10 or r.limit == 0 or r.limit > 1000) return #err(#invalid("Use a positive interval up to 1827 days, at most 10 filters and limit <= 1000"));
     if (not validDimension(r.dimension, site) or r.filters.values().any(func f = not validDimension(f.dimension, site) or f.values.size() == 0 or f.values.size() > 50)) return #err(#invalid("Unknown dimension or invalid filter"));
@@ -73,7 +79,7 @@ module {
     let out = List.empty<T.Event>();
     for ((_, e) in db.events.entriesFrom(key(r.site, start, ""))) {
       if (e.site != r.site or e.at >= r.until) break;
-      if (out.size() >= scanLimit) return #err(#capacity("Report exceeds 50000 events. Narrow the interval; totals were not sampled."));
+      if (out.size() >= maxEvents) return #err(#capacity("Report exceeds " # maxEvents.toText() # " events. Use the full report endpoint; totals were not sampled."));
       out.add(e);
     };
     #ok(out.toArray());
@@ -229,7 +235,10 @@ module {
     };
   };
   public func report(db : T.Store, r : T.ReportRequest) : T.Result<T.Report> {
-    let events = switch (load(db, r)) {
+    reportWithLimit(db, r, scanLimit);
+  };
+  public func reportWithLimit(db : T.Store, r : T.ReportRequest, maxEvents : Nat) : T.Result<T.Report> {
+    let events = switch (loadWithLimit(db, r, maxEvents)) {
       case (#ok e) e;
       case (#err e) return #err(e);
     };
@@ -274,9 +283,12 @@ module {
   };
   /// Goal completions per group of the requested dimension (0.7.0): the question "which source brought the sign-ups".
   public func goalRows(db : T.Store, r : T.ReportRequest, goal : T.Goal) : T.Result<[{value : Text; visitors : Nat; completions : Nat}]> {
+    goalRowsWithLimit(db, r, goal, scanLimit);
+  };
+  public func goalRowsWithLimit(db : T.Store, r : T.ReportRequest, goal : T.Goal, maxEvents : Nat) : T.Result<[{value : Text; visitors : Nat; completions : Nat}]> {
     if (goal.site != r.site) return #err(#invalid("Goal belongs to a different website"));
     if (r.dimension == "") return #err(#invalid("Choose a dimension to group by"));
-    let events = switch (load(db, r)) { case (#ok e) e; case (#err e) return #err(e) };
+    let events = switch (loadWithLimit(db, r, maxEvents)) { case (#ok e) e; case (#err e) return #err(e) };
     let groups = Map.empty<Text, { visitors : Set.Set<Nat>; var completions : Nat }>();
     let scrollVisits = Set.empty<Nat>();
     for (s in sessions(events).values()) for (e in s.items.values()) {
@@ -297,8 +309,11 @@ module {
     #ok(rows.sort(func(a, b) = if (a.visitors == b.visitors) Text.compare(a.value, b.value) else Nat.compare(b.visitors, a.visitors)).values().take(r.limit).toArray());
   };
   public func goalReport(db : T.Store, r : T.ReportRequest, goal : T.Goal) : T.Result<{visitors : Nat; completions : Nat; revenue : [(Text,Int)]}> {
+    goalReportWithLimit(db, r, goal, scanLimit);
+  };
+  public func goalReportWithLimit(db : T.Store, r : T.ReportRequest, goal : T.Goal, maxEvents : Nat) : T.Result<{visitors : Nat; completions : Nat; revenue : [(Text,Int)]}> {
     if(goal.site != r.site) return #err(#invalid("Goal belongs to a different website"));
-    let events = switch(load(db,r)) {case (#ok e) e; case (#err e) return #err(e)};
+    let events = switch(loadWithLimit(db,r,maxEvents)) {case (#ok e) e; case (#err e) return #err(e)};
     let visitors = Set.empty<Nat>(); let scrollVisits = Set.empty<Nat>(); let revenue = Map.empty<Text,Int>(); var completions = 0;
     for(s in sessions(events).values()) for(e in s.items.values()) {
       if(e.at < r.from or not sessionMatches(e,s,r.filters)) continue;
@@ -312,8 +327,11 @@ module {
     #ok({visitors=visitors.size();completions;revenue=revenue.toArray()});
   };
   public func funnel(db : T.Store, r : T.ReportRequest, steps : [T.FunnelStep]) : T.Result<[Nat]> {
+    funnelWithLimit(db, r, steps, scanLimit);
+  };
+  public func funnelWithLimit(db : T.Store, r : T.ReportRequest, steps : [T.FunnelStep], maxEvents : Nat) : T.Result<[Nat]> {
     if (steps.size() < 2 or steps.size() > 10) return #err(#invalid("A funnel needs 2–10 steps"));
-    let events = switch (load(db, r)) {
+    let events = switch (loadWithLimit(db, r, maxEvents)) {
       case (#ok e) e;
       case (#err e) return #err(e);
     };
@@ -332,7 +350,10 @@ module {
     #ok(counts.map(func c = c.size()));
   };
   public func journeys(db : T.Store, r : T.ReportRequest) : T.Result<[(Text, Text, Nat)]> {
-    let events = switch (load(db, r)) {
+    journeysWithLimit(db, r, scanLimit);
+  };
+  public func journeysWithLimit(db : T.Store, r : T.ReportRequest, maxEvents : Nat) : T.Result<[(Text, Text, Nat)]> {
+    let events = switch (loadWithLimit(db, r, maxEvents)) {
       case (#ok e) e;
       case (#err e) return #err(e);
     };

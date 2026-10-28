@@ -1,3 +1,4 @@
+import {analyticsCall} from '../dist/report-client.js';
 export function unwrap(result) {
   if(result&&'err'in result){const code=Object.keys(result.err)[0];throw Object.assign(new Error(typeof result.err[code]==='string'?result.err[code]:code),{status:{unauthorized:403,notFound:404,invalid:400,conflict:409,capacity:422}[code]??500,code});}
   return result&&'ok'in result?result.ok:result;
@@ -22,10 +23,10 @@ export async function api(actor,method,path,token,body,search) {
     if(members[2]==='people'&&method==='GET')return unwrap(await actor.accessPeople(token,site,search.get('search')??''));
   }
   if(/^\/api\/v1\/sites\/[^/]+$/.test(path)&&method==='DELETE')return unwrap(await actor.deleteSite(token,decodeURIComponent(path.split('/').at(-1))));
-  if(path==='/api/v1/query'&&method==='POST')return unwrap(await actor.report(token,reportRequest(body)));
-  if(path==='/api/v1/funnels'&&method==='POST')return unwrap(await actor.funnel(token,reportRequest(body),body.steps.map(s=>({kind:{[s.kind]:null},value:s.value}))));
-  if(path==='/api/v1/journeys'&&method==='POST')return unwrap(await actor.journeys(token,reportRequest(body)));
-  if(path==='/api/v1/goals/report'&&method==='POST')return unwrap(await actor.goalReport(token,reportRequest(body),body.id));
+  if(path==='/api/v1/query'&&method==='POST')return unwrap(await analyticsCall(actor,'report',token,reportRequest(body)));
+  if(path==='/api/v1/funnels'&&method==='POST')return unwrap(await analyticsCall(actor,'funnel',token,reportRequest(body),body.steps.map(s=>({kind:{[s.kind]:null},value:s.value}))));
+  if(path==='/api/v1/journeys'&&method==='POST')return unwrap(await analyticsCall(actor,'journeys',token,reportRequest(body)));
+  if(path==='/api/v1/goals/report'&&method==='POST')return unwrap(await analyticsCall(actor,'goalReport',token,reportRequest(body),body.id));
   if(path==='/api/v1/goals'&&method==='GET')return unwrap(await actor.goals(token,search.get('site')??'')).map(g=>({...g,kind:Object.keys(g.kind)[0],scrollDepth:g.kind.scroll===undefined?null:String(g.kind.scroll)}));
   if(path==='/api/v1/goals'&&method==='POST')return unwrap(await actor.saveGoal(token,{...body,kind:{[body.kind]:body.kind==='scroll'?BigInt(body.scrollDepth):null}}));
   if(path==='/api/v1/goals'&&method==='DELETE')return unwrap(await actor.deleteGoal(token,search.get('site')??'',search.get('id')??''));

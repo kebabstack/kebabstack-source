@@ -71,13 +71,25 @@ mixin (auth : T.AuthState, lease : T.Lease, db : T.Store, siteAccess : Map.Map<T
     if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
     Analytics.report(db, request);
   };
+  public shared func reportFull(token : Text, request : T.ReportRequest) : async T.Result<T.Report> {
+    if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
+    Analytics.reportWithLimit(db, request, Analytics.fullScanLimit);
+  };
   public query func funnel(token : Text, request : T.ReportRequest, steps : [T.FunnelStep]) : async T.Result<[Nat]> {
     if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
     Analytics.funnel(db, request, steps);
   };
+  public shared func funnelFull(token : Text, request : T.ReportRequest, steps : [T.FunnelStep]) : async T.Result<[Nat]> {
+    if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
+    Analytics.funnelWithLimit(db, request, steps, Analytics.fullScanLimit);
+  };
   public query func journeys(token : Text, request : T.ReportRequest) : async T.Result<[(Text, Text, Nat)]> {
     if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
     Analytics.journeys(db, request);
+  };
+  public shared func journeysFull(token : Text, request : T.ReportRequest) : async T.Result<[(Text, Text, Nat)]> {
+    if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
+    Analytics.journeysWithLimit(db, request, Analytics.fullScanLimit);
   };
   public query func exportEvents(token : Text, site : Text, after : Text, limit : Nat) : async T.Result<{ events : [T.Event]; cursor : Text }> {
     if (not A.permit(auth, lease, db, siteAccess, token, site, true)) return #err(#unauthorized);
@@ -115,10 +127,20 @@ mixin (auth : T.AuthState, lease : T.Lease, db : T.Store, siteAccess : Map.Map<T
     let goal = db.goals.get(request.site # ":" # id) ?? (return #err(#notFound));
     Analytics.goalReport(db,request,goal);
   };
+  public shared func goalReportFull(token : Text, request : T.ReportRequest, id : Text) : async T.Result<{visitors : Nat; completions : Nat; revenue : [(Text,Int)]}> {
+    if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
+    let goal = db.goals.get(request.site # ":" # id) ?? (return #err(#notFound));
+    Analytics.goalReportWithLimit(db,request,goal, Analytics.fullScanLimit);
+  };
   public query func goalRows(token : Text, request : T.ReportRequest, id : Text) : async T.Result<[{value : Text; visitors : Nat; completions : Nat}]> {
     if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
     let goal = db.goals.get(request.site # ":" # id) ?? (return #err(#notFound));
     Analytics.goalRows(db,request,goal);
+  };
+  public shared func goalRowsFull(token : Text, request : T.ReportRequest, id : Text) : async T.Result<[{value : Text; visitors : Nat; completions : Nat}]> {
+    if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
+    let goal = db.goals.get(request.site # ":" # id) ?? (return #err(#notFound));
+    Analytics.goalRowsWithLimit(db,request,goal, Analytics.fullScanLimit);
   };
   public shared func deleteGoal(token : Text, site : Text, id : Text) : async T.Result<()> {
     if (not A.permit(auth, lease, db, siteAccess, token, site, true)) return #err(#unauthorized);

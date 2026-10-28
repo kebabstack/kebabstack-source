@@ -13,7 +13,7 @@ Object.defineProperty(globalThis,'navigator',{value:w.navigator,configurable:tru
 w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(value=''){this.returnValue=value;this.open=false;this.dispatchEvent(new w.Event('close'));};
 const $=id=>document.getElementById(id),settle=()=>new Promise(r=>setTimeout(r,30)),go=async v=>{location.hash='#/'+v;await settle();};
 try{
- for(const file of ['idl.js','hub-client.js','view.js','access.js','business.js','search-console.js'])copyFileSync(new URL('../dist/'+file,import.meta.url),join(dir,file));
+ for(const file of ['report-client.js','idl.js','hub-client.js','view.js','access.js','business.js','search-console.js'])copyFileSync(new URL('../dist/'+file,import.meta.url),join(dir,file));
  writeFileSync(join(dir,'package.json'),'{"type":"module"}');writeFileSync(join(dir,'app.js'),readFileSync(new URL('../dist/app.js',import.meta.url),'utf8').replace('void boot();','').replace('__BACKEND_CANISTER_ID__','aaaaa-aa'));
  const {start}=await import(pathToFileURL(join(dir,'app.js')));const f=fixture({role,empty,unsafe:true});await start(f.actor,{...person,role:role==='manager'?'viewer':role},{version:'0.6.1',hubId:''});
  assert.equal($('layout').hidden,false);assert.equal($('newSite').hidden,true);

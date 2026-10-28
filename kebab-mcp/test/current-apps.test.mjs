@@ -59,3 +59,14 @@ test('lifecycle queue views reject old or unknown Desk versions instead of retur
   }
  }
 });
+
+test('analytics full fallback only on Crumbs 0.12+ capacity, preserving query-only default',async()=>{
+ for(const version of ['0.11.2','0.12.0']) {
+  const calls=[],tools=new Map(),result={err:{capacity:'Report exceeds 50000 events. Use full report.'}};
+  const rt={query:async(a,m,args)=>{calls.push(m);return m==='info'?{name:'Crumbs',version}:result;},call:async(a,m,args)=>{calls.push(m);assert.equal(m,'reportFull');assert.equal(args[0].site,'example');return {ok:{totals:{visitors:'50000'}}};}};
+  registerTools({registerTool:(n,def,fn)=>tools.set(n,{def,fn})},rt);
+  const tool=tools.get('kebab_analytics_report'),response=await tool.fn(z.object(tool.def.inputSchema).parse({site:'example',from:'2026-09-01T00:00:00Z',until:'2026-10-01T00:00:00Z'}));
+  assert.deepEqual(calls,version==='0.12.0'?['report','info','reportFull']:['report','info']);
+  assert.equal(response.isError===true,version==='0.11.2');
+ }
+});

@@ -30,7 +30,7 @@ endpoint('/api/v1/sites','get','List accessible websites',{response:array(ref('S
 endpoint('/api/v1/sites/{id}/access','get','Read website members (Manager/Admin session)',{params:['{id}'],response:ref('SiteAccess')});
 endpoint('/api/v1/sites/{id}/access','put','Replace named website access using its current revision (Manager/Admin session)',{params:['{id}'],body:obj({revision:{type:'string',pattern:'^[0-9]+$'},readers:array(text),managers:array(text)}),response:ref('SiteAccess')});
 endpoint('/api/v1/sites/{id}/people','get','Search Hub people; first 100 matches (Manager/Admin session)',{params:['{id}','search'],response:obj({people:array(ref('AccessPerson')),truncated:{type:'boolean'}})});
-endpoint('/api/v1/query','post','Query complete aggregate statistics',{body:ref('ReportRequest'),response:ref('Report')});
+endpoint('/api/v1/query','post','Complete aggregate statistics via atomic full-report update execution',{body:ref('ReportRequest'),response:ref('Report')});
 endpoint('/api/v1/funnels','post','Sequential funnel within a visit; unique visitor estimates per step',{body:{...request,properties:{...request.properties,steps:{...array(step),minItems:2,maxItems:10}},required:[...request.required,'steps']},response:array(number)});
 endpoint('/api/v1/journeys','post','Most frequent page transitions within visits',{body:ref('ReportRequest'),response:array({type:'array',prefixItems:[text,text,number],minItems:3,maxItems:3})});
 endpoint('/api/v1/goals/report','post','Goal completions, visitor estimates and revenue',{body:{...request,properties:{...request.properties,id:text},required:[...request.required,'id']},response:obj({visitors:number,completions:number,revenue:metric.properties.revenue})});

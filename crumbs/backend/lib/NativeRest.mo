@@ -19,10 +19,10 @@ module {
     getSiteAccess : shared query (Text,Text) -> async T.Result<T.AccessView>;
     accessPeople : shared query (Text,Text,Text) -> async T.Result<{people:[T.AccessPerson];truncated:Bool}>;
     setSiteAccess : shared (Text,Text,Nat,[Text],[Text]) -> async T.Result<T.AccessView>;
-    report : shared query (Text,T.ReportRequest) -> async T.Result<T.Report>;
-    funnel : shared query (Text,T.ReportRequest,[T.FunnelStep]) -> async T.Result<[Nat]>;
-    journeys : shared query (Text,T.ReportRequest) -> async T.Result<[(Text,Text,Nat)]>;
-    goalReport : shared query (Text,T.ReportRequest,Text) -> async T.Result<{visitors:Nat;completions:Nat;revenue:[(Text,Int)]}>;
+    reportFull : shared (Text,T.ReportRequest) -> async T.Result<T.Report>;
+    funnelFull : shared (Text,T.ReportRequest,[T.FunnelStep]) -> async T.Result<[Nat]>;
+    journeysFull : shared (Text,T.ReportRequest) -> async T.Result<[(Text,Text,Nat)]>;
+    goalReportFull : shared (Text,T.ReportRequest,Text) -> async T.Result<{visitors:Nat;completions:Nat;revenue:[(Text,Int)]}>;
     goals : shared query (Text,Text) -> async T.Result<[T.Goal]>;
     saveGoal : shared (Text,T.Goal) -> async T.Result<()>;
     deleteGoal : shared (Text,Text,Text) -> async T.Result<()>;
@@ -83,14 +83,14 @@ module {
     };
     if(method=="POST" and ["/api/v1/query","/api/v1/funnels","/api/v1/journeys"].values().any(func p=p==path)){
       let r=request(body) ?? (return invalid("Invalid report interval or filters"));
-      if(path=="/api/v1/query")return wrap(await api.report(token,r),J.report);
-      if(path=="/api/v1/journeys")return wrap(await api.journeys(token,r),func(xs:[(Text,Text,Nat)]):Json{#array(xs.map(func(a,b,n):Json{#array([#string(a),#string(b),H.jInt(n)])}))});
+      if(path=="/api/v1/query")return wrap(await api.reportFull(token,r),J.report);
+      if(path=="/api/v1/journeys")return wrap(await api.journeysFull(token,r),func(xs:[(Text,Text,Nat)]):Json{#array(xs.map(func(a,b,n):Json{#array([#string(a),#string(b),H.jInt(n)])}))});
       let steps=List.empty<T.FunnelStep>();for(s in H.array(body,"steps").values()){let kind=switch(H.str(s,"kind","")){case "page" #page;case "event" #event;case _ return invalid("Invalid funnel step")};steps.add({kind;value=H.str(s,"value","")})};
-      return wrap(await api.funnel(token,r,steps.toArray()),func(xs:[Nat]):Json{#array(xs.map(func(n:Nat):Json{H.jInt(n)}))})
+      return wrap(await api.funnelFull(token,r,steps.toArray()),func(xs:[Nat]):Json{#array(xs.map(func(n:Nat):Json{H.jInt(n)}))})
     };
     if(path=="/api/v1/goals/report" and method=="POST"){
       let r=request(body) ?? (return invalid("Invalid report interval or filters"));
-      return wrap(await api.goalReport(token,r,H.str(body,"id","")),func(x:{visitors:Nat;completions:Nat;revenue:[(Text,Int)]}):Json{#object_([("visitors",H.jInt(x.visitors)),("completions",H.jInt(x.completions)),("revenue",#array(x.revenue.map(func(c,v):Json{#array([#string(c),H.jInt(v)])})))])})
+      return wrap(await api.goalReportFull(token,r,H.str(body,"id","")),func(x:{visitors:Nat;completions:Nat;revenue:[(Text,Int)]}):Json{#object_([("visitors",H.jInt(x.visitors)),("completions",H.jInt(x.completions)),("revenue",#array(x.revenue.map(func(c,v):Json{#array([#string(c),H.jInt(v)])})))])})
     };
     let site=H.param(queryString,"site");let id=H.param(queryString,"id");
     if(path=="/api/v1/goals"){

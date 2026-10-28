@@ -1,6 +1,6 @@
 {
   "format": "kebab-public-source-v1",
-  "sourceCommit": "75c487c62ea332dc0162cd2657975c068361fb7c",
+  "sourceCommit": "ea036f035fb6c8612e246518829f7d3b43931059",
   "historyIncluded": false,
   "marketplaceReady": false,
   "files": [
@@ -2276,12 +2276,12 @@
     },
     {
       "path": "crumbs/CHANGELOG.md",
-      "sha256": "398a11218a0c9a9e173a344bce4d557fa11747fac60cf48b2d609dec6e5ed088",
+      "sha256": "961466530f05eba55c379bb69c1d3bd1225855e025acba6288177f1f7aa16132",
       "mode": "100644"
     },
     {
       "path": "crumbs/INSTALL.md",
-      "sha256": "34c106dcda3a756262484b4829d640d5a4f44db32c3a24d3dc8f25bda747807c",
+      "sha256": "138e0708312ea2c3ab7d144e8a6bc157faf4c4d69e83d866db4a18d2f5b57ca4",
       "mode": "100644"
     },
     {
@@ -2291,12 +2291,12 @@
     },
     {
       "path": "crumbs/METRICS.md",
-      "sha256": "2b4c68f53691a6893abf4d2a9b80777d2aba81b0289a43488afbb56f27349713",
+      "sha256": "a188943803e2d519dd628d43a04950257f6b510dfad9c3c159317a2ec160f75a",
       "mode": "100644"
     },
     {
       "path": "crumbs/PARITY.md",
-      "sha256": "6db6079e47a8d3a10266b3e8f8e414c089ef8ef85d16ecbf6a68581c0d03d15b",
+      "sha256": "db10f8b2273827dd04ec62ff8e0d2c86ab86aecbe1870209aa1c9e9aaa03c098",
       "mode": "100644"
     },
     {
@@ -2306,7 +2306,7 @@
     },
     {
       "path": "crumbs/README.md",
-      "sha256": "28a256fb7092a46d2c1914e60902047f8f5f2cf4c1e9c9e744ac2eae320d754a",
+      "sha256": "7b8f36c92f65c4e8c69d1de6230b2aaafb185c7a3388de476baad2780a2a9538",
       "mode": "100644"
     },
     {
@@ -2326,7 +2326,7 @@
     },
     {
       "path": "crumbs/TESTING.md",
-      "sha256": "2308f0efd914f8308bc2c1517ab3c3f063ced454abea335dba8b3cfb732a6d77",
+      "sha256": "f235f319a32f4d13d3af965ea0559c4aef721c7c4f7f5bef9a6e6b076cc166a0",
       "mode": "100644"
     },
     {
@@ -2336,7 +2336,7 @@
     },
     {
       "path": "crumbs/backend/backend.did",
-      "sha256": "128c088389e4361927a456d8a18894e4758a238ed495584c5c5451f2de94e830",
+      "sha256": "56e7709ef7d77df7d10f375fc7b8d297cec75d1d3aae26c1057acb1efba3fda5",
       "mode": "100644"
     },
     {
@@ -2351,7 +2351,7 @@
     },
     {
       "path": "crumbs/backend/lib/Analytics.mo",
-      "sha256": "98f854a9f04cda751e7cedbc78e00412dc1e68da818ab06aee60b427885c73ac",
+      "sha256": "d6b464ebbd64b3ab74066d0afbf70ca0ec9f3d5beefa3a0f524d77ddae9e5634",
       "mode": "100644"
     },
     {
@@ -2391,7 +2391,7 @@
     },
     {
       "path": "crumbs/backend/lib/NativeRest.mo",
-      "sha256": "945b8a61575eb0759136cea9c5fd807c50d3e91b9ce6b43e252fe0c894576dc3",
+      "sha256": "ba4ca9f8215760079caf6ae2b8b9aa90e3bf6bf54d00e9999da08928f58585fd",
       "mode": "100644"
     },
     {
@@ -2406,7 +2406,7 @@
     },
     {
       "path": "crumbs/backend/main.mo",
-      "sha256": "73e118f708930288adefeb2ba506bd9c7b7820bd186fcc74858a98651cc8b906",
+      "sha256": "e26d657034aab455ec8d2b6509144615bf25de1a3a006289b3aecb2788cda7bd",
       "mode": "100644"
     },
     {
@@ -2441,7 +2441,7 @@
     },
     {
       "path": "crumbs/backend/mixins/Analytics.mo",
-      "sha256": "8eb4d4707d50dcfc539575f098fe5b8eb02f0fd6e7baf4aa309d499f3ce328ae",
+      "sha256": "dbf2c7730fbfe3ea5d300ec10b16c793abd40cf0b20067a4356569553c203b45",
       "mode": "100644"
     },
     {
@@ -2476,7 +2476,7 @@
     },
     {
       "path": "crumbs/collector/api.mjs",
-      "sha256": "1602983ac3f39c17e82d62ab03d8652626c6623dd7bfe97e5310bb7e59cd3738",
+      "sha256": "c5e769a06a3d453a6a1341011f432dc09b05aa35409e4eae11e80a5be7ca869d",
       "mode": "100644"
     },
     {
@@ -2486,12 +2486,12 @@
     },
     {
       "path": "crumbs/collector/package-lock.json",
-      "sha256": "7442589fd57d761b00621439fa2f2d05d693c3bfb27d33f8f87c2b57225617ef",
+      "sha256": "0d42f82b1cd11f888a6730dedd569e2699a580149bf47c75a5ddafbcd8da10a3",
       "mode": "100644"
     },
     {
       "path": "crumbs/collector/package.json",
-      "sha256": "fde6a7b77959d63c970880b57a5ebbf9d467751f350658d3ab1e45d39a2070ff",
+      "sha256": "cabec102b7789b609b574dd606c4fcc5fda07a4098936c6fb5e559ac2f73ce2a",
       "mode": "100644"
     },
     {
@@ -2516,7 +2516,7 @@
     },
     {
       "path": "crumbs/dist/CHANGELOG.md",
-      "sha256": "398a11218a0c9a9e173a344bce4d557fa11747fac60cf48b2d609dec6e5ed088",
+      "sha256": "961466530f05eba55c379bb69c1d3bd1225855e025acba6288177f1f7aa16132",
       "mode": "100644"
     },
     {
@@ -2531,17 +2531,17 @@
     },
     {
       "path": "crumbs/dist/api.html",
-      "sha256": "5094e5234cc65f9b10f82ee364492b8f0c938f88ffef6f2396b1c0d4371f9187",
+      "sha256": "cfaf628744dd0cfe92be16ec6fe3a8e6350df82b7c781899015a69dcaa3caf11",
       "mode": "100644"
     },
     {
       "path": "crumbs/dist/app.js",
-      "sha256": "16cf778f86bce9a07f32f617a44ab774ffbcf37d5dd40ee1303aad72c92c85ea",
+      "sha256": "0dbef642cb017aac1e051a1b5326e8c14434839ec46b1a0fc0642eb9832cbc5d",
       "mode": "100644"
     },
     {
       "path": "crumbs/dist/business.js",
-      "sha256": "d223b26c85fd650219c8486a25f5cb8caba8d6b2b7e1af1dd7ae3558cde6f2c8",
+      "sha256": "58536f11883b594b6d772e0ad7de17c234d01b91a78f0b562a341bf6548ac0f5",
       "mode": "100644"
     },
     {
@@ -2581,7 +2581,7 @@
     },
     {
       "path": "crumbs/dist/idl.js",
-      "sha256": "1071836cb02c55a0170a6d41e24eeb5f5c534f7ab0f31a771fa37546ca1718b1",
+      "sha256": "9a09bd0a72d0e789f4de29660d7ca97d7215af8e50869dbd8c8ad99a4aa88dda",
       "mode": "100644"
     },
     {
@@ -2591,7 +2591,7 @@
     },
     {
       "path": "crumbs/dist/integrations.html",
-      "sha256": "1a9120e78cd8db18cbee1849cc73135ebed6141496dc50e2c8c7542cab9335da",
+      "sha256": "b69daa420ee3781dbf3bd6228e5fb0a754eb93b6e6606209ad21fa176fcaf766",
       "mode": "100644"
     },
     {
@@ -2606,12 +2606,17 @@
     },
     {
       "path": "crumbs/dist/openapi.json",
-      "sha256": "443717756408c72de7106491771b7ad98a0b1ae0a88f884789866c1a13494adb",
+      "sha256": "ed1d6e30b11ef8fcdaa219d798736988dc51471468e89e67db74460e3f39d0d8",
       "mode": "100644"
     },
     {
       "path": "crumbs/dist/privacy.html",
       "sha256": "f96b10699e9127e875a60b65754d2ff053f4c90198abf0c32e5607dd69fd558e",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/dist/report-client.js",
+      "sha256": "484271a5b07d0d81116e6c71fbd98462f04b58a84a526b3fd6a444ff702114f5",
       "mode": "100644"
     },
     {
@@ -2626,7 +2631,7 @@
     },
     {
       "path": "crumbs/dist/shared.js",
-      "sha256": "9b95794db509b1da562dc4ee45f3fa4ba73ce98b60a815517562701806b2dc79",
+      "sha256": "26d251f0e08cb922f81942153d83294036b25f98682e06855497eb64171d9dba",
       "mode": "100644"
     },
     {
@@ -2676,12 +2681,12 @@
     },
     {
       "path": "crumbs/mops.toml",
-      "sha256": "f048c3fc08f960a67c123053c9d9d1c775c751dc2066205cd18a3027916e0168",
+      "sha256": "1da7e9637b3ddc0ef3d01d33e9971066519a0564b727d868fe5598e346e11a26",
       "mode": "100644"
     },
     {
       "path": "crumbs/package.json",
-      "sha256": "d4b0bfb50bbfb8b6e77a8e64ea0682d6c1a70b11a2abe26737a579027ecfb991",
+      "sha256": "67493a442d77eac45de9135821c8ef612a92eec0066c7fcd7d385f8c16819a7f",
       "mode": "100644"
     },
     {
@@ -2746,7 +2751,12 @@
     },
     {
       "path": "crumbs/test/preview.mjs",
-      "sha256": "a744c154949790f46ea5c9b9526fc2c281876fd8d30b2b34b133c0dea6095247",
+      "sha256": "08cfb13a5f1d188791d41df08958a45f652ba171cff3021212dfede150fdccf1",
+      "mode": "100644"
+    },
+    {
+      "path": "crumbs/test/report-client.test.mjs",
+      "sha256": "d5093568f69fb54ab867ec830f832266bc25b5ab40c8ed5186e85eec1f2d66f6",
       "mode": "100644"
     },
     {
@@ -2761,7 +2771,7 @@
     },
     {
       "path": "crumbs/test/ui-smoke.mjs",
-      "sha256": "65d885dc93e24cbeb24297db2055c648e1d586cf8bb3780842186959e8c1b1d7",
+      "sha256": "f1a9307be7e938c0c0ef830d7e398494fbe639705f091bfa4b81df16e98bb9b8",
       "mode": "100644"
     },
     {
@@ -2776,7 +2786,7 @@
     },
     {
       "path": "crumbs/tools/api-docs.mjs",
-      "sha256": "6421e83272bcdbf6a67ba6fc461c94d769d7aecbd0a86a5c603af371ff9cb30a",
+      "sha256": "78975b76a4f69a3c0bf43c2cbbf7384e39352b1a8114808a78bf983702d17215",
       "mode": "100644"
     },
     {
@@ -2796,7 +2806,7 @@
     },
     {
       "path": "crumbs/tools/pack-collector.mjs",
-      "sha256": "640ca6131c32cf7b9d0ff79d3eb178886f53625b907b5234b864b12829dc0d8a",
+      "sha256": "3390bbe0baa9ca1ba07080c7a379eb34914db93ec1db59ae7d36652d52b5d29b",
       "mode": "100644"
     },
     {
@@ -3302,6 +3312,11 @@
     {
       "path": "design/reviews/2026-10-21-knowledge-sharing.md",
       "sha256": "d9b0384977eb0615a58207a735b1279e960fa7e851575c06e5fabe7589049be4",
+      "mode": "100644"
+    },
+    {
+      "path": "design/reviews/2026-10-28-crumbs-large-reports.md",
+      "sha256": "d5255ab0cbe382b690ea64674ac458654b93f213ccf0d957e31dcabe17ffc0d7",
       "mode": "100644"
     },
     {
@@ -5026,7 +5041,7 @@
     },
     {
       "path": "kebab-mcp/CHANGELOG.md",
-      "sha256": "e09384ce4c04809bd6dbc0d19b63b15299052d2418b7d776700365b9e3a83cd3",
+      "sha256": "3fe9bfa224192b257221d909ada143f87164b45573e7135de56a988c3f825c5e",
       "mode": "100644"
     },
     {
@@ -5036,7 +5051,7 @@
     },
     {
       "path": "kebab-mcp/README.md",
-      "sha256": "34568649b2bab09ba3c9b2d4cdd8e5414188e1d07a925e6503f9b566abfd550c",
+      "sha256": "58672223bcf85cb346144e672374e4b6a90e54b91ffc063546bd6fcfdd646177",
       "mode": "100644"
     },
     {
@@ -5056,22 +5071,22 @@
     },
     {
       "path": "kebab-mcp/lib/tools.mjs",
-      "sha256": "9a54cb0c1d100918b096a3684d7bed748bfd46e9434800d40ff4ad9a8e3cdfcc",
+      "sha256": "d7fd2e44e5aec3c6e42f57d042a6faf8db84ff3492bb4eeafe59f825dfb25f6e",
       "mode": "100644"
     },
     {
       "path": "kebab-mcp/package-lock.json",
-      "sha256": "f852831eb717c144eb944ced0361b8371ee426a3c15baf9548109a26f93135e5",
+      "sha256": "724b1720c26dcc3bdfe18acff249c07f412eaabeb8733dc51c5572402bf50c08",
       "mode": "100644"
     },
     {
       "path": "kebab-mcp/package.json",
-      "sha256": "51f5bb68b0af0c88f8b450c817c5a2b11ae077d53b1678935f0c0c77d3a0aa5b",
+      "sha256": "af750a46081a489c1bb3854677f963f9d5450f742b8ba0e4e3f9f361a116c185",
       "mode": "100644"
     },
     {
       "path": "kebab-mcp/server.mjs",
-      "sha256": "95c4326f41f0774b6f20d8500784bded20cf8f8d02c382a14947eef350c6dca0",
+      "sha256": "7e5b69b09b8d53ee90edd2d503d8de1f655d839bea3dc4301d568a009267dfb3",
       "mode": "100644"
     },
     {
@@ -5081,7 +5096,7 @@
     },
     {
       "path": "kebab-mcp/test/current-apps.test.mjs",
-      "sha256": "0ef47cb9ddd3b3b3d433279e133d2b273015f824fbec074ee9c261f16fa8ded5",
+      "sha256": "02e60512deed4a9f5dcaf3cd785e9ca33ed0f33171122a23dfd7863ccf74b6c9",
       "mode": "100644"
     },
     {
@@ -5606,7 +5621,7 @@
     },
     {
       "path": "tests/crumbs.test.mjs",
-      "sha256": "d78257872bef9a954b21f10adfea8841315061831ba22d52182ba49b1f9a6214",
+      "sha256": "bdbfbd0ae6b65ea5a947bbe7592dc92026a4bf362c64800b0fffe42ca60478bf",
       "mode": "100644"
     },
     {

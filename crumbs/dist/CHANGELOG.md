@@ -1,5 +1,11 @@
 # Crumbs changelog
 
+## [0.12.0] — 2026-10-28
+
+- Automatically retry report query capacity/instruction failures through atomic update endpoints with the full retained-store scan budget. Preserve exact visitor deduplication, session context, filters, totals and top-row semantics across the full interval. Applies to dashboard, shared reports, goals, acquisition, funnels, journeys and REST/optional collector clients.
+- Keep small-report queries and existing signatures; add authorized `reportFull`, `goalRowsFull`, `goalReportFull`, `funnelFull` and `journeysFull` update methods. No stored-state migration or collection change.
+- Serialize expensive browser fallbacks and document execution/storage boundaries. Optional collector 0.9.2 includes the shared fallback client.
+
 ## [0.11.3] — 2026-10-23
 
 - Synchronize the canonical Hub client with the Doku logo registry. Existing behavior is unchanged; this source maintenance release does not imply a production rollout.

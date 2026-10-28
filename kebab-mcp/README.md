@@ -30,7 +30,7 @@ There is no published `kebab-mcp` npm package; install from this repository.
 Some app APIs return an empty list for unauthorized reads; an empty result is
 not proof that there is no work. Results describe only the connected person's
 permitted scope. Desk's internal queue is limited to 500 rows by its backend;
-use filters for large queues. Analytics keeps its backend `truncated` indicator.
+use filters for large queues. Analytics keeps its backend `truncated` indicator. With Crumbs 0.12+, the curated analytics report retries query capacity/instruction failures once through `reportFull`, an update endpoint that calculates aggregates without changing records. Generic `kebab_query` still refuses every update method.
 
 ## New apps and methods
 

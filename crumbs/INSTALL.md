@@ -28,7 +28,7 @@ Use one collector mode per website. For a custom collection domain, configure an
 
 Choose this mode when you need local GeoIP or a queue outside the canister, and accept the additional host operations. Kitchen installs canisters only; it does not install this optional host process.
 
-Use Node ≥22.22.2 with `node:sqlite`, a persistent local disk and a dedicated service account. Copy `collector/`, `dist/idl.js`, `dist/tracker.js`, `dist/openapi.json` and the parent `package.json` with the same relative layout; `tools/pack-collector.mjs` creates this artifact from the reviewed tree. Install its pinned dependencies with `npm ci --omit=dev --ignore-scripts` inside `collector/`.
+Use Node ≥22.22.2 with `node:sqlite`, a persistent local disk and a dedicated service account. Copy `collector/`, `dist/idl.js`, `dist/report-client.js`, `dist/tracker.js`, `dist/openapi.json` and the parent `package.json` with the same relative layout; `tools/pack-collector.mjs` creates this artifact from the reviewed tree. Install its pinned dependencies with `npm ci --omit=dev --ignore-scripts` inside `collector/`.
 
 Create the local identity and print only its public principal:
 
@@ -136,3 +136,7 @@ their workflows. Long marked selectors keep native selection and add an option
 search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
 
 Report navigation: point at or tap the traffic chart for exact values; keyboard users can focus the chart and use arrow keys. Breakdown lists scroll after ten rows. See [Exploring reports](README.md#exploring-reports) for comparison and accessible table controls. No tracking-script or API changes are required for this update.
+
+## Large native reports (0.12.0)
+
+Use the normal date selector. The dashboard automatically retries a report that exceeds the fast query budget using an authorized update calculation; keep the page open while it loads. The result preserves exact whole-period visitors and session context. No re-import, tracking-script change or data migration is required. Direct Candid integrations can use the matching `*Full` update endpoints on query capacity or instruction errors. REST `/api/v1/query`, funnels, journeys and goal reports use the full path; REST SDK consumers retain the same request/response contract. The curated MCP analytics tool gains the same fallback in connector 0.4.1; update that local connector separately. Update the optional collector to 0.9.2 with its packaged report client and generated IDL. Platform execution and existing storage limits still apply; see METRICS.md and TESTING.md.

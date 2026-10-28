@@ -114,7 +114,7 @@ type Result_3 =
    err: Error;
    ok: Connection;
  };
-type Result_22 =
+type Result_24 =
  variant {
    err: Error;
    ok: record {
@@ -122,12 +122,12 @@ type Result_22 =
          truncated: bool;
        };
  };
-type Result_21 =
+type Result_23 =
  variant {
    err: Error;
    ok: vec Annotation;
  };
-type Result_20 =
+type Result_22 =
  variant {
    err: Error;
    ok: record {
@@ -135,12 +135,7 @@ type Result_20 =
          token: text;
        };
  };
-type Result_2 =
- variant {
-   err: Error;
-   ok: opt SearchSnapshot;
- };
-type Result_19 =
+type Result_21 =
  variant {
    err: Error;
    ok: record {
@@ -148,12 +143,17 @@ type Result_19 =
          events: vec Event;
        };
  };
-type Result_18 =
+type Result_20 =
  variant {
    err: Error;
    ok: vec nat;
  };
-type Result_17 =
+type Result_2 =
+ variant {
+   err: Error;
+   ok: opt SearchSnapshot;
+ };
+type Result_18 =
  variant {
    err: Error;
    ok:
@@ -491,9 +491,9 @@ type AccessPerson =
    id: text;
  };
 service : {
-  accessPeople: (token: text, site: text, search: text) -> (Result_22) query;
+  accessPeople: (token: text, site: text, search: text) -> (Result_24) query;
   activateTrafficDataset: (id: text) -> (Result_6);
-  annotations: (token: text, site: text) -> (Result_21) query;
+  annotations: (token: text, site: text) -> (Result_23) query;
   beginTrafficDataset: (m: Manifest) -> (Result_6);
   cancelTrafficDataset: (id: text) -> (Result_6);
   collectorSites: () -> (vec Site) query;
@@ -503,20 +503,26 @@ service : {
      manage;
      read;
      share;
-   }, days: nat) -> (Result_20);
+   }, days: nat) -> (Result_22);
   deleteGoal: (token: text, site: text, id: text) -> (Result_6);
   deleteReport: (token: text, site: text, id: text, revision: nat) ->
    (Result_6);
   deleteSite: (token: text, id: text) -> (Result_6);
   exportEvents: (token: text, site: text, after: text, limit: nat) ->
-   (Result_19) query;
+   (Result_21) query;
   funnel: (token: text, request: ReportRequest, steps: vec FunnelStep) ->
-   (Result_18) query;
+   (Result_20) query;
+  funnelFull: (token: text, request: ReportRequest, steps: vec FunnelStep) ->
+   (Result_20);
   getSiteAccess: (token: text, site: text) -> (Result_1) query;
   goalReport: (token: text, request: ReportRequest, id: text) ->
-   (Result_17) query;
+   (Result_18) query;
+  goalReportFull: (token: text, request: ReportRequest, id: text) ->
+   (Result_18);
   goalRows: (token: text, request: ReportRequest, id: text) ->
    (Result_16) query;
+  goalRowsFull: (token: text, request: ReportRequest, id: text) ->
+   (Result_16);
   goals: (token: text, site: text) -> (Result_15) query;
   hasImports: (token: text, site: text) -> (Result_14) query;
   health: (token: text) -> (Result_13) query;
@@ -540,6 +546,7 @@ service : {
     }) query;
   ingestBatch: (batch: vec Event) -> (Result_11);
   journeys: (token: text, request: ReportRequest) -> (Result_10) query;
+  journeysFull: (token: text, request: ReportRequest) -> (Result_10);
   listKeys: (token: text) -> (Result_9) query;
   listSites: (token: text) -> (vec SiteView) query;
   loginWithSuite: (token: text) ->
@@ -561,6 +568,7 @@ service : {
        token: text;
      });
   report: (token: text, request: ReportRequest) -> (Result_8) query;
+  reportFull: (token: text, request: ReportRequest) -> (Result_8);
   revokeKey: (token: text, id: text) -> (Result_6);
   saveAnnotation: (token: text, item: Annotation) -> (Result_6);
   saveGoal: (token: text, goal: Goal) -> (Result_6);

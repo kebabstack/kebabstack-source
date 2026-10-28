@@ -61,3 +61,27 @@ The frozen source commit `b7bbf97` produced the 0.3.0 release. The composed prod
 Production verification confirms current matching Hub, Kitchen and Crumbs releases; actual HTTPS native health and REST authorization; fresh Hub policy confirmation with inherited owner/admin rights; and no tracking response cookies. A rejected request for an unregistered synthetic site exercises the production gateway address path without storing analytics. No website or real analytics traffic was added by this rollout. The deployment identity is not a linked Hub person, so the final personal browser login requires the user's company SSO/passkey; positive login and authenticated REST flows passed against the exact packaged canisters locally. Existing six central policies/effective grants, Lunch roster, all previous connector contracts, canister settings and unrelated applications are preserved. A successful Lunch directory pull is checked after the Hub upgrade. Existing release-store assets except the intentionally updated catalogue remain unchanged.
 
 The persistent sibling `kebabstack-crumbs-artifacts/0.3.0-b7bbf97/` directory holds the release bundle, baseline fixtures, logs and deployment/hash receipts. Private temporary roster/policy captures and temporary test signing identities are removed after verification. Production checks do not replace the real-workload and 14-day comparison gates in PARITY.md.
+
+## 0.12.0 full-report regression (2026-10-28)
+
+`tests/crumbs.test.mjs` now includes a 100,000-event dataset with 50,000 consented
+browser IDs returning on two UTC days, queried over 30 days. The old fast query
+returns its 50,000-event capacity error; full update reporting must return exactly
+50,000 range visitors and 100,000 visits/pageviews/bounces. Daily visitors sum to
+100,000 and are deliberately **not** used as range visitors. Checks include path
+filtering, day buckets, goals, goal rows, funnels, journeys, native HTTP and denied
+credentials/revoked sharing. Set `CRUMBS_FULL_BASELINE` to a directory containing
+the published 0.11.2 backend.wasm/backend.did to run the same fixture through a
+populated upgrade before exercising the new methods. Set
+`CRUMBS_PACKAGED_CRUMBS_WASM` to verify the stamped release executable.
+
+This is a local PocketIC correctness/execution-limit test, not a production SLA
+or coverage of every worst-case string/filter/cardinality combination. Existing
+storage, response-size and platform execution limits still apply. Browser preview
+`?large&many` simulates the capacity response before returning synthetic full
+reports, exercising the actual frontend fallback; it does not benchmark a canister.
+
+`test/report-client.test.mjs` covers query success, precise fallback selection,
+serialized expensive calls and non-replayed errors. The optional collector package
+must contain `dist/report-client.js`; MCP 0.4.1 has a version-gated curated fallback
+without changing generic query-only enforcement.

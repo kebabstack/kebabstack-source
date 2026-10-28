@@ -1,3 +1,4 @@
+import {analyticsCall} from './report-client.js';
 import {displayError,esc,num,money,dimensionLabel,valueLabel} from './view.js';
 import {authorize,fetchSearchReport,loadGoogle} from './search-console.js';
 const unwrap=r=>{if(r?.err)throw new Error(Object.values(r.err)[0]||Object.keys(r.err)[0]);return r?.ok??r;};
@@ -6,7 +7,7 @@ const revenue=values=>values.length?values.map(([c,n])=>money(c,n)).join(' · ')
 export const csvCell=value=>{let text=String(value??'');if(/^[\s\uFEFF]*[=+@-]|^[\t\r\n]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';};
 export function downloadReport(rows,name){const url=URL.createObjectURL(new Blob([rows.map(r=>r.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 export function businessWorkspace(ctx){
- const $=id=>document.getElementById(id),call=(method,...args)=>ctx.actor()[method](ctx.token(),...args).then(unwrap);
+ const $=id=>document.getElementById(id),call=(method,...args)=>analyticsCall(ctx.actor(),method,ctx.token(),...args).then(unwrap);
  let saved=[],connection,reportRows=[],requestVersion=0,preparedSearch;
  const alive=run=>ctx.isCurrent(run),showError=e=>ctx.notice(displayError(e));
  function fullTable(rows,dimension,{goal=null,scroll=true}={}){

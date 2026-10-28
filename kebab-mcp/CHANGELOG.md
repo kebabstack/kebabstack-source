@@ -1,5 +1,9 @@
 # Changelog — kebab-mcp
 
+## [0.4.1] — 2026-10-28
+
+- Retry Crumbs report query capacity/instruction failures through the read-only `reportFull` update endpoint after verifying Crumbs 0.12+. Preserve exact aggregates and generic query-only enforcement; do not replay failed updates.
+
 ## [0.4.0] — 2026-10-19
 
 - Add onboarding/offboarding queue views to `kebab_tickets`. Verify Desk 0.35+ before querying; older servers must not silently return every ticket for an unknown view. Existing permissions and the 500-row bound remain. This local connector is updated separately from the canister rollout.

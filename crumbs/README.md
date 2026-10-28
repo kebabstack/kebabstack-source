@@ -2,7 +2,7 @@
 
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical identity, semantic light/dark colours and common navigation/control sizes. Product access and workflow boundaries remain explicit.
 
-Website analytics with cookieless defaults and an optional consented cookie mode for kebab-stack, targeting a reliable Plausible replacement. **0.11.3 is an alpha pilot, not yet approved to retire Plausible.** Backend, native HTTP collection, REST API and dashboard run on your Cloud Engine. A Node/SQLite collector remains optional. Core analytics does not require an external analytics SaaS. Optional Google integrations are explicitly configured by the operator.
+Website analytics with cookieless defaults and an optional consented cookie mode for kebab-stack, targeting a reliable Plausible replacement. **0.12.0 is an alpha pilot, not yet approved to retire Plausible.** Backend, native HTTP collection, REST API and dashboard run on your Cloud Engine. A Node/SQLite collector remains optional. Core analytics does not require an external analytics SaaS. Optional Google integrations are explicitly configured by the operator.
 
 For management: the implemented core covers traffic, acquisition, events, goals, funnels, journeys and historical imports. The adoption decision depends on matching your real workload and the features you use. There is no validated throughput or operating-cost claim. See [replacement acceptance](PARITY.md).
 

@@ -7,7 +7,7 @@ const ids=Object.fromEntries(['controller','owner','alice','bob','global','outsi
 const wasmPath=name=>process.env["CRUMBS_PACKAGED_"+name.toUpperCase()+"_WASM"]??resolve(name,"backend/dist/backend.wasm");
 let server;
 before(async()=>server=await PocketIcServer.start());after(async()=>server?.stop());
-async function install(pic,name,baseline=false){const dir=baseline==='traffic'?process.env.CRUMBS_TRAFFIC_BASELINE:baseline==='native'?process.env.CRUMBS_NATIVE_BASELINE:baseline?process.env.CRUMBS_ACCESS_BASELINE:resolve(name,'backend/dist');const js=execFileSync('python3',['sdk/tools/did2idl.py',dir+'/backend.did'],{encoding:'utf8'});const {idlFactory}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));return {...await pic.setupCanister({sender:ids.controller,controllers:[ids.controller],wasm:baseline?dir+'/backend.wasm':wasmPath(name),idlFactory,environmentVariables:name==='hub'?[{name:'KEBAB_CLAIM_CODE',value:'cd'.repeat(32)}]:[]}),idlFactory};}
+async function install(pic,name,baseline=false){const dir=baseline==='large'?process.env.CRUMBS_FULL_BASELINE:baseline==='traffic'?process.env.CRUMBS_TRAFFIC_BASELINE:baseline==='native'?process.env.CRUMBS_NATIVE_BASELINE:baseline?process.env.CRUMBS_ACCESS_BASELINE:resolve(name,'backend/dist');const js=execFileSync('python3',['sdk/tools/did2idl.py',dir+'/backend.did'],{encoding:'utf8'});const {idlFactory}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));return {...await pic.setupCanister({sender:ids.controller,controllers:[ids.controller],wasm:baseline?dir+'/backend.wasm':wasmPath(name),idlFactory,environmentVariables:name==='hub'?[{name:'KEBAB_CLAIM_CODE',value:'cd'.repeat(32)}]:[]}),idlFactory};}
 async function setup(live=false,baseline=false){const pic=await PocketIc.create(server.getUrl(),live?{nns:{state:{type:'new'}},application:[{state:{type:'new'}}]}:undefined);await pic.setTime(live?new Date():new Date('2026-09-19T12:00:00Z'));const h=await install(pic,'hub'),c=await install(pic,'crumbs',baseline),hub=h.actor,app=c.actor;
  hub.setPrincipal(ids.owner);assert.equal((await hub.claimHubWithCode('cd'.repeat(32),{email:'owner@crumbs.test',displayName:'Owner',orgName:'Crumbs test'})).ok,true);
  for(const name of ['alice','bob','global']){hub.setPrincipal(ids.owner);assert.equal(await hub.addLocalUser(name+'@crumbs.test',name,'',''),true);const [invite]=await hub.createInvite(name+'@crumbs.test');hub.setPrincipal(ids[name]);assert.equal(await hub.claimInvite(invite),true);}hub.setPrincipal(ids.owner);assert.equal((await hub.setPersonRole('global@crumbs.test','admin')).ok,true);await pic.tick(2);
@@ -454,3 +454,42 @@ test('Crumbs traffic bulk upload: invalid tail is atomic; chunk boundaries and g
  const owner=await s.login('owner'),events=ok(await app.exportEvents(owner.token,'main','',100n)).events;
  for(const i of [0,1023,1024,16383,16384])assert.equal(events.find(e=>e.id==='bulk-'+i).country,i%2?'DE':'CH');assert.equal(events.find(e=>e.id==='bulk-gap').country,'');
  }finally{await s.pic.tearDown();}});
+
+test('Crumbs: full report exceeds query scan cap without summing daily cookie visitors',async()=>{
+ const s=await setup(false,process.env.CRUMBS_FULL_BASELINE?'large':false);try{
+ let {app}=s;const {owner,viewer,event,request,now}=s;app.setPrincipal(ids.collector);
+ const count=100000, visitors=50000, start=performance.now();
+ for(let offset=0;offset<count;offset+=50){
+  const batch=Array.from({length:50},(_,j)=>{const i=offset+j;return event('full-'+i,{visitor:'c:'+(i%visitors).toString(16).padStart(64,'0'),at:now-BigInt(i<visitors?86400:100),order:BigInt(i+1),path:i%2?'/pricing':'/'});});
+  assert.equal(ok(await app.ingestBatch(batch)).accepted,50n);
+ }
+ const r=request({from:now-30n*86400n,dimension:'path'});
+ assert.match((await app.report(owner.token,r)).err.capacity,/50000/);
+ if(process.env.CRUMBS_FULL_BASELINE){
+  const before=ok(await app.health(owner.token));
+  await s.pic.upgradeCanister({sender:ids.controller,canisterId:s.c.canisterId,wasm:wasmPath('crumbs'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
+  const js=execFileSync('python3',['sdk/tools/did2idl.py','crumbs/backend/dist/backend.did'],{encoding:'utf8'}),{idlFactory}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
+  app=s.pic.createActor(idlFactory,s.c.canisterId);await s.pic.advanceTime(31000);await s.pic.tick(4);
+  assert.equal(ok(await app.health(owner.token)).storedEvents,before.storedEvents);
+ }
+
+ assert.ok('unauthorized' in (await app.reportFull('',r)).err);
+ const report=ok(await app.reportFull(viewer.token,r));
+ assert.deepEqual([report.totals.visitors,report.totals.visits,report.totals.pageviews,report.totals.bounces],[50000n,100000n,100000n,100000n]);
+ assert.equal(report.rows.reduce((n,r)=>n+r.metrics.pageviews,0n),100000n);
+ assert.equal(ok(await app.reportFull(owner.token,{...r,filters:[{dimension:'path',values:['/pricing'],exclude:false}]})).totals.visitors,25000n);
+ const day=ok(await app.reportFull(owner.token,{...r,dimension:'day'}));
+ assert.equal(day.rows.reduce((n,row)=>n+row.metrics.visitors,0n),100000n,'daily visitors cannot be summed into range visitors');
+ ok(await app.saveGoal(owner.token,{id:'landing',site:'main',name:'Landing',kind:{page:null},value:'/'}));
+ const goal=ok(await app.goalReportFull(viewer.token,r,'landing'));assert.equal(goal.visitors,25000n);assert.equal(goal.completions,50000n);
+ assert.equal(ok(await app.goalRowsFull(viewer.token,r,'landing'))[0].visitors,25000n);
+ assert.deepEqual(ok(await app.funnelFull(viewer.token,r,[{kind:{page:null},value:'/'},{kind:{page:null},value:'/pricing'}])),[25000n,0n]);
+ assert.equal(ok(await app.journeysFull(viewer.token,r)).reduce((n,[,,v])=>n+v,0n),200000n);
+ const rest=await app.http_request_update({certificate_version:[],method:'POST',url:'/api/v1/query',headers:[['Authorization','Bearer '+viewer.token]],body:Buffer.from(JSON.stringify({...r,filters:[],dayStarts:[]},(_,v)=>typeof v==='bigint'?Number(v):v))});
+ assert.equal(rest.status_code,200);assert.equal(JSON.parse(Buffer.from(rest.body).toString()).totals.visitors,'50000');
+ for(const [method,args] of [['reportFull',[r]],['goalReportFull',[r,'landing']],['goalRowsFull',[r,'landing']],['journeysFull',[r]],['funnelFull',[r,[{kind:{page:null},value:'/'},{kind:{page:null},value:'/pricing'}]]]])assert.ok('unauthorized'in (await app[method]('',...args)).err);
+ const share=ok(await app.createKey(owner.token,'main','Full report',{share:null},1n));
+ assert.equal(ok(await app.reportFull(share.token,r)).totals.visitors,50000n);ok(await app.revokeKey(owner.token,share.key.id));assert.ok('unauthorized'in(await app.reportFull(share.token,r)).err);
+ console.log(JSON.stringify({fullReportEvents:count,uniqueCookieBrowsers:visitors,elapsedMs:Math.round(performance.now()-start)}));
+ }finally{await s.pic.tearDown();}
+});
