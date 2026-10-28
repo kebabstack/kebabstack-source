@@ -7,7 +7,7 @@ app — on demand, on a schedule, restorable from the hub's **Backups** page.
 |---|---|
 | holds | no business data — only target list, schedules, snapshot notes, a journal |
 | can | `take / load / list / delete_canister_snapshot`, `stop / start` on the canisters it co-controls |
-| who | hub **owners** only (the vault asks the hub `vaultAuth(principal)` before anything — fresh for every state change, 5-min cache for reads) and the vault's own controllers |
+| who | hub **owners** only (the vault asks the hub `vaultAuth(principal)` before anything — fresh for every state change, cache valid for less than 60 seconds for reads) and the vault's own controllers |
 | where | snapshots stay inside the platform (max 10 per canister); the vault rotates the oldest out |
 | UI | Hub → Backups (owner-only page): Services · Schedules · Activity · Setup (IT) |
 

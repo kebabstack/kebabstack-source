@@ -1,6 +1,6 @@
 {
   "format": "kebab-public-source-v1",
-  "sourceCommit": "4c2986dd8ae70785f8b86ca84a5fc9186be5dd4e",
+  "sourceCommit": "a551be8cca98fdb1883ee94cdf2bcd0386a6c4bd",
   "historyIncluded": false,
   "marketplaceReady": false,
   "files": [
@@ -6061,7 +6061,7 @@
     },
     {
       "path": "vault/CHANGELOG.md",
-      "sha256": "1e804dc4300bc68a4a8097d3d6cefd8a9def2e3f22ec202234dda9978b39ad89",
+      "sha256": "34d0cfc1d22b82bfcd7ce4839a696c404c725f37f05171105b0f9cfa9df3cb4b",
       "mode": "100644"
     },
     {
@@ -6071,7 +6071,7 @@
     },
     {
       "path": "vault/README.md",
-      "sha256": "ad0232a4c6c8884520f6b16eb57e3d91339d7a6ada953f9a460bff330f7eb669",
+      "sha256": "536e7fdec875bf8e9f4337282cd3911426cd22b7819c91daafc27b798cc50386",
       "mode": "100644"
     },
     {

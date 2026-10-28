@@ -1,5 +1,9 @@
 # Changelog
 
+## Documentation — 2026-10-28
+
+- Correct the README read-authorization cache duration to less than 60 seconds, matching the implementation since 0.2.1. State-changing calls still refresh authorization. No executable, API or release-version change.
+
 ## [0.2.2] — 2026-09-22
 
 - Publish the canonical line mark in the release catalogue. The packer verifies the central logo registry before creating releases. No stable-state or operational changes.
