@@ -1,5 +1,10 @@
 # Product website changes
 
+## [0.5.11] — 2026-10-28
+
+- Remove the Crumbs collection loader, deployment configuration and event hooks. Product analytics examples remain synthetic.
+- Prepare static hosting on Hetzner with separate GoDaddy DNS; preserve mail records during migration.
+
 ## [0.5.10] — 2026-10-23
 
 - Add Doku to the German/English product overview and explorer with a clearly labelled synthetic draft-to-publication example.

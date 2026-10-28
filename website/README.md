@@ -1,7 +1,7 @@
 # kebabstack product website
 
-Version **0.5.10**. A standalone, bilingual product website intended for
-**kebabstack.dev**, hosted on a Cloud Engine.
+Version **0.5.11**. A standalone, bilingual product website intended for
+**kebabstack.dev**, suitable for static web hosting.
 
 The site explains the working alpha suite, including Crumbs analytics and Desk
 on-call response, Cloud Engines, the cost model and how an IT team can extend
@@ -24,8 +24,7 @@ npm run preview
 Open http://127.0.0.1:4177. German is `/`; English is `/en/`. Both are rendered
 as complete HTML, including all module descriptions. JavaScript enhances the
 app explorer and mobile menu; reading and language switching work without it.
-There are no runtime packages, remote fonts or forms. The production website
-uses the configured Crumbs tracker; unconfigured builds remain analytics-free.
+There are no runtime packages, remote fonts or forms. The website contains no analytics or marketing tracker.
 The optional appearance choice is the only local-storage preference.
 
 `src/operations.mjs` renders the dedicated Hub Operations work/TV illustration.
@@ -58,16 +57,14 @@ site does not publish the application source or submit it to a marketplace.
 The public contact address is **hello@kebabstack.dev**. Desktop/mobile navigation
 and every page footer open the visitor’s email application with an ordinary
 `mailto:` link. The destination mailbox and forwarding are managed separately in
-Cloudflare Email Routing and are never included in the website or public source.
+the operator’s mail service and are never included in the website or public source.
 No form, Worker or outbound mailbox is configured by this website build.
 
-## Crumbs pilot
+## Website privacy
 
-The production site records pageviews, referral/engagement metrics, app-explorer
-choices and pilot downloads in the existing Crumbs website. Examples on the page
-stay synthetic. No report key, user identity or form content is embedded.
-See INSTALL.md for the ignored per-deployment configuration, exact CSP and live
-verification. Local previews and canister-alias visits do not load the tracker.
+Tracking integration has been removed, including its configuration reader. Old
+`.analytics.local.json` files cannot enable it. Product demos remain synthetic.
+Infrastructure may still process technical access logs.
 
 ## Persistent application state
 

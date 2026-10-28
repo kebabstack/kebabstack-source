@@ -1,6 +1,6 @@
 {
   "format": "kebab-public-source-v1",
-  "sourceCommit": "a551be8cca98fdb1883ee94cdf2bcd0386a6c4bd",
+  "sourceCommit": "75c487c62ea332dc0162cd2657975c068361fb7c",
   "historyIncluded": false,
   "marketplaceReady": false,
   "files": [
@@ -6261,22 +6261,22 @@
     },
     {
       "path": "website/CHANGELOG.md",
-      "sha256": "aef2cc80c67534e5907248a4bcc74e8b5fb1c94db93496b27b3c9e4ec5bb34b5",
+      "sha256": "e0966a53beacec001ad05a3f156003c2a5ed8e18b79d4d352b06ebc809bdc0f4",
       "mode": "100644"
     },
     {
       "path": "website/CONTENT.md",
-      "sha256": "fdfe917c083011bc3609b568776f4a5081b99323dd848b9b6ff2f85527ab7021",
+      "sha256": "0d4077cb3d6d760c62debf13ba259e7fa58b150d9a5c87b7d81219d36730cc12",
       "mode": "100644"
     },
     {
       "path": "website/INSTALL.md",
-      "sha256": "1ae56b441e8335a0f43d9d02703010266a7ed208268658ef4ade13df97dd3c31",
+      "sha256": "71a2ce7afafc103f4e95942469582e0e25a2bb703e280aad4e40426f0fa06ddb",
       "mode": "100644"
     },
     {
       "path": "website/README.md",
-      "sha256": "7f9e5e2e4ec271489fe341200c511ae3dbddca97878147c7331ece682deec32f",
+      "sha256": "f46c8a2c1fdc2197a1f2cd638fe32f6cb3b0319833e34d548f95d52c4991fb38",
       "mode": "100644"
     },
     {
@@ -6296,17 +6296,22 @@
     },
     {
       "path": "website/icp.yaml",
-      "sha256": "d5ada5520a47a594b319aaac6ede5e522526ce72cb5a99166c2480262ceb491a",
+      "sha256": "e93d204c44319f722fc24214a20189fa7b541fffaaabf454824d2a031807b2fa",
       "mode": "100644"
     },
     {
       "path": "website/package-lock.json",
-      "sha256": "9d4338be9a1ec31a8874473fb29b81cf6994cd022f96a618afbd1328939c5c29",
+      "sha256": "ffc66a8c4426f61ec47ccc2133181b3b228c4f03bacef3f51a6c7eda636d440c",
       "mode": "100644"
     },
     {
       "path": "website/package.json",
-      "sha256": "ba3ed0b49d9b5c85a557f6734cccca075e9908466306248a9b93dd6966b1363e",
+      "sha256": "f28767392aa4627aec0aaf0cfee0bd662f3b5a5327cc6cf843add44eece8e28b",
+      "mode": "100644"
+    },
+    {
+      "path": "website/public/.htaccess",
+      "sha256": "ff62cc272968b8b91977b81ea29265a53a308c4c162a2ae61f3d143ffa6f74ce",
       "mode": "100644"
     },
     {
@@ -6317,11 +6322,6 @@
     {
       "path": "website/public/_headers",
       "sha256": "bc555793420e9eb907d68cded5de083626ae07c1222f795abf5c43dd10d8cf32",
-      "mode": "100644"
-    },
-    {
-      "path": "website/public/analytics.js",
-      "sha256": "eac7644d3994fbbdcbe9e5ea0372c64123e17a918f227beaa39bb9d240be95cb",
       "mode": "100644"
     },
     {
@@ -6345,18 +6345,13 @@
       "mode": "100644"
     },
     {
-      "path": "website/src/analytics.mjs",
-      "sha256": "83990904bf588da4ac80a48e6af3b5b85f71bea5cc784a894b3cb3fd8c197675",
-      "mode": "100644"
-    },
-    {
       "path": "website/src/build.mjs",
-      "sha256": "4e2f1f934f7d3ad3b0b6954b97cb639ce6a16b5d41c0f1adcfcda8187ecd1e2b",
+      "sha256": "40d97b6d3a6eb5c31fa4392a28194693a5135e1e853295e34ab35454137b4314",
       "mode": "100644"
     },
     {
       "path": "website/src/content.mjs",
-      "sha256": "76304141a2cbb5f0c2d093d832b866065fc6ff65454fd09fea095773c98dc08e",
+      "sha256": "af9f06367cfc088e768259b538889c172ca23b87b928ee3bc7692b14ce9da0f5",
       "mode": "100644"
     },
     {
@@ -6386,7 +6381,7 @@
     },
     {
       "path": "website/test/smoke.mjs",
-      "sha256": "727c922219500caacc5f747fdc1b59ad169c89ad9a03622ecd86444c52b895d6",
+      "sha256": "ef8d154ab0eeccdb521edd395540f36830d6c7a234b77cc04dc54c59fa3dc267",
       "mode": "100644"
     }
   ]

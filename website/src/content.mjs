@@ -396,9 +396,6 @@ export const content = {
     contactLabel: "Kontakt per E-Mail",
     footerLicense: "MIT-Lizenz",
     footerVersion: "Version",
-    analyticsPrivacyTitle: "Datenschutz & Crumbs",
-    analyticsPrivacy: "Wir nutzen unser eigenes Crumbs für Seitenaufrufe, Verweisquellen, Verweildauer, Scrolltiefe, Linkklicks, App-Auswahl und Downloads. Die Analyse setzt keine Cookies und speichert nichts im Browser. Do Not Track und Global Privacy Control verhindern die Erfassung. Deine Farbschema-Auswahl wird unabhängig davon nur lokal gespeichert.",
-    analyticsProcessing: "Der Gateway und die Cloud Engine verarbeiten dabei IP-Adresse und Browserinformationen. Crumbs bildet täglich wechselnde, websitebezogene Besucherkennungen; rohe IP-Adressen und vollständige Browserkennungen werden nicht in den Analyseereignissen gespeichert. Ereignisse werden nach {days} Tagen aus Berichten entfernt und anschließend schrittweise gelöscht. Infrastrukturprotokolle und Sicherungen haben eigene Aufbewahrungsregeln. Die dargestellten Produkt-Demos bleiben Beispieldaten.",
     footerPrivacy:
       "Diese Seite verwendet keine Analyse- oder Marketing-Tracker. Deine Farbschema-Auswahl wird nur lokal gespeichert. Die Infrastruktur kann technische Zugriffsprotokolle verarbeiten.",
     notFound: "Diese Seite gibt es hier nicht.",
@@ -799,9 +796,6 @@ export const content = {
     contactLabel: "Contact by email",
     footerLicense: "MIT licence",
     footerVersion: "Version",
-    analyticsPrivacyTitle: "Privacy & Crumbs",
-    analyticsPrivacy: "We use our own Crumbs for pageviews, referral sources, active time, scroll depth, link clicks, app selection and downloads. Analytics uses no cookies or browser storage. Do Not Track and Global Privacy Control prevent collection. Your appearance preference is stored only locally, separately from analytics.",
-    analyticsProcessing: "The gateway and Cloud Engine process IP addresses and browser information. Crumbs derives daily, site-specific visitor identifiers; raw IP addresses and full browser identifiers are not stored in analytics events. Events leave reports after {days} days and are then progressively deleted. Infrastructure logs and backups have separate retention rules. Product demos still show sample data.",
     footerPrivacy:
       "This site uses no analytics or marketing trackers. Your appearance preference is stored only locally. Infrastructure may process technical access logs.",
     notFound: "This page is not here.",

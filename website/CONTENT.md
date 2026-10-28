@@ -72,12 +72,10 @@ Product diagrams have readable text at 320 CSS px, labelled statuses, real links
 for navigation and buttons only for working local demo interactions.
 
 Appearance preference is stored locally under `kebabstack-appearance`; it carries
-no user identifier and is never sent. The authorized production build uses the
-operator’s Crumbs tracker with pageviews, engagement, app-choice and download
-events. DNT/GPC and non-production hostnames disable collection. The notice
-describes actual collection and configured event retention, including separate
-infrastructure/snapshot limits. No analytics cookies, remote fonts, report keys
-or form values are added. Do not turn the example into a production-data demo.
+no user identifier and is never sent. Website 0.5.11 removes collection, event
+hooks and the analytics configuration reader. Product examples remain synthetic;
+hosting infrastructure may process technical access logs.
+
 
 Platform sources consulted for the existing deployment and rechecked where used:
 
@@ -183,7 +181,8 @@ The Hub explorer instead explains central access, supported by
 Website 0.5.6 reflects Crumbs 0.9.1: cookieless by default, optional consented
 browser recognition with revocation and installation guidance. Evidence:
 `crumbs/README.md`, `crumbs/dist/consent.html`, `crumbs/dist/consent.js`. This
-website still configures cookieless collection; its privacy notice is unchanged.
+website configured cookieless collection at that release; collection was removed
+in 0.5.11.
 No persistent person identification or legal-compliance guarantee is claimed.
 
 The standalone game description is reconciled with public Bug 0.20.1 and its
@@ -222,3 +221,12 @@ in `hub/backend/` and `desk/backend/main.mo`. Manual and Desk-sourced drafts req
 explicit review. External links expose one published version, not the library or
 later edits. The single internal library and planned AI/images/Slack features
 are stated explicitly. No automatic knowledge generation or private-space claim.
+
+## Private static hosting — 0.5.11
+
+The website no longer loads the Crumbs tracker or reads local analytics configuration.
+The CSP allows no outbound connections, and interaction tests cover the absence of
+collection calls. Product descriptions still document Crumbs as a separate app.
+Apache configuration supports static hosting, HTTPS redirects and error responses.
+DNS, certificate issuance and actual deployment are verified in private receipts;
+source changes alone do not establish a completed migration or automatic renewal.

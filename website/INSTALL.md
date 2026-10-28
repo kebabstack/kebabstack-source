@@ -1,14 +1,49 @@
-# Product website — Cloud Engine installation
+# Product website — static hosting installation
 
 This module publishes only the static marketing website. It is separate from
 Kitchen and the application suite. It neither upgrades the suite nor publishes
-its source. Target domain: **kebabstack.dev**. Version: **0.5.10**.
+its source. Target domain: **kebabstack.dev**. Version: **0.5.11**.
+
+## Hetzner Webhosting and GoDaddy DNS
+
+Use a separate document root for this domain so other hosted websites are not
+overwritten. Add the domain as an external addon: registration remains at GoDaddy.
+Build locally and upload only the contents of `dist/`, including hidden hosting
+configuration files. Do not upload source, node_modules, credentials or Git history.
+
+Before switching nameservers, export the complete Cloudflare zone and prepare the
+GoDaddy zone. Preserve MX, SPF, DKIM, DMARC, verification and unrelated subdomain
+records. Obtain web A/AAAA targets from the actual Hetzner hosting account.
+Remove conflicting old web records only as part of the cutover. Check DNSSEC/DS
+state and arrange a valid certificate before routing visitors: .dev requires HTTPS.
+Verify both languages, guide routes, redirects, security headers and a true 404.
+Keep the old hosting and DNS zone available until propagation and rollback checks
+are complete. Domain booking, DNS changes and upload require operator access.
+
+`dist/.htaccess` supplies Apache headers, production HTTPS/canonical redirects,
+no directory listing and a true 404 page. Include this hidden file in uploads.
+`_headers` is retained for the legacy static-canister recipe.
+The Cloud Engine instructions below are retained for legacy deployment/rollback.
+
+For subsequent static releases, review a clean commit, run the build and tests,
+retain the exact artifact and SHA-256 manifest privately, then upload into a new
+release directory. Verify it before changing the domain document root. Keep the
+previous directory for rollback. Never publish the upload ZIP in the document root.
+Use a deployment account restricted to this website for any later CI upload;
+store its credential in the hosting deployment environment, never in source.
+CI deployment is not enabled by this migration's source alone.
+
+If mail is hosted elsewhere, disable local mail delivery for this addon domain
+without changing the parent website's mail settings. After DNS cutover, verify
+certificate auto-renewal in konsoleH; a successful one-time DNS challenge does not
+prove automatic renewal. Configure and verify a certificate for `www` before
+adding that hostname to DNS.
 
 ## Build and inspect
 
 Use Node.js 22.22.2 or a newer supported version and the repository's pinned
-dependencies. `icp` 1.4.0 was used for validation; the recipe is pinned to
-`@dfinity/static-site@v0.3.3` (certified-assets, not the legacy asset canister).
+dependencies. Hetzner deployment needs no ICP CLI or identity. The optional legacy
+canister recipe uses `icp` 1.4.0 and `@dfinity/static-site@v0.3.3`.
 
 ```sh
 # repository root
@@ -17,7 +52,6 @@ cd website
 npm ci
 npm run build
 npm test
-icp build
 npm run preview
 ```
 
@@ -48,8 +82,7 @@ canister**, not a reused Hub, Kitchen, release store or application canister.
 
 1. Review the content, including public-release/Marketplace status. Add the real
    publisher/contact and any notices required for that operator. The site does
-   not collect forms. A configured build loads the operator’s Crumbs tracker;
-   infrastructure may also log access.
+   not collect forms. No analytics tracker is loaded; infrastructure may log access.
 2. Link an identity to the **exact** console origin, following
    [the official Cloud Engine guide](https://skills.internetcomputer.org/.well-known/skills/deploy-to-cloud-engine/SKILL.md).
    Existing valid operator identities can be reused explicitly. Avoid changing
@@ -68,11 +101,11 @@ icp deploy -e ic --identity <AUTHORIZED-IDENTITY> --subnet <ENGINE-SUBNET-ID>
    `/.well-known/ic-domains`. An unknown path must return a real 404.
    Check the served language, version, headers and interactive controls.
 
-The optional Crumbs configuration is deployment-specific; no Hub connection,
+No Hub connection,
 login or cycle top-up is required by this website. Engine
 infrastructure is still billable. Do not treat `icp build` as a deployment.
 
-## Connect kebabstack.dev
+## Legacy canister custom domain (not the Hetzner DNS configuration)
 
 `public/.well-known/ic-domains` already contains `kebabstack.dev`; the build
 retains it and the certified-assets recipe uploads it automatically.
@@ -105,7 +138,7 @@ registration change has been made. No `www` domain is claimed or configured.
 
 See the [official custom-domain guide](https://skills.internetcomputer.org/.well-known/skills/custom-domains/SKILL.md).
 
-## Later releases and rollback
+## Legacy canister releases and rollback
 
 Bump `website/package.json`, its lockfile and the explicit `service:version`
 metadata in `website/icp.yaml` together; add a dated entry to
@@ -122,49 +155,16 @@ This independent static website has no Kitchen recipe and no format-2 suite
 rollout. Any future changes to the application suite still follow
 `kitchen/INSTALL.md` and its publication/update executor.
 
-## Enable Crumbs for kebabstack.dev
+## Website analytics
 
-Create `.analytics.local.json` beside package.json (gitignored):
-
-```json
-{
-  "tracker": "https://analytics.example.org/tracker.js",
-  "endpoint": "https://YOUR-BACKEND.icp.net/api/v1/events",
-  "site": "kebabstack-dev",
-  "retentionDays": 365
-}
-```
-
-Copy the exact tracker URL, endpoint and website ID from Crumbs → Settings → Tracking script.
-Confirm domain, collection and retention under General; reflect later retention
-changes here and rebuild the notice. No API or reporting key belongs in this file.
-Without it builds omit tracking and retain the analytics-free notice. Malformed
-configuration fails the build. Keep the local configuration with the private
-release record, not the public repository.
-
-The production loader is limited to HTTPS kebabstack.dev, respects DNT/GPC before
-loading the tracker and enables outbound/download events, not form or hash-route
-tracking. German and English share the same website ID. `Explore: AppName` and
-`Pilot: Download` are stable event names in both languages. Anchor selection does
-not create extra pageviews; the default File Download event is a separate metric
-from the pilot goal, not an additional download to sum.
-
-The build permits only the exact Crumbs tracker URL in script-src and the exact
-collection URL in connect-src. No wildcard, unsafe-inline or reporting API access
-is added. Local JSDOM tests stub network delivery. Never run test payloads against
-the live collector. After an authorized release, visit each real language page
-once and check Crumbs Overview for the corresponding paths. These genuine smoke
-visits will be part of the pilot traffic.
-
-Analytics remains an alpha pilot. Cookie-free collection is not a legal
-certification or an automatic consent exemption; see `crumbs/PRIVACY.md` and the
-operator's actual site policy. Product demos do not read private analytics.
-
+Tracking is removed in 0.5.11. Old `.analytics.local.json` files are ignored.
+The site retains only the local appearance preference. Hosting access logs are
+managed separately by the infrastructure provider.
 
 ## Contact forwarding
 
 The website links to `hello@kebabstack.dev`. Provision and verify its destination
-privately in Cloudflare Email Routing before publishing this link. Retain existing
+privately with the existing mail provider before publishing this link. Retain existing
 web records and inspect conflicting mail records before enabling routing.
 Sending from the public address is separate from receiving/forwarding email.
 Check an incoming message from a different sender; DNS records alone do not prove

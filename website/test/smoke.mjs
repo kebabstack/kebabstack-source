@@ -155,13 +155,13 @@ test("public package contains only intended website files, preserves MIT and dec
   assert.deepEqual(
     (await walk(dist)).sort(),
     [
-      ".well-known/ic-domains",
+      ".well-known/ic-domains", ".htaccess",
       "404.html",
       "CHANGELOG.txt",
       "LICENSE.txt",
       "_headers",
       "app.js",
-      "analytics.js",
+
       "en/index.html",
       "favicon.svg",
       "index.html",
@@ -301,80 +301,22 @@ for (const lang of ["de", "en"])
     dom.window.close();
   });
 
-test('Crumbs build config rejects credentials, query strings and invalid retention', async () => {
-  const { validateAnalytics } = await import('../src/analytics.mjs');
-  const good = {tracker:'https://analytics.example/tracker.js',endpoint:'https://collector.example/api/v1/events', site:'kebabstack-dev', retentionDays:365};
-  assert.deepEqual(validateAnalytics(good), good);
-  for (const endpoint of ['http://collector.example/api/v1/events','https://secret@collector.example/api/v1/events','https://collector.example/api/v1/events?key=secret','https://collector.example/api/v1/reports']) {
-    assert.throws(()=>validateAnalytics({...good,endpoint}));
-  }
-  for (const tracker of ['http://analytics.example/tracker.js','https://u:p@analytics.example/tracker.js','https://analytics.example/tracker.js?key=secret','javascript:alert(1)']) assert.throws(()=>validateAnalytics({...good,tracker}));
-  assert.throws(()=>validateAnalytics({...good,retentionDays:0}));
-  assert.throws(()=>validateAnalytics({...good,site:'<script>'}));
-});
-
-test('Crumbs loader excludes previews and privacy signals, and exposes no report key', async () => {
-  const loader = await readFile(path.join(dist,'analytics.js'),'utf8');
-  for (const [url,signal,expected] of [
-    ['https://kebabstack.dev/','',1],['https://kebabstack.dev/en/','',1],
-    ['http://127.0.0.1:4177/','',0],['https://preview.example/','',0],
-    ['https://kebabstack.dev/','dnt',0],['https://kebabstack.dev/','gpc',0],
-  ]) {
-    const dom = new JSDOM('<head><script src="/analytics.js" data-tracker="https://analytics.example/tracker.js" data-endpoint="https://collector.example/api/v1/events" data-site="kebabstack-dev"></script></head>', {url,runScripts:'outside-only'});
-    const w=dom.window,d=w.document;
-    Object.defineProperty(d,'currentScript',{get:()=>d.querySelector('script[src="/analytics.js"]')});
-    Object.defineProperty(w.navigator,'doNotTrack',{value:signal==='dnt'?'1':null});
-    Object.defineProperty(w.navigator,'globalPrivacyControl',{value:signal==='gpc'});
-    w.eval(loader);
-    const trackers=d.querySelectorAll('script[src="https://analytics.example/tracker.js"]');
-    assert.equal(trackers.length,expected,`${url} ${signal}`);
-    if(expected) assert.deepEqual({...trackers[0].dataset},{endpoint:'https://collector.example/api/v1/events',site:'kebabstack-dev',outbound:'true',downloads:'true'});
-    assert.equal(w.localStorage.length,0); assert.equal(w.sessionStorage.length,0); assert.equal(d.cookie,'');
-    w.close();
-  }
-});
-
-test('Crumbs integration counts language pages and deliberate actions, not anchor navigation', async () => {
-  const tracker=await readFile(path.join(root,'../crumbs/dist/tracker.js'),'utf8');
-  for(const lang of ['de','en']) {
-    const dom=await load(lang),w=dom.window,d=w.document,events=[];
+test('website interactions do not collect analytics', async () => {
+  const headers = await readFile(path.join(dist, '_headers'), 'utf8');
+  assert.match(headers, /connect-src 'none'/);
+  await assert.rejects(stat(path.join(dist, 'analytics.js')), {code:'ENOENT'});
+  for (const lang of ['de','en']) {
+    const dom = await load(lang), w = dom.window, d = w.document, calls = [];
     try {
-    w.eval(script);
-    const config=d.createElement('script');
-    config.dataset.site='kebabstack-dev';config.dataset.endpoint='https://collector.example/api/v1/events';config.dataset.downloads='true';config.dataset.outbound='true';
-    Object.defineProperty(d,'currentScript',{get:()=>config});
-    w.fetch=async (url,options)=>{assert.equal(url,config.dataset.endpoint);assert.equal(options.credentials,'omit');const batch=JSON.parse(options.body);events.push(...batch);return {ok:true,status:202,json:async()=>({accepted:batch.length,duplicates:0,ignored:0,durability:'canister',delivery:'committed'})};};
-    w.eval(tracker);
-    d.getElementById('tab-desk').click();
-    d.querySelector('a[download]').dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));
-    await new Promise(resolve=>setImmediate(resolve));
-    assert.equal(events.filter(e=>e.kind==='pageview').length,1);
-    assert.equal(events[0].url,`https://kebabstack.dev/${lang==='en'?'en/':''}`);
-    assert.equal(events.filter(e=>e.name==='Explore: Desk').length,1);
-    assert.equal(events.filter(e=>e.name==='Pilot: Download').length,1);
-    assert.equal(events.filter(e=>e.name==='File Download').length,1);
-    assert.ok(events.every(e=>!e.properties&&!e.userId));
+      w.fetch = (...args) => { calls.push(args); throw new Error('Unexpected network request'); };
+      w.navigator.sendBeacon = (...args) => { calls.push(args); return false; };
+      w.eval(script);
+      d.getElementById('tab-desk').click();
+      assert.equal(d.querySelectorAll('[data-crumbs-event], [data-tracker], [data-endpoint]').length, 0);
+      for (const tag of d.querySelectorAll('script[src]')) assert.equal(new URL(tag.src).origin, 'https://kebabstack.dev');
+      assert.equal(calls.length, 0);
+      assert.equal(d.cookie, '');
     } finally { w.close(); }
-  }
-});
-
-test('configured analytics uses exact CSP destinations and a matching notice', async()=>{
-  const {readAnalytics}=await import('../src/analytics.mjs');
-  const analytics=await readAnalytics();
-  const headers=await readFile(path.join(dist,'_headers'),'utf8');
-  for(const lang of ['de','en']){
-    const dom=await load(lang),d=dom.window.document;
-    const tag=d.querySelector('script[src="/analytics.js"]');
-    assert.equal(Boolean(tag),Boolean(analytics));
-    if(analytics){
-      assert.equal(tag.dataset.site,analytics.site);assert.equal(tag.dataset.endpoint,analytics.endpoint);
-      assert.ok(headers.includes(`script-src 'self' ${analytics.tracker};`));
-      assert.ok(headers.includes(`connect-src ${analytics.endpoint};`));
-      assert.ok(d.querySelector('.privacy-note').textContent.includes(String(analytics.retentionDays)));
-      assert.match(d.querySelector('.privacy-note').textContent,/Global Privacy Control/);
-    } else {assert.match(headers,/connect-src 'none'/);}
-    assert.doesNotMatch(headers,/unsafe-inline|unsafe-eval|https:\/\/\*/);
-    dom.window.close();
   }
 });
 
