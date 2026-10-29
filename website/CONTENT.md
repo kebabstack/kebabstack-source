@@ -230,3 +230,5 @@ collection calls. Product descriptions still document Crumbs as a separate app.
 Apache configuration supports static hosting, HTTPS redirects and error responses.
 DNS, certificate issuance and actual deployment are verified in private receipts;
 source changes alone do not establish a completed migration or automatic renewal.
+
+Dashboard profile wording (0.5.12): Hub 0.45.0 `operationsDisplayProfileCreate`, `operationsDisplayJoin`, `operationsDisplayProfileRevoke`; `docs/HUB-OPERATIONS.md`. Six-digit PIN is enrollment-only, each browser keeps its own key. Browser storage deletion still requires reconnecting.

@@ -227,6 +227,14 @@ type Progress =
    state: text;
    total: nat;
  };
+type ProfileView =
+ record {
+   active: bool;
+   days: nat;
+   id: nat;
+   name: text;
+   sources: vec Source__1;
+ };
 type Policy =
  record {
    app: text;
@@ -387,6 +395,13 @@ type JournalEntry =
    by: text;
    detail: text;
    kind: text;
+ };
+type JoinResult =
+ variant {
+   invalid;
+   limit;
+   locked;
+   ok: nat;
  };
 type Item =
  record {
@@ -1423,7 +1438,17 @@ service : {
    vec nat, days: nat, workboard: bool) -> (Approval);
   operationsDisplayConfigure: (id: nat, options: Options) -> (Approval);
   operationsDisplayForget: (secret: text) -> ();
+  operationsDisplayJoin: (code: text, keyHash: text) -> (JoinResult);
   operationsDisplayPair: (code: text, keyHash: text) -> (PairResult);
+  operationsDisplayPairingUnlock: () -> (bool);
+  operationsDisplayProfileCreate: (code: text, name: text, cids: vec nat,
+   days: nat, options: Options) -> (Approval);
+  operationsDisplayProfileRevoke: (id: nat) -> (bool);
+  operationsDisplayProfilesAdmin: () ->
+   (record {
+      locked: bool;
+      profiles: vec ProfileView;
+    }) query;
   operationsDisplayRevoke: (id: nat) -> (bool);
   operationsDisplaySnapshot: (secret: text, cid: nat) -> (Snapshot);
   operationsDisplayState: (secret: text) -> (State);

@@ -234,7 +234,7 @@ Hub 0.28 adds the signed-in work dashboard. Publish it with Desk 0.15, Assets 0.
 
 After updating Hub and the five Operations sources, open **Operations → Screens**
 as a linked active Owner. Open the same Hub at `#/tv` on the display and approve
-its short-lived pairing code with selected sources and an expiry. No directory
+screens with a Hub-created six-digit profile code, selected sources and either a fixed expiry or until-revoked access. No directory
 lane, role assignment or Lunch change is needed. The TV does not use a Hub login.
 See [pairing, revocation and coverage](HUB-OPERATIONS.md#a-screen-for-the-team-room).
 

@@ -1373,7 +1373,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.44.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.45.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1406,6 +1406,7 @@ const idlFactory = ({ IDL }) => {
   const ReportingScope = IDL.Record({ id: IDL.Nat, name: IDL.Text });
   const ReportingGrant = IDL.Record({ capabilities: IDL.Vec(IDL.Text), projectId: IDL.Nat, subject: IDL.Variant({ group: IDL.Nat, person: IDL.Text }) });
   const Progress = IDL.Record({ bindings: IDL.Vec(IDL.Text), checkedAt: IDL.Int, open: IDL.Nat, sources: IDL.Nat, state: IDL.Text, total: IDL.Nat });
+  const ProfileView = IDL.Record({ active: IDL.Bool, days: IDL.Nat, id: IDL.Nat, name: IDL.Text, sources: IDL.Vec(Source__1) });
   const GroupGrant = IDL.Record({ id: IDL.Nat, role: IDL.Text });
   const PersonGrant = IDL.Record({ id: IDL.Text, role: IDL.Text });
   const Policy = IDL.Record({ app: IDL.Text, defaultRole: IDL.Text, groups: IDL.Vec(GroupGrant), people: IDL.Vec(PersonGrant) });
@@ -1427,6 +1428,7 @@ const idlFactory = ({ IDL }) => {
   const Manifest = IDL.Record({ description: IDL.Text, name: IDL.Text, needs: IDL.Vec(IDL.Text), version: IDL.Text, wants: IDL.Vec(IDL.Text) });
   const LunchSummary = IDL.Record({ dates: IDL.Vec(IDL.Text), recent: IDL.Vec(IDL.Text), thisMonth: IDL.Nat, total: IDL.Nat });
   const JournalEntry = IDL.Record({ at: IDL.Int, by: IDL.Text, detail: IDL.Text, kind: IDL.Text });
+  const JoinResult = IDL.Variant({ invalid: IDL.Null, limit: IDL.Null, locked: IDL.Null, ok: IDL.Nat });
   const Item = IDL.Record({ detail: IDL.Text, historical: IDL.Bool, id: IDL.Text, kind: IDL.Text, path: IDL.Text, status: IDL.Text, title: IDL.Text });
   const HeaderField = IDL.Tuple(IDL.Text, IDL.Text);
   const HttpGwResponse = IDL.Record({ body: IDL.Vec(IDL.Nat8), headers: IDL.Vec(HeaderField), status_code: IDL.Nat16, upgrade: IDL.Opt(IDL.Bool) });
@@ -1582,7 +1584,12 @@ const idlFactory = ({ IDL }) => {
     operationsDisplayApproveWithWorkboard: IDL.Func([IDL.Text, IDL.Text, IDL.Vec(IDL.Nat), IDL.Nat, IDL.Bool], [Approval], []),
     operationsDisplayConfigure: IDL.Func([IDL.Nat, Options], [Approval], []),
     operationsDisplayForget: IDL.Func([IDL.Text], [], []),
+    operationsDisplayJoin: IDL.Func([IDL.Text, IDL.Text], [JoinResult], []),
     operationsDisplayPair: IDL.Func([IDL.Text, IDL.Text], [PairResult], []),
+    operationsDisplayPairingUnlock: IDL.Func([], [IDL.Bool], []),
+    operationsDisplayProfileCreate: IDL.Func([IDL.Text, IDL.Text, IDL.Vec(IDL.Nat), IDL.Nat, Options], [Approval], []),
+    operationsDisplayProfileRevoke: IDL.Func([IDL.Nat], [IDL.Bool], []),
+    operationsDisplayProfilesAdmin: IDL.Func([], [IDL.Record({ locked: IDL.Bool, profiles: IDL.Vec(ProfileView) })], ["query"]),
     operationsDisplayRevoke: IDL.Func([IDL.Nat], [IDL.Bool], []),
     operationsDisplaySnapshot: IDL.Func([IDL.Text, IDL.Nat], [Snapshot], []),
     operationsDisplayState: IDL.Func([IDL.Text], [State], []),

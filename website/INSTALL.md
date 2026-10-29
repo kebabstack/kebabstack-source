@@ -2,7 +2,7 @@
 
 This module publishes only the static marketing website. It is separate from
 Kitchen and the application suite. It neither upgrades the suite nor publishes
-its source. Target domain: **kebabstack.dev**. Version: **0.5.11**.
+its source. Target domain: **kebabstack.dev**. Version: **0.5.12**.
 
 ## Hetzner Webhosting and GoDaddy DNS
 
@@ -157,7 +157,7 @@ rollout. Any future changes to the application suite still follow
 
 ## Website analytics
 
-Tracking is removed in 0.5.11. Old `.analytics.local.json` files are ignored.
+Tracking is removed in 0.5.12. Old `.analytics.local.json` files are ignored.
 The site retains only the local appearance preference. Hosting access logs are
 managed separately by the infrastructure provider.
 

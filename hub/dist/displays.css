@@ -68,3 +68,6 @@ html[data-surface="display"] body{background:#0c1d17}
 
 /* Short wall-screen windows scroll rather than obscure follow-up totals. */
 @media(min-width:1600px) and (max-height:900px){#tv{height:auto;min-height:100vh}}
+
+/* One readable enrollment field, usable from a room keyboard or touch screen. */
+.tv-pair [data-join]{display:grid;gap:16px;max-width:340px;margin:24px auto}.tv-pair [data-join] label{display:grid;gap:10px;font:500 16px var(--ks-ui)}.tv-pair [data-join] input{box-sizing:border-box;width:100%;min-height:52px;text-align:center;font:500 26px var(--ks-ui);letter-spacing:.2em;padding:12px;border:1px solid var(--ks-rule);border-radius:8px;background:var(--ks-bg-card);color:var(--ks-fg)}.tv-pair [data-join-message]{font-size:14px;letter-spacing:normal}.screen-list article button{white-space:normal;flex-shrink:0;max-width:180px}

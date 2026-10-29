@@ -1,5 +1,9 @@
 # Product website changes
 
+## [0.5.12] — 2026-10-29
+
+- Align the DE/EN Operations guide with shared six-digit dashboard profiles, independent device credentials and until-revoked access. Clarify explicitly selected lifecycle, sales and personal task totals.
+
 ## [0.5.11] — 2026-10-28
 
 - Remove the Crumbs collection loader, deployment configuration and event hooks. Product analytics examples remain synthetic.

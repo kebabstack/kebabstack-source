@@ -12,7 +12,7 @@
   };
   const selectedOptions=form=>({...Object.fromEntries(['workboard','personal','lifecycle','sales'].map(k=>[k,Boolean(form.elements[k]?.checked)])),personalEmail:form.elements.personalEmail?.value.trim()?[form.elements.personalEmail.value.trim().toLowerCase()]:[]});
   const descriptions={desk:'Internal ticket counts and service targets',trust:'Fleet scores and reporting coverage',assets:'Inventory, stock and preparation',contracts:'Decision dates and ownership coverage',watch:'Domain alerts and monitoring coverage'};
-  const ns=n=>Number(n/1000000n), date=n=>new Date(ns(n)).toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
+  const ns=n=>Number(n/1000000n), date=n=>n===0n?'Until revoked':new Date(ns(n)).toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
   const number=n=>n==null?'—':n>=100000?new Intl.NumberFormat(undefined,{notation:'compact',maximumFractionDigits:1}).format(n):n.toLocaleString();
   const hex=bytes=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
   const storageKey='ks-operations-display-v1';
@@ -26,27 +26,31 @@
       try{
         const admin=await getAPI().operationsDisplayAdmin();if(!active||run!==epoch)return;
         if(!admin.canManage){root.innerHTML='<a href="#/operations">← Operations</a><h2>Screens are managed by Hub owners.</h2><p>Use Operations for the sources available to your account.</p>';return;}
+        const profiles=await getAPI().operationsDisplayProfilesAdmin();if(!active||run!==epoch)return;
         const sources=(await getAPI().operationsSources()).filter(s=>names[s.app]);if(!active||run!==epoch)return;
-        root.innerHTML=`<a href="#/operations" class="screen-back">← Operations</a><header class="ops-heading"><div><div class="ops-eyebrow">SHARED SCREENS</div><h2>The big picture. Safely shared.</h2><p class="lead">Choose what a screen can show, and for how long.</p></div><a class="screen-button" href="${esc(tvURL())}" target="_blank" rel="noopener noreferrer">Open TV view ↗</a></header>
-        <div class="screen-setup"><div><h3>Pair a screen</h3><ol><li>Open <strong>${esc(tvURL())}</strong> on the TV.</li><li>Enter the code shown on that screen.</li><li>Choose the areas safe to share in this room.</li></ol><p class="screen-note">A screen gets a separate read-only key, never your Hub session. Names, task and ticket text, serials, buyers and amounts stay off the TV. Lifecycle, sales and selected personal task counts require explicit choices below. Small counts can still be sensitive.</p></div>
-        <form data-pair><label>Screen code<input name="code" autocomplete="off" spellcheck="false" placeholder="ABCDE · 12345" required maxlength="13"></label><label>Screen name<input name="screenName" placeholder="IT team room" required maxlength="60"></label><fieldset><legend>Show these areas</legend>${sources.map(s=>`<label class="screen-scope"><input type="checkbox" name="scope" value="${s.cid}"><span><strong>${names[s.app]}</strong><small>${descriptions[s.app]}</small></span></label>`).join('')||'<p>No supported sources. Connect your apps first.</p>'}${choices(sources)}</fieldset><label>Allow access for<select name="days"><option value="1">1 day</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label><button type="submit" ${sources.length?'':'disabled'}>Approve this screen</button><p data-message role="status"></p></form></div>
-        <section class="screen-list"><div class="ops-section-heading"><h3>Approved screens</h3><button data-reload type="button">Refresh</button></div><p class="screen-note">Revocation blocks new reads immediately. An online screen checks access every 15 seconds and clears its display within 30 seconds without confirmation. Expired screens must be paired again.</p>${admin.displays.length?admin.displays.map(d=>`<article><div><strong>${esc(d.name)}</strong><p>${d.sources.map(s=>names[s.app]||'Unavailable source').join(' · ')}</p><small>${d.active?'Expires':'Inactive · expiry'} ${date(d.expiresAt)}</small>${d.active?`<details><summary>Sharing details</summary><form data-configure="${d.id}"><fieldset><legend>Additional totals for this screen</legend>${choices(d.sources,d.sources,d.personalEmail)}</fieldset><p class="screen-note">Only the owner who approved this screen can save these choices. Its sources and expiry stay unchanged.</p><button type="submit">Save sharing details</button><p data-config-message role="status"></p></form></details>`:''}</div><button type="button" data-revoke="${d.id}">${d.active?'Revoke':'Remove'}</button></article>`).join(''):'<div class="screen-empty">No screens approved yet.</div>'}</section>`;
+        root.innerHTML=`<a href="#/operations" class="screen-back">← Operations</a><header class="ops-heading"><div><div class="ops-eyebrow">SHARED SCREENS</div><h2>The big picture. Safely shared.</h2><p class="lead">Create a dashboard profile once. Connect each screen with its six-digit code.</p></div><a class="screen-button" href="${esc(tvURL())}" target="_blank" rel="noopener noreferrer">Open TV view ↗</a></header>
+        <div class="screen-setup"><div><h3>Create a dashboard profile</h3><ol><li>Choose a six-digit code and the areas safe to share.</li><li>Open <strong>${esc(tvURL())}</strong> on each TV.</li><li>Enter the same code on every screen using this profile.</li></ol><p class="screen-note">Use the same browser profile and Hub address after restarting. Browser data must be retained; private browsing or clearing site data requires reconnecting. The code is used only to enroll a screen, never stored on the TV.</p><p class="screen-note">A screen gets a separate read-only key, never your Hub session. Names, task and ticket text, serials, buyers and amounts stay off the TV. Lifecycle, sales and selected personal task counts require explicit choices below. Small counts can still be sensitive.</p></div>
+        <form data-pair><label>Profile code<input name="code" type="password" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{6}" placeholder="6 digits" required minlength="6" maxlength="6"><small>Share only with people allowed to connect a dashboard. Five incorrect codes lock new connections until a Hub Owner unlocks them.</small></label><label>Profile name<input name="screenName" placeholder="IT team room" required maxlength="60"></label><fieldset><legend>Show these areas</legend>${sources.map(s=>`<label class="screen-scope"><input type="checkbox" name="scope" value="${s.cid}"><span><strong>${names[s.app]}</strong><small>${descriptions[s.app]}</small></span></label>`).join('')||'<p>No supported sources. Connect your apps first.</p>'}${choices(sources)}</fieldset><label>Allow access for<select name="days"><option value="0" selected>Until revoked</option><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select></label><button type="submit" ${sources.length?'':'disabled'}>Create profile</button><p data-message role="status"></p></form></div>
+        <section class="screen-list"><h3>Dashboard profiles</h3><p class="screen-note">Codes connect new screens to the selected aggregates. Existing screens use their own key and reconnect automatically until their approval ends. Removing a profile disconnects all its screens.</p>${profiles.locked?'<p role="status">Code entry is locked after five incorrect attempts.</p><button type="button" data-unlock>Unlock code entry</button>':''}${profiles.profiles.map(p=>`<article><div><strong>${esc(p.name)}</strong><p>${p.sources.map(s=>names[s.app]||'Unavailable source').join(' · ')}</p><small>${p.active?'Available':'Owner access ended'} · ${p.days===0n?'Until revoked':String(p.days)+' days per screen'}</small></div><button type="button" data-profile-revoke="${p.id}">Remove profile and screens</button></article>`).join('')||'<p>No dashboard profiles yet.</p>'}</section>
+        <section class="screen-list"><div class="ops-section-heading"><h3>Approved screens</h3><button data-reload type="button">Refresh</button></div><p class="screen-note">Revocation blocks new reads immediately. An online screen checks access every 15 seconds and clears its display within 30 seconds without confirmation. Expired screens must be paired again.</p>${admin.displays.length?admin.displays.map(d=>`<article><div><strong>${esc(d.name)} · Screen ${d.id}</strong><p>${d.sources.map(s=>names[s.app]||'Unavailable source').join(' · ')}</p><small>${d.active?(d.expiresAt===0n?'':'Expires'):'Inactive · expiry'} ${date(d.expiresAt)}</small>${d.active?`<details><summary>Sharing details</summary><form data-configure="${d.id}"><fieldset><legend>Additional totals for this screen</legend>${choices(d.sources,d.sources,d.personalEmail)}</fieldset><p class="screen-note">Only the owner who approved this screen can save these choices. Its sources and expiry stay unchanged.</p><button type="submit">Save sharing details</button><p data-config-message role="status"></p></form></details>`:''}</div><button type="button" data-revoke="${d.id}">${d.active?'Revoke':'Remove'}</button></article>`).join(''):'<div class="screen-empty">No screens approved yet.</div>'}</section>`;
         $('[data-reload]').onclick=load;
+        if($('[data-unlock]'))$('[data-unlock]').onclick=async e=>{e.currentTarget.disabled=true;try{if(!await getAPI().operationsDisplayPairingUnlock())throw Error();await load();}catch{$('[data-message]').textContent='Could not unlock code entry. Refresh and retry.';}};
+        root.querySelectorAll('[data-profile-revoke]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{if(!await getAPI().operationsDisplayProfileRevoke(BigInt(button.dataset.profileRevoke)))throw Error();await load();}catch{button.disabled=false;$('[data-message]').textContent='Could not confirm profile removal. Refresh to check.';}});
         $('[data-pair]').onsubmit=async e=>{
           e.preventDefault();const form=e.currentTarget,button=form.querySelector('button[type=submit]'),message=$('[data-message]');
-          const code=form.elements.code.value.replace(/[\s·-]/g,'').toLowerCase(),label=form.elements.screenName.value.trim();
+          const code=form.elements.code.value.trim(),label=form.elements.screenName.value.trim();
           const cids=Array.from(form.querySelectorAll('[name=scope]:checked'),x=>BigInt(x.value));
-          if(!/^[0-9a-f]{10}$/.test(code)||!label||!cids.length){message.textContent='Enter the code from the TV, a name and at least one area.';return;}
+          if(!/^\d{6}$/.test(code)||!label||!cids.length){message.textContent='Choose a six-digit code, profile name and at least one area.';return;}
           const options=selectedOptions(form),workboard=options.workboard;
           if(options.personal&&!workboard){message.textContent='Select Workboard to include personal task totals.';return;}
           if(options.lifecycle&&!sources.some(s=>s.app==='desk'&&cids.includes(s.cid))||options.sales&&!sources.some(s=>s.app==='assets'&&cids.includes(s.cid))){message.textContent='Select the matching Desk or Assets source for these details.';return;}
           if(workboard&&!sources.some(s=>s.app==='desk'&&cids.includes(s.cid))){message.textContent='Select Desk to include its Workboard.';return;}
-          button.disabled=true;message.textContent='Approving this screen…';
+          button.disabled=true;message.textContent='Creating dashboard profile…';
           try{
-            const result=(options.personal||options.lifecycle||options.sales)?await getAPI().operationsDisplayApproveWithOptions(code,label,cids,BigInt(form.elements.days.value),options):workboard?await getAPI().operationsDisplayApproveWithWorkboard(code,label,cids,BigInt(form.elements.days.value),true):await getAPI().operationsDisplayApprove(code,label,cids,BigInt(form.elements.days.value));if(!active||epoch!==run)return;
-            if('ok' in result){await load();$('[data-message]').textContent='Screen approved. It will connect automatically.';}
-            else message.textContent=({denied:'Your Owner access or source permissions changed. Refresh this page.',missing:'This code expired or was already used. Generate a new code on the TV.',limit:'Remove an unused screen before pairing another.',invalid:'Check the code, name and selected areas.'})[Object.keys(result)[0]]||'Approval was not completed. Refresh to check the screen list.';
-          }catch{if(active&&epoch===run)message.textContent='Could not confirm approval. Refresh the screen list before trying again.';}
+            const result=await getAPI().operationsDisplayProfileCreate(code,label,cids,BigInt(form.elements.days.value),options);if(!active||epoch!==run)return;
+            if('ok' in result){await load();$('[data-message]').textContent='Profile created. Enter your six-digit code on each TV to connect it.';}
+            else message.textContent=({denied:'Your Owner access or source permissions changed. Refresh this page.',missing:'This code expired or was already used. Generate a new code on the TV.',limit:'Remove an unused screen before pairing another.',invalid:'Choose a unique six-digit code and check the name and selected areas.'})[Object.keys(result)[0]]||'Approval was not completed. Refresh to check the screen list.';
+          }catch{if(active&&epoch===run)message.textContent='Could not confirm creation. Refresh the profile list before trying again.';}
           finally{button.disabled=false;}
         };
         root.querySelectorAll('[data-configure]').forEach(form=>form.onsubmit=async e=>{
@@ -143,7 +147,7 @@
   const reducedMotion=()=>{try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch{return true;}};
   function createTV(root,api,options={}){
     const now=options.now||Date.now,storage=options.storage||localStorage;
-    let secret='',code='',pairExpires=0,state=null,entries=[],generation=0,closed=false,stateBusy=false,metricBusy=false,lastCheck=0,lastMetrics=0,lastCards=new Map(),poll,aging,idle;
+    let ended=false,secret='',code='',pairExpires=0,state=null,entries=[],generation=0,closed=false,stateBusy=false,metricBusy=false,lastCheck=0,lastMetrics=0,lastCards=new Map(),poll,aging,idle;
     const $=s=>root.querySelector(s);
     root.className='tv-surface';
     root.innerHTML='<canvas class="tv-backdrop" aria-hidden="true"></canvas><header class="tv-header"><div><span class="tv-brand">kebabstack / operations</span><h1 data-title>One screen. Your stack.</h1></div><div class="tv-clock"><time data-clock></time><span data-date></span><span data-expiry></span></div></header><section data-stage></section><footer class="tv-footer"><div class="tv-status"><span class="tv-live" aria-hidden="true"></span><span data-status role="status">Preparing this screen…</span></div><div class="tv-controls"><button type="button" data-fullscreen>Full screen</button><button type="button" data-forget>Disconnect</button></div></footer>';
@@ -153,33 +157,36 @@
     function wake(){root.classList.add('tv-awake');clearTimeout(idle);idle=setTimeout(()=>root.classList.remove('tv-awake'),6000);}
     root.addEventListener('pointermove',wake);root.addEventListener('pointerdown',wake);root.addEventListener('keydown',wake);wake();
     const stopBackdrop=createBackdrop($('.tv-backdrop'));
-    function readStorage(){try{const s=JSON.parse(storage.getItem(storageKey)||'null');if(/^[0-9a-f]{64}$/.test(s?.secret)){secret=s.secret;code=/^[0-9a-f]{10}$/.test(s.code)?s.code:'';}}catch{}}
+    function readStorage(){try{const s=JSON.parse(storage.getItem(storageKey)||'null');if(/^[0-9a-f]{64}$/.test(s?.secret)){secret=s.secret;code=/^(?:[0-9a-f]{10}|[0-9]{6})$/.test(s.code)?s.code:'';}}catch{}}
     function save(){storage.setItem(storageKey,JSON.stringify({secret,code}));}
     function clock(){const t=new Date(now());$('[data-clock]').textContent=t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});$('[data-date]').textContent=t.toLocaleDateString([], {weekday:'long',day:'numeric',month:'long'});}
     function reset(message,canPair=false){
       state=null;entries=[];generation++;metricBusy=false;lastMetrics=0;lastCards=new Map();root.dataset.live='';
       $('[data-title]').textContent='One screen. Your stack.';$('[data-expiry]').textContent='';
-      $('[data-stage]').innerHTML=`<div class="tv-pair"><span class="tv-kicker">OPERATIONS DISPLAY</span><h2>${esc(message)}</h2><p>No company data is shown until this screen has current approval.</p>${canPair?'<button type="button" data-new>Generate pairing code</button>':''}</div>`;
+      $('[data-stage]').innerHTML=`<div class="tv-pair"><span class="tv-kicker">OPERATIONS DISPLAY</span><h2>${esc(message)}</h2><p>No company data is shown until this screen has current approval.</p>${canPair?'<form data-join><label>Dashboard code<input name="pin" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="6 digits"></label><button type="submit">Connect screen</button><p data-join-message role="status"></p></form><p>Use the code configured in Hub → Operations → Screens. Keep this browser profile and its site data to reconnect after restarting.</p>':''}</div>`;
       $('[data-status]').textContent='Read-only screen · no Hub session';
-      if(canPair)$('[data-new]').onclick=pair;
+      if(canPair)$('[data-join]').onsubmit=join;
     }
     function pairing(expires){
       pairExpires=expires;state=null;entries=[];lastCards=new Map();root.dataset.live='';
-      const printed=code?code.toUpperCase().slice(0,5)+' · '+code.toUpperCase().slice(5):'New code needed';
+      const printed=code?code.toUpperCase():'New code needed';
       $('[data-stage]').innerHTML=`<div class="tv-pair"><span class="tv-kicker">PAIR THIS SCREEN</span><h2>Your IT, at a glance.</h2><p>On your own computer, open Hub → Operations → Screens.</p><strong class="tv-code">${esc(printed)}</strong><p>Enter this code and choose what this room may see.</p><small data-countdown></small></div>`;
       $('[data-status]').textContent='Waiting for a Hub Owner to approve this screen';
     }
-    async function pair(){
-      if(closed||stateBusy)return;
-      generation++;stateBusy=true;reset('Creating a pairing code…');const next=generation;
+    async function join(event){
+      event.preventDefault();if(closed||stateBusy)return;
+      const form=event.currentTarget,pin=form.elements.pin.value,message=form.querySelector('[data-join-message]'),button=form.querySelector('button');
+      if(!/^\d{6}$/.test(pin)){message.textContent='Enter six digits.';return;}
+      stateBusy=true;button.disabled=true;message.textContent='Connecting this screen…';const run=generation;
       try{
-        secret=hex(crypto.getRandomValues(new Uint8Array(32)));code=hex(crypto.getRandomValues(new Uint8Array(5)));
-        // Verify persistent storage before requesting approval; no key is ever put in a URL.
-        save();const hash=hex(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret))));
-        const result=await bounded(api.operationsDisplayPair(code,hash));if(closed||next!==generation)return;
-        if('ok' in result)pairing(ns(result.ok));else reset('Pairing is busy. Try again shortly.',true);
-      }catch{if(!closed&&next===generation)reset('Pairing could not start. Check browser storage and connection.',true);}
-      finally{stateBusy=false;}
+        // Reuse an unconfirmed key after a timeout so retries do not enroll twice.
+        if(!secret||ended){ended=false;secret=hex(crypto.getRandomValues(new Uint8Array(32)));code='';}save();
+        const hash=hex(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret))));
+        const result=await bounded(api.operationsDisplayJoin(pin,hash));if(closed||run!==generation)return;
+        if('ok' in result){form.elements.pin.value='';stateBusy=false;await check();}
+        else message.textContent=({locked:'Code entry is locked. A Hub Owner can unlock it in Operations → Screens.',limit:'The screen limit is reached. Remove an unused screen in Hub.',invalid:'Code or profile unavailable. Check the code with the Hub Owner.'})[Object.keys(result)[0]]||'Could not connect.';
+      }catch{if(!closed&&run===generation)message.textContent='Could not confirm connection. Check browser storage and network, then retry.';}
+      finally{stateBusy=false;button.disabled=false;}
     }
     function bounded(promise){let timeout;return Promise.race([promise,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error('timeout')),20000);})]).finally(()=>clearTimeout(timeout));}
     function card(e){
@@ -202,7 +209,7 @@
     }
     function paint(){
       if(!state||closed||document.hidden)return;
-      $('[data-title]').textContent=state.name;$('[data-expiry]').textContent='Access ends '+date(state.expiresAt);root.dataset.live='on';
+      $('[data-title]').textContent=state.name;$('[data-expiry]').textContent=state.expiresAt===0n?'Connected until revoked':'Access ends '+date(state.expiresAt);root.dataset.live='on';
       const checked=entries.filter(e=>e.data).length;
       const views=entries.flatMap(e=>baseApp(e.app)==='desk'?[{...e,app:e.app.includes('-lifecycle')?'desk-lifecycle':'desk'},...(e.app.includes('-workboard')?[{...e,app:e.app.includes('-personal')?'workboard-personal':'workboard'}]:[])]:e.app==='assets-sales'?[{...e,app:'sales'},{...e,app:'assets'}]:[e]);
       const cards=views.map(e=>({key:`${e.cid}:${e.app}`,...card(e)}));
@@ -217,7 +224,7 @@
         const el=grid.children[i];el.className=c.cls;el.dataset.flag=String(c.flag);el.innerHTML=c.html;lastCards.set(c.key,c);
         if(previous&&previous.value!==c.value){el.classList.remove('tv-changed');void el.offsetWidth;el.classList.add('tv-changed');tween(el,previous.value,c.value);}
       });
-      $('[data-status]').textContent=`${checked} of ${entries.length} approved sources checked · read only`;
+      $('[data-status]').textContent=`Screen ${state.id} · ${checked} of ${entries.length} approved sources checked · read only`;
     }
     async function metrics(){
       if(!state||metricBusy||closed||document.hidden)return;
@@ -235,9 +242,10 @@
       try{
         const result=await bounded(api.operationsDisplayState(secret));if(closed||run!==generation||document.hidden)return;
         if('pending' in result){pairing(ns(result.pending));return;}
-        if(!result.ready){reset('This screen is no longer approved.',true);return;}
+        if(!result.ready){if(!ended){ended=true;reset('This screen is no longer approved. Its access expired or was revoked.',true);}return;}
+        ended=false;
         const value=result.ready,at=ns(value.checkedAt);
-        if(!Number.isFinite(at)||at>now()+5000||now()-at>=30000||ns(value.expiresAt)<=now()||!value.sources.length||value.sources.length>5||value.sources.some(s=>!expected[s.app])||new Set(value.sources.map(s=>String(s.cid))).size!==value.sources.length)throw Error('invalid state');
+        if(!Number.isFinite(at)||at>now()+5000||now()-at>=30000||(value.expiresAt!==0n&&ns(value.expiresAt)<=now())||!value.sources.length||value.sources.length>5||value.sources.some(s=>!expected[s.app])||new Set(value.sources.map(s=>String(s.cid))).size!==value.sources.length)throw Error('invalid state');
         lastCheck=at;pairExpires=0;
         const changed=!state||state.id!==value.id||JSON.stringify(state.sources,(_,v)=>typeof v==='bigint'?String(v):v)!==JSON.stringify(value.sources,(_,v)=>typeof v==='bigint'?String(v):v);
         if(changed){generation++;metricBusy=false;entries=value.sources.map(s=>({...s,data:null,waiting:true}));lastMetrics=0;}
@@ -246,7 +254,7 @@
       finally{stateBusy=false;}
     }
     function age(){
-      clock();if(state&&(now()-lastCheck>=30000||ns(state.expiresAt)<=now())){reset('Access confirmation expired. Reconnecting…');void check();}
+      clock();if(state&&(now()-lastCheck>=30000||(state.expiresAt!==0n&&ns(state.expiresAt)<=now()))){reset('Access confirmation expired. Reconnecting…');void check();}
       if(state){let changed=false;for(const e of entries)if(e.data&&now()-e.data.at>90000){e.data=null;e.waiting=false;changed=true;}if(changed)paint();}
       if(pairExpires){const left=Math.max(0,Math.ceil((pairExpires-now())/1000));if($('[data-countdown]'))$('[data-countdown]').textContent=`Code expires in ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;if(left===0){pairExpires=0;reset('This pairing code expired.',true);}}
     }
@@ -254,7 +262,7 @@
     function visibility(){if(document.hidden){reset('Display paused while hidden.');}else void check();}
     document.addEventListener('visibilitychange',visibility);
     readStorage();clock();reset('Checking this screen’s access…',!secret);
-    if(secret)void check();else reset('A clear view for your team.',true);
+    if(secret)void check();else reset('Connect this dashboard.',true);
     poll=setInterval(check,options.pollInterval??15000);aging=setInterval(age,1000);
     return {check,forget,destroy(){closed=true;generation++;clearInterval(poll);clearInterval(aging);clearTimeout(idle);stopBackdrop();document.removeEventListener('visibilitychange',visibility);root.replaceChildren();}};
   }

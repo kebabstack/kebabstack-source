@@ -120,7 +120,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.44.0";
+  transient let BUILD_VERSION : Text = "0.45.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -7527,6 +7527,11 @@ persistent actor UserHub {
   // Owner may explicitly select an active Desk administrator's numeric totals.
   let operationsDisplayPeople : Map.Map<Nat, Text> = Map.empty<Nat, Text>();
   var operationsDisplayNext : Nat = 0;
+  let operationsDisplayProfiles : Map.Map<Nat, Displays.Profile> = Map.empty<Nat, Displays.Profile>();
+  let operationsDisplayProfileOf : Map.Map<Nat, Nat> = Map.empty<Nat, Nat>();
+  // Persistent, Hub-wide failure budget: changing anonymous principals or upgrading
+  // cannot reset a six-digit code's guessing budget. Owner intervention unlocks it.
+  var operationsDisplayJoinFailures : Nat = 0;
   transient let operationsPairs : Map.Map<Text, Displays.Pending> = Map.empty<Text, Displays.Pending>();
   transient var operationsPairWindow : Int = 0;
   transient var operationsPairCount : Nat = 0;
@@ -7543,7 +7548,7 @@ persistent actor UserHub {
     ?pid;
   };
   func displayActive(grant : Displays.Grant) : Bool {
-    grant.expiresAt > Time.now() and displayOwner(grant.by) == ?grant.personId;
+    (grant.expiresAt == 0 or grant.expiresAt > Time.now()) and displayOwner(grant.by) == ?grant.personId;
   };
   func displayScope(grant : Displays.Grant, cid : Nat) : ?Displays.Scope {
     if (not displayActive(grant) or operationsViewer(grant.by, cid) != ?grant.personId) return null;
@@ -7571,7 +7576,7 @@ persistent actor UserHub {
   func displayPrune() {
     let now = Time.now();
     for ((code, p) in operationsPairs.entries().toArray().vals()) if (p.expiresAt <= now) ignore operationsPairs.delete(code);
-    for ((hash, g) in operationsDisplays.entries().toArray().vals()) if (g.expiresAt + 30 * DISPLAY_DAY < now) { ignore operationsDisplays.delete(hash); ignore operationsDisplayPeople.delete(g.id) };
+    for ((hash, g) in operationsDisplays.entries().toArray().vals()) if (g.expiresAt != 0 and g.expiresAt + 30 * DISPLAY_DAY < now) { ignore operationsDisplays.delete(hash); ignore operationsDisplayPeople.delete(g.id); ignore operationsDisplayProfileOf.delete(g.id) };
     for ((key, at) in operationsDisplayReads.entries().toArray().vals()) if (now - at > DISPLAY_MINUTE) ignore operationsDisplayReads.delete(key);
   };
   public shared query ({ caller }) func operationsDisplayAdmin() : async { canManage : Bool; displays : [Displays.View] } {
@@ -7583,7 +7588,7 @@ persistent actor UserHub {
   // No authority is granted here. Approval is a separate authenticated Owner action.
   // Browser randomness supplies a 256-bit secret; only its hash is registered/stored.
   public shared func operationsDisplayPair(code : Text, keyHash : Text) : async Displays.PairResult {
-    if (not Displays.hex(code, 10) or not Displays.hex(keyHash, 64)) return #invalid;
+    if (not (Displays.hex(code, 10) or Displays.pin(code)) or not Displays.hex(keyHash, 64)) return #invalid;
     displayPrune();
     let now = Time.now();
     if (operationsDisplays.containsKey(keyHash)) return #invalid;
@@ -7611,7 +7616,7 @@ persistent actor UserHub {
   };
   func approveDisplay(caller : Principal, code : Text, name : Text, cids : [Nat], days : Nat, options : Displays.Options) : Displays.Approval {
     let personId = displayOwner(caller) ?? (return #denied);
-    if (not Displays.hex(code, 10) or name.size() == 0 or name.size() > 60 or name.chars().any(func c = c < ' ') or cids.size() == 0 or cids.size() > 5 or (days != 1 and days != 7 and days != 30)) return #invalid;
+    if (not (Displays.hex(code, 10) or Displays.pin(code)) or name.size() == 0 or name.size() > 60 or name.chars().any(func c = c < ' ') or cids.size() == 0 or cids.size() > 5 or (days != 1 and days != 7 and days != 30)) return #invalid;
     displayPrune();
     let codeHash = scimHash(code);
     let pending = operationsPairs.get(codeHash) ?? (return #missing);
@@ -7635,6 +7640,73 @@ persistent actor UserHub {
     operationsDisplays.add(pending.keyHash, { id; name; by = caller; personId; createdAt = now; expiresAt = now + days * DISPLAY_DAY; scopes = scopes.toArray() });
     journal("display", "Screen " # id.toText() # " approved: " # name # " (" # cids.size().toText() # " sources, " # days.toText() # " days)", caller);
     #ok(id);
+  };
+  // Profiles grant only the same bounded display capability as individual approval.
+  // A PIN is enrollment-only; every browser supplies its own 256-bit key hash.
+  public shared query ({ caller }) func operationsDisplayProfilesAdmin() : async { profiles : [Displays.ProfileView]; locked : Bool } {
+    if (displayOwner(caller) == null) return { profiles = []; locked = true };
+    { profiles = operationsDisplayProfiles.values().map(func p : Displays.ProfileView = { id = p.id; name = p.grant.name; days = p.days; sources = Displays.sources(p.grant); active = displayActive(p.grant) }).toArray(); locked = operationsDisplayJoinFailures >= 5 }
+  };
+  public shared ({ caller }) func operationsDisplayProfileCreate(code : Text, name : Text, cids : [Nat], days : Nat, options : Displays.Options) : async Displays.Approval {
+    let personId = displayOwner(caller) ?? (return #denied);
+    if (not Displays.pin(code) or name.size() == 0 or name.size() > 60 or name.chars().any(func c = c < ' ') or cids.size() == 0 or cids.size() > 5 or (days != 0 and days != 1 and days != 7 and days != 30)) return #invalid;
+    let codeHash = scimHash("display-profile:" # code);
+    if (operationsDisplayProfiles.size() >= 10) return #limit;
+    if (operationsDisplayProfiles.values().any(func p = p.codeHash == codeHash)) return #invalid;
+    let scopes = List.empty<Displays.Scope>();
+    for (cid in cids.vals()) {
+      if (operationsViewer(caller, cid) != ?personId) return #denied;
+      let c = connectors.get(cid) ?? (return #invalid);
+      let policy = appPermissionPolicies.get(cid) ?? (return #invalid);
+      if (scopes.values().any(func s = s.cid == cid or Displays.sourceApp(s.app) == policy.policy.app)) return #invalid;
+      scopes.add({ cid; app = Displays.scopeApp(policy.policy.app, options); canisterId = c.canisterId });
+    };
+    if (not validDisplayOptions(scopes.toArray(), options)) return #invalid;
+    let personalPid = displayPerson(options, personId);
+    if (options.personal and not displayPersonAllowed(personalPid, scopes.toArray())) return #denied;
+    operationsDisplayNext += 1;
+    let id = operationsDisplayNext;
+    let grant : Displays.Grant = { id; name; by = caller; personId; createdAt = Time.now(); expiresAt = 0; scopes = scopes.toArray() };
+    operationsDisplayProfiles.add(id, { id; codeHash; grant; days; personalId = if (options.personal) ?personalPid else null });
+    journal("display", "Dashboard profile " # id.toText() # " created: " # name, caller);
+    #ok(id)
+  };
+  public shared ({ caller }) func operationsDisplayPairingUnlock() : async Bool {
+    if (displayOwner(caller) == null) return false;
+    operationsDisplayJoinFailures := 0;
+    journal("display", "Dashboard code entry unlocked", caller);
+    true
+  };
+  public shared ({ caller }) func operationsDisplayProfileRevoke(id : Nat) : async Bool {
+    if (displayOwner(caller) == null or not operationsDisplayProfiles.containsKey(id)) return false;
+    ignore operationsDisplayProfiles.delete(id);
+    for ((hash, grant) in operationsDisplays.entries().toArray().vals()) if (operationsDisplayProfileOf.get(grant.id) == ?id) {
+      ignore operationsDisplays.delete(hash); ignore operationsDisplayPeople.delete(grant.id); ignore operationsDisplayProfileOf.delete(grant.id);
+    };
+    journal("display", "Dashboard profile " # id.toText() # " and its screens revoked", caller);
+    true
+  };
+  public shared func operationsDisplayJoin(code : Text, keyHash : Text) : async Displays.JoinResult {
+    if (operationsDisplayJoinFailures >= 5) return #locked;
+    if (not Displays.pin(code) or not Displays.hex(keyHash, 64)) return #invalid;
+    let profile = operationsDisplayProfiles.values().find(func p = p.codeHash == scimHash("display-profile:" # code));
+    let p = switch (profile) { case (?p) p; case null { operationsDisplayJoinFailures += 1; return if (operationsDisplayJoinFailures >= 5) #locked else #invalid } };
+    if (not displayActive(p.grant) or p.grant.scopes.any(func s = displayScope(p.grant, s.cid) == null)) return #invalid;
+    switch (p.personalId) { case (?pid) { if (not displayPersonAllowed(pid, p.grant.scopes)) return #invalid }; case null {} };
+    switch (operationsDisplays.get(keyHash)) {
+      case (?g) { if (operationsDisplayProfileOf.get(g.id) == ?p.id and displayActive(g)) return #ok(g.id); return #invalid };
+      case null {};
+    };
+    displayPrune();
+    if (operationsDisplays.size() >= 100 or operationsDisplays.values().filter(func g = displayActive(g)).toArray().size() >= 20) return #limit;
+    operationsDisplayNext += 1;
+    let id = operationsDisplayNext;
+    let grant = { p.grant with id; createdAt = Time.now(); expiresAt = if (p.days == 0) 0 else Time.now() + p.days * DISPLAY_DAY };
+    operationsDisplays.add(keyHash, grant);
+    operationsDisplayProfileOf.add(id, p.id);
+    switch (p.personalId) { case (?pid) operationsDisplayPeople.add(id, pid); case null {} };
+    journal("display", "Screen " # id.toText() # " joined dashboard profile " # p.id.toText(), Principal.anonymous());
+    #ok(id)
   };
   func validDisplayOptions(scopes : [Displays.Scope], options : Displays.Options) : Bool {
     (not options.personal or options.workboard) and
@@ -7663,7 +7735,7 @@ persistent actor UserHub {
     if (displayOwner(caller) == null) return false;
     for ((hash, g) in operationsDisplays.entries()) if (g.id == id) {
       ignore operationsDisplays.delete(hash);
-      ignore operationsDisplayPeople.delete(g.id);
+      ignore operationsDisplayPeople.delete(g.id); ignore operationsDisplayProfileOf.delete(g.id);
       journal("display", "Screen " # id.toText() # " revoked: " # g.name, caller);
       return true;
     };
@@ -7689,7 +7761,7 @@ persistent actor UserHub {
     if (not Displays.hex(secret, 64)) return;
     let hash = scimHash(secret);
     switch (operationsDisplays.get(hash)) {
-      case (?g) { ignore operationsDisplays.delete(hash); ignore operationsDisplayPeople.delete(g.id); journal("display", "Screen " # g.id.toText() # " disconnected on device", Principal.anonymous()) };
+      case (?g) { ignore operationsDisplays.delete(hash); ignore operationsDisplayPeople.delete(g.id); ignore operationsDisplayProfileOf.delete(g.id); journal("display", "Screen " # g.id.toText() # " disconnected on device", Principal.anonymous()) };
       case null {};
     };
     for ((code, p) in operationsPairs.entries().toArray().vals()) if (p.keyHash == hash) ignore operationsPairs.delete(code);

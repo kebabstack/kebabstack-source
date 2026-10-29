@@ -54,60 +54,54 @@ approved aggregate scopes and never signs into an Owner account.
 
 ## A screen for the team room
 
-1. On the TV, open your Hub URL with `#/tv` and select **Generate pairing code**.
-   Use a dedicated browser profile for the room. The TV route never initializes
-   AuthClient or resumes an existing SSO session, even if the browser has one.
-2. On your own computer, an active, linked **Hub Owner** opens **Operations →
-   Screens**. Enter the ten-character code shown on the physical screen, name
-   the room, select its sources and choose **1, 7 or 30 days** (default: 7).
-   Sources start unselected. **Include Workboard with Desk** is a separate unchecked choice. It requires Desk to be selected. Existing screen approvals keep their original data scope. Since Hub 0.43, the original approving Owner can open **Sharing details** on an approved screen and select Workboard, onboarding/offboarding, asset sales and personal task totals from a selected active Desk administrator account. Personal totals require Workboard. Save the choices without re-pairing; expiry and selected source identities do not change. Reload an already-open TV once after this frontend update. Later saved choices refresh automatically. A pairing code expires after ten minutes.
-3. Select **Approve this screen**. The TV connects automatically. Full screen
-   expands the display; configure the device's sleep/kiosk settings separately.
-   Since Hub 0.38.1 the Full screen and Disconnect controls fade out after six
-   seconds of no input and return on any touch, pointer movement or key press;
-   the backdrop animation and number transitions follow the browser's
-   reduced-motion setting.
-4. To stop sharing, use **Revoke** beside the screen in Hub. **Disconnect** on
-   the TV removes its local credential and requests server revocation. If that
-   request cannot reach Hub, revoke it centrally. Renewal requires a new pairing;
-   there is no permanent or automatically renewed display grant.
+Hub Owners open **Operations → Screens**, choose a profile name, a six-digit code
+(including leading zeros), its permitted sources and duration. On every TV, open
+the same Hub address at `#/tv` and enter that code. Multiple devices can use one
+profile, but each receives its own 256-bit random read-only key. The short code
+is used for enrollment only and is not saved on the TV or placed in a URL.
 
-The TV never exposes app links or business-action controls. Desk shares internal
-queue/service-target counts, not customer projects. Separately approved lifecycle counts show open onboarding/offboarding requests as subsets of the Desk total. An approved Workboard card shows shared-project task totals and subtask progress; a separate unchecked option adds personal task/project totals from one explicitly selected active Desk administrator account. The default is the approving Owner’s account; enter a different account only when those totals may be shared in the room. All other accounts stay excluded. Assets shares inventory, stock and preparation; separately approved sales counts show paid IT follow-ups, exclusive next stages, outstanding payments and offers. No sale buyer or financial amount is shared. Trust, Contracts and Watch share the documented numeric coverage and
-follow-up metrics. No names, emails, ticket/contract text, device serials, vendor
-amounts, node keys or source URLs travel through the display API. The screen name
-is visible, so use a room name without personal or confidential information.
-Small aggregate counts can still reveal sensitive circumstances: select sources
-appropriate for everyone who can see the physical screen.
+Choose **Until revoked** for a permanent dashboard, or 1, 7 or 30 days per screen.
+Existing approvals keep their original expiry and scope; an upgrade does not
+revive expired/revoked screens. New profiles default to until revoked. Revoke an
+individual screen without disconnecting its peers, or remove a profile to revoke
+all of its enrolled screens and its enrollment code. To change a profile's code
+or source selection, replace that profile and reconnect its screens. An approving
+Owner can still adjust individual screen sharing details. No new source or
+personal totals are added to an existing approval implicitly.
 
-TV totals refresh every minute. Access is confirmed with an update call every
-15 seconds; a responsive visible browser hides all totals after 30 seconds
-without fresh confirmation. Individual source values expire after 90 seconds.
-Hiding the tab clears its data and returning rechecks access. Revocation blocks
-new server reads immediately, including an already-running call's reply; an
-already displayed value can remain until the browser checks again. A paused
-browser, screenshot or external video capture cannot be remotely erased.
+A normal browser or macOS restart should reconnect with its saved key. Keep the
+same browser profile, Hub origin and site data. Private browsing, a kiosk policy
+that clears browser data, a new profile/origin or erased site storage requires
+entering the profile code again. A browser application cannot recover a credential
+that the operating system or browser has deleted. Temporary network failures hide
+stale metrics and retry without removing the stored key. Expiry/revocation or lost
+Owner access blocks reconnection. No actual macOS update is simulated by the local
+tests; browser recreation and backend stop/start/upgrade are tested separately.
 
-Approval is bound to the approving Owner's stable person ID and principal, and
-the selected app/connector identities. Loss of that Owner's active status or
-Owner role suspends the grant; restoration within its expiry can resume it.
-Use **Revoke** for permanent removal. Source access is checked separately on
-every read; removing/replacing a connector cannot silently widen an existing
-grant. Only its original approving Owner can change additional sharing details. Re-pair screens when changing responsible Owner or source selection. Changing options preserves expiry and invalidates in-flight old-scope replies. Removing personal sharing removes those fields from subsequent snapshots.
+Profiles and screens expose only explicitly approved numeric aggregates. Lifecycle,
+sales and selected personal task totals need explicit choices. Names, ticket/task
+text, serial numbers, buyers and amounts are excluded. Small aggregates may still
+be sensitive; share codes only with people allowed to enroll room screens. Owner,
+person, connector and app permissions are rechecked before and after source calls.
+This remains separate from Hub sign-in, app tokens and directory credentials.
 
-The browser generates a 256-bit random display key and stores it in this Hub
-origin's local storage, separately from sign-in credentials. The key never enters
-a URL; the backend stores its SHA-256 hash. It authorizes only display status,
-selected whitelisted metrics and self-disconnection. Treat the room browser as
-trusted for those aggregates; clearing its storage requires re-pairing. Limits:
-20 active screens, 100 retained approvals, 64 pending pairings, 12 new pairing
-requests per minute per Hub and one source read per screen/source every ten
-seconds. Public pairing may be temporarily unavailable under abuse; it cannot
-grant data access without Owner approval. Expired approval metadata is pruned
-30 days after expiry on the next pairing/source operation. Revocation deletes
-it immediately; the Hub activity journal retains approval/revocation events
-without codes, key hashes or secret keys. Pending pairing codes do not survive
-an upgrade; existing approvals do.
+Enrollment codes are hashed, never returned by profile listing or written to the
+journal. Five incorrect six-digit codes lock enrollment globally until a linked
+active Hub Owner selects **Unlock code entry**. The failure budget persists across
+canister upgrades and does not reset after a correct guess. This intentionally
+limits guessing across changing anonymous identities; an attacker can temporarily
+block new enrollment, but cannot interrupt existing screen keys. Limits remain
+20 active screens and 100 retained approvals, with at most 10 profiles. Retire
+unused profiles/screens explicitly. Legacy pending approval APIs remain compatible
+with older clients; the new UI uses Hub-created numeric profile codes.
+
+Approved keys are stored in this Hub origin's local storage. The backend keeps
+only their hashes. Revocation blocks new reads immediately; online screens check
+access every 15 seconds and clear stale data within 30 seconds without confirmation.
+Infinite approvals are retained until revoked; expired metadata is pruned 30 days
+after expiry. Journals contain IDs and names, never codes or keys. Profile and
+screen approvals survive compatible upgrades. Source reads are bounded and
+throttled per device/source; older source coverage remains explicitly unavailable.
 
 ## Release and verification
 

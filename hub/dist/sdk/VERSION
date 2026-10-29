@@ -1,4 +1,4 @@
-kebab-hub SDK · synced 2026-10-23 17:51 UTC · repo 2aecfe4
+kebab-hub SDK · synced 2026-10-29 13:46 UTC · repo 2914384
 Knowledge.mo     be058fd6e632  ← sdk/motoko/src/Knowledge.mo
 WORKSPACE-UI.md  f95a1733238d  ← sdk/WORKSPACE-UI.md
 Workboard.mo     7d5eee948d43  ← sdk/motoko/src/Workboard.mo
@@ -11,4 +11,4 @@ hub-client.js    43a09aedb461  ← sdk/js/hub-client.js
 onboard-app.md   519b9f42ff93  ← docs/agent/onboard-app.md
 mcp.md           eff3d120d467  ← docs/agent/mcp.md
 README.md        78617202d507  ← sdk/README.md
-hub.did          affe86e80dda  ← hub/backend/backend.did
+hub.did          d87746c8cbc8  ← hub/backend/backend.did

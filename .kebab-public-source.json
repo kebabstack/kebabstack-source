@@ -1,6 +1,6 @@
 {
   "format": "kebab-public-source-v1",
-  "sourceCommit": "29143848c2fdd75ebb2f9e816edb3bd5c7d3279e",
+  "sourceCommit": "660d19b3171c961bbedecf18c54a9facab21ec94",
   "historyIncluded": false,
   "marketplaceReady": false,
   "files": [
@@ -3325,6 +3325,11 @@
       "mode": "100644"
     },
     {
+      "path": "design/reviews/2026-10-29-dashboard-pairing.md",
+      "sha256": "4a2693450303dece01f2dd8b56c46b35118a05620c4ff460e09c6c3c2142f5e5",
+      "mode": "100644"
+    },
+    {
       "path": "design/runtime/README.md",
       "sha256": "25872e97cbec1ce9a996e29f02b058f426a34feb51656effbd4069f29a5e1e4f",
       "mode": "100644"
@@ -4031,12 +4036,12 @@
     },
     {
       "path": "docs/HUB-OPERATIONS.md",
-      "sha256": "fcd61dd58db2cce931ad73afcd98dfaa3e5b2984a794c9addfb318cdfaa2c6ce",
+      "sha256": "9481675eda50584b790eb57005fb7e7472d4e4b77c27a1e984000d5fbbb2d95c",
       "mode": "100644"
     },
     {
       "path": "docs/INSTALL.md",
-      "sha256": "a972ba83d46b6a96d22d925d6447c297c6eee2de14ed14d2f3c92a149ffd165b",
+      "sha256": "7001b847621d8ff73facba5eba9628db7e8cf093cf9ca1e5272457963683b149",
       "mode": "100644"
     },
     {
@@ -4291,7 +4296,7 @@
     },
     {
       "path": "hub/CHANGELOG.md",
-      "sha256": "4a4bcf7f86ba28fc866f251c62d3ef4d4ff1101b40b2e0a3e93638f850e738a2",
+      "sha256": "fdc81ce2f14a59941e9b31eeeb4c4546e8baec876d002ea1c8649222b6a8f714",
       "mode": "100644"
     },
     {
@@ -4301,7 +4306,7 @@
     },
     {
       "path": "hub/backend/Displays.mo",
-      "sha256": "81c23a69dbfe2867c41563d1d179a5fd0b5c57381e874a381ef196b53b850b41",
+      "sha256": "3a6af9d26df2a9be1a2adb26dc2493d3b45aa362a04f7983c490ea7fb27a0f4c",
       "mode": "100644"
     },
     {
@@ -4321,7 +4326,7 @@
     },
     {
       "path": "hub/backend/backend.did",
-      "sha256": "affe86e80dda8c51e722dfdb9fc6fd79374bb3296ca0f932d444d541cd71f4c9",
+      "sha256": "d87746c8cbc890c4300944b74894cefc0d5ce7cdc84d087ffe13e9e2755ad3e6",
       "mode": "100644"
     },
     {
@@ -4331,7 +4336,7 @@
     },
     {
       "path": "hub/backend/main.mo",
-      "sha256": "90ed687834b1a35779a5d13c64300802a9c3d83eda51694044e1c4484c304853",
+      "sha256": "2e0b7f8da4bedf8f48afa78f014f1b2a5566ef0aa52b39ab1a245d570195d28d",
       "mode": "100644"
     },
     {
@@ -4341,7 +4346,7 @@
     },
     {
       "path": "hub/dist/CHANGELOG.md",
-      "sha256": "4a4bcf7f86ba28fc866f251c62d3ef4d4ff1101b40b2e0a3e93638f850e738a2",
+      "sha256": "fdc81ce2f14a59941e9b31eeeb4c4546e8baec876d002ea1c8649222b6a8f714",
       "mode": "100644"
     },
     {
@@ -4731,12 +4736,12 @@
     },
     {
       "path": "hub/dist/displays.css",
-      "sha256": "9325844ee41e975242d3e607a13b8af20e5924fa1706b9ffa9438f972b3f557b",
+      "sha256": "e8635e40a4319aab5915b23d898ea0afbb88202aac92e9f0675212a28a0eaaf4",
       "mode": "100644"
     },
     {
       "path": "hub/dist/displays.js",
-      "sha256": "5a562b80404566bdb638f96e8c1df6a216a18186a26486ed88d48ada11a8e7ed",
+      "sha256": "4af45c9f3a97288cd0fcea3069c7979d72d0450efa01873727a6bac75d6900be",
       "mode": "100644"
     },
     {
@@ -4751,7 +4756,7 @@
     },
     {
       "path": "hub/dist/index.html",
-      "sha256": "3f6b47e56a950e69dcf7698fa4fc9c2649242fe92a1d6793a91b1a58c5956bd4",
+      "sha256": "fb402ac0d3905901da0ac68bb034926faca662f58d1e117e2c3f0c47c06d8066",
       "mode": "100644"
     },
     {
@@ -4821,7 +4826,7 @@
     },
     {
       "path": "hub/dist/sdk/VERSION",
-      "sha256": "78346506eafa7ab430f331b54046239850ebfff36550fd625ae03a615c766888",
+      "sha256": "4e609d60cdcefc643eb1be9886bed28b3c79c3dce8848469915fda9d743aea3c",
       "mode": "100644"
     },
     {
@@ -4846,7 +4851,7 @@
     },
     {
       "path": "hub/dist/sdk/hub.did",
-      "sha256": "affe86e80dda8c51e722dfdb9fc6fd79374bb3296ca0f932d444d541cd71f4c9",
+      "sha256": "d87746c8cbc890c4300944b74894cefc0d5ce7cdc84d087ffe13e9e2755ad3e6",
       "mode": "100644"
     },
     {
@@ -4916,7 +4921,7 @@
     },
     {
       "path": "hub/mops.toml",
-      "sha256": "8d69b72cda3ea8cd7d5115285a5d278674f13a6c6ca51ed21eacaab9f74fccc3",
+      "sha256": "a70b66d3bd63576f046da143857f41e6f5dce9559c822bd03cb668a45b3fe185",
       "mode": "100644"
     },
     {
@@ -4961,7 +4966,7 @@
     },
     {
       "path": "hub/test/displays-ui.mjs",
-      "sha256": "5d937dfa5c4f11c500b24f8456e24039ea58d1b5eb959be43745f62ff2d75511",
+      "sha256": "bf6520583a316b0cdb002543ea54b7142129362f0fb2326c02f8df2d788d1c3f",
       "mode": "100644"
     },
     {
@@ -4996,7 +5001,7 @@
     },
     {
       "path": "hub/test/preview-fixture.js",
-      "sha256": "04bf8026c72ffb1aeedd031c1674ee41bde26e0a9e564bc5b191d73c83628406",
+      "sha256": "dcc46e2463aff44b013de5b4e1f7552febd29fab11e922c1ebe3d59b3bdb6328",
       "mode": "100644"
     },
     {
@@ -5651,7 +5656,7 @@
     },
     {
       "path": "tests/displays.test.mjs",
-      "sha256": "2ad2ac55d8f5d723e6cdd14e8eb09705295b6209ac4c91f53d6e5d25eb7e7c43",
+      "sha256": "96f75819c2ca2dccf0f572ffab1e005be9bb794ebc364457242719435c8ae97b",
       "mode": "100644"
     },
     {
@@ -6281,22 +6286,22 @@
     },
     {
       "path": "website/CHANGELOG.md",
-      "sha256": "e0966a53beacec001ad05a3f156003c2a5ed8e18b79d4d352b06ebc809bdc0f4",
+      "sha256": "cc4c77dbb1ab00e6e0bc97b551ee91fa58b5a0ad6bd60f29f471a9c043d0c723",
       "mode": "100644"
     },
     {
       "path": "website/CONTENT.md",
-      "sha256": "0d4077cb3d6d760c62debf13ba259e7fa58b150d9a5c87b7d81219d36730cc12",
+      "sha256": "6b9d59f5fd47d1bd33e3e6924dc3770a2653c289c05c6a448c69d9ca1092f362",
       "mode": "100644"
     },
     {
       "path": "website/INSTALL.md",
-      "sha256": "71a2ce7afafc103f4e95942469582e0e25a2bb703e280aad4e40426f0fa06ddb",
+      "sha256": "de89f5229f1bc355f989a4432e4a97f6886b908c9831cf9f90ac4032eb7f0fc9",
       "mode": "100644"
     },
     {
       "path": "website/README.md",
-      "sha256": "f46c8a2c1fdc2197a1f2cd638fe32f6cb3b0319833e34d548f95d52c4991fb38",
+      "sha256": "89599768924dc1cc68025d1af3752161c9416708b73ea02ca3b7ab06ad1361e5",
       "mode": "100644"
     },
     {
@@ -6316,17 +6321,17 @@
     },
     {
       "path": "website/icp.yaml",
-      "sha256": "e93d204c44319f722fc24214a20189fa7b541fffaaabf454824d2a031807b2fa",
+      "sha256": "75b67957b0e2fc67a03672e3e21cebb761aed6184e4249b609b586002b4d3607",
       "mode": "100644"
     },
     {
       "path": "website/package-lock.json",
-      "sha256": "ffc66a8c4426f61ec47ccc2133181b3b228c4f03bacef3f51a6c7eda636d440c",
+      "sha256": "31f4e81b0855efae5e1ccc68b83cf8afca74fa6a430151011141435f50bbd0f7",
       "mode": "100644"
     },
     {
       "path": "website/package.json",
-      "sha256": "f28767392aa4627aec0aaf0cfee0bd662f3b5a5327cc6cf843add44eece8e28b",
+      "sha256": "9566dc048328059c4a6ecf7e05adf080a4d634d62afb9496a19f9b5743f84140",
       "mode": "100644"
     },
     {
@@ -6381,7 +6386,7 @@
     },
     {
       "path": "website/src/operations.mjs",
-      "sha256": "a00d14f0fe7b57e0432db3fae6a1bb01870fa19d256356b1ae267704f10c3111",
+      "sha256": "6462918adb9744963caa39797e1318fbc97db029daebba400f319fb9f18a668f",
       "mode": "100644"
     },
     {

@@ -1,5 +1,11 @@
 # Changelog — kebab-stack hub
 
+## [0.45.0] — 2026-10-29
+
+- Owners can create a shared six-digit dashboard profile code. Each TV enrolls its own persistent, read-only key; reboot/reload reconnects while browser data and approval are retained. New profiles offer until-revoked access; existing approvals keep their expiry and scope. Codes have no display separator.
+- Five incorrect six-digit enrollment attempts lock code entry across the Hub until an Owner unlocks it; this budget survives upgrades. Existing screens keep working during an enrollment lock. Owners can revoke one screen or a profile and all its screens. Profile codes never become sign-in tokens.
+- Clarify expiry, lost browser data and temporary connectivity separately. Browser recreation/offline recovery and backend restart/upgrade tests cover reconnection and continued authorization checks.
+
 ## [0.44.0] — 2026-10-21
 
 - Add the permission-checked Doku evidence bridge and central Reader, Author and Reviewer roles. Preserve existing Operations, TV, directory and external-app behavior.

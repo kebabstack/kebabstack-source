@@ -70,7 +70,7 @@ export function renderOperations(lang, icon, esc) {
           ${cards(true)}
           <p class="operations-tv-footer">${icon("shield")} ${t("Ausgewählte Kennzahlen · keine Namen oder Ticketinhalte", "Selected metrics · no names or ticket content")}</p>
         </div>
-        <p class="operations-view-note">${t("Im Hub per Code koppeln, Quellen auswählen und für 1, 7 oder 30 Tage freigeben. Eigener Anzeigezugang statt Admin-Anmeldung am TV. Verkäufe und Austritte bleiben im Arbeitsbereich.", "Pair by code in Hub, choose sources and approve for 1, 7 or 30 days. Separate display access instead of an admin sign-in on the TV. Sales and departures stay in the work view.")}</p>
+        <p class="operations-view-note">${t("Im Hub ein Dashboard-Profil mit sechsstelliger PIN und Quellen anlegen. Mehrere TVs verbinden sich mit derselben PIN; jeder behält seinen eigenen Anzeigezugang. Freigabe für 1, 7 oder 30 Tage oder bis zum Widerruf. Zusätzliche Lifecycle-, Verkaufs- und persönliche Aufgaben-Zahlen brauchen eine ausdrückliche Auswahl.", "Create a dashboard profile with a six-digit PIN and selected sources in Hub. Multiple TVs use the same PIN; each keeps its own display credential. Approve for 1, 7 or 30 days or until revoked. Additional lifecycle, sales and personal task totals require explicit selection.")}</p>
       </section>
       <figcaption>${t("Produktillustration · Beispieldaten · implementierte Alpha. Hier werden keine Unternehmensdaten geladen.", "Product illustration · sample data · implemented alpha. No company data is loaded here.")}</figcaption>
     </figure>

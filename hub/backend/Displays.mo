@@ -15,6 +15,10 @@ module {
   public type PairResult = { #ok : Int; #invalid; #busy };
   public type Approval = { #ok : Nat; #denied; #invalid; #missing; #limit };
 
+  public type Profile = { id : Nat; codeHash : Text; grant : Grant; days : Nat; personalId : ?Text };
+  public type ProfileView = { id : Nat; name : Text; days : Nat; sources : [Source]; active : Bool };
+  public type JoinResult = { #ok : Nat; #invalid; #locked; #limit };
+  public func pin(value : Text) : Bool { value.size() == 6 and value.chars().all(func c = c >= '0' and c <= '9') };
   public func hex(value : Text, size : Nat) : Bool {
     value.size() == size and value.chars().all(func c = (c >= '0' and c <= '9') or (c >= 'a' and c <= 'f'));
   };
