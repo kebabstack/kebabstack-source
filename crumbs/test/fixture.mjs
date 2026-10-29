@@ -23,5 +23,6 @@ export function fixture({role='admin',empty=false,unsafe=false,history=false,man
   imported:async()=>({ok:history?[{day:1792368000n,dimension:'matomo:Actions.getPageUrls',value:JSON.stringify({source:'Matomo',date:'2026-10-19',timezone:'America/Los_Angeles',label:'/sample-page',available:['pageviews'],sourceMetrics:{nb_hits:123}}),metrics:{...metric,pageviews:123n}}]:[]}),listKeys:async()=>({ok:[]}),createKey:async()=>({ok:{token:'1'.repeat(64),key:{id:'one'}}}),revokeKey:async()=>({ok:null}),
   health:async()=>({ok:{accepted:13260n,duplicates:14n,rejected:0n,storedEvents:13260n,collectors:['example'],storageChargeBytes:20000000n}}),exportEvents:async()=>({ok:{events:[],cursor:''}})
  };
+ actor.reportBundle=async(t,r,dimensions)=>{calls.push(['reportBundle',r,dimensions]);const results=await Promise.all(dimensions.map(([dimension,limit])=>actor.report(t,{...r,dimension,limit})));return results.find(x=>x.err)??{ok:results.map(x=>x.ok)};};
  return {actor,calls,demote:()=>{siteRole='read';},invalidate:()=>{invalid=true;},fail:()=>{fail=true;}};
 }

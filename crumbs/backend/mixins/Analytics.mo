@@ -75,6 +75,14 @@ mixin (auth : T.AuthState, lease : T.Lease, db : T.Store, siteAccess : Map.Map<T
     if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
     Analytics.reportWithLimit(db, request, Analytics.fullScanLimit);
   };
+  public query func reportBundle(token : Text, request : T.ReportRequest, dimensions : [(Text, Nat)]) : async T.Result<[T.Report]> {
+    if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
+    Analytics.reportBundle(db, request, dimensions, Analytics.scanLimit);
+  };
+  public shared func reportBundleFull(token : Text, request : T.ReportRequest, dimensions : [(Text, Nat)]) : async T.Result<[T.Report]> {
+    if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
+    Analytics.reportBundle(db, request, dimensions, Analytics.fullScanLimit);
+  };
   public query func funnel(token : Text, request : T.ReportRequest, steps : [T.FunnelStep]) : async T.Result<[Nat]> {
     if (not A.permit(auth, lease, db, siteAccess, token, request.site, false)) return #err(#unauthorized);
     Analytics.funnel(db, request, steps);

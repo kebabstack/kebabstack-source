@@ -1,5 +1,11 @@
 # Crumbs changelog
 
+## [0.13.0] — 2026-10-29
+
+- Bundle overview and shared-report dimensions into one authorized computation per interval. Read events and build sessions once; reuse exact whole-period totals without sampling, daily-unique summation or persistent caching.
+- Use exact sparse visitor bitmaps and contiguous visit counting to reduce aggregation work. On an oversized bundle, split dimensions without splitting the time range or showing partial results.
+- Add bounded Candid `reportBundle`/`reportBundleFull` methods (1–8 dimensions, at most 2,000 requested rows). Existing report and REST contracts remain unchanged. Optional collector 0.9.3 carries matching client/IDL.
+
 ## [0.12.0] — 2026-10-28
 
 - Automatically retry report query capacity/instruction failures through atomic update endpoints with the full retained-store scan budget. Preserve exact visitor deduplication, session context, filters, totals and top-row semantics across the full interval. Applies to dashboard, shared reports, goals, acquisition, funnels, journeys and REST/optional collector clients.

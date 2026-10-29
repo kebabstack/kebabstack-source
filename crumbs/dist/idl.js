@@ -13,9 +13,8 @@ export const idlFactory = ({ IDL }) => {
   const Metrics = IDL.Record({ bounces: IDL.Nat, durationSeconds: IDL.Nat, engagementMs: IDL.Nat, events: IDL.Nat, pageviews: IDL.Nat, revenue: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Int)), scrollDepthSum: IDL.Nat, scrollSamples: IDL.Nat, visitors: IDL.Nat, visits: IDL.Nat });
   const Row = IDL.Record({ metrics: Metrics, value: IDL.Text });
   const Error = IDL.Variant({ capacity: IDL.Text, conflict: IDL.Text, invalid: IDL.Text, notFound: IDL.Null, unauthorized: IDL.Null });
-  const Key = IDL.Record({ expiresAt: IDL.Int, id: IDL.Text, name: IDL.Text, owner: IDL.Text, scope: IDL.Variant({ manage: IDL.Null, read: IDL.Null, share: IDL.Null }), site: IDL.Text });
-  const Result_9 = IDL.Variant({ err: Error, ok: IDL.Vec(Key) });
   const Report = IDL.Record({ rows: IDL.Vec(Row), scanned: IDL.Nat, totals: Metrics, truncated: IDL.Bool });
+  const Result_9 = IDL.Variant({ err: Error, ok: IDL.Vec(Report) });
   const Result_8 = IDL.Variant({ err: Error, ok: Report });
   const Result_7 = IDL.Variant({ err: Error, ok: SavedReport });
   const Result_6 = IDL.Variant({ err: Error, ok: IDL.Null });
@@ -24,25 +23,27 @@ export const idlFactory = ({ IDL }) => {
   const Connection = IDL.Record({ clientId: IDL.Text, property: IDL.Text, revision: IDL.Nat });
   const Result_3 = IDL.Variant({ err: Error, ok: Connection });
   const AccessPerson = IDL.Record({ active: IDL.Bool, automatic: IDL.Bool, displayName: IDL.Text, eligible: IDL.Bool, email: IDL.Text, id: IDL.Text });
-  const Result_24 = IDL.Variant({ err: Error, ok: IDL.Record({ people: IDL.Vec(AccessPerson), truncated: IDL.Bool }) });
+  const Result_25 = IDL.Variant({ err: Error, ok: IDL.Record({ people: IDL.Vec(AccessPerson), truncated: IDL.Bool }) });
   const Annotation = IDL.Record({ at: IDL.Int, id: IDL.Text, site: IDL.Text, text: IDL.Text });
-  const Result_23 = IDL.Variant({ err: Error, ok: IDL.Vec(Annotation) });
-  const Result_22 = IDL.Variant({ err: Error, ok: IDL.Record({ key: Key, token: IDL.Text }) });
+  const Result_24 = IDL.Variant({ err: Error, ok: IDL.Vec(Annotation) });
+  const Key = IDL.Record({ expiresAt: IDL.Int, id: IDL.Text, name: IDL.Text, owner: IDL.Text, scope: IDL.Variant({ manage: IDL.Null, read: IDL.Null, share: IDL.Null }), site: IDL.Text });
+  const Result_23 = IDL.Variant({ err: Error, ok: IDL.Record({ key: Key, token: IDL.Text }) });
   const Context = IDL.Record({ asn: IDL.Text, automation: IDL.Bool, geoSource: IDL.Text, hosting: IDL.Bool, hostingSource: IDL.Text, network: IDL.Text, networkSource: IDL.Text, screen: IDL.Text });
   const Event = IDL.Record({ at: IDL.Int, browser: IDL.Text, campaign: IDL.Text, city: IDL.Text, content: IDL.Text, context: IDL.Opt(Context), country: IDL.Text, currency: IDL.Text, device: IDL.Text, engagementMs: IDL.Nat, hostname: IDL.Text, id: IDL.Text, interactive: IDL.Bool, kind: IDL.Variant({ engagement: IDL.Null, event: IDL.Null, pageview: IDL.Null }), medium: IDL.Text, name: IDL.Text, order: IDL.Nat, os: IDL.Text, path: IDL.Text, props: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), region: IDL.Text, revenueMinor: IDL.Int, scrollDepth: IDL.Nat, site: IDL.Text, source: IDL.Text, term: IDL.Text, visitor: IDL.Text });
-  const Result_21 = IDL.Variant({ err: Error, ok: IDL.Record({ cursor: IDL.Text, events: IDL.Vec(Event) }) });
-  const Result_20 = IDL.Variant({ err: Error, ok: IDL.Vec(IDL.Nat) });
+  const Result_22 = IDL.Variant({ err: Error, ok: IDL.Record({ cursor: IDL.Text, events: IDL.Vec(Event) }) });
+  const Result_21 = IDL.Variant({ err: Error, ok: IDL.Vec(IDL.Nat) });
   const Result_2 = IDL.Variant({ err: Error, ok: IDL.Opt(SearchSnapshot) });
-  const Result_18 = IDL.Variant({ err: Error, ok: IDL.Record({ completions: IDL.Nat, revenue: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Int)), visitors: IDL.Nat }) });
-  const Result_16 = IDL.Variant({ err: Error, ok: IDL.Vec(IDL.Record({ completions: IDL.Nat, value: IDL.Text, visitors: IDL.Nat })) });
+  const Result_19 = IDL.Variant({ err: Error, ok: IDL.Record({ completions: IDL.Nat, revenue: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Int)), visitors: IDL.Nat }) });
+  const Result_17 = IDL.Variant({ err: Error, ok: IDL.Vec(IDL.Record({ completions: IDL.Nat, value: IDL.Text, visitors: IDL.Nat })) });
   const Goal = IDL.Record({ id: IDL.Text, kind: IDL.Variant({ event: IDL.Null, page: IDL.Null, scroll: IDL.Nat }), name: IDL.Text, site: IDL.Text, value: IDL.Text });
-  const Result_15 = IDL.Variant({ err: Error, ok: IDL.Vec(Goal) });
-  const Result_14 = IDL.Variant({ err: Error, ok: IDL.Bool });
-  const Result_13 = IDL.Variant({ err: Error, ok: IDL.Record({ accepted: IDL.Nat, collectors: IDL.Vec(IDL.Text), directoryAt: IDL.Int, duplicates: IDL.Nat, rejected: IDL.Nat, storageChargeBytes: IDL.Nat, storedEvents: IDL.Nat }) });
+  const Result_16 = IDL.Variant({ err: Error, ok: IDL.Vec(Goal) });
+  const Result_15 = IDL.Variant({ err: Error, ok: IDL.Bool });
+  const Result_14 = IDL.Variant({ err: Error, ok: IDL.Record({ accepted: IDL.Nat, collectors: IDL.Vec(IDL.Text), directoryAt: IDL.Int, duplicates: IDL.Nat, rejected: IDL.Nat, storageChargeBytes: IDL.Nat, storedEvents: IDL.Nat }) });
   const ImportRow = IDL.Record({ day: IDL.Int, dimension: IDL.Text, id: IDL.Text, metrics: Metrics, site: IDL.Text, value: IDL.Text });
-  const Result_12 = IDL.Variant({ err: Error, ok: IDL.Vec(ImportRow) });
-  const Result_11 = IDL.Variant({ err: Error, ok: IDL.Record({ accepted: IDL.Nat, duplicates: IDL.Nat }) });
-  const Result_10 = IDL.Variant({ err: Error, ok: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Nat)) });
+  const Result_13 = IDL.Variant({ err: Error, ok: IDL.Vec(ImportRow) });
+  const Result_12 = IDL.Variant({ err: Error, ok: IDL.Record({ accepted: IDL.Nat, duplicates: IDL.Nat }) });
+  const Result_11 = IDL.Variant({ err: Error, ok: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Nat)) });
+  const Result_10 = IDL.Variant({ err: Error, ok: IDL.Vec(Key) });
   const AccessView = IDL.Record({ legacyAllReaders: IDL.Bool, managers: IDL.Vec(AccessPerson), readers: IDL.Vec(AccessPerson), revision: IDL.Nat, site: IDL.Text, updatedAt: IDL.Int, updatedBy: IDL.Text });
   const Result_1 = IDL.Variant({ err: Error, ok: AccessView });
   const Result = IDL.Variant({ err: Error, ok: IDL.Nat });
@@ -56,28 +57,28 @@ export const idlFactory = ({ IDL }) => {
   const HttpRequest = IDL.Record({ body: IDL.Vec(IDL.Nat8), certificate_version: IDL.Opt(IDL.Nat16), headers: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), method: IDL.Text, url: IDL.Text });
   const DirectoryRow = IDL.Record({ active: IDL.Bool, attributes: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), displayName: IDL.Text, email: IDL.Text, externalId: IDL.Text, firstName: IDL.Text, id: IDL.Opt(IDL.Text), lastName: IDL.Text, source: IDL.Text });
   return IDL.Service({
-    accessPeople: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [Result_24], ["query"]),
+    accessPeople: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [Result_25], ["query"]),
     activateTrafficDataset: IDL.Func([IDL.Text], [Result_6], []),
-    annotations: IDL.Func([IDL.Text, IDL.Text], [Result_23], ["query"]),
+    annotations: IDL.Func([IDL.Text, IDL.Text], [Result_24], ["query"]),
     beginTrafficDataset: IDL.Func([Manifest], [Result_6], []),
     cancelTrafficDataset: IDL.Func([IDL.Text], [Result_6], []),
     collectorSites: IDL.Func([], [IDL.Vec(Site)], ["query"]),
     configureCollectors: IDL.Func([IDL.Vec(IDL.Principal)], [], []),
-    createKey: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Variant({ manage: IDL.Null, read: IDL.Null, share: IDL.Null }), IDL.Nat], [Result_22], []),
+    createKey: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Variant({ manage: IDL.Null, read: IDL.Null, share: IDL.Null }), IDL.Nat], [Result_23], []),
     deleteGoal: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [Result_6], []),
     deleteReport: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Nat], [Result_6], []),
     deleteSite: IDL.Func([IDL.Text, IDL.Text], [Result_6], []),
-    exportEvents: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Nat], [Result_21], ["query"]),
-    funnel: IDL.Func([IDL.Text, ReportRequest, IDL.Vec(FunnelStep)], [Result_20], ["query"]),
-    funnelFull: IDL.Func([IDL.Text, ReportRequest, IDL.Vec(FunnelStep)], [Result_20], []),
+    exportEvents: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Nat], [Result_22], ["query"]),
+    funnel: IDL.Func([IDL.Text, ReportRequest, IDL.Vec(FunnelStep)], [Result_21], ["query"]),
+    funnelFull: IDL.Func([IDL.Text, ReportRequest, IDL.Vec(FunnelStep)], [Result_21], []),
     getSiteAccess: IDL.Func([IDL.Text, IDL.Text], [Result_1], ["query"]),
-    goalReport: IDL.Func([IDL.Text, ReportRequest, IDL.Text], [Result_18], ["query"]),
-    goalReportFull: IDL.Func([IDL.Text, ReportRequest, IDL.Text], [Result_18], []),
-    goalRows: IDL.Func([IDL.Text, ReportRequest, IDL.Text], [Result_16], ["query"]),
-    goalRowsFull: IDL.Func([IDL.Text, ReportRequest, IDL.Text], [Result_16], []),
-    goals: IDL.Func([IDL.Text, IDL.Text], [Result_15], ["query"]),
-    hasImports: IDL.Func([IDL.Text, IDL.Text], [Result_14], ["query"]),
-    health: IDL.Func([IDL.Text], [Result_13], ["query"]),
+    goalReport: IDL.Func([IDL.Text, ReportRequest, IDL.Text], [Result_19], ["query"]),
+    goalReportFull: IDL.Func([IDL.Text, ReportRequest, IDL.Text], [Result_19], []),
+    goalRows: IDL.Func([IDL.Text, ReportRequest, IDL.Text], [Result_17], ["query"]),
+    goalRowsFull: IDL.Func([IDL.Text, ReportRequest, IDL.Text], [Result_17], []),
+    goals: IDL.Func([IDL.Text, IDL.Text], [Result_16], ["query"]),
+    hasImports: IDL.Func([IDL.Text, IDL.Text], [Result_15], ["query"]),
+    health: IDL.Func([IDL.Text], [Result_14], ["query"]),
     http_request: IDL.Func([HttpRequest], [HttpResponse], ["query"]),
     http_request_update: IDL.Func([HttpRequest], [HttpResponse], []),
     hub_deactivate: IDL.Func([IDL.Vec(IDL.Text)], [IDL.Nat], []),
@@ -86,16 +87,18 @@ export const idlFactory = ({ IDL }) => {
     hub_ping: IDL.Func([], [IDL.Text], ["query"]),
     hub_upsert: IDL.Func([IDL.Vec(DirectoryRow)], [IDL.Nat], []),
     importAggregates: IDL.Func([IDL.Text, IDL.Vec(ImportRow)], [Result], []),
-    imported: IDL.Func([IDL.Text, IDL.Text, IDL.Int, IDL.Int], [Result_12], ["query"]),
+    imported: IDL.Func([IDL.Text, IDL.Text, IDL.Int, IDL.Int], [Result_13], ["query"]),
     info: IDL.Func([], [IDL.Record({ hubId: IDL.Text, hubSet: IDL.Bool, name: IDL.Text, orgName: IDL.Text, version: IDL.Text })], ["query"]),
-    ingestBatch: IDL.Func([IDL.Vec(Event)], [Result_11], []),
-    journeys: IDL.Func([IDL.Text, ReportRequest], [Result_10], ["query"]),
-    journeysFull: IDL.Func([IDL.Text, ReportRequest], [Result_10], []),
-    listKeys: IDL.Func([IDL.Text], [Result_9], ["query"]),
+    ingestBatch: IDL.Func([IDL.Vec(Event)], [Result_12], []),
+    journeys: IDL.Func([IDL.Text, ReportRequest], [Result_11], ["query"]),
+    journeysFull: IDL.Func([IDL.Text, ReportRequest], [Result_11], []),
+    listKeys: IDL.Func([IDL.Text], [Result_10], ["query"]),
     listSites: IDL.Func([IDL.Text], [IDL.Vec(SiteView)], ["query"]),
     loginWithSuite: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     loginWithTicket: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ displayName: IDL.Text, email: IDL.Text, role: IDL.Text, suiteToken: IDL.Text, token: IDL.Text }))], []),
     report: IDL.Func([IDL.Text, ReportRequest], [Result_8], ["query"]),
+    reportBundle: IDL.Func([IDL.Text, ReportRequest, IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat))], [Result_9], ["query"]),
+    reportBundleFull: IDL.Func([IDL.Text, ReportRequest, IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat))], [Result_9], []),
     reportFull: IDL.Func([IDL.Text, ReportRequest], [Result_8], []),
     revokeKey: IDL.Func([IDL.Text, IDL.Text], [Result_6], []),
     saveAnnotation: IDL.Func([IDL.Text, Annotation], [Result_6], []),

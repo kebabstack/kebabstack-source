@@ -85,3 +85,11 @@ reports, exercising the actual frontend fallback; it does not benchmark a canist
 serialized expensive calls and non-replayed errors. The optional collector package
 must contain `dist/report-client.js`; MCP 0.4.1 has a version-gated curated fallback
 without changing generic query-only enforcement.
+
+## 0.13.0 overview performance
+
+The 100,000-event fixture uses 50,000 consented browser IDs recurring on two days inside a 30-day interval. It compares every field of seven individual reports against the bounded bundle client, including rows, ordering, truncation, revenue and scan counts. With `CRUMBS_FULL_BASELINE` pointing to a directory containing the published 0.12.0 `backend.wasm` and generated `backend.did`, it also compares the old results before a populated upgrade against the candidate after upgrade. Baseline data and viewer authorization must survive.
+
+A local PocketIC source-candidate run on 29 October measured 33.72 s for seven published 0.12.0 reports versus 17.73 s through the new bounded bundle path (1.90×; 47% less elapsed time). This is synthetic local execution, not a production/browser latency promise. Single-report candidate execution was 27.09 s. Measurements vary with host load. Bundle requests over 200,000 event × dimension units split dimensions; they never sum daily unique counts. Initial unbounded seven-dimension prototypes exceeded the update instruction limit and were rejected before release.
+
+Additional regressions cover mid-session filters, explicit local-day boundaries, top-row limits, exact visitor bitmap word boundaries via high cardinality, newly ingested data, revoked shared keys, malformed bundles, budget fallback, network failures and late UI responses after permission revocation. Shared reports prevent overlapping refreshes. Existing finite storage and execution limits remain; arbitrary filter/cardinality combinations are not certified as unbounded.

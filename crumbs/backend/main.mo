@@ -11,7 +11,7 @@ import Principal "mo:core/Principal";
 import AccessApi "mixins/Access";
 
 persistent actor Crumbs {
-  transient let BUILD_VERSION : Text = "0.12.0";
+  transient let BUILD_VERSION : Text = "0.13.0";
   let auth : T.AuthState;
   let db : T.Store;
   let siteAccess : Map.Map<Text, T.SiteAccess>;

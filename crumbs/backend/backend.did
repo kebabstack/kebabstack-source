@@ -82,7 +82,7 @@ type Row =
 type Result_9 =
  variant {
    err: Error;
-   ok: vec Key;
+   ok: vec Report;
  };
 type Result_8 =
  variant {
@@ -114,7 +114,7 @@ type Result_3 =
    err: Error;
    ok: Connection;
  };
-type Result_24 =
+type Result_25 =
  variant {
    err: Error;
    ok: record {
@@ -122,12 +122,12 @@ type Result_24 =
          truncated: bool;
        };
  };
-type Result_23 =
+type Result_24 =
  variant {
    err: Error;
    ok: vec Annotation;
  };
-type Result_22 =
+type Result_23 =
  variant {
    err: Error;
    ok: record {
@@ -135,7 +135,7 @@ type Result_22 =
          token: text;
        };
  };
-type Result_21 =
+type Result_22 =
  variant {
    err: Error;
    ok: record {
@@ -143,7 +143,7 @@ type Result_21 =
          events: vec Event;
        };
  };
-type Result_20 =
+type Result_21 =
  variant {
    err: Error;
    ok: vec nat;
@@ -153,7 +153,7 @@ type Result_2 =
    err: Error;
    ok: opt SearchSnapshot;
  };
-type Result_18 =
+type Result_19 =
  variant {
    err: Error;
    ok:
@@ -166,7 +166,7 @@ type Result_18 =
       visitors: nat;
     };
  };
-type Result_16 =
+type Result_17 =
  variant {
    err: Error;
    ok: vec record {
@@ -175,17 +175,17 @@ type Result_16 =
              visitors: nat;
            };
  };
-type Result_15 =
+type Result_16 =
  variant {
    err: Error;
    ok: vec Goal;
  };
-type Result_14 =
+type Result_15 =
  variant {
    err: Error;
    ok: bool;
  };
-type Result_13 =
+type Result_14 =
  variant {
    err: Error;
    ok:
@@ -199,12 +199,12 @@ type Result_13 =
       storedEvents: nat;
     };
  };
-type Result_12 =
+type Result_13 =
  variant {
    err: Error;
    ok: vec ImportRow;
  };
-type Result_11 =
+type Result_12 =
  variant {
    err: Error;
    ok: record {
@@ -212,7 +212,7 @@ type Result_11 =
          duplicates: nat;
        };
  };
-type Result_10 =
+type Result_11 =
  variant {
    err: Error;
    ok: vec record {
@@ -220,6 +220,11 @@ type Result_10 =
              text;
              nat;
            };
+ };
+type Result_10 =
+ variant {
+   err: Error;
+   ok: vec Key;
  };
 type Result_1 =
  variant {
@@ -491,9 +496,9 @@ type AccessPerson =
    id: text;
  };
 service : {
-  accessPeople: (token: text, site: text, search: text) -> (Result_24) query;
+  accessPeople: (token: text, site: text, search: text) -> (Result_25) query;
   activateTrafficDataset: (id: text) -> (Result_6);
-  annotations: (token: text, site: text) -> (Result_23) query;
+  annotations: (token: text, site: text) -> (Result_24) query;
   beginTrafficDataset: (m: Manifest) -> (Result_6);
   cancelTrafficDataset: (id: text) -> (Result_6);
   collectorSites: () -> (vec Site) query;
@@ -503,29 +508,29 @@ service : {
      manage;
      read;
      share;
-   }, days: nat) -> (Result_22);
+   }, days: nat) -> (Result_23);
   deleteGoal: (token: text, site: text, id: text) -> (Result_6);
   deleteReport: (token: text, site: text, id: text, revision: nat) ->
    (Result_6);
   deleteSite: (token: text, id: text) -> (Result_6);
   exportEvents: (token: text, site: text, after: text, limit: nat) ->
-   (Result_21) query;
+   (Result_22) query;
   funnel: (token: text, request: ReportRequest, steps: vec FunnelStep) ->
-   (Result_20) query;
+   (Result_21) query;
   funnelFull: (token: text, request: ReportRequest, steps: vec FunnelStep) ->
-   (Result_20);
+   (Result_21);
   getSiteAccess: (token: text, site: text) -> (Result_1) query;
   goalReport: (token: text, request: ReportRequest, id: text) ->
-   (Result_18) query;
+   (Result_19) query;
   goalReportFull: (token: text, request: ReportRequest, id: text) ->
-   (Result_18);
+   (Result_19);
   goalRows: (token: text, request: ReportRequest, id: text) ->
-   (Result_16) query;
+   (Result_17) query;
   goalRowsFull: (token: text, request: ReportRequest, id: text) ->
-   (Result_16);
-  goals: (token: text, site: text) -> (Result_15) query;
-  hasImports: (token: text, site: text) -> (Result_14) query;
-  health: (token: text) -> (Result_13) query;
+   (Result_17);
+  goals: (token: text, site: text) -> (Result_16) query;
+  hasImports: (token: text, site: text) -> (Result_15) query;
+  health: (token: text) -> (Result_14) query;
   http_request: (_req: HttpRequest) -> (HttpResponse) query;
   http_request_update: (req: HttpRequest) -> (HttpResponse);
   hub_deactivate: (emails: vec text) -> (nat);
@@ -535,7 +540,7 @@ service : {
   hub_upsert: (rows: vec DirectoryRow) -> (nat);
   importAggregates: (token: text, rows: vec ImportRow) -> (Result);
   imported: (token: text, site: text, from: int, until: int) ->
-   (Result_12) query;
+   (Result_13) query;
   info: () ->
    (record {
       hubId: text;
@@ -544,10 +549,10 @@ service : {
       orgName: text;
       version: text;
     }) query;
-  ingestBatch: (batch: vec Event) -> (Result_11);
-  journeys: (token: text, request: ReportRequest) -> (Result_10) query;
-  journeysFull: (token: text, request: ReportRequest) -> (Result_10);
-  listKeys: (token: text) -> (Result_9) query;
+  ingestBatch: (batch: vec Event) -> (Result_12);
+  journeys: (token: text, request: ReportRequest) -> (Result_11) query;
+  journeysFull: (token: text, request: ReportRequest) -> (Result_11);
+  listKeys: (token: text) -> (Result_10) query;
   listSites: (token: text) -> (vec SiteView) query;
   loginWithSuite: (token: text) ->
    (opt
@@ -568,6 +573,16 @@ service : {
        token: text;
      });
   report: (token: text, request: ReportRequest) -> (Result_8) query;
+  reportBundle: (token: text, request: ReportRequest, dimensions:
+   vec record {
+         text;
+         nat;
+       }) -> (Result_9) query;
+  reportBundleFull: (token: text, request: ReportRequest, dimensions:
+   vec record {
+         text;
+         nat;
+       }) -> (Result_9);
   reportFull: (token: text, request: ReportRequest) -> (Result_8);
   revokeKey: (token: text, id: text) -> (Result_6);
   saveAnnotation: (token: text, item: Annotation) -> (Result_6);

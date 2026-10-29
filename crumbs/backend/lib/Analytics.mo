@@ -7,6 +7,7 @@ import Array "mo:core/Array";
 import Iter "mo:core/Iter";
 import Text "mo:core/Text";
 import Nat "mo:core/Nat";
+import Nat64 "mo:core/Nat64";
 import Int "mo:core/Int";
 import Time "mo:core/Time";
 
@@ -177,8 +178,11 @@ module {
     ["visitors","sources","pages","entry_pages","exit_pages","custom_events","locations","devices","browsers","operating_systems"].values().any(func t = d == "import:" # t);
   };
   type Acc = {
-    visitors : Set.Set<Nat>;
-    visits : Set.Set<Nat>;
+    visitorBits : Map.Map<Nat, Nat64>;
+    var visitors : Nat;
+    // reportPrepared visits each session contiguously, in increasing id order.
+    var lastSession : ?Nat;
+    var visits : Nat;
     var views : Nat;
     var events : Nat;
     var bounces : Nat;
@@ -189,8 +193,10 @@ module {
   };
   func empty() : Acc {
     {
-      visitors = Set.empty();
-      visits = Set.empty();
+      visitorBits = Map.empty();
+      var visitors = 0;
+      var lastSession = null;
+      var visits = 0;
       var views = 0;
       var events = 0;
       var bounces = 0;
@@ -202,9 +208,17 @@ module {
   };
   func add(a : Acc, e : T.Event, s : Session) {
     if (e.kind != #engagement) {
-      if (not a.visits.contains(s.id)) {
-        a.visitors.add(s.visitorKey);
-        a.visits.add(s.id);
+      if (a.lastSession != ?s.id) {
+        // Exact sparse bitmap over query-local visitor ordinals, not a hash/sketch.
+        let word = s.visitorKey / 64;
+        let mask : Nat64 = 1 << Nat64.fromNat(s.visitorKey % 64);
+        let bits : Nat64 = a.visitorBits.get(word) ?? 0;
+        if (bits & mask == 0) {
+          a.visitorBits.add(word, bits | mask);
+          a.visitors += 1;
+        };
+        a.lastSession := ?s.id;
+        a.visits += 1;
         if (s.views <= 1 and not s.engaged) a.bounces += 1;
         a.duration += (s.last - s.first.at).toNat();
       };
@@ -222,8 +236,8 @@ module {
     var sum = 0;
     for (v in a.scroll.values()) sum += v;
     {
-      visitors = a.visitors.size();
-      visits = a.visits.size();
+      visitors = a.visitors;
+      visits = a.visits;
       pageviews = a.views;
       events = a.events;
       bounces = a.bounces;
@@ -242,17 +256,20 @@ module {
       case (#ok e) e;
       case (#err e) return #err(e);
     };
+    #ok(reportPrepared(sessions(events), events.size(), r, null));
+  };
+  func reportPrepared(prepared : [Session], scanned : Nat, r : T.ReportRequest, totals : ?T.Metrics) : T.Report {
     let total = empty();
     let groups = Map.empty<Text, Acc>();
     let fixedDimension = fixedSessionDimension(r.dimension);
     let fixedFilters = r.filters.filter(func f = fixedSessionDimension(f.dimension));
     let eventFilters = r.filters.filter(func f = not fixedSessionDimension(f.dimension));
-    for (s in sessions(events).values()) {
+    for (s in prepared.values()) {
       if (not sessionMatches(s.first, s, fixedFilters)) continue;
       let fixedValue = if (fixedDimension) sessionDimension(s.first, s, r.dimension) else "";
       for (e in s.items.values()) {
         if (e.at < r.from or e.at >= r.until or not sessionMatches(e, s, eventFilters)) continue;
-        add(total, e, s);
+        if (totals == null) add(total, e, s);
         if (r.dimension != "") {
           let v = if (fixedDimension) fixedValue else if (r.dimension == "day") dayBucket(r, e.at) else sessionDimension(e, s, r.dimension);
           let g = groups.get(v) ??{ let a = empty(); groups.add(v, a); a };
@@ -262,12 +279,35 @@ module {
     };
     let all : [T.Row] = groups.entries().map(func(v, a) { { value = v; metrics = freeze(a) } }).toArray();
     let sorted = all.sort(func(a, b) { if (r.dimension == "day" or r.dimension == "hour" or r.dimension == "minute") Text.compare(a.value, b.value) else if (a.metrics.visitors == b.metrics.visitors) Text.compare(a.value, b.value) else Nat.compare(b.metrics.visitors, a.metrics.visitors) });
-    #ok({
-      totals = freeze(total);
+    {
+      totals = totals ?? freeze(total);
       rows = sorted.values().take(r.limit).toArray();
-      scanned = events.size();
+      scanned;
       truncated = sorted.size() > r.limit;
-    });
+    };
+  };
+  // One interval, authorization scope and event snapshot. No persisted cache:
+  // revocation, retention and newly ingested events are checked on every call.
+  public func reportBundle(db : T.Store, r : T.ReportRequest, dimensions : [(Text, Nat)], maxEvents : Nat) : T.Result<[T.Report]> {
+    if (dimensions.size() == 0 or dimensions.size() > 8) return #err(#invalid("Choose 1–8 report dimensions"));
+    let site = db.sites.get(r.site) ??(return #err(#notFound));
+    var rows = 0;
+    for ((d, limit) in dimensions.values()) {
+      if (not validDimension(d, site) or limit == 0 or limit > 1000) return #err(#invalid("Invalid report dimension or row limit"));
+      rows += limit;
+    };
+    if (rows > 2000) return #err(#invalid("At most 2000 rows per report bundle"));
+    let events = switch (loadWithLimit(db, r, maxEvents)) { case (#ok e) e; case (#err e) return #err(e) };
+    // Bound aggregate work before constructing sessions. Clients may split dimensions,
+    // never the interval: every resulting report retains exact range visitors.
+    if (events.size() * dimensions.size() > 200_000) return #err(#capacity("Report bundle exceeds work budget. Split dimensions, not the date range."));
+    let prepared = sessions(events);
+    var totals : ?T.Metrics = null;
+    #ok(dimensions.map(func(d, limit) {
+      let result = reportPrepared(prepared, events.size(), {r with dimension = d; limit}, totals);
+      totals := ?result.totals;
+      result;
+    }));
   };
   /// Day bucket: the latest supplied local-midnight instant at or before the event, else the UTC day.
   func dayBucket(r : T.ReportRequest, at : Int) : Text {

@@ -464,8 +464,13 @@ test('Crumbs: full report exceeds query scan cap without summing daily cookie vi
   assert.equal(ok(await app.ingestBatch(batch)).accepted,50n);
  }
  const r=request({from:now-30n*86400n,dimension:'path'});
+ const dimensions=[['',100n],['day',1000n],['path',100n],['source',100n],['country',100n],['device',100n],['entryPath',100n]];
+ let baselineResults=null,baselineMs=null;
  assert.match((await app.report(owner.token,r)).err.capacity,/50000/);
  if(process.env.CRUMBS_FULL_BASELINE){
+  const baselineStart=performance.now();baselineResults=[];
+  for(const [dimension,limit]of dimensions)baselineResults.push(ok(await app.reportFull(viewer.token,{...r,dimension,limit})));
+  baselineMs=performance.now()-baselineStart;
   const before=ok(await app.health(owner.token));
   await s.pic.upgradeCanister({sender:ids.controller,canisterId:s.c.canisterId,wasm:wasmPath('crumbs'),upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
   const js=execFileSync('python3',['sdk/tools/did2idl.py','crumbs/backend/dist/backend.did'],{encoding:'utf8'}),{idlFactory}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
@@ -475,6 +480,18 @@ test('Crumbs: full report exceeds query scan cap without summing daily cookie vi
 
  assert.ok('unauthorized' in (await app.reportFull('',r)).err);
  const report=ok(await app.reportFull(viewer.token,r));
+ const singleStart=performance.now(),single=[];
+ for(const [dimension,limit] of dimensions)single.push(ok(await app.reportFull(viewer.token,{...r,dimension,limit})));
+ const singleMs=performance.now()-singleStart,bundleStart=performance.now();
+ const {analyticsCall}=await import('../crumbs/dist/report-client.js');
+ const bundled=ok(await analyticsCall(app,'reportBundle',viewer.token,r,dimensions)),bundleMs=performance.now()-bundleStart;
+ assert.match((await app.reportBundleFull(viewer.token,r,dimensions)).err.capacity,/Split dimensions/);
+ assert.deepEqual(bundled,single,'bundle preserves every metric, ordering, truncation and scanned count');
+ if(baselineResults)assert.deepEqual(bundled,baselineResults,'exact published 0.12.0 results survive optimization and populated upgrade');
+ console.log(JSON.stringify({reportPerformance:{baselineMs,baselineSpeedup:baselineMs===null?null:baselineMs/bundleMs,events:count,dimensions:dimensions.length,singleMs,bundleMs,speedup:singleMs/bundleMs,environment:'PocketIC; not production latency'}}));
+ assert.match((await app.reportBundle(viewer.token,r,dimensions)).err.capacity,/50000/);
+ assert.ok('unauthorized'in(await app.reportBundleFull('',r,dimensions)).err);
+
  assert.deepEqual([report.totals.visitors,report.totals.visits,report.totals.pageviews,report.totals.bounces],[50000n,100000n,100000n,100000n]);
  assert.equal(report.rows.reduce((n,r)=>n+r.metrics.pageviews,0n),100000n);
  assert.equal(ok(await app.reportFull(owner.token,{...r,filters:[{dimension:'path',values:['/pricing'],exclude:false}]})).totals.visitors,25000n);
@@ -491,5 +508,33 @@ test('Crumbs: full report exceeds query scan cap without summing daily cookie vi
  const share=ok(await app.createKey(owner.token,'main','Full report',{share:null},1n));
  assert.equal(ok(await app.reportFull(share.token,r)).totals.visitors,50000n);ok(await app.revokeKey(owner.token,share.key.id));assert.ok('unauthorized'in(await app.reportFull(share.token,r)).err);
  console.log(JSON.stringify({fullReportEvents:count,uniqueCookieBrowsers:visitors,elapsedMs:Math.round(performance.now()-start)}));
+ }finally{await s.pic.tearDown();}
+});
+
+
+test('Crumbs report bundles: filters, local day buckets, limits, live data and revocation retain exact semantics',async()=>{
+ const s=await setup();try{
+  const {app,owner,viewer,event,request,now}=s;app.setPrincipal(ids.collector);
+  ok(await app.ingestBatch([
+   event('bundle-a',{visitor:'c:'+'a'.repeat(64),at:now-120n,path:'/a',source:'google.com'}),
+   event('bundle-b',{visitor:'c:'+'a'.repeat(64),at:now-60n,path:'/b',source:''}),
+   event('bundle-c',{visitor:'c:'+'b'.repeat(64),at:now-50n,path:'/c'}),
+   event('bundle-engagement',{visitor:'c:'+'a'.repeat(64),at:now-30n,path:'/b',kind:{engagement:null},engagementMs:10000n,scrollDepth:75n}),
+   event('bundle-money',{visitor:'c:'+'a'.repeat(64),at:now-20n,path:'/b',kind:{event:null},name:'purchase',currency:'USD',revenueMinor:1500n})
+  ]));
+  const ds=[['',1n],['path',1n],['day',10n],['source',10n],['exitPath',10n],['device',10n]];
+  for(const filters of [[],[{dimension:'path',values:['/b'],exclude:false}],[{dimension:'source',values:['google.com'],exclude:false}],[{dimension:'path',values:['/a'],exclude:true}]]){
+   const r=request({from:now-100n,filters,dayStarts:[[now-86400n,now-40n]]});
+   const expected=[];for(const [dimension,limit]of ds)expected.push(ok(await app.report(viewer.token,{...r,dimension,limit})));
+   assert.deepEqual(ok(await app.reportBundle(viewer.token,r,ds)),expected);
+   assert.deepEqual(ok(await app.reportBundleFull(viewer.token,r,ds)),expected);
+  }
+  const r=request();for(const ds of [[],Array(9).fill(['path',1n]),[['path',1001n]],[['path',0n]],[['unknown',1n]],[['path',1000n],['source',1000n],['country',1n]]])assert.ok('invalid'in(await app.reportBundleFull(owner.token,r,ds)).err);
+  const before=ok(await app.reportBundle(viewer.token,r,[['',1n]]))[0].totals.pageviews;
+  ok(await app.ingestBatch([event('bundle-new',{visitor:'c:'+'c'.repeat(64)})]));
+  assert.equal(ok(await app.reportBundle(viewer.token,r,[['',1n]]))[0].totals.pageviews,before+1n,'no stale result cache');
+  const share=ok(await app.createKey(owner.token,'main','Bundle',{share:null},1n));
+  ok(await app.reportBundleFull(share.token,r,ds));ok(await app.revokeKey(owner.token,share.key.id));
+  for(const m of ['reportBundle','reportBundleFull'])assert.ok('unauthorized'in(await app[m](share.token,r,ds)).err);
  }finally{await s.pic.tearDown();}
 });

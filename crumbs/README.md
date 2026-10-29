@@ -2,7 +2,7 @@
 
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical identity, semantic light/dark colours and common navigation/control sizes. Product access and workflow boundaries remain explicit.
 
-Website analytics with cookieless defaults and an optional consented cookie mode for kebab-stack, targeting a reliable Plausible replacement. **0.12.0 is an alpha pilot, not yet approved to retire Plausible.** Backend, native HTTP collection, REST API and dashboard run on your Cloud Engine. A Node/SQLite collector remains optional. Core analytics does not require an external analytics SaaS. Optional Google integrations are explicitly configured by the operator.
+Website analytics with cookieless defaults and an optional consented cookie mode for kebab-stack, targeting a reliable Plausible replacement. **0.13.0 is an alpha pilot, not yet approved to retire Plausible.** Backend, native HTTP collection, REST API and dashboard run on your Cloud Engine. A Node/SQLite collector remains optional. Core analytics does not require an external analytics SaaS. Optional Google integrations are explicitly configured by the operator.
 
 For management: the implemented core covers traffic, acquisition, events, goals, funnels, journeys and historical imports. The adoption decision depends on matching your real workload and the features you use. There is no validated throughput or operating-cost claim. See [replacement acceptance](PARITY.md).
 
@@ -72,3 +72,11 @@ search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
 Hover or tap Traffic over time to inspect the date and exact value for the selected metric. With keyboard focus on the chart, use Left/Right or Home/End; Escape dismisses the readout. The previous-period value appears when comparison is enabled. “View chart data” provides the same values as a table.
 
 Overview breakdowns (pages, sources, countries, devices and more details) show ten rows at a time. Scroll inside a breakdown for the remaining loaded results, or focus it and use the keyboard. Clicking a row still filters the report. This display limit does not change reporting totals, API results or exports.
+
+## Faster overview reports (0.13.0)
+
+The overview and shared report bundle their dimensions for the same interval. Events and sessions are prepared once and whole-period totals reused; visitors are never calculated by summing daily uniques. Each bundle reads one current snapshot, checks access again, and uses no persistent result cache. Current, previous and realtime intervals remain separate snapshots as before. The previous period and realtime may therefore reflect a slightly different collection instant.
+
+Direct Candid clients can call `reportBundle(token, request, [(dimension, limit)])`, falling back to `reportBundleFull` only for a query capacity/instruction error. Results are in input order and use the same `Report` records and counting/filter rules as individual reports. All dimensions share the request’s site, interval, filters and local-midnight boundaries; each has its own row limit. Bounds: 1–8 dimensions, each limit 1–1,000, at most 2,000 requested rows total. Invalid bundles fail as a whole. These are Candid-only dashboard methods; existing REST/OpenAPI/SDK and MCP report contracts remain unchanged. Intervals over 900 days retain the existing segmented chart path. No reimport or tracker change is needed.
+
+A bundle is limited to 200,000 scanned-event × dimension units before aggregation. If a bundle exceeds this work limit or the full execution budget, the shared browser client splits **dimensions**, never the date range or visitor population, and only displays the complete result. Split groups are individually authorized snapshots and may reflect intervening collection. An individual report failure remains visible. Visitor counting uses an exact sparse bitmap over local ordinals, not a probabilistic estimate; visit counts use contiguous session traversal.

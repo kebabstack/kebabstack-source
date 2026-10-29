@@ -88,7 +88,19 @@ async function overview(run){
  const realtime={...r,from:BigInt(Math.floor(Date.now()/1000)-300),until:BigInt(Math.floor(Date.now()/1000)+1),filters:[{dimension:'event',values:[''],exclude:false}]};
  const dimension=$('dimension').value,timeDimension=length<=3600n?'minute':length<=86400n?'hour':'day',tz=siteTz();
  const oldStarts=timeDimension==='day'?dayStartsBetween(localDate(Number(old.from)*1000,tz),localDate((Number(old.until)-1)*1000,tz),tz):[];const oldReq={...old,dayStarts:timeDimension==='day'?[oldStarts.map(BigInt)]:[]};
- const data=await Promise.all([report('',r),report('',old).catch(()=>null),chartReport(r,timeDimension),report('path'),report('source'),report('country'),report('device'),report(dimension),report('',realtime),chartReport(oldReq,timeDimension).catch(()=>null)]);
+ let data;
+ if(length<=900n*86400n){
+  const dimensions=[['',100n],[timeDimension,1000n],['path',100n],['source',100n],['country',100n],['device',100n],[dimension,100n]];
+  const [present,previous,recent]=await Promise.all([
+   analyticsCall(backend,'reportBundle',session.load(),{...r,dayStarts:timeDimension==='day'?[(range.dayStarts||[]).map(BigInt)]:[]},dimensions).then(unwrap),
+   analyticsCall(backend,'reportBundle',session.load(),oldReq,[['',100n],[timeDimension,1000n]]).then(unwrap).catch(()=>null),
+   report('',realtime)
+  ]);
+  data=[present[0],previous?.[0],present[1],...present.slice(2),recent,previous?.[1]];
+ }else{
+ data=await Promise.all([report('',r),report('',old).catch(()=>null),chartReport(r,timeDimension),report('path'),report('source'),report('country'),report('device'),report(dimension),report('',realtime),chartReport(oldReq,timeDimension).catch(()=>null)]);
+ }
+
  if(!isCurrent(run))return;
  $('metrics').innerHTML=metricCards(data[0].totals,data[1]?.totals);
  if(!data[1]||!data[9])notice('Current results are available, but the previous-period comparison could not be loaded. Refresh to retry.','info');
