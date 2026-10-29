@@ -1,5 +1,9 @@
 # Changelog — kebab-stack hub
 
+## [0.45.1] — 2026-10-29
+
+- Keep the reconnect form available if a suspended or expired screen also loses network access; retry without a page reload. Existing device credentials remain retained.
+
 ## [0.45.0] — 2026-10-29
 
 - Owners can create a shared six-digit dashboard profile code. Each TV enrolls its own persistent, read-only key; reboot/reload reconnects while browser data and approval are retained. New profiles offer until-revoked access; existing approvals keep their expiry and scope. Codes have no display separator.

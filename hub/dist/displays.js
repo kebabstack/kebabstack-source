@@ -250,7 +250,7 @@
         const changed=!state||state.id!==value.id||JSON.stringify(state.sources,(_,v)=>typeof v==='bigint'?String(v):v)!==JSON.stringify(value.sources,(_,v)=>typeof v==='bigint'?String(v):v);
         if(changed){generation++;metricBusy=false;entries=value.sources.map(s=>({...s,data:null,waiting:true}));lastMetrics=0;}
         state=value;paint();if(now()-lastMetrics>=60000)void metrics();
-      }catch{if(!closed&&run===generation)reset('Connection paused. Rechecking access…');}
+      }catch{if(!closed&&run===generation)reset('Connection paused. Rechecking access…',ended);}
       finally{stateBusy=false;}
     }
     function age(){

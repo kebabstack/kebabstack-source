@@ -1,6 +1,6 @@
 {
   "format": "kebab-public-source-v1",
-  "sourceCommit": "660d19b3171c961bbedecf18c54a9facab21ec94",
+  "sourceCommit": "88cafe0df1c01ee2905b283a80fdf07813a460a1",
   "historyIncluded": false,
   "marketplaceReady": false,
   "files": [
@@ -4296,7 +4296,7 @@
     },
     {
       "path": "hub/CHANGELOG.md",
-      "sha256": "fdc81ce2f14a59941e9b31eeeb4c4546e8baec876d002ea1c8649222b6a8f714",
+      "sha256": "524b6732cf31fdea549223959fd41c21afc5a13224942a8244b83a8827c30587",
       "mode": "100644"
     },
     {
@@ -4336,7 +4336,7 @@
     },
     {
       "path": "hub/backend/main.mo",
-      "sha256": "2e0b7f8da4bedf8f48afa78f014f1b2a5566ef0aa52b39ab1a245d570195d28d",
+      "sha256": "2d39a640c0f0411c35f7610dd3e8927eabe29199aa3c3bcc25e8f07ff3077194",
       "mode": "100644"
     },
     {
@@ -4346,7 +4346,7 @@
     },
     {
       "path": "hub/dist/CHANGELOG.md",
-      "sha256": "fdc81ce2f14a59941e9b31eeeb4c4546e8baec876d002ea1c8649222b6a8f714",
+      "sha256": "524b6732cf31fdea549223959fd41c21afc5a13224942a8244b83a8827c30587",
       "mode": "100644"
     },
     {
@@ -4741,7 +4741,7 @@
     },
     {
       "path": "hub/dist/displays.js",
-      "sha256": "4af45c9f3a97288cd0fcea3069c7979d72d0450efa01873727a6bac75d6900be",
+      "sha256": "1c7f8626e7bdf6779d3175dadf432e404d0010772ec224d959d27cc36d765e52",
       "mode": "100644"
     },
     {
@@ -4756,7 +4756,7 @@
     },
     {
       "path": "hub/dist/index.html",
-      "sha256": "fb402ac0d3905901da0ac68bb034926faca662f58d1e117e2c3f0c47c06d8066",
+      "sha256": "c70bc2cdc672e0c46162bd8388fc82d267e38326be395cc248339c89460fdd7b",
       "mode": "100644"
     },
     {
@@ -4826,7 +4826,7 @@
     },
     {
       "path": "hub/dist/sdk/VERSION",
-      "sha256": "4e609d60cdcefc643eb1be9886bed28b3c79c3dce8848469915fda9d743aea3c",
+      "sha256": "196bd54bdf1aee476371ea744de09efe956d9e0116156b6eca47d0ce2627151b",
       "mode": "100644"
     },
     {
@@ -4921,7 +4921,7 @@
     },
     {
       "path": "hub/mops.toml",
-      "sha256": "a70b66d3bd63576f046da143857f41e6f5dce9559c822bd03cb668a45b3fe185",
+      "sha256": "f5e59df87b4f7310bab0b3fe6447031100d6d75bd023a6a7c438b11b4ab0248f",
       "mode": "100644"
     },
     {
@@ -4966,7 +4966,7 @@
     },
     {
       "path": "hub/test/displays-ui.mjs",
-      "sha256": "bf6520583a316b0cdb002543ea54b7142129362f0fb2326c02f8df2d788d1c3f",
+      "sha256": "3e7a195b47e3dcfb6a1d9a6f09d1cbcad538895d163ccf19d19193d6050e44aa",
       "mode": "100644"
     },
     {
