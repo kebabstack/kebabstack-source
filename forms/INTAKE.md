@@ -39,8 +39,7 @@ future calls. An already dispatched call can still finish. Changing the source
 never silently reroutes old responses. Reconnect the original source to resume
 its queue. The first version does not map answers into required Desk custom fields.
 
-Public submission retries use a 30-day receipt. After an uncertain network result, the browser freezes the draft and retries the identical payload. Browser reloads start a new
-submission reference; there is no cross-device identity or reliable bot detection.
+Public submission retries use a 30-day receipt. After an uncertain network result, the browser freezes the draft and retries the identical payload. The browser saves the exact pending payload and reference in tab-scoped session storage before sending. Reloading the same tab offers an explicit retry, including when the form has closed or its schema changed; the backend still decides whether it can confirm or accept it. Recovery is allowed for 24 hours. Success removes the copy; on the next access after expiry, answer contents are replaced by an expired marker requiring explicit clearing. Closing a tab normally removes session storage, but browser session restoration can retain it. This is not cross-device recovery. Blocked/full browser storage leaves only the in-memory retry and displays a warning to keep the tab open. No reliable bot detection is provided.
 A hidden trap field, bounds, quotas and server validation reduce accidental and
 basic abusive input; they do not replace a production anti-abuse gateway.
 

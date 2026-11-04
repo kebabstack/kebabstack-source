@@ -1,5 +1,10 @@
 # Changelog — kebab-stack forms
 
+## [0.8.3] — 2026-11-04
+
+- Preserve unconfirmed public responses across reloads in the same browser tab using their original request reference and exact payload. Retry remains explicit; expired recovery copies require acknowledgement before starting over.
+- Keep recovery answers in session storage only, remove them after confirmation, and clear expired contents on next access after 24 hours. Explain unavailable storage and browser-session restoration limits.
+
 ## [0.8.2] — 2026-10-21
 
 - Synchronize the canonical browser logo registry for Doku. Existing application behavior is unchanged. This source update does not by itself deploy this app.

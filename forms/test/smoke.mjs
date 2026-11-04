@@ -16,7 +16,7 @@ const form = { id: 1n, slug: "abcdef0123456789", title: "Idea box", description:
 const meta = (over = {}) => ({ id: 1n, slug: form.slug, title: form.title, status: { open: null }, allowEdit: true, cap: 0n, createdBy: ME, createdByName: "Me Myself", createdAt: now, updatedAt: now, subs: 2n, subsReceived: 1n, subsInReview: 0n, subsAccepted: 1n, subsDeclined: 0n, myRole: role === "admin" ? "owner" : "viewer", closesAt: 0n, ...over });
 const sub = (id, over = {}) => ({ id: BigInt(id), formId: 1n, num: BigInt(id), answers: JSON.stringify({ 1: "Lunch roulette", 2: "Team", 3: 4 }), submitterName: "Ada", submitterEmail: "", submittedAt: now, updatedAt: now, status: { received: null }, assignee: "", assigneeName: "", reviews: [], notes: [], people: [], ...over });
 const calls = [];
-const submissions=[];let routedFixture=false;
+const submissions=[];let routedFixture=false, recoveryClosed=false, recoveryReject=false;
 globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
   calls.push(m);
   switch (m) {
@@ -34,9 +34,9 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "listTrash": return [{ id: 9n, title: "Old form", deletedAt: now, purgeAt: now + 86400n * 1000000000n * 80n, subs: 3n }];
     case "directory": return [{ email: "ana@example.com", displayName: "Ana Ruiz", department: "Ops" }, { email: "ben@example.com", displayName: "Ben Ko", department: "IT" }];
     case "createForm": case "duplicateForm": return [meta({ id: 3n, slug: "0123456789abcdef", title: "Untitled form", status: { draft: null }, subs: 0n, subsReceived: 0n, subsAccepted: 0n })];
-    case "publicForm": return [{ title: "Idea box", description: "Tell us", schema, allowEdit: true, open: true, capReached: false, closesAt: 0n, orgName: "Acme" }];
+    case "publicForm": return [{ title: "Idea box", description: "Tell us", schema:recoveryClosed ? '{"sections":[]}' : schema, allowEdit: true, open: !recoveryClosed, capReached: false, closesAt: 0n, orgName: "Acme" }];
     case "previewForm": return [{ id: 1n, title: "Idea box", description: "Tell us", schema, allowEdit: true, status: { open: null }, myRole: "owner", closesAt: 0n }];
-    case "submitIntake": submissions.push(a); if(submissions.length===1)throw Error("Synthetic lost response");return { ok: true, num: 7n, detail: "" };
+    case "submitIntake": submissions.push(a); if(submissions.length===1)throw Error("Synthetic lost response");if(recoveryReject)return {ok:false,num:0n,detail:'Context policy changed'};return { ok: true, num: 7n, detail: "" };
     case "publicIntake": case "getIntake": return [{revision:0n,origins:[],contextKeys:[],privacyUrl:'',retentionDays:0n,graceUntil:0n}];
     case "deliveryStatus": return routedFixture?[{state:"blocked",attempts:1n,ticketId:0n,url:"",detail:"Check the project"}]:[];
     case "getDeskTarget": case "submissionContext": case "mySubmission": return [];
@@ -48,7 +48,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
 const startUrl = mode === "public" ? "https://forms.test/#/f/abcdef0123456789" : "https://forms.test/#uht=" + "ab".repeat(20);
 const dom = new JSDOM(html, { url: startUrl, runScripts: "outside-only", pretendToBeVisual: true });
 const { window } = dom;
-globalThis.window = window; globalThis.document = window.document; globalThis.location = window.location; globalThis.history = window.history; globalThis.localStorage = window.localStorage;
+globalThis.window = window; globalThis.document = window.document; globalThis.location = window.location; globalThis.history = window.history; globalThis.localStorage = window.localStorage; globalThis.sessionStorage = window.sessionStorage;
 globalThis.setInterval = () => 0; window.scrollTo = () => {}; window.Element.prototype.scrollIntoView = () => {}; globalThis.confirm = () => true; globalThis.alert = (m) => { throw new Error("alert: " + m) };
 globalThis.Blob = window.Blob; globalThis.URL = window.URL; window.URL.createObjectURL = () => "blob:smoke"; globalThis.URL.createObjectURL = () => "blob:smoke"; window.URL.revokeObjectURL = () => {};
 Object.defineProperty(globalThis, "navigator", { value: { clipboard: { writeText: async () => {} } }, configurable: true });
@@ -73,10 +73,24 @@ if (mode === "public") {
   const radio = document.querySelector('#fillWrap input[name="q2"]'); radio.checked = true; radio.dispatchEvent(new window.Event("change"));
   $("fNext").click(); for (let i = 0; i < 6; i++) await tick();
   check($('fNext').textContent==='RETRY SAME RESPONSE' && $('idName').disabled,'uncertain submission retains a frozen draft');
+  const recoveryKey='ks-forms-pending-'+form.slug;
+  check(!!sessionStorage.getItem(recoveryKey),'pending response saved before retry');
+  recoveryClosed=true; recoveryReject=true;
+  await go('/f/'+form.slug);
+  check($('fNext')?.textContent==='RETRY SAME RESPONSE' && !$('idName'),'re-entering form restores pending response without new editable submission');
+  $('fNext').click();for(let i=0;i<6;i++)await tick();
+  check(!!sessionStorage.getItem(recoveryKey) && $('fNext')?.textContent==='RETRY SAME RESPONSE','rejection after unknown receipt preserves recovery identity rather than starting another response');
+  recoveryReject=false;
   $('fNext').click();for(let i=0;i<6;i++)await tick();
   check(JSON.stringify(submissions[0])===JSON.stringify(submissions[1]),'retry resends the exact accepted-or-pending payload');
+  check(JSON.stringify(submissions[0])===JSON.stringify(submissions[2]),'closed/changed form retry preserves all original arguments');
   check(calls.includes("submitIntake") && /Submission received/.test($("fillWrap").textContent) && /#7/.test($("fillWrap").textContent), "submitted + thank-you with number: " + $("fillWrap").textContent.slice(0, 80));
   check(window.localStorage.getItem("ks-forms-sub-abcdef0123456789"), "edit token kept on the device");
+  check(!sessionStorage.getItem(recoveryKey),'confirmed response removes tab recovery copy');
+  sessionStorage.setItem(recoveryKey,JSON.stringify({v:1,at:Date.now()-25*3600000,requestId:'ab'.repeat(32),pending:{slug:form.slug,name:'',email:'',payload:'{}',context:[],website:''}}));
+  await go('/f/'+form.slug);
+  check(!$('fNext') && /no longer be retried safely/.test($('fillWrap').textContent),'expired response requires explicit clearing instead of silently starting a duplicate');
+  check(!sessionStorage.getItem(recoveryKey).includes('payload'),'expiry removes saved answer contents');
 } else {
   check($("layout").classList.contains("on") && $("login").style.display === "none", "layout shown after ticket login");
   check(!!document.querySelector("#topbar .ks-topbar") && /Forms/.test($("ks-appName").textContent) && $("ks-badge").textContent === "2", "shared topbar with bell count");

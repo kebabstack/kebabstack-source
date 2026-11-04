@@ -881,6 +881,40 @@ function renderInsights() {
 /* ============================== public fill ============================== */
 let FILL = null; // { slug, meta, schema, pageIdx, hist, A, editToken, editing }
 
+// Tab-scoped recovery only: never put response contents in persistent localStorage.
+const pendingKey = slug => 'ks-forms-pending-' + slug;
+const PENDING_TTL = 24 * 60 * 60 * 1000;
+function readPending(slug) {
+  let raw;
+  try { raw = sessionStorage.getItem(pendingKey(slug)); } catch { return null; }
+  if (!raw) return null;
+  try {
+    const saved = JSON.parse(raw);
+    if (saved.v !== 1 || saved.pending?.slug !== slug || !/^[0-9a-f]{64}$/.test(saved.requestId) ||
+        !Number.isFinite(saved.at) || typeof saved.pending.payload !== 'string' ||
+        typeof saved.pending.name !== 'string' || typeof saved.pending.email !== 'string' ||
+        typeof saved.pending.website !== 'string' || !Array.isArray(saved.pending.context)) throw Error('Invalid recovery');
+    if (Date.now() - saved.at > PENDING_TTL || saved.at > Date.now()) {
+      sessionStorage.setItem(pendingKey(slug), JSON.stringify({expired:true}));
+      return {expired:true};
+    }
+    return saved;
+  } catch { return {expired:true}; }
+}
+function clearPending() { try { sessionStorage.removeItem(pendingKey(FILL.slug)); } catch {} }
+function renderPending(saved) {
+  FILL.recovering = true;
+  if (!saved.expired) {
+    FILL.pending = saved.pending; FILL.requestId = saved.requestId; FILL.pendingAt = saved.at;
+  }
+  $('fillWrap').innerHTML = `<div class="fillhead"><h2>${esc(FILL.meta.title)}</h2></div><div class="notice" role="status">${saved.expired ? 'The saved response can no longer be retried safely. Check with the form owner whether it was received before starting again.' : 'Receipt of your previous response has not been confirmed. Retry sends the identical response, even if the form has since changed. Its recovery copy is available in this tab for 24 hours and removed after confirmation. Expired answers are cleared when you return.'}</div>${saved.expired ? '' : '<button class="pill primary" id="fNext">RETRY SAME RESPONSE</button>'}<button class="pill" id="discardPending">Clear recovery copy</button>`;
+  if ($('fNext')) $('fNext').onclick = doSubmit;
+  $('discardPending').onclick = () => {
+    if (!confirm('Your response may already have been received. Clearing this copy cannot undo that submission. Check with the form owner before sending another response. Clear the recovery copy?')) return;
+    clearPending(); location.reload();
+  };
+}
+
 async function enterFill(slug, urlTok, isPreview) {
   show("viewFill");
   const w = $("fillWrap");
@@ -920,6 +954,8 @@ async function enterFill(slug, urlTok, isPreview) {
     if(window.__formsResize)window.__formsResize.disconnect();
     window.__formsResize=new ResizeObserver(()=>window.parent.postMessage({type:'kebabstack.forms.resize',height:Math.ceil(document.querySelector('#fillShell').getBoundingClientRect().height)},parent));window.__formsResize.observe(document.querySelector('#fillShell'));
   }
+  const savedPending = readPending(slug);
+  if (savedPending) { renderPending(savedPending); return; }
   // edit lane: token from URL or a previous submission on this device
   let stored = null; try { stored = localStorage.getItem("ks-forms-sub-" + slug); } catch {}
   const tok = urlTok || stored;
@@ -1023,7 +1059,7 @@ function renderFillPage() {
     <span class="progress">SECTION ${si + 1} / ${secs.length}</span>
     <button class="pill primary" id="fNext">${nextTarget(s) === "s" ? (FILL.preview ? "FINISH PREVIEW" : FILL.editing ? "SAVE CHANGES" : "SUBMIT") : "NEXT →"}</button>
   </div>
-  <div style="margin-top:26px;font:400 11px var(--ks-mono);letter-spacing:.06em;color:var(--ks-fg-muted)">Your answers and any contact details or displayed context are sent to the form owner.</div>`;
+  <div style="margin-top:26px;font:400 11px var(--ks-mono);letter-spacing:.06em;color:var(--ks-fg-muted)">Your answers and any contact details or displayed context are sent to the form owner. While awaiting confirmation, a recovery copy is saved in this tab. It can be retried for 24 hours; confirmation removes it.</div>`;
   if(FILL.policy?.privacyUrl)html+='<p><a target="_blank" rel="noopener noreferrer" href="'+esc(FILL.policy.privacyUrl)+'">Privacy notice</a></p>';
   if(Number(FILL.policy?.retentionDays)>0)html+='<p class="kv">Responses are scheduled for deletion after '+Number(FILL.policy.retentionDays)+' days.</p>';
   w.innerHTML = html;
@@ -1146,7 +1182,9 @@ function nextTarget(s) {
 }
 
 async function doSubmit() {
+  const submittingFill = FILL;
   if (FILL.preview) { renderPreviewDone(); return; }
+  if (FILL.pendingAt && (Date.now() - FILL.pendingAt > PENDING_TTL || FILL.pendingAt > Date.now())) { try { sessionStorage.setItem(pendingKey(FILL.slug), JSON.stringify({expired:true})); } catch {} renderPending({expired:true}); return; }
   const btn = $("fNext");
   btn.disabled = true; btn.textContent = "SUBMITTING…";
   // answers for every visited-path question only? Keep everything the user answered.
@@ -1155,19 +1193,35 @@ async function doSubmit() {
     const a = backend;
     if (FILL.editing && FILL.editToken) {
       const r = await a.updateMySubmission(FILL.slug, FILL.editToken, payload);
+      if (FILL !== submittingFill) return;
       if (!r.ok) { toast(r.detail || "Update failed"); btn.disabled = false; btn.textContent = "SAVE CHANGES"; return; }
       renderDone(null, true);
       return;
     }
     const editToken = FILL.requestId;
     FILL.pending ||= {slug:FILL.slug,name:(FILL.idName || "").trim().slice(0,200),email:(FILL.idEmail || "").trim().slice(0,200),payload,context:FILL.context || [],website:$("intakeWebsite")?.value || ""};
+    FILL.pendingAt ||= Date.now();
+    try {
+      sessionStorage.setItem(pendingKey(FILL.slug), JSON.stringify({v:1,at:FILL.pendingAt,requestId:editToken,pending:FILL.pending}));
+    } catch { FILL.recoveryUnavailable = true; }
     const pending=FILL.pending;
     $("fillWrap").querySelectorAll('input,textarea,select,button').forEach(el=>{if(el!==btn)el.disabled=true;});
     const r = await a.submitIntake(pending.slug,pending.name,pending.email,pending.payload,editToken,pending.context,pending.website);
-    if (!r.ok) { FILL.pending=null;$("fillWrap").querySelectorAll('input,textarea,select,button').forEach(el=>el.disabled=false);toast(r.detail || "Submission failed"); btn.disabled = false; btn.textContent = "SUBMIT"; return; }
+    if (FILL !== submittingFill) return;
+    if (!r.ok) {
+      if (FILL.recovering) { renderPending({pending:FILL.pending,requestId:FILL.requestId,at:FILL.pendingAt}); toast(r.detail || "Receipt could not be confirmed. Contact the form owner."); return; }
+      clearPending(); FILL.pending=null; FILL.pendingAt=null; $('fillWrap').querySelectorAll('input,textarea,select,button').forEach(el=>el.disabled=false);toast(r.detail || "Submission failed"); btn.disabled = false; btn.textContent = "SUBMIT"; return;
+    }
+    clearPending();
     if (editToken && FILL.meta.allowEdit) { try {localStorage.setItem("ks-forms-sub-" + FILL.slug, editToken);} catch {} FILL.editToken = editToken; }
     renderDone(r.num, false);
-  } catch (e) { toast(FILL.pending ? "Receipt could not be confirmed. Retry the same response; it will not be duplicated." : "Could not save changes. Please retry."); btn.disabled = false; btn.textContent = FILL.pending ? "RETRY SAME RESPONSE" : "SAVE CHANGES"; }
+  } catch (e) {
+    if (FILL !== submittingFill) return;
+    if (FILL.pending) FILL.recovering = true;
+    toast(FILL.pending ? "Receipt could not be confirmed. Retry the same response; it will not be duplicated." : "Could not save changes. Please retry."); btn.disabled = false; btn.textContent = FILL.pending ? "RETRY SAME RESPONSE" : "SAVE CHANGES";
+    if ($('discardPending')) $('discardPending').disabled = false;
+    if (FILL.recoveryUnavailable && !$('recoveryWarning')) { const note=document.createElement('p');note.id='recoveryWarning';note.className='notice';note.setAttribute('role','status');note.textContent='This browser cannot save a recovery copy. Keep this tab open and retry here; reloading will lose these answers.';$('fillWrap').append(note); }
+  }
 }
 
 function renderDone(num, wasEdit) {
