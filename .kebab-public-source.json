@@ -1,6 +1,6 @@
 {
   "format": "kebab-public-source-v1",
-  "sourceCommit": "e7a2fda2cf5a55a9db7878c265000ac4257d50b4",
+  "sourceCommit": "4f8b7c998202500f09eebc9f5bbb271f7f1489b1",
   "historyIncluded": false,
   "marketplaceReady": false,
   "files": [
@@ -5796,7 +5796,7 @@
     },
     {
       "path": "tests/security.test.mjs",
-      "sha256": "9ed27837e9843a8717fe178499a0e809f4b2208bf2b975ee3acd0cefa7e9da43",
+      "sha256": "2be0436b5a0caede9fcec7af1e2848d0eb55bc072dc27127f554126c3d38529e",
       "mode": "100644"
     },
     {

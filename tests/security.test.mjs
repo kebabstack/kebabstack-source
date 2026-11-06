@@ -2999,7 +2999,9 @@ test('contracts: current populated upgrade preserves agreements, source bytes an
   const doc=(await app.getSource(adminTok,source.sourceId))[0].documents[0].id;
   await pic.upgradeCanister({upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]},sender:controller,canisterId:f.appId,wasm:candidateWasm('contracts')});
   await settled(pic);f.hub.setPrincipal(owner);const ticket=await f.hub.mintAppTicket('',f.connector.tileId);const token=(await app.loginWithTicket(ticket.ticket))[0].token;const scoped=(await app.openSpace(token,f.spaceId)).token;
-  assert.equal((await app.info()).version,'0.21.0');
+  const expectedVersion = /^version\s*=\s*"([^"]+)"/m.exec(readFileSync(resolve('contracts/mops.toml'), 'utf8'))?.[1];
+  assert.ok(expectedVersion, 'Contracts declares its release version');
+  assert.equal((await app.info()).version, expectedVersion);
   const kept=(await app.getContract(scoped,created.id))[0];assert.equal(kept.contract.terms.amountMinor[0],TERMS.amountMinor[0]);assert.equal(kept.documents[0].id,doc);
   assert.deepEqual(Buffer.from((await app.documentData(scoped,doc))[0].bytes),bytes);
   assert.deepEqual(await app.documentData('invalid-session',doc),[]);
