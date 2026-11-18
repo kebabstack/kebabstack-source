@@ -3,10 +3,8 @@
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical product mark and shared foundations, with the documented immersive-game visual exception. The game has its own guest/Internet Identity controls and no suite account bar.
 
 Launch a ladybug from DFINITY's Zurich rooftop into the Internet Computer universe.
-Version 0.20.4 offers **3D Immersive** and **2D Retro** as a standalone game. 0.20 is a
-presentation release (rendering, feel, audio, typography); flight rules, boards and
-publication rules are unchanged from 0.19. Existing installations and their game URL are retained.
-The 0.20.1 follow-up repairs the whole-page God Candle/Overdrive fade, released pointer controls, portable shader fades and narrow-screen HUD/sound controls. It keeps the same flight balance.
+**Genesis Relay · 0.21.0.** Choose 3D Immersive or 2D Retro to carry a build from DFINITY’s Zürich rooftop to an OpenSaaS application. Five historical stops trace DFINITY’s early work, Copper, Sodium, Genesis and Bitcoin integration. Five application missions follow across identity, OISY Wallet, Caffeine, Cloud Engines and OpenSaaS. The flight manual links each real milestone to its source and explains the fictional pickups. [Mission chronology and sources](JOURNEY.md)
+
 Choose a mode before launch or after a flight; your preference is remembered on this device.
 Both modes use the same selected player, optional local callsign and Internet Identity sign-in.
 3D keeps Season 2 and its Early flights archive; 2D has its own Season 1 board.
@@ -14,7 +12,7 @@ The mode buttons in the scoreboard browse either board without changing your fli
 Switching after a flight keeps it private unless you publish or save locally first.
 An active flight or publication cannot be interrupted by the mode switch.
 
-See [installation and custom domains](INSTALL.md) to connect your own instance.
+See [installation and custom domains](INSTALL.md) to connect your own instance. The [design review](../design/reviews/2026-11-18-bug-genesis-relay.md) covers flight, controls and the mission guide.
 
 Anyone can open the game URL and play as a guest. In **Player profile**, choose an
 optional name saved only in this browser, or **Sign in with Internet Identity**.
@@ -40,6 +38,8 @@ identity is stored locally; clearing browser data loses that identity. Internet 
 keys public ownership to the authenticated principal. A local name alone is not a login.
 
 ## 2D Retro
+
+A white-suited pilot rides a red ladybug capsule above a layered pixel panorama of the Zürich lakeshore and the Alps. Each of the ten stations has a skyline landmark and an engraved, rotating token. The opening trails follow the simulated launch at three angles.
 
 The 2D route has its own encounter rhythm: single walls or mines at least 600 m
 apart, recovery pickups and dedicated Motoko passages with 180 m hazard buffers.
@@ -113,9 +113,7 @@ Hidden/paused tabs and isolated long scheduling gaps do not lower quality.
 The publication rules ID is independent of the display/release version. Unchanged
 0.16.0–0.17.5 clients remain accepted, including still-valid tickets rejected by the
 previous version check. Future gameplay changes must explicitly version and review
-the rules; unknown rules remain rejected. 3D uses `moon-2026-09-30`; unchanged 2D uses
-`arcade-2026-09-09`. Both previous rules and records remain accepted. Season 2 is
-retained, so historical 3D bests reflect their earlier balance. Permanent rejection offers local saving
+the rules; unknown rules remain rejected. Genesis Relay submits `relay-3d-2026-11-18` or `relay-2d-2026-11-18` because pickup placement and the order of abilities change the challenge. The backend also accepts the two previous game identifiers and compatible older clients. Both boards retain historical bests earned on the previous courses. Permanent rejection offers local saving
 and a new flight; transient network failures retain an exact-payload retry.
 
 ## After dark
@@ -172,17 +170,15 @@ an inline retry. On phones, the screen scrolls as one page.
 - Phones have separate left/right touch buttons. Before the first flight on each phone page visit, choose **USE TILT** or **USE ARROWS INSTEAD**. Tilt asks for motion permission only after your click and waits for a usable neutral reading. The small phone icon on the left edge switches it off/on; no persistent steering banner covers the scene. Pause and resume to set a new neutral grip. Screen rotation pauses and recalibrates. If access is denied or readings stop, the arrows remain usable. Sensor readings stay in this page and are never sent or stored.
 - Hold F/J or the FIRE button to shoot red candles and Motoko. Use bursts: continuous firing overheats the blaster. Gold-ringed candles and the ghost need two hits. C changes camera; P/Escape pauses;
   R restarts; M toggles sound. Profile, help and scoreboard pause the flight.
-- Every gold ring adds 50 points and FLOW energy, without an immediate speed increase. Every launch remixes lanes and pickups. Steer toward risky coins or choose a safer line.
-- Coffee appears in about 70% of sections and floor pads in about 55%; airborne rewards sit lower and closer to the main flight lanes. Floor rescues are still lucky finds. Lift rewards diminish as the run gets longer, and air resistance increases with progress and time. Five manual boosts retain their power.
+- Every relay token adds 50 points and FLOW energy, without an immediate speed increase. Every launch remixes lanes and pickups. Steer toward risky coins or choose a safer line.
+- Each 200 m section has an 84% chance of airborne coffee and an 80% chance of a floor pad. Every third section after launch also has a low coffee pickup. The primary chapter relic follows one of the three token trails. Lift rewards diminish as the run gets longer, and air resistance increases with progress and time. Five manual boosts retain their power.
 - FLOW rewards clean flying: +4 per coin, +8 extra on every fifth consecutive coin (at most 2.5 seconds between coins), +20 for a close mine/candle pass after completely clearing it. At 100, Overdrive starts automatically for 3.2 seconds: an initial +22 m/s and up to +4 m/s² thrust / +2 m/s² lift, with the same late-run diminishing returns as pickups. Speed remains capped at 150 m/s. Hits cancel FLOW, shields preserve it, and a five-second recovery prevents chaining. No extra button or leaderboard multiplier is added.
 - Wind gives a two-second warning before a gust: tailwinds and updrafts help, while headwinds slow the flight. 3D crosswind intervals are calm; no weather force changes your lane.
 - Exploit mines start at 225 m: four on the floor per 200 m, plus one airborne red candle per 200 m from the second minefield. Red warning rings mark ground-mine footprints. Each row leaves three floor lanes open, including two neighbouring ones; the openings shift gradually and the outside edges are no longer permanently safe. Fly above a ground mine, steer through the openings or clear it with one pulse. A collision costs 40% momentum unless an Identity shield absorbs it. Defusing adds 15 K simulated cycles and a separate counter, without extra leaderboard points.
 - Motoko follows the supplied spacecraft references: compact pink/violet armour, a round dark visor, yellow eyes and a recessed cyan rear thruster. Velocity-aligned banking and twelve cyan/magenta exhaust ribbons follow the engine’s previous world positions, bending through turns with a brighter soft glow. Instanced engine details keep draw calls low; the wake stops on pause and is hidden with reduced motion.
 - Motoko first patrols from 500 to 1,600 m, then returns from 2,200 m in recurring patrols with quiet gaps. It flies world-space approach, strafe and recovery curves, alternating sides. Its nose follows its velocity. A pink cannon charges for 0.8 seconds before a two-shot burst aimed at the locked lane. The shot does not follow later sideways dodges. Only projectile contact costs 33% momentum; the ghost body is harmless. The burst is followed by a 1.8-second climb-out. A short impact grace period prevents both shots from stacking momentum penalties. Two player hits debug Motoko and cancel its incoming pulse. An Identity shield blocks one shot. Debugging it gives eight seconds of peace and 75 K **simulated** cycles, not leaderboard points.
 
-Ten chapters lead through Caffeine, Motoko, canisters, identity, OISY, Chain Fusion,
-Cloud Engines, NNS and Mainnet. Stars, planets, an accretion disc and boost trails
-surround the flight. A giant articulated DFINITY astronaut fades into the right-hand horizon from 750–1,100 m and has a rounded white helmet, curved infinity visor, padded suit and mirrored five-finger gloves. A relaxed shoulder/elbow/wrist wave repeats every ten seconds, with smooth preparation and settling. The outer route edges carry a restrained, slow RGB pulse that freezes on pause and stays static with reduced motion. Small satellites drift on the opposite side; occasional comets remain at the upper edges. These distant decorations have no collisions. Reduced motion holds the astronaut and satellites still and hides comet motion.
+Each chapter has its own relay token. The trails mark a flight line, and the larger artifacts grant the abilities listed in the flight manual. Three distinct tokens from one chapter link its relay once per flight. Depending on the station this attracts nearby tokens for two seconds, vents half a blaster heat bar and adds forward thrust, or provides a short updraft. The HUD tracks each link and the result lists how many stations were linked. All ten score-bearing token types use the same 50-point value. The 3D pilot in the distance wears a white pressure suit and a curved black visor with an illuminated infinity. It drifts outside the playable lanes and raises a hand once on the first encounter. Shoulders, elbows, wrists, hips and knees move independently. Reduced motion holds the pose. The bug remains the player character.
 
 The astronaut commander appears for 4.5 seconds at each new epoch, then fades away.
 It returns once when the grounded bug has little momentum and boosts remain. Routine
@@ -260,4 +256,4 @@ dependencies, rendered UI and upgrade/security tests are checked with each relea
 
 ### Public source artwork
 
-The flight guide uses the canonical Bug mark. The supplied third-party mascot portrait is omitted from this distribution because its redistribution license was not documented. Code-drawn scenery and ecosystem references do not imply endorsement. See [third-party notices](../THIRD_PARTY_NOTICES.md).
+The game keeps the canonical Bug mark. Its manual contains an original, locally bundled orbital illustration. The supplied astronaut portrait served as a visual reference. Code-drawn scenery and ecosystem references do not imply endorsement. See [third-party notices](../THIRD_PARTY_NOTICES.md).

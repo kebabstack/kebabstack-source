@@ -31,7 +31,10 @@ export class SpaceSky {
         const iw = image.naturalWidth * scale, ih = image.naturalHeight * scale;
         // Phone framing keeps the dark flight corridor and the bright galaxy edge.
         c.drawImage(image, (width - iw) * .56, (height - ih) * .32, iw, ih);
-        c.fillStyle = '#080c202c'; c.fillRect(0, 0, width, height);
+        // Preserve the Webb image while keeping small reward silhouettes readable against bright nebulae.
+        const tint=c.createLinearGradient(0,0,0,height);
+        tint.addColorStop(0,'#0b133047');tint.addColorStop(.52,'#101a385e');tint.addColorStop(1,'#10162b80');
+        c.fillStyle=tint;c.fillRect(0,0,width,height);
       }));
     }
     return this.cache.get(index);
@@ -79,10 +82,14 @@ export class SpaceSky {
     const elapsedDistance = run.d - region.at - 200;
     if (elapsedDistance > 580) return;
     const c = view.ctx; c.save(); c.globalAlpha = Math.min(1, elapsedDistance / 50, (580 - elapsedDistance) / 90);
-    const width = Math.min(410, view.w - 32), x = view.w - width - 16;
-    view.rect(x, 168, width, view.w < 700 ? 32 : 51, '#11152bc9');
-    view.text(region.title, view.w - 27, 177, region.color, view.w < 700 ? 9 : 11, 'right', true);
-    if (view.w >= 700) view.text(region.note, view.w - 27, 196, '#e1d5ed', 10, 'right');
+    // A small plate stays above the controls and below the chapter/HUD row.
+    // Keep the full Webb location note on a wide display; phones show its title.
+    const compact=view.w<700, width=compact?170:346, height=compact?22:36;
+    const x=view.w-width-16,y=view.baseGround-height-15;
+    view.rect(x,y,width,height,'#11152bd1',3);
+    view.rect(x,y,2,height,region.color);
+    view.text(region.title,x+9,y+4,region.color,compact?12:13);
+    if(!compact)view.text(region.note,x+9,y+19,'#e1d5ed',11);
     c.restore();
   }
 }

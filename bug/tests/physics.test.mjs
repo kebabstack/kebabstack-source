@@ -57,7 +57,7 @@ test('coffee, portal, hotfix and firewall effects have the documented direction'
   const r = fired(), before = r.speed; r.combo = 4;
   collect(r, { id: 'wall', kind: 'hazard' }); assert.ok(r.speed < before); assert.equal(r.combo, 0);
 });
-test('all ten story milestones remain ordered and mainnet continues indefinitely', () => {
+test('all ten story milestones remain ordered and the final mission continues indefinitely', () => {
   assert.equal(ZONES.length, 10); assert.equal(zoneIndex(199.9), 0); assert.equal(zoneIndex(200), 1);
   assert.equal(zoneIndex(4400), 9); assert.equal(zoneIndex(1000000), 9);
   const r = fired(); r.d = 4399.5; stepRun(r, STEP);
@@ -126,11 +126,41 @@ test('a canister stores one rescue, consumes it on landing, and cannot stack', (
   assert.deepEqual([...r.seals], ['canister']);
 });
 test('each ecosystem sector offers its own collectible mechanic', () => {
-  for (const [chunk, kind] of [[2, 'compiler'], [5, 'canister'], [7, 'identity'], [10, 'oisy'], [12, 'fusion'], [15, 'portal'], [19, 'neuron']]) {
-    assert.ok(makeObjects(DAY, chunk).some(o => o.kind === kind), `${chunk}: ${kind}`);
+  for (const [chunk, kind] of [[0, 'canister'], [1, 'compiler'], [2, 'neuron'], [4, 'canister'], [6, 'fusion'], [9, 'identity'], [12, 'oisy'], [15, 'coffee'], [18, 'portal'], [22, 'canister']]) {
+    assert.ok(makeObjects(DAY, chunk).some(o => o.kind === kind && o.d === chunk * 200 + 176), `${chunk}: ${kind}`);
   }
+  // At 1,350 m the rare early spawn can still be in Genesis while the primary relic is already in Chain Fusion.
+  const overlap = Array.from({length: 32}, (_, seed) => makeObjects(seed, 6)).flat().filter(o => o.d === 1312 && o.radius === 4);
+  assert.ok(overlap.length > 0 && overlap.every(o => o.kind === 'canister'));
   for (const kind of ['compiler', 'fusion', 'neuron']) {
     const r = fired(); collect(r, { id: kind, kind });
     assert.ok(r.speed > fired().speed); assert.ok(r.seals.has(kind));
+  }
+});
+
+test('the opening centre trail meets a normal unsteered launch and preserves the server coin positions', () => {
+  const r = fired(.65), start = makeObjects(DAY, 0);
+  const centre = start.filter(o => o.kind === 'cycle' && Math.abs(o.x) < 4);
+  assert.equal(centre.length, 7);
+  const reachedWithoutMagnet = new Set();
+  for (let i = 0; r.d < 102 && i < 500; i++) {
+    const before = {x:r.x, y:r.y, d:r.d};
+    stepRun(r, STEP, 0, start);
+    for (const coin of centre) {
+      if (segmentDistanceSq(before, r, coin) <= (coin.radius + 1.25) ** 2) reachedWithoutMagnet.add(coin.id);
+    }
+  }
+  assert.equal(reachedWithoutMagnet.size, 7, 'the flight itself intersects every centre token');
+  assert.ok(centre.every(coin => r.hits.has(coin.id)));
+  assert.ok(r.coins > centre.length, 'the linked launch relay also attracts adjacent cargo');
+  for (const day of [DAY, DAY + 1]) for (const chunk of [0, 1, 3, 10, 22, 40]) {
+    const coins = makeObjects(day, chunk).filter(o => o.kind === 'cycle');
+    assert.equal(coins.length, 21);
+    for (const [i, coin] of coins.entries()) {
+      assert.equal(coin.id, `${day}:${chunk}:${i}`);
+      assert.equal(coin.d, chunk * 200 + 50 + (i % 7) * 8);
+      if (i % 7) assert.ok(Math.abs(coin.x - coins[i - 1].x) < 1.3);
+    }
+    if (chunk) assert.ok(coins.some(c => c.y <= 6) && coins.some(c => c.y >= 25));
   }
 });

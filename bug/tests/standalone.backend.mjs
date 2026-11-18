@@ -28,7 +28,7 @@ try {
  assert.equal(ok(await a.arcadeProfile()).name,'ExistingGuest');
  for(let i=0;i<modes.length;i++){await wait();assert.equal(ok(await a.arcadePublish(modes[i],failed[i])).best.score,700n);}
  // Every shipped compatible UI version stays valid. Unknown or different gameplay stays rejected.
- for(const version of ['0.16.0','0.16.1','0.17.0','0.17.1','0.17.2','0.17.3','0.17.4','0.17.5',RULESET,RULESET_3D]){
+ for(const version of ['0.16.0','0.16.1','0.17.0','0.17.1','0.17.2','0.17.3','0.17.4','0.17.5','arcade-2026-09-09','moon-2026-09-30',RULESET,RULESET_3D]){
   await wait();const r=ok(await a.arcadeBegin());await pic.advanceTime(10000);assert.equal(ok(await a.arcadePublish(modes[0],submission(r,version))).flight.score,600n);
  }
  await wait();const r=ok(await a.arcadeBegin());await pic.advanceTime(10000);

@@ -1,10 +1,11 @@
+import { linkToken } from './relay.js';
 import { pickupPower, pressureOf, weatherAt } from './challenge.js';
 import { newGhost, stepGhost, ghostTarget, hitGhost } from './ghost.js';
 import { burnRate } from './scoring.js';
 import { makeMines } from './mines.js';
 import { newFlow, flowCoin, flowCandle, breakFlow, flowNearMiss, stepFlow } from './overdrive.js';
 import { isRedCandle, candleHit } from './candle.js';
-export const VERSION = '0.20.4';
+export const VERSION = '0.21.0';
 export const PROMPT_BOOSTS = 5;
 export const STEP = 1 / 120;
 export const START_HEIGHT = 21.2;
@@ -43,7 +44,7 @@ export function seededRandom(seed) {
 }
 export function createRun(day = Math.floor(Date.now() / 86400000), seed = day) {
   return { phase: 'ready', day, seed, chargeTime: 0, weaponHeat: 0, overheated: false, overheats: 0, wind: weatherAt(seed, 0), wallDamage: new Map(), x: 0, y: START_HEIGHT, d: 0, vx: 0, vy: 0, speed: 0,
-    charge: 0, angle: 38, elapsed: 0, prompts: PROMPT_BOOSTS, cycles: 0, coins: 0, coinIds: [], burnTotal: 0, ghost: newGhost(), flow: newFlow(true), combo: 0,
+    charge: 0, angle: 38, elapsed: 0, prompts: PROMPT_BOOSTS, cycles: 0, coins: 0, coinIds: [], relayTokens: new Uint8Array(ZONES.length), burnTotal: 0, ghost: newGhost(), flow: newFlow(true), combo: 0,
     bounces: 0, highest: START_HEIGHT, zone: 0, stillTime: 0, effects: [], hits: new Set(), minesCleared: 0, mineHits: 0, mineWarning: false,
     trail: [], trailClock: 0, boostTime: 0, hitTime: 0, shield: 0, magnetTime: 0, anchor: 0, seals: new Set(), projectiles: [], shotCooldown: 0, shotsFired: 0, destroyed: 0 };
 }
@@ -180,6 +181,8 @@ export function collect(run, obj) {
   if (obj.kind === 'cycle') {
     run.coins++; run.coinIds.push(obj.id); run.cycles += 10; run.combo++;
     flowCoin(run);
+    const chapter = zoneIndex(obj.d ?? run.d);
+    linkToken(run, chapter, ZONES[chapter], power);
   } else if (obj.kind === 'coffee') {
     run.speed = Math.min(150, run.speed + 15 * power); run.vy = Math.max(8 * power, run.vy) + 7 * power;
     run.effects.push({ kind: 'coffee', label: 'CAFFEINE BOOST', sub: '+200% productivity. Allegedly.' });
@@ -298,16 +301,30 @@ export function makeObjects(day, chunk) {
   const objects = [], start = chunk * 200;
   let id = 0;
   const add = (kind, x, y, d, radius) => objects.push({ id: `${day}:${chunk}:${id++}`, kind, x, y, d, radius });
+  const lanes = [];
   for (let lane = -1; lane <= 1; lane++) {
-    const x = lane * 17 + (random() - 0.5) * 4;
-    const baseY = chunk === 0 ? 26 + (lane + 1) * 8 : 9 + random() * 32;
-    for (let i = 0; i < 7; i++) add('cycle', x, baseY + Math.sin(i / 6 * Math.PI) * 9, start + 50 + i * 8, 2.7);
+    const x = lane * 17 + (random() - .5) * 3, tier = (lane + 1 + chunk) % 3;
+    const jitter = chunk === 0 ? 0 : random() * 2;
+    const height = chunk === 0 ? 45 + lane * 3 : [4, 14, 29][tier] + jitter;
+    const rise = chunk === 0 ? 16 + lane * 6 : (chunk % 2 ? 1 : -1) * [1, 5, 7][tier];
+    const curve = chunk === 0 && lane === 0 ? .75 : 2.3 * ((chunk + tier) % 2 ? -1 : 1);
+    for (let i = 0; i < 7; i++) {
+      const u = i / 6, bow = Math.sin(Math.PI * u);
+      add('cycle', x + curve * bow, height + rise * u + bow * (chunk === 0 ? 1.5 : 2), start + 50 + i * 8, 2.7);
+    }
+    lanes.push({x, y: height + rise});
   }
-  const zone = zoneIndex(start + 176);
-  const special = ['portal', 'coffee', 'compiler', 'canister', 'identity', 'oisy', 'fusion', 'portal', 'neuron', 'fusion'][zone];
-  if (random() < .84) add('coffee', (random() - .5) * 40, 6 + random() * 22, start + 123, 3.3);
-  add(special, (random() - .5) * 38, 6 + random() * 22, start + 176, 4.2);
-  if (chunk > 1 && chunk < 20 && random() < .35) add(special, (random() - .5) * 44, 5, start + 112, 4);
+  const zone = ZONES[zoneIndex(start + 176)];
+  // The primary relic follows one of the three lines. Keep seeded draws in the
+  // original order so a new token pattern doesn't reroll unrelated hazards.
+  const relic = (kind, d, radius) => {
+    const lane = lanes[Math.floor(random() * lanes.length)], variation = random();
+    add(kind, lane.x + (variation - .5) * 3, clamp(lane.y + variation * 3 - 1.5, 4, chunk ? 28 : 68), d, radius);
+  };
+  const special = zone.pickup;
+  if (random() < .84) relic('coffee', start + 123, 3.3);
+  relic(special, start + 176, 4.2);
+  if (chunk > 1 && chunk < 20 && random() < .35) add(ZONES[zoneIndex(start + 112)].pickup, (random() - .5) * 44, 5, start + 112, 4);
   // A visible low route offers recovery choices, without replenishing manual boosts.
   const floorLane = [-17,0,17][Math.floor(random()*3)];
   if (random() < .8) add('pad', floorLane, 1.5, start + 140, 5);

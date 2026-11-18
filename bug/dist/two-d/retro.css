@@ -28,3 +28,36 @@ body[data-mode="2d"] .mode-segments{border:2px solid #856586;box-shadow:3px 3px 
 body[data-mode="2d"] .mode-segments button[aria-pressed=true]{background:#ffd45c;box-shadow:2px 2px #bc7655}
 
 #world canvas{cursor:crosshair}
+
+.retro-chapter{display:none}
+body[data-mode="2d"].is-playing .retro-chapter{
+  display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;
+  align-items:center;column-gap:9px;position:absolute;z-index:3;right:max(16px,env(safe-area-inset-right));top:23px;
+  max-width:min(250px,34vw);padding:8px 12px 8px 8px;pointer-events:none;
+  background:#11182de8;color:#fff5e4;border:1px solid #96a6bd55;border-left:2px solid var(--sector-ink);
+  box-shadow:0 3px 0 #0c1328a6;font-family:var(--mono,ui-monospace,monospace)
+}
+.retro-chapter span{grid-row:span 2;text-align:center;color:var(--sector-ink);font:700 22px/1 ui-monospace,monospace}
+.retro-chapter small{color:var(--sector-ink);font-size:10px;line-height:1.25}
+.retro-chapter strong{font-size:13px;line-height:1.3;font-weight:600}
+@media(max-width:760px){body[data-mode="2d"].is-playing .retro-chapter{top:var(--compact-chapter-top,128px);right:12px;max-width:min(225px,55vw);padding:5px 8px 5px 5px;column-gap:4px}}
+@media(max-height:520px){body[data-mode="2d"].is-playing .retro-chapter{top:11px;right:12px;max-width:28vw}}
+@media(max-height:520px) and (max-width:650px){body[data-mode="2d"].is-playing .retro-chapter{display:none}}
+
+body[data-mode="2d"] #flightHud{
+  border:1px solid #8996b56b;border-top:2px solid #a5cacc;
+  background:linear-gradient(112deg,#111a2df5,#1b213bed);
+  box-shadow:0 4px 0 #0d142a91,inset 0 0 0 2px #10172b61
+}
+body[data-mode="2d"] #flightHud .flight-stat{border-left:1px solid #91a7c236;padding-left:12px}
+body[data-mode="2d"] #flightHud .flight-stat>span,
+body[data-mode="2d"] #flightHud .eyebrow{font:600 10px/1.25 var(--mono,ui-monospace,monospace);letter-spacing:.075em;color:#c5cfdb}
+body[data-mode="2d"] #flightHud .flight-stat strong{color:#fff4dd}
+body[data-mode="2d"] #flightHud .distance-block b{color:#ffdd86}
+body[data-mode="2d"].is-playing .control-dock{background:linear-gradient(110deg,#11192edb,#192039f2);border:1px solid #8297af75;border-top:2px solid #819ca8}
+body[data-mode="2d"].is-playing .flow-status,
+body[data-mode="2d"].is-playing .action-area>span{font-family:var(--mono,ui-monospace,monospace);letter-spacing:.025em}
+@media(max-width:700px){
+ body[data-mode="2d"] #flightHud .flight-stat{padding-left:7px}
+ body[data-mode="2d"] #flightHud .flight-stat>span,body[data-mode="2d"] #flightHud .eyebrow{font-size:9px}
+}

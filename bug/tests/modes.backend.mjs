@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';import {PocketIc,PocketIcServer,createId
 import {RULESET as SCORE_VERSION} from '../src/ruleset.js';
 import {APP_VERSION as VERSION} from '../src/app.js';
 const baselineVersion=process.env.KEBAB_MODES_BASELINE_VERSION||(process.env.KEBAB_MODES_BASELINE_WASM?'0.11.0':SCORE_VERSION);
-const wasm=new URL('../backend/dist/backend.wasm',import.meta.url).pathname,baseline=process.env.KEBAB_MODES_BASELINE_WASM||wasm;
+const wasm=process.env.KEBAB_CANDIDATE_WASM||new URL('../backend/dist/backend.wasm',import.meta.url).pathname,baseline=process.env.KEBAB_MODES_BASELINE_WASM||wasm;
 if(!process.env.KEBAB_MODES_BASELINE_WASM)console.log('Current release: fresh setup and populated restart; historical upgrade requires KEBAB_MODES_BASELINE_WASM.');
 import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
 const previousTmp=process.env.TMPDIR,testTmp=mkdtempSync(join(tmpdir(),'stb-modes-'));process.env.TMPDIR=testTmp;

@@ -14,11 +14,13 @@ export class FloatingLabels {
   texture(text, color) {
     const key = text + '|' + color;
     if (this.cache.has(key)) return this.cache.get(key);
-    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 160;
-    const ctx = canvas.getContext('2d');
-    ctx.font = '700 92px "Space Grotesk", "JetBrains Mono", Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round'; ctx.lineWidth = 16; ctx.strokeStyle = 'rgba(6,10,24,.85)'; ctx.strokeText(text, 256, 84);
-    ctx.fillStyle = color; ctx.fillText(text, 256, 84);
+    const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+    const font = '700 92px "Space Grotesk", "JetBrains Mono", Arial, sans-serif';
+    ctx.font = font;
+    canvas.width = Math.max(256, Math.ceil(ctx.measureText(text).width) + 40); canvas.height = 160;
+    ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round'; ctx.lineWidth = 16; ctx.strokeStyle = 'rgba(6,10,24,.85)'; ctx.strokeText(text, canvas.width / 2, 84);
+    ctx.fillStyle = color; ctx.fillText(text, canvas.width / 2, 84);
     const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace; texture.anisotropy = 2;
     this.cache.set(key, texture); return texture;
   }
@@ -26,7 +28,8 @@ export class FloatingLabels {
     if (!this.enabled) return;
     const slot = this.pool.find(s => s.life <= 0) || this.pool.reduce((a, b) => a.life < b.life ? a : b);
     slot.sprite.material.map = this.texture(text, color); slot.sprite.material.needsUpdate = true;
-    slot.sprite.position.set(x, y, z); slot.sprite.scale.set(6.4 * scale, 2 * scale, 1);
+    slot.sprite.position.set(x, y, z); slot.width = 2 * slot.sprite.material.map.image.width / slot.sprite.material.map.image.height;
+    slot.sprite.scale.set(slot.width * scale, 2 * scale, 1);
     slot.sprite.visible = true; slot.life = duration; slot.duration = duration; slot.vy = 5.5; slot.base = scale;
   }
   update(dt, reduced = false) {
@@ -35,7 +38,7 @@ export class FloatingLabels {
       slot.life -= dt; const t = 1 - Math.max(0, slot.life) / slot.duration;
       if (!reduced) { slot.sprite.position.y += slot.vy * dt; slot.vy *= Math.exp(-dt * 3); }
       const pop = 1 + Math.sin(Math.min(1, t * 4) * Math.PI) * .25;
-      slot.sprite.scale.set(6.4 * slot.base * pop, 2 * slot.base * pop, 1);
+      slot.sprite.scale.set(slot.width * slot.base * pop, 2 * slot.base * pop, 1);
       slot.sprite.material.opacity = t < .75 ? 1 : 1 - (t - .75) / .25;
       if (slot.life <= 0) slot.sprite.visible = false;
     }

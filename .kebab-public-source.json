@@ -1,6 +1,6 @@
 {
   "format": "kebab-public-source-v1",
-  "sourceCommit": "fb9ddecb42c50205d30b227d8b6a463a0bfddb66",
+  "sourceCommit": "81006c7e2ff5985b01cc67de5d20230db0873acf",
   "historyIncluded": false,
   "marketplaceReady": false,
   "files": [
@@ -61,7 +61,7 @@
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "cf3fbfd1bb0ad0b33d1053d2066ecc05abfe59fd9c0be21cca3f1124e33005f2",
+      "sha256": "1f95e54d2d526c0a70aed1a67ed601a3808831c2657401eac555bb8b9efc05de",
       "mode": "100644"
     },
     {
@@ -366,17 +366,22 @@
     },
     {
       "path": "bug/CHANGELOG.md",
-      "sha256": "5b7f64a444ccc72e633335b16ed1b4a55a0462859ef580b713bf0c7241def657",
+      "sha256": "6f30c9dfe20082717a0a7360e84aa8cffb9be6604ba36bf2f586da43afba7c77",
       "mode": "100644"
     },
     {
       "path": "bug/INSTALL.md",
-      "sha256": "db3d3d7dc329f632175a71e5adf5f3cd591cb1e35e63162ec54e5a19a2a42fd1",
+      "sha256": "99bd41a98033e2383170d45fcbe9650f6cd18a07c6b64382af1de4cf3c92f1fb",
+      "mode": "100644"
+    },
+    {
+      "path": "bug/JOURNEY.md",
+      "sha256": "200bb596165a6301ac9fdd708207a2a0c10ee13f7643044bce32230b9f019923",
       "mode": "100644"
     },
     {
       "path": "bug/README.md",
-      "sha256": "9e59e92fd9cf7e32de2631eb0ed3a961f33f7915399727a8f8d7b8a4e5f1285f",
+      "sha256": "9777f717bac8046224aaf920a7379f2aa7824ac625732091f6e7e36db8bd6454",
       "mode": "100644"
     },
     {
@@ -391,12 +396,12 @@
     },
     {
       "path": "bug/backend/lib/Rules.mo",
-      "sha256": "f874c92108403a3b43517992a9dda36f0faa5a02edd0a3510c87389b8f163f2e",
+      "sha256": "85db2dcf409f6eab0680694c93ea10f4692fb48684ef5099b16eac69522b2a60",
       "mode": "100644"
     },
     {
       "path": "bug/backend/main.mo",
-      "sha256": "513b24c9bb7ee2ec6738794d20e79a945f2677838adb1ddf0ba1e2aafdad9ccb",
+      "sha256": "51e1f67018d3a490f872e3a9578b293347b797bcebd3c19e59d938ee7759964e",
       "mode": "100644"
     },
     {
@@ -416,7 +421,7 @@
     },
     {
       "path": "bug/dist/CHANGELOG.md",
-      "sha256": "5b7f64a444ccc72e633335b16ed1b4a55a0462859ef580b713bf0c7241def657",
+      "sha256": "6f30c9dfe20082717a0a7360e84aa8cffb9be6604ba36bf2f586da43afba7c77",
       "mode": "100644"
     },
     {
@@ -426,7 +431,7 @@
     },
     {
       "path": "bug/dist/app.js",
-      "sha256": "c3590a9d2f83da5587fe07bea2dac1a276c956132dd991abfeca1ebe9bb7eb17",
+      "sha256": "b24b66ce21fde14a9e45a0b5b8375bbc057171afd8056e0a2b136954d9480d0b",
       "mode": "100644"
     },
     {
@@ -480,6 +485,11 @@
       "mode": "100644"
     },
     {
+      "path": "bug/dist/assets/orbital-relay.jpg",
+      "sha256": "a003abebbdd507fd95cd6f9c8777e15e7590f1c953ac1336a95b85a85dd1f4c7",
+      "mode": "100644"
+    },
+    {
       "path": "bug/dist/assets/two-d/deep-field.webp",
       "sha256": "6cf263535d6ba5c6dc4b0448fca3f6963b50f94909c030452bf0f182c7cb6f25",
       "mode": "100644"
@@ -515,13 +525,18 @@
       "mode": "100644"
     },
     {
+      "path": "bug/dist/astronaut.js",
+      "sha256": "08a024af485ef2afc8629841a8ecbf404ce9e1eaf506af7a9865141938ebcadc",
+      "mode": "100644"
+    },
+    {
       "path": "bug/dist/audio.js",
       "sha256": "22ef92d3b8b4ed8477144cdd6dfcd9354a05c0b6399111965f83a8df6e34d074",
       "mode": "100644"
     },
     {
       "path": "bug/dist/build-info.json",
-      "sha256": "a2915622274e2d25c60d21820abe535561e8f3ad8ddc4b45f23fb03c6b821c0e",
+      "sha256": "7702ca276b91c7a31fab39d1199065c8c6026733dbcfc1bf6236573358b2e426",
       "mode": "100644"
     },
     {
@@ -536,7 +551,7 @@
     },
     {
       "path": "bug/dist/celestial-crew.js",
-      "sha256": "0abdbc7eddfdb6f9af618a2179ab796556cea25662942827e2247af733eea15b",
+      "sha256": "88aa3f609d5ab2e42c85d3b0a5a0444db2b8781340c100622b175da32c04ee43",
       "mode": "100644"
     },
     {
@@ -571,7 +586,12 @@
     },
     {
       "path": "bug/dist/cosmos.js",
-      "sha256": "0a1874870ad948e4951e6e3ef3026d967b0542417ff897bf24089d469f9510e9",
+      "sha256": "c227576b31e58b06b4f3dc9cbd9db587aef8b34f028b1ddef3a88cd0a2700082",
+      "mode": "100644"
+    },
+    {
+      "path": "bug/dist/cycle-token.js",
+      "sha256": "73af2d24febcf70b8d91d2af255cb39b8f5b2bebf94eee71a21ecef8595bc073",
       "mode": "100644"
     },
     {
@@ -581,12 +601,12 @@
     },
     {
       "path": "bug/dist/ecosystem.js",
-      "sha256": "02011d98e4f334c8ad6d5ea8cc5a743fc533916530f8a119556d40c595b35a07",
+      "sha256": "bafada29d579a070971b1ba3f298bff1a4cf85bbd4d4d029338669d710942844",
       "mode": "100644"
     },
     {
       "path": "bug/dist/entry.js",
-      "sha256": "46a4d776b79af91f7ff0c691f207d206159e29b57bdb37f6576ea76d29bcf46c",
+      "sha256": "a5aace01cdcf850adaa94836d953f8297626617979104bb054cb269c5a41855a",
       "mode": "100644"
     },
     {
@@ -636,7 +656,7 @@
     },
     {
       "path": "bug/dist/index.html",
-      "sha256": "0d436c9a921bc6c62ac705f28218d77b697ea36eed8f15c0cddd1dd242fb755a",
+      "sha256": "0ed5e64544ab8837d7d90f399add64bcd9dd72ab32e6bb10ab713fa08c83b5e1",
       "mode": "100644"
     },
     {
@@ -646,7 +666,7 @@
     },
     {
       "path": "bug/dist/labels.js",
-      "sha256": "dd8986db9325415547069ee4661d8d1ccce4fe0f4bc278488a43ebb72283e73c",
+      "sha256": "fe4a3eda4ff9fbba9d8c818af96c56c7461319a1bdd427eb4df326d61e0b964c",
       "mode": "100644"
     },
     {
@@ -661,7 +681,7 @@
     },
     {
       "path": "bug/dist/main.js",
-      "sha256": "9bb340c66896b5ccd99d0028f1b88616620f87cc50f254b9b693cffc6f7bdea6",
+      "sha256": "27ca512a442738dbfe7031f842571e0ba513b93f2d78c352514498c87ff6adba",
       "mode": "100644"
     },
     {
@@ -691,7 +711,7 @@
     },
     {
       "path": "bug/dist/particles.js",
-      "sha256": "6865458fd5169b50ffd91f49efc7d33d9b748aea12fa4576f0ffe0756170a860",
+      "sha256": "efcbccd5eca4977a1cc0271d57292f65ccce0551988097813458b8db7a0992fa",
       "mode": "100644"
     },
     {
@@ -701,7 +721,7 @@
     },
     {
       "path": "bug/dist/physics.js",
-      "sha256": "370ef36ce5b0345b2a15547d35c08f8dfdd1d7e4856e0ec3c2daaaa282ab4af4",
+      "sha256": "ef921348093010b57313a20be97a5e6946fb653ad08b9673be9caea3977a50eb",
       "mode": "100644"
     },
     {
@@ -711,12 +731,17 @@
     },
     {
       "path": "bug/dist/polish.css",
-      "sha256": "67486f5c3dbca5c83695242cf1c39076153ff74892d59c3f3260363f8acbf740",
+      "sha256": "58c7ac6c2fff2ce758522ea8568b5c83a8ee6320bd9391c58c746a1474f30dcd",
       "mode": "100644"
     },
     {
       "path": "bug/dist/post-fx.js",
       "sha256": "ff4161a01611103d3457bb7f2a4f391a5b1d84ebc86e948ac5c16c881cde55ad",
+      "mode": "100644"
+    },
+    {
+      "path": "bug/dist/relay.js",
+      "sha256": "6724e49a000000f2c29989bb12966bf1243f3c11bf2e56a93b1c4053555b992f",
       "mode": "100644"
     },
     {
@@ -726,7 +751,7 @@
     },
     {
       "path": "bug/dist/ruleset.js",
-      "sha256": "22b66a893d8a98ac07bdaef866bd00132ebe291499a2ed32a5c780cfcb300a86",
+      "sha256": "b0c4c8f63102d1aca3b410cfa5575fd6a503f6293ee8ccdc4c208a007f6b0958",
       "mode": "100644"
     },
     {
@@ -736,7 +761,7 @@
     },
     {
       "path": "bug/dist/scene.js",
-      "sha256": "a7da772584330d8e22db6128b17d75dbcccd485514077cebba47c040803d912b",
+      "sha256": "aadb8ee1e8b7ce7ea815b705e2f801001f4c268f996ea5088987d6b861fe5d62",
       "mode": "100644"
     },
     {
@@ -771,7 +796,7 @@
     },
     {
       "path": "bug/dist/two-d/course.js",
-      "sha256": "e1da735446cb73546889c6b2216c64b9cbc33a32d26a4aaefea56c76c7e4fcf3",
+      "sha256": "91e91222682735de27789cfdee44d3ed3b3d428e21cacb11b8e3a9d16bfee2c1",
       "mode": "100644"
     },
     {
@@ -800,33 +825,43 @@
       "mode": "100644"
     },
     {
+      "path": "bug/dist/two-d/insignia.js",
+      "sha256": "d7760033e42d669d6ad6e6809657409542757f6643d4f9816c79a40902bf51b4",
+      "mode": "100644"
+    },
+    {
       "path": "bug/dist/two-d/launch-aim.js",
       "sha256": "8338538907ca9afc38274dd0f4de417711d0d1a220f2dbb88aceec5613bbad22",
       "mode": "100644"
     },
     {
       "path": "bug/dist/two-d/main.js",
-      "sha256": "a24be608cbdf7af7d114cad638bdd70802f07e46bc96a9e3959d07b77f0dba71",
+      "sha256": "ffe04857c3e6c666535f56228a31218dfb773a1a83d2ec81b49168e21bb3b2c1",
+      "mode": "100644"
+    },
+    {
+      "path": "bug/dist/two-d/panorama.js",
+      "sha256": "c1a73ef8ab91bde2348b6ea27f1e1d090659808bcad26eed3fa8457e5b5e374b",
       "mode": "100644"
     },
     {
       "path": "bug/dist/two-d/physics.js",
-      "sha256": "c4b280dc8297444515cb1a420820cb3daa13fbd89c7c1f1d2236743fefe05a82",
+      "sha256": "8d9337b0a6b26c705c5ac84a599993c5d888d150d8c49546a13b081ab663abf4",
       "mode": "100644"
     },
     {
       "path": "bug/dist/two-d/retro.css",
-      "sha256": "55e2d340d1579f9c55c4b9eb88f0fe764aacd2e0e5828ca9562cfaf902240231",
+      "sha256": "aebd4044e7ae4589a08eacef4a33ed2c6996d5dc7a71a6d43711cc87e743b440",
       "mode": "100644"
     },
     {
       "path": "bug/dist/two-d/scene.js",
-      "sha256": "50095cfec195315577230a6a70892610182d361f1c3eae84a5aea953b86eb6c6",
+      "sha256": "87cd0743a1566a0c2e66c669e1325dd2baae8541dee5e0ec01a9875581279948",
       "mode": "100644"
     },
     {
       "path": "bug/dist/two-d/space-sky.js",
-      "sha256": "9d890e989f5d69e813f022342aacec0268c72df3ed3485da20b84fac0f5a97bc",
+      "sha256": "65b3ed4823941c84edf43189a131a27af89cdbdb34168ceb47c4b553e64ff73e",
       "mode": "100644"
     },
     {
@@ -931,22 +966,22 @@
     },
     {
       "path": "bug/mops.toml",
-      "sha256": "230081604148513a05ced38c26695b86f7935b4782d14283d001f1b9c7dc9141",
+      "sha256": "5d7241b95cd2ee846bdf0b15b72ebba5b0320f238a502ba5e9638832a3deb8f5",
       "mode": "100644"
     },
     {
       "path": "bug/package-lock.json",
-      "sha256": "7db169b036cbdcca9bdcafde240a9cc269115d4d79c369a81e7795d41bec64ba",
+      "sha256": "82e9254d33a9a475ab6372e30d6b424253e53eedc6f0203422cbe26e03edfc4f",
       "mode": "100644"
     },
     {
       "path": "bug/package.json",
-      "sha256": "756cc50b4cf07e5900560ff79802bdc087a4df9a831826f7b35e4467103c3ca3",
+      "sha256": "2a515c717c70fe143e50974d8193977f8b4b862c4df1c311a1c77f7da765f08b",
       "mode": "100644"
     },
     {
       "path": "bug/src/app.js",
-      "sha256": "c3590a9d2f83da5587fe07bea2dac1a276c956132dd991abfeca1ebe9bb7eb17",
+      "sha256": "b24b66ce21fde14a9e45a0b5b8375bbc057171afd8056e0a2b136954d9480d0b",
       "mode": "100644"
     },
     {
@@ -1000,6 +1035,11 @@
       "mode": "100644"
     },
     {
+      "path": "bug/src/assets/orbital-relay.jpg",
+      "sha256": "a003abebbdd507fd95cd6f9c8777e15e7590f1c953ac1336a95b85a85dd1f4c7",
+      "mode": "100644"
+    },
+    {
       "path": "bug/src/assets/two-d/deep-field.webp",
       "sha256": "6cf263535d6ba5c6dc4b0448fca3f6963b50f94909c030452bf0f182c7cb6f25",
       "mode": "100644"
@@ -1035,6 +1075,11 @@
       "mode": "100644"
     },
     {
+      "path": "bug/src/astronaut.js",
+      "sha256": "08a024af485ef2afc8629841a8ecbf404ce9e1eaf506af7a9865141938ebcadc",
+      "mode": "100644"
+    },
+    {
       "path": "bug/src/audio.js",
       "sha256": "22ef92d3b8b4ed8477144cdd6dfcd9354a05c0b6399111965f83a8df6e34d074",
       "mode": "100644"
@@ -1051,7 +1096,7 @@
     },
     {
       "path": "bug/src/celestial-crew.js",
-      "sha256": "0abdbc7eddfdb6f9af618a2179ab796556cea25662942827e2247af733eea15b",
+      "sha256": "88aa3f609d5ab2e42c85d3b0a5a0444db2b8781340c100622b175da32c04ee43",
       "mode": "100644"
     },
     {
@@ -1081,7 +1126,12 @@
     },
     {
       "path": "bug/src/cosmos.js",
-      "sha256": "0a1874870ad948e4951e6e3ef3026d967b0542417ff897bf24089d469f9510e9",
+      "sha256": "c227576b31e58b06b4f3dc9cbd9db587aef8b34f028b1ddef3a88cd0a2700082",
+      "mode": "100644"
+    },
+    {
+      "path": "bug/src/cycle-token.js",
+      "sha256": "73af2d24febcf70b8d91d2af255cb39b8f5b2bebf94eee71a21ecef8595bc073",
       "mode": "100644"
     },
     {
@@ -1091,12 +1141,12 @@
     },
     {
       "path": "bug/src/ecosystem.js",
-      "sha256": "02011d98e4f334c8ad6d5ea8cc5a743fc533916530f8a119556d40c595b35a07",
+      "sha256": "bafada29d579a070971b1ba3f298bff1a4cf85bbd4d4d029338669d710942844",
       "mode": "100644"
     },
     {
       "path": "bug/src/entry.js",
-      "sha256": "46a4d776b79af91f7ff0c691f207d206159e29b57bdb37f6576ea76d29bcf46c",
+      "sha256": "a5aace01cdcf850adaa94836d953f8297626617979104bb054cb269c5a41855a",
       "mode": "100644"
     },
     {
@@ -1146,7 +1196,7 @@
     },
     {
       "path": "bug/src/index.html",
-      "sha256": "e207219ec0626534c7158920b9177779b0565241b9ac9143c4494d51f003b52f",
+      "sha256": "93c2ac71c1b7a4193c804be5b43fc666d6bb13a73391df69a053566fa5400c1e",
       "mode": "100644"
     },
     {
@@ -1156,7 +1206,7 @@
     },
     {
       "path": "bug/src/labels.js",
-      "sha256": "dd8986db9325415547069ee4661d8d1ccce4fe0f4bc278488a43ebb72283e73c",
+      "sha256": "fe4a3eda4ff9fbba9d8c818af96c56c7461319a1bdd427eb4df326d61e0b964c",
       "mode": "100644"
     },
     {
@@ -1171,7 +1221,7 @@
     },
     {
       "path": "bug/src/main.js",
-      "sha256": "9bb340c66896b5ccd99d0028f1b88616620f87cc50f254b9b693cffc6f7bdea6",
+      "sha256": "27ca512a442738dbfe7031f842571e0ba513b93f2d78c352514498c87ff6adba",
       "mode": "100644"
     },
     {
@@ -1201,7 +1251,7 @@
     },
     {
       "path": "bug/src/particles.js",
-      "sha256": "6865458fd5169b50ffd91f49efc7d33d9b748aea12fa4576f0ffe0756170a860",
+      "sha256": "efcbccd5eca4977a1cc0271d57292f65ccce0551988097813458b8db7a0992fa",
       "mode": "100644"
     },
     {
@@ -1211,7 +1261,7 @@
     },
     {
       "path": "bug/src/physics.js",
-      "sha256": "370ef36ce5b0345b2a15547d35c08f8dfdd1d7e4856e0ec3c2daaaa282ab4af4",
+      "sha256": "ef921348093010b57313a20be97a5e6946fb653ad08b9673be9caea3977a50eb",
       "mode": "100644"
     },
     {
@@ -1221,12 +1271,17 @@
     },
     {
       "path": "bug/src/polish.css",
-      "sha256": "67486f5c3dbca5c83695242cf1c39076153ff74892d59c3f3260363f8acbf740",
+      "sha256": "58c7ac6c2fff2ce758522ea8568b5c83a8ee6320bd9391c58c746a1474f30dcd",
       "mode": "100644"
     },
     {
       "path": "bug/src/post-fx.js",
       "sha256": "ff4161a01611103d3457bb7f2a4f391a5b1d84ebc86e948ac5c16c881cde55ad",
+      "mode": "100644"
+    },
+    {
+      "path": "bug/src/relay.js",
+      "sha256": "6724e49a000000f2c29989bb12966bf1243f3c11bf2e56a93b1c4053555b992f",
       "mode": "100644"
     },
     {
@@ -1236,12 +1291,12 @@
     },
     {
       "path": "bug/src/ruleset.js",
-      "sha256": "22b66a893d8a98ac07bdaef866bd00132ebe291499a2ed32a5c780cfcb300a86",
+      "sha256": "b0c4c8f63102d1aca3b410cfa5575fd6a503f6293ee8ccdc4c208a007f6b0958",
       "mode": "100644"
     },
     {
       "path": "bug/src/scene.js",
-      "sha256": "a7da772584330d8e22db6128b17d75dbcccd485514077cebba47c040803d912b",
+      "sha256": "aadb8ee1e8b7ce7ea815b705e2f801001f4c268f996ea5088987d6b861fe5d62",
       "mode": "100644"
     },
     {
@@ -1271,7 +1326,7 @@
     },
     {
       "path": "bug/src/two-d/course.js",
-      "sha256": "e1da735446cb73546889c6b2216c64b9cbc33a32d26a4aaefea56c76c7e4fcf3",
+      "sha256": "91e91222682735de27789cfdee44d3ed3b3d428e21cacb11b8e3a9d16bfee2c1",
       "mode": "100644"
     },
     {
@@ -1300,33 +1355,43 @@
       "mode": "100644"
     },
     {
+      "path": "bug/src/two-d/insignia.js",
+      "sha256": "d7760033e42d669d6ad6e6809657409542757f6643d4f9816c79a40902bf51b4",
+      "mode": "100644"
+    },
+    {
       "path": "bug/src/two-d/launch-aim.js",
       "sha256": "8338538907ca9afc38274dd0f4de417711d0d1a220f2dbb88aceec5613bbad22",
       "mode": "100644"
     },
     {
       "path": "bug/src/two-d/main.js",
-      "sha256": "a24be608cbdf7af7d114cad638bdd70802f07e46bc96a9e3959d07b77f0dba71",
+      "sha256": "ffe04857c3e6c666535f56228a31218dfb773a1a83d2ec81b49168e21bb3b2c1",
+      "mode": "100644"
+    },
+    {
+      "path": "bug/src/two-d/panorama.js",
+      "sha256": "c1a73ef8ab91bde2348b6ea27f1e1d090659808bcad26eed3fa8457e5b5e374b",
       "mode": "100644"
     },
     {
       "path": "bug/src/two-d/physics.js",
-      "sha256": "c4b280dc8297444515cb1a420820cb3daa13fbd89c7c1f1d2236743fefe05a82",
+      "sha256": "8d9337b0a6b26c705c5ac84a599993c5d888d150d8c49546a13b081ab663abf4",
       "mode": "100644"
     },
     {
       "path": "bug/src/two-d/retro.css",
-      "sha256": "55e2d340d1579f9c55c4b9eb88f0fe764aacd2e0e5828ca9562cfaf902240231",
+      "sha256": "aebd4044e7ae4589a08eacef4a33ed2c6996d5dc7a71a6d43711cc87e743b440",
       "mode": "100644"
     },
     {
       "path": "bug/src/two-d/scene.js",
-      "sha256": "50095cfec195315577230a6a70892610182d361f1c3eae84a5aea953b86eb6c6",
+      "sha256": "87cd0743a1566a0c2e66c669e1325dd2baae8541dee5e0ec01a9875581279948",
       "mode": "100644"
     },
     {
       "path": "bug/src/two-d/space-sky.js",
-      "sha256": "9d890e989f5d69e813f022342aacec0268c72df3ed3485da20b84fac0f5a97bc",
+      "sha256": "65b3ed4823941c84edf43189a131a27af89cdbdb34168ceb47c4b553e64ff73e",
       "mode": "100644"
     },
     {
@@ -1376,7 +1441,7 @@
     },
     {
       "path": "bug/tests/celestial-crew.test.mjs",
-      "sha256": "e59ea2c7c488fb3a420a7c216ec32158be2a8000c4c42593af31280b0af36069",
+      "sha256": "577cc333010500a12711123d849cac1138166ffa6ceeb5e918f2517023dcb3f9",
       "mode": "100644"
     },
     {
@@ -1386,7 +1451,7 @@
     },
     {
       "path": "bug/tests/coin-instances.test.mjs",
-      "sha256": "7f1b62b437dcbe09436d3237ee1b0809d04d1b3e67e00505f7f26594a6762b6c",
+      "sha256": "ec63fdf4a67f390c26069f13ef098b185566520bfbc566bc5bcf77e854affb62",
       "mode": "100644"
     },
     {
@@ -1415,6 +1480,11 @@
       "mode": "100644"
     },
     {
+      "path": "bug/tests/journey.test.mjs",
+      "sha256": "93a6bd32567f775f2edbe7ed08d55aba8193d8a5190553747951982a311fb269",
+      "mode": "100644"
+    },
+    {
       "path": "bug/tests/launch-guide.test.mjs",
       "sha256": "89c973c1a77fa5fe5b9ef92ba8a62ad359ba485e9f6bc2d536f53428f081aa82",
       "mode": "100644"
@@ -1431,12 +1501,12 @@
     },
     {
       "path": "bug/tests/modes.backend.mjs",
-      "sha256": "db6ee75ec39b25af1592efc48cf245c007738e5de2da1b02df236d87e53e8375",
+      "sha256": "26d2da77297190d71d9c0a99c19f8b42592fc7d3192ce5aef7870f00ef24b8c2",
       "mode": "100644"
     },
     {
       "path": "bug/tests/modes.test.mjs",
-      "sha256": "48ebd2df89d986b7a4d86193dd2c8ed7bbc69bf990ebe77292f50732bec01b0f",
+      "sha256": "083f245acd7f8309531f97c376c65d361498d18cd6c1760ba9e91398577579db",
       "mode": "100644"
     },
     {
@@ -1456,7 +1526,7 @@
     },
     {
       "path": "bug/tests/physics.test.mjs",
-      "sha256": "18934d451679ec1d6e95ed20dea26324210906a84601c6d6bc998f35c47c4aa4",
+      "sha256": "53186df9354ff6cafd3ea0330f05a0850fb9bf3e6b5a8e4eb1b4b9919708c2a9",
       "mode": "100644"
     },
     {
@@ -1481,12 +1551,12 @@
     },
     {
       "path": "bug/tests/standalone.backend.mjs",
-      "sha256": "15ad88a242235e26595b710a8f936050dafd7e57a9df68ce13fa04bf64987644",
+      "sha256": "b834a8cf73834b101edfd80d85d65b3b01c8cd619aa419363537d1715694a698",
       "mode": "100644"
     },
     {
       "path": "bug/tests/two-d-course.test.mjs",
-      "sha256": "40d1a1acc70bc72b2ec5a4549ccca6c47bb16fb07746ab7f4b93c301f1544c15",
+      "sha256": "fb6c1655140daf22689ec00e0f1fdc08e2fb8725a61637269afa0e5e1a3f5b62",
       "mode": "100644"
     },
     {
@@ -1516,7 +1586,7 @@
     },
     {
       "path": "bug/tools/build.mjs",
-      "sha256": "465d41b9279f7952b4c4d3e91a8be60ffeefe049a40b590ae997c23fbc8a9064",
+      "sha256": "ddf12767a1389a82c813204d5baa5930f7977318a45c434ccca5e4fff1194ac1",
       "mode": "100644"
     },
     {
@@ -3350,6 +3420,11 @@
       "mode": "100644"
     },
     {
+      "path": "design/reviews/2026-11-18-bug-genesis-relay.md",
+      "sha256": "2400ea4ef6a377ca17a44888e0485d97766c638d7bcb78f1d6836c10aa0fa539",
+      "mode": "100644"
+    },
+    {
       "path": "design/reviews/2026-11-18-workspace-relaunch.md",
       "sha256": "e4e58a38ad376ccb215542c2d3cf25240128b1c1e90be93cc812979c3a610841",
       "mode": "100644"
@@ -4161,7 +4236,7 @@
     },
     {
       "path": "docs/source-asset-reviews.json",
-      "sha256": "adaecb7535eb07c5562ae247c469d1b5afe9fb2caa62a4f4523da0ab5941ba4b",
+      "sha256": "81fc10045ad85ebff821d037e22ca125c2ce7f32fc6565ad2d8f79fe60f0200e",
       "mode": "100644"
     },
     {

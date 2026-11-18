@@ -46,7 +46,9 @@ are original game illustration, not telescope data. The optional game's three We
 photographs use CC BY 4.0 and retain their original metadata; see the complete
 [credits and source links](bug/src/assets/webb/CREDITS.md), also shown in the game.
 The supplied third-party astronaut portrait is not included: its redistribution
-license was not documented. The flight guide uses the canonical Bug mark instead.
+license was not documented. The pressure-suit geometry is drawn in code. The
+flight manual uses a new, generated orbital illustration, bundled locally as
+`bug/src/assets/orbital-relay.jpg`. The canonical Bug mark identifies the game.
 
 References to Internet Computer, DFINITY, OpenCloud and other vendors identify
 platforms or integrations. They do not imply endorsement or transfer trademark

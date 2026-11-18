@@ -1,5 +1,7 @@
 # Install or upgrade Ship the Bug
 
+Version 0.21.0 ships Genesis Relay in both modes of the existing **bug** installation. Upgrade this backend and frontend together using Kitchen. Keep the same canisters, hostname, boards and profiles. The course changes collectible placement and the sequence of flight abilities. The old publication rules and their tickets remain valid within the normal ticket lifetime. New clients submit `relay-3d-2026-11-18` or `relay-2d-2026-11-18`. The upgrade adds accepted identifiers and preserves the stable schema. The legacy standalone `bug2d` installation is independent.
+
 Version 0.20.2 synchronizes the bundled suite client without changing standalone sign-in or game rules. Version 0.20.1 fixes the boost fade, input release, shader portability and narrow
 layouts. Upgrade recipe **bug** in place; preserve both canisters, origin, boards and profiles. No
 schema or ruleset change is required. The backend differs only in BUILD_VERSION.

@@ -1,3 +1,4 @@
+import { TOKENS_TO_LINK } from '../relay.js';
 import { gameReady, loadingFailed } from '../loading.js';
 import { MODE, mountModeSwitcher, updateModeSwitchers } from '../mode.js';
 import { registerGameTools } from './game-tools.js';
@@ -183,7 +184,7 @@ function finish() {
   const r = state.run, score = scoreOf(r), previous = best.read(), record = !r.practice && score > previous;
   if (record) best.write(score);
   document.body.classList.toggle('new-best', record);
-  $('resultTitle').textContent = record && previous > 0 ? 'NEW HIGH SCORE!' : r.zone >= 9 ? 'Hello, mainnet.' : r.zone >= 3 ? 'Well, it shipped.' : 'A promising bug.';
+  $('resultTitle').textContent = record && previous > 0 ? 'NEW HIGH SCORE!' : r.zone === ZONES.length-1 ? 'OpenSaaS delivery complete.' : r.zone >= 3 ? 'Well, it shipped.' : 'A promising bug.';
   $('resultQuip').textContent = (record && previous > 0 ? `You beat your previous best of ${fmt(previous)} points. ` : 'Out of momentum. ') + (r.mineHits ? 'Red rings mark mines. Try a gap or one well-timed pulse.' : r.ghost.hits ? 'Try two quick pulses when Motoko circles in front.' : r.overheats > 1 ? 'Use shorter bursts so the blaster is ready when it matters.' : r.prompts ? 'You still had a boost. Save the next landing!' : 'A cleaner route or a lucky updraft could carry the next bug further.');
   countUp($('resultScore'), score, fmt, 1.1);
   audio.finish(r.zone >= 3 || record);
@@ -193,6 +194,8 @@ function finish() {
   $('resultZone').textContent = ZONES[r.zone].name;
   $('resultTime').textContent = Math.round(r.elapsed) + ' sec';
   $('resultCombat').textContent = `${r.destroyed} firewalls patched · ${r.minesCleared} mines defused · ${r.ghost.kills} ghosts debugged · ${r.shotsFired} pulses fired · ${r.flow.activations} overdrives · ${r.flow.nearMisses} close calls · ${fmt(r.burnTotal)} K simulated cycles`;
+  const links = r.relayTokens.filter(count => count === TOKENS_TO_LINK).length;
+  $('relayReport').textContent = `Relay stations linked: ${links} of ${ZONES.length}.`;
   $('resultSeals').replaceChildren();
   for (const kind of r.seals) {
     const badge = document.createElement('span'); badge.textContent = POWERUPS[kind]?.name || kind;
@@ -204,28 +207,38 @@ function finish() {
 }
 $('resultDialog').addEventListener('cancel', e => { e.preventDefault(); if (!state.run.publishing) reset(); });
 
-ZONES.forEach(z => {
-  const article = document.createElement('article');
-  const glyph = document.createElement('span'); glyph.className = 'atlas-glyph'; glyph.textContent = z.glyph; glyph.style.color = z.color;
-  const content = document.createElement('div');
-  const heading = document.createElement('b'); heading.textContent = z.name;
-  const fact = document.createElement('p'); fact.textContent = z.fact;
-  const link = document.createElement('a'); link.href = z.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Explore the real technology ↗';
-  content.append(heading, fact, link); article.append(glyph, content); $('atlas').append(article);
-});
 ZONES.forEach((z, i) => {
-  const dot = document.createElement('i'); dot.dataset.label = z.key.toUpperCase(); dot.dataset.zone = i;
+  const dot = document.createElement('i'); dot.dataset.label = z.name.toUpperCase(); dot.dataset.zone = i;
   $('journeyLine').append(dot);
 });
+// This readout is DOM text rather than half-resolution canvas lettering.
+const chapterReadout=document.createElement('div');
+chapterReadout.className='retro-chapter';
+const chapterSymbol=document.createElement('span'),chapterPeriod=document.createElement('small'),chapterName=document.createElement('strong');
+chapterSymbol.setAttribute('aria-hidden','true');chapterReadout.append(chapterSymbol,chapterPeriod,chapterName);
+$('flightHud').after(chapterReadout);
+// Touch HUDs can wrap to two rows as fonts load. Anchor under the actual panel.
+function alignChapterReadout(){
+ const hud=$('flightHud').getBoundingClientRect(),main=chapterReadout.offsetParent;
+ if(main&&hud.height)chapterReadout.style.setProperty('--compact-chapter-top',(hud.bottom-main.getBoundingClientRect().top+8)+'px');
+}
+if(typeof ResizeObserver==='function')new ResizeObserver(alignChapterReadout).observe($('flightHud'));
+window.addEventListener('resize',alignChapterReadout);
+let displayedChapter='';
 function updateHUD() {
   updateModeSwitchers(state.run);
   $('angle').disabled = !['ready', 'charging'].includes(state.run.phase);
   const r = state.run, z = ZONES[r.zone], next = ZONES[r.zone + 1];
+  if(displayedChapter!==z.key){
+    displayedChapter=z.key;chapterSymbol.textContent=z.glyph;chapterPeriod.textContent=z.period;
+    chapterName.textContent=z.name;chapterReadout.style.setProperty('--sector-ink',z.color);
+  }
   $('score').textContent = fmt(scoreOf(r)); $('distance').textContent = fmt(r.d); $('coins').textContent = fmt(r.coins);
   $('speed').textContent = Math.round(r.speed) + ' m/s';
-  $('zoneName').textContent = z.name; $('zoneTag').textContent = z.tag; $('stageDot').style.background = z.color;
+  $('relayProgress').textContent = `LINK ${r.relayTokens[r.zone]}/${TOKENS_TO_LINK}`;
+  $('zoneName').textContent = z.name; $('zoneTag').textContent = z.period + ' · ' + z.tag; $('stageDot').style.background = z.color;
   $('zoneProgress').style.width = next ? `${clamp((r.d - z.at) / (next.at - z.at), 0, 1) * 100}%` : '100%';
-  $('nextZone').textContent = next ? `NEXT: ${next.name.toUpperCase()} · ${fmt(next.at - r.d)} m` : 'ENDLESS MAINNET · KEEP SHIPPING';
+  $('nextZone').textContent = next ? `NEXT: ${next.name.toUpperCase()} · ${fmt(next.at - r.d)} m` : 'OPENSAAS DISPATCH · ENDLESS ROUTE';
   $('actionFill').style.transform = `scaleX(${r.phase === 'charging' ? r.charge : 0})`;
   $('actionText').textContent = r.phase === 'charging' ? (r.charge >= .94 ? 'PERFECT — RELEASE!' : `CHARGING ${Math.round(r.charge * 100)}%`) : r.phase === 'flying' ? (r.prompts > 0 ? (needsBoost(r) ? 'BOOST NOW' : 'PROMPT BOOST') : 'OUT OF PROMPTS') : 'HOLD TO CHARGE';
   $('actionHint').textContent = r.phase === 'flying' ? (needsBoost(r) ? 'BOOST NOW — YOUR BUG IS SLOWING DOWN' : 'SPACE / TAP TO BOOST · F TO FIRE') : (document.body.classList.contains('touch') ? 'DRAG TO AIM · HOLD, THEN RELEASE NEAR FULL' : 'AIM WITH MOUSE · HOLD, THEN RELEASE NEAR FULL');
@@ -249,7 +262,7 @@ function updateHUD() {
   document.body.classList.toggle('overdrive-active',r.phase==='flying'&&flow.active>0);
   $('flightWeather').textContent = r.phase === 'flying' ? r.wind.label : 'ZÜRICH';
   $('flightWeather').classList.toggle('incoming', r.phase === 'flying' && r.wind.warning);
-  $('flightPressure').textContent = r.phase === 'flying' ? ['CRUISE', 'TURBULENT', 'REDLINE'][Math.min(2, Math.floor(pressureOf(r)))] : 'MAINNET';
+  $('flightPressure').textContent = r.phase === 'flying' ? ['CRUISE', 'TURBULENT', 'REDLINE'][Math.min(2, Math.floor(pressureOf(r)))] : 'OPENSAAS';
   const abilities = [r.shield ? '⌘ IDENTITY SHIELD' : '', r.anchor ? '▥ STATE SAVED' : '', r.magnetTime > 0 ? `◉ OISY MAGNET ${Math.ceil(r.magnetTime)}s` : ''].filter(Boolean);
   $('abilityHud').textContent = abilities.join('   /   ');
   const target = findTarget(r, view.objects);
@@ -272,7 +285,7 @@ function processEvents() {
     view.event(e, state.run);
     if (e.kind === 'zone') {
       commander.update(state.run);
-      const z = ZONES[e.index]; banner.show(`STAGE ${String(e.index + 1).padStart(2, '0')}`, z.name.toUpperCase(), z.tag, z.color);
+      const z = ZONES[e.index]; banner.show(z.period.toUpperCase(), z.name.toUpperCase(), z.tag, z.color);
       audio.zone();
     } else if (e.kind === 'shot') audio.shot();
     else if (e.kind === 'launch') { audio.launch(e.label === 'PERFECT DEPLOY'); toast(e.label, e.sub, 2); }

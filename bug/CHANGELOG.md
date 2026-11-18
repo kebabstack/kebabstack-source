@@ -1,5 +1,13 @@
 # Changelog — kebab-stack bug (Ship the Bug)
 
+## [0.21.0] — 2026-11-18
+
+- Fly Genesis Relay in either mode. Five documented milestones lead into five application missions. The flight manual shows the route, collectible names, abilities and primary sources.
+- Follow chapter-specific relay tokens in 3D and 2D. Each carries the same 50 points. Link three in a chapter for a brief magnet, cooling thrust or updraft. The HUD tracks the link and the flight result counts completed stations. Special pickups follow the mission’s technology and the history and application routes share a source.
+- Give the distant 3D astronaut an articulated suit, a curved infinity visor and one slow greeting. Clear bright decorative rings from its sightline. Fly a red pixel capsule over the Zürich lakeshore in 2D, with ten chapter landmarks, rotating insignia and launch trails fitted to the flight physics.
+- Let enlarged briefing text scroll above the flight controls, keeping both the launch dock and header reachable at 200% text zoom.
+- Keep both boards, archived records, names, mode-bound tickets and score bounds. New course identifiers distinguish the new balance and the backend continues to accept compatible previous identifiers.
+
 ## [0.20.4] — 2026-11-18
 
 - Refresh the bundled suite palette and navigation client.

@@ -1,9 +1,10 @@
+import { linkToken } from '../relay.js';
 import { pickupPower, pressureOf, weatherAt } from '../challenge.js';
 import { newGhost, stepGhost, ghostTarget, hitGhost } from './ghost.js';
 import { burnRate } from '../scoring.js';
 import { courseObjects, crossesCurrent } from './course.js';
 import { newFlow, flowCoin, breakFlow, flowNearMiss, stepFlow } from '../overdrive.js';
-export const VERSION = '0.20.4';
+export const VERSION = '0.21.0';
 export const PROMPT_BOOSTS = 5;
 export const STEP = 1 / 120;
 export const START_HEIGHT = 38;
@@ -40,7 +41,7 @@ export function seededRandom(seed) {
 }
 export function createRun(day = Math.floor(Date.now() / 86400000), seed = day) {
   return { phase: 'ready', day, seed, chargeTime: 0, weaponHeat: 0, overheated: false, overheats: 0, wind: weatherAt(seed, 0), wallDamage: new Map(), x: 0, y: START_HEIGHT, d: 0, vx: 0, vy: 0, speed: 0,
-    charge: 0, angle: 38, elapsed: 0, prompts: PROMPT_BOOSTS, cycles: 0, coins: 0, coinIds: [], burnTotal: 0, ghost: newGhost(), flow: newFlow(), combo: 0,
+    charge: 0, angle: 38, elapsed: 0, prompts: PROMPT_BOOSTS, cycles: 0, coins: 0, coinIds: [], relayTokens: new Uint8Array(ZONES.length), burnTotal: 0, ghost: newGhost(), flow: newFlow(), combo: 0,
     bounces: 0, highest: START_HEIGHT, zone: 0, stillTime: 0, effects: [], hits: new Set(), minesCleared: 0, mineHits: 0, mineWarning: false,
     trail: [], trailClock: 0, boostTime: 0, hitTime: 0, shield: 0, magnetTime: 0, anchor: 0, seals: new Set(), projectiles: [], shotCooldown: 0, shotsFired: 0, destroyed: 0 };
 }
@@ -176,6 +177,8 @@ export function collect(run, obj) {
   if (obj.kind === 'cycle') {
     run.coins++; run.coinIds.push(obj.id); run.cycles += 10; run.combo++;
     flowCoin(run);
+    const chapter = zoneIndex(obj.d ?? run.d);
+    linkToken(run, chapter, ZONES[chapter], power);
   } else if (obj.kind === 'updraft') {
     run.speed = Math.min(150, run.speed + 26 * power); run.vy = Math.max(run.vy, 27 * power); run.boostTime = .65;
     run.effects.push({kind: 'updraft', label: 'SOLAR CURRENT', sub: 'Free lift. Save your five prompts for the gaps.'});
@@ -292,6 +295,6 @@ export function stepRun(run, dt, _legacySteering = 0, objects = []) {
 }
 export function makeObjects(day, chunk) {
   const random = seededRandom(Math.imul(day + 1, 2654435761) ^ Math.imul(chunk + 11, 1597334677));
-  const special = ['portal', 'coffee', 'compiler', 'canister', 'identity', 'oisy', 'fusion', 'portal', 'neuron', 'fusion'][zoneIndex(chunk * 200 + 160)];
+  const special = ZONES[zoneIndex(chunk * 200 + 160)].pickup;
   return courseObjects(day, chunk, random, special);
 }

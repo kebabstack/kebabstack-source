@@ -68,3 +68,22 @@ test('using the five boosts matters: the currents cannot carry an idle pilot thr
  }
  assert.ok(active>coast*1.7);
 });
+
+test('a low, standard and high launch can each follow an opening token lane',()=>{
+ for(const [angle,charge] of [[25,.25],[38,.75],[55,.85]]){
+  const run=createRun(1,74);run.angle=angle;beginCharge(run);run.charge=charge;launch(run);
+  const tokens=makeObjects(run.seed,0).filter(o=>o.kind==='cycle');
+  while(run.d<106&&run.phase==='flying')stepRun(run,STEP,0,tokens);
+  assert.ok(run.coins>=5,`angle ${angle}, charge ${charge}: ${run.coins} opening coins`);
+  assert.equal(new Set(run.coinIds).size,run.coins);
+ }
+});
+
+test('each recovery item follows the chapter of its actual position',async()=>{
+ const {ZONES,zoneIndex}=await import('../src/two-d/physics.js');
+ for(let chunk=1;chunk<32;chunk++){
+  if(chunk%4===0)continue;
+  const o=makeObjects(98,chunk).find(o=>!['cycle','hazard','mine','pad'].includes(o.kind));
+  assert.equal(o.kind,ZONES[zoneIndex(o.d)].pickup);
+ }
+});

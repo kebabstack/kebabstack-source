@@ -40,14 +40,27 @@ test('the event horizon stays outside the flight centre, fades in late and freez
  }
 });
 
-test('both gloves are handed, and a complete wave returns smoothly every ten seconds',async()=>{
+test('both gloves are handed and the gentle arrival greeting ends without restarting',async()=>{
  const {createAstronaut,poseAstronaut}=await import('../src/celestial-crew.js');const a=createAstronaut();
  const [right,left]=a.hands.map(h=>h.userData.anatomy);
  assert.equal(right.fingers.length,4);assert.equal(left.fingers.length,4);
  assert.ok(right.thumb[0]<Math.min(...right.fingers.map(f=>f[0])));
  assert.ok(left.thumb[0]>Math.max(...left.fingers.map(f=>f[0])));
- const pose=t=>{poseAstronaut(a,t);return [a.waveArm,a.waveElbow,a.waveWrist].flatMap(j=>j.rotation.toArray().slice(0,3));};
- for(const t of [0,.9,1.5,2.8,4.4,7]) {const p=pose(t),next=pose(t+10);p.forEach((v,i)=>assert.ok(Math.abs(v-next[i])<1e-10));}
- assert.notDeepEqual(pose(1.5),pose(7));
- const before=pose(9.9999),after=pose(10.0001);before.forEach((v,i)=>assert.ok(Math.abs(v-after[i])<.0001,'no snap across the loop'));
+ const pose=p=>{poseAstronaut(a,2,false,p);return [a.waveArm,a.waveElbow,a.waveWrist].flatMap(j=>j.rotation.toArray().slice(0,3));};
+ assert.notDeepEqual(pose(2.5),pose(0));
+ for(const t of [6,10,12.5,22.5]) assert.deepEqual(pose(t),pose(0));
+ const before=pose(5.7999),after=pose(5.8001);before.forEach((v,i)=>assert.ok(Math.abs(v-after[i])<.0001,'no snap at the return to neutral'));
+});
+
+test('each side articulates at the hip, knee and ankle while the full suit retains opaque depth', () => {
+ const scene = new T.Scene(), crew = new CelestialCrew(scene), a = crew.astronaut;
+ const camera = new T.PerspectiveCamera(60, 1.5, .1, 1400);
+ const angles = () => a.legs.flatMap(({hip,knee,ankle}) => [hip.rotation.x,knee.rotation.x,ankle.rotation.x]);
+ crew.update(camera, 850, 0);
+ const first = angles(); assert.ok([...crew.materials.values()].every(m => m.transparent));
+ crew.update(camera, 2000, 2.2);
+ angles().forEach((x,i) => assert.notEqual(x, first[i]));
+ assert.ok([...crew.materials.values()].every(m => m.opacity === 1 && !m.transparent));
+ crew.update(camera, 1200, 2, true); const rest = angles();
+ crew.update(camera, 1200, 87, true); assert.deepEqual(angles(),rest);
 });

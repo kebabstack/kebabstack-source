@@ -694,5 +694,21 @@
       "binary-review"
     ],
     "reason": "Visually reviewed canonical open-book mark generated from the product registry; PNG contains only image/physical-size chunks, no personal metadata. Original project logo under the repository license."
+  },
+  {
+    "path": "bug/dist/assets/orbital-relay.jpg",
+    "sha256": "a003abebbdd507fd95cd6f9c8777e15e7590f1c953ac1336a95b85a85dd1f4c7",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Original generated orbital illustration for the flight manual. Visual and metadata review found only fictional scenery and image properties."
+  },
+  {
+    "path": "bug/src/assets/orbital-relay.jpg",
+    "sha256": "a003abebbdd507fd95cd6f9c8777e15e7590f1c953ac1336a95b85a85dd1f4c7",
+    "rules": [
+      "binary-review"
+    ],
+    "reason": "Original generated orbital illustration for the flight manual. Visual and metadata review found only fictional scenery and image properties."
   }
 ]

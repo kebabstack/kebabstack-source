@@ -88,8 +88,9 @@ export class Particles {
         color: Math.random() < .5 ? color : color2, size: size * rnd(.6, 1.4), life: life * rnd(.6, 1.3), drag });
     }
   }
-  coin(x, y, z) {
-    this.burst(x, y, z, { count: 18, color: '#ffe9a6', color2: '#ffb347', speed: 11, size: 1.1, life: .6, up: 4 });
+  coin(x, y, z, accent, reduced) {
+    if (reduced) return;
+    this.burst(x, y, z, { count: 18, color: accent, color2: '#fff0bf', speed: 11, size: 1.1, life: .6, up: 4 });
     this.sparks.emit(x, y, z, { color: '#fff7d6', size: 5, life: .28, drag: 0 });
   }
   explosion(x, y, z, scale = 1, hot = '#ffb27a', cold = '#ff5a3c') {

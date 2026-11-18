@@ -4,9 +4,9 @@ import Set "mo:core/Set";
 import T "../types";
 module {
   // Gameplay compatibility is independent of the application release number.
-  public let version = "arcade-2026-09-09";
   public func compatible(v : Text) : Bool {
-    v == version or v == "moon-2026-09-30" or v == "0.16.0" or v == "0.16.1" or v == "0.17.0" or
+    v == "relay-2d-2026-11-18" or v == "relay-3d-2026-11-18" or
+    v == "arcade-2026-09-09" or v == "moon-2026-09-30" or v == "0.16.0" or v == "0.16.1" or v == "0.17.0" or
     v == "0.17.1" or v == "0.17.2" or v == "0.17.3" or v == "0.17.4" or v == "0.17.5"
   };
   public let coinBonus = 50;

@@ -188,3 +188,124 @@ body[data-mode="2d"] .primary-button,body[data-mode="2d"] .secondary-button{font
   body[data-mode] .game-header .icon-button{height:44px;min-width:36px;padding:0 7px}
   body[data-mode] .game-header .profile-button{max-width:74px;font-size:8px}
 }
+
+body:not(.is-playing) #intro.scroll-briefing {
+  max-height: var(--briefing-room);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+}
+
+/* The flight manual is shared by the WebGL and pixel-art cockpits. */
+.briefing-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 15px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  color: #d6f1f5;
+  background: #102039ee;
+  font: 600 13px var(--sans);
+  pointer-events: auto;
+}
+body[data-mode="2d"] .briefing-button {
+  font-family: var(--pixel);
+  border-radius: 2px;
+  color: #ffdc92;
+  background: #25233a;
+}
+#helpDialog {
+  --manual-inset: clamp(16px, 4vw, 32px);
+  width: min(680px, calc(100vw - 24px));
+  max-width: 680px;
+  max-height: calc(100dvh - 24px);
+  padding: 0 var(--manual-inset) var(--manual-inset);
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  color: #e7eff6;
+  background: #0e1828;
+}
+#helpDialog .manual-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  border-bottom: 1px solid #66758b;
+  background: #0e1828;
+  color: #c1d1df;
+  font: 500 12px var(--mono);
+}
+#helpDialog .dialog-close {
+  position: static;
+  width: 44px;
+  height: 44px;
+  color: #fff;
+  background: transparent;
+}
+.manual-art { display: block; width: 100%; height: auto; margin-top: 16px; border-radius: 6px; }
+#helpDialog h2 { margin: 18px 0 6px; font-size: clamp(28px, 5vw, 43px); }
+#helpDialog .manual-intro { margin: 0 0 18px; font-size: 15px; line-height: 1.5; }
+#flightControls { border-block: 1px solid #516176; }
+#flightControls summary {
+  min-height: 44px;
+  padding: 12px 2px;
+  color: #f0f5fa;
+  font: 600 15px var(--sans);
+  cursor: pointer;
+}
+#flightControls summary span { color: #becbd6; font: 400 13px var(--sans); margin-left: 8px; }
+#flightMap { margin: 24px 0; }
+#flightMap h3 { color: #f0f5fa; font: 650 23px var(--sans); margin: 0 0 12px; }
+#flightMap .atlas { display: block; }
+#flightMap article {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid #354457;
+}
+#flightMap .atlas-glyph {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: var(--mission-ink);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font: 600 18px var(--mono);
+}
+#flightMap small { color: #c0ccda; font: 500 11px var(--mono); }
+#flightMap h4 { color: #eef4fa; margin: 4px 0; font: 650 18px var(--sans); }
+#flightMap p { margin: 4px 0; font: 400 14px/1.45 var(--sans); }
+#flightMap .atlas-token { color: var(--mission-ink); }
+#flightMap a { display: inline-block; padding: 8px 0; color: #a9e4fb; font: 500 12px var(--sans); }
+#helpDialog :is(button, a, summary):focus-visible, .briefing-button:focus-visible {
+  outline: 2px solid #ffe5a6;
+  outline-offset: 2px;
+}
+@media (max-height: 520px) {
+  .briefing-button { margin-top: 0; }
+  #helpDialog .manual-art { max-height: 110px; object-fit: cover; }
+}
+
+#relayProgress {
+  display: block;
+  margin-top: 2px;
+  color: #bdece3;
+  font: 500 9px var(--mono);
+  white-space: nowrap;
+}
+@media (max-height: 420px) and (orientation: landscape) {
+  body:not(.is-playing) #intro > p,
+  body:not(.is-playing) #intro .briefing-button { display: none; }
+}

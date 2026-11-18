@@ -29,6 +29,18 @@ for(const mode of ['2d','3d'])test(`shared entrypoint loads only ${mode} control
  } }]});
  try{w.eval(bundle.outputFiles[0].text);await new Promise(r=>setTimeout(r,40));if(mode==='3d'){assert.ok(!w.document.body.classList.contains('loaded'));frame(0);await new Promise(r=>setTimeout(r,0));w.document.dispatchEvent(new w.KeyboardEvent('keydown',{code:'Space',bubbles:true}));assert.ok(!w.document.body.classList.contains('is-playing'));w.completeWarmup();await new Promise(r=>setTimeout(r,0));}assert.deepEqual(errors,[]);assert.ok(w.document.body.classList.contains('loaded'));assert.equal(w.document.body.dataset.mode,mode);assert.equal(Boolean(w.document.getElementById('tiltBtn')),mode==='3d');assert.equal(w.document.querySelectorAll('[data-flight-mode]').length,4);
   assert.equal(w.document.getElementById('steeringDialog')?.open||false,false,'mode selection must precede any phone chooser');
+  const briefing = w.document.getElementById('intro');
+  const dock = w.document.querySelector('.bottom-area');
+  Object.defineProperty(briefing, 'offsetTop', {value:100});
+  Object.defineProperty(dock, 'offsetTop', {value:500});
+  let contentHeight=750;
+  Object.defineProperty(briefing, 'scrollHeight', {get:()=>contentHeight});
+  w.dispatchEvent(new w.Event('resize'));
+  assert.ok(briefing.classList.contains('scroll-briefing'), 'an enlarged briefing must scroll above the controls');
+  assert.equal(briefing.style.getPropertyValue('--briefing-room'), '392px');
+  contentHeight=200;
+  w.dispatchEvent(new w.Event('resize'));
+  assert.equal(briefing.classList.contains('scroll-briefing'), false, 'an ordinary briefing uses the original layout');
   let now=100;const frames=n=>{for(let i=0;i<n;i++){now+=1000/60;frame(now);}};const key=(type,code,target=w.document)=>target.dispatchEvent(new w.KeyboardEvent(type,{code,bubbles:true,cancelable:true}));
   const angle=w.document.getElementById('angle');angle.focus();angle.value='46';angle.dispatchEvent(new w.Event('input'));
   key('keydown','Space',angle);frames(45);key('keyup','Space',angle);frames(5);assert.ok(w.document.body.classList.contains('is-playing'));assert.ok([...w.document.querySelectorAll('[data-flight-mode]')].every(b=>b.disabled));

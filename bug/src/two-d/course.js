@@ -8,18 +8,28 @@ export function courseObjects(seed, chunk, random, special) {
   const add = (kind, y, offset, radius, extra = {}) => objects.push({
     id: `${seed}:${chunk}:${objects.length}`, kind, x: 0, y, d: start + offset, radius, ...extra
   });
-  // Three readable arcs at distinct heights; the server's coin IDs and forward
-  // positions are unchanged. Rewards never share an obstacle's position.
+  // IDs and distance slots are validated by the score service. Angle and charge
+  // change altitude, so fan out the opening lanes along three real launch arcs.
   const rise = random() * 4;
   for (let row = 0; row < 3; row++) for (let i = 0; i < 7; i++) {
-    const height = chunk === 0 ? 48 + row * 15 : 8 + row * 24 + rise;
-    add('cycle', height + Math.sin(i / 6 * Math.PI) * 7, 50 + i * 8, 2.7);
+    const t = i / 6, bow = 4 * t * (1 - t);
+    let y;
+    if (chunk === 0) y = [45, 52, 63][row] + [1.5, 10, 16.5][row] * t + bow;
+    else if (chunk === 1) y = [54, 77, 99][row] + (8 - row * 6) * t + bow * 2;
+    else {
+      const slope = chunk % 3 === 0 ? -1 : 1;
+      y = [8, 32, 62][row] + rise + slope * (t - .5) * (4 + row * 3) + bow * (3 + row);
+    }
+    add('cycle', y, 50 + i * 8, 2.7);
   }
   if (chunk % 4 === 0) {
     // A tall visible current catches actual launch arcs, not just a tiny pickup
     // hidden far below the bug. Once per crossing, never a continuous motor.
     const top = chunk === 0 ? 130 : 104;
-    add('updraft', (10 + top) / 2, 160, 4, { bottom: 10, top });
+    // The launch current assists all starts. Later currents reward an airborne
+    // approach; a slow ground bounce cannot repeatedly refill an unattended run.
+    const bottom = chunk === 0 ? 10 : 38;
+    add('updraft', (bottom + top) / 2, 160, 4, { bottom, top });
   } else {
     add(special, 18 + random() * 13, hazardChunk(chunk) ? 176 : 160, 5);
   }

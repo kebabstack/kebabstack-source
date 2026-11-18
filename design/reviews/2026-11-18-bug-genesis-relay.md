@@ -1,0 +1,17 @@
+# Genesis Relay flight and mission guide
+
+Ship the Bug 0.21.0, reviewed against the Kebabstack Brand & Product System 1.3.0 on 18 November 2026. This review covers the 3D WebGL and 2D Canvas modes of the unified game. The comparison starts from Bug 0.20.4. Local browser flights use synthetic guests and an isolated leaderboard.
+
+| Task or gate | Observed outcome and scope |
+| --- | --- |
+| Identify the pilot and fly past it | A white articulated EVA suit and illuminated visor appear to the side of the 3D course. The first encounter gives one greeting. Model inspection includes the full float cycle, desktop and portrait views. The red bug remains under player control. |
+| Read a line in flight | The seven-token centre trail crosses the unsteered 3D launch. The 2D opening follows simulated launch arcs. Automated flight tests exercise clearance, distinct collections and the effects of a linked station. Each chapter uses a separate silhouette and a named radio response. |
+| Understand the mission | Both launch screens and the question-mark control open the same ten-station guide. Five dated entries link historical sources. Later entries explain the player's delivery tasks and reference the actual tools. |
+| Play, switch modes and publish | A Chrome guest launched with Space, paused, resumed, finished and published in each mode using one local profile. The result offered publication explicitly. The mode switch and separate board confirmations worked. The shared rules and source chronology are covered by module tests. |
+| Layout and scrolling | Chrome exercised 1280 × 800, 800 × 600, 640 × 320 and 320 × 568. The open guide fitted each tested width. Actual wheel scrolling moved the content between 2,143 and 3,796 px across the six observations. The close control stayed in view. Short landscape uses the header help control. Relevant rules include LAYOUTS-07/08, COMPONENTS-07 and NAVIGATION-06. |
+| Enlarged text | Firefox at 200% text-only zoom previously pushed the introductory manual button below the viewport. Tab displaced the header by up to 345 px. The intro now scrolls within the available height. Both pointer and keyboard reached the guide and the header stayed visible in both modes at widths of 640 and 1280 px. Ten normal-size comparisons retained their measured control positions. |
+| Keyboard and motion | Escape closed the manual and returned focus to its opener. Flight tests exercised keyboard charge, launch, boost, fire and pause/resume. Reduced motion suppresses the decorative EVA drift and continuous pickup effects. Real motion sensors and assistive technology require device testing. |
+| Identity, data and recovery | This release keeps the established guest and Internet Identity contracts, separate public board for each mode, optional score publication and previous course support. The module's backend tests exercise other-player isolation and score integrity. Live sign-in and production boards are outside this local review. |
+| Brand, scope and exception | The immersive-game visual exception retains the game header and both established HUDs. The Bug mark and suite runtime stay canonical. No operator workflow, notification, currency, export or suite role is introduced. |
+
+The side-view pixel art and the orbiting 3D astronaut use native rendering. The flight manual includes a locally bundled illustration. Browser viewport sizes establish geometry on the test machine. Frame rates on physical phones, screen-reader output and color perception need separate evaluation.

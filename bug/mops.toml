@@ -1,6 +1,6 @@
 [package]
 name = "kebabstack-bug"
-version = "0.20.4"
+version = "0.21.0"
 description = "kebab-stack bug — Ship the Bug: 2D and 3D arcade with shared pilots and separate scoreboards"
 
 [toolchain]

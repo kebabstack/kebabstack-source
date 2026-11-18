@@ -4,11 +4,11 @@ import { isRedCandle } from './candle.js';
 import { GhostView } from './ghost-view.js';
 import { nextPaint } from './loading.js';
 import { FrameBudget } from './frame-budget.js';
-import { CoinInstances } from './coin-instances.js';
+import { CourseTokens } from './cycle-token.js';
 import { createZurich } from './zurich.js';
 import { LaunchGuide } from './launch-guide.js';
 import * as T from './vendor/three.module.js';
-import { makeObjects, seededRandom, ZONES, clamp, ascentAt, altitudeAt } from './physics.js';
+import { makeObjects, seededRandom, ZONES, zoneIndex, clamp, ascentAt, altitudeAt } from './physics.js';
 import { POWERUPS } from './ecosystem.js';
 
 import { FlightFX } from './flight-fx.js';
@@ -210,8 +210,6 @@ function terrain(chunk, day) {
   return g;
 }
 
-const coinGold = new T.MeshStandardMaterial({ color: '#ffcd5c', metalness: .95, roughness: .22, emissive: '#b86713', emissiveIntensity: .55 });
-const coinCore = new T.MeshStandardMaterial({ color: '#fff1bd', emissive: '#ffcf63', emissiveIntensity: 1.6, roughness: .3 });
 function pickup(obj) {
   if(isRedCandle(obj)) {
     const candle=createCandle(false,obj.hp>1);
@@ -222,10 +220,8 @@ function pickup(obj) {
     if (!obj.airborne) g.rotation.x = Math.atan(ascentAt(obj.d + .5) - ascentAt(obj.d - .5));
     return g;
   }
-  if (obj.kind === 'cycle') {
-    shape(g, 'coin', coinGold, 0, 0, 0, 1.65);
-    shape(g, 'sphere', coinCore, 0, 0, 0, .26);
-  } else if (obj.kind === 'coffee') {
+  if (obj.kind === 'cycle') return g; // CourseTokens draws the shared chapter faces.
+  if (obj.kind === 'coffee') {
     shape(g, 'cylinder', '#f6f0da', 0, 0, 0, 1.1, 1.8, 1.1);
     shape(g, 'cylinder', '#624738', 0, .95, 0, .95, .06, .95);
     const handle = shape(g, 'ring', '#f6f0da', 1.16, .15, 0, .6); handle.rotation.y = Math.PI / 2;
@@ -325,7 +321,7 @@ export class GameView {
     this.groundShadow = new T.Mesh(new T.CircleGeometry(2.1, 24), new T.MeshBasicMaterial({ color: '#102a24', transparent: true, opacity: .2, depthWrite: false }));
     this.groundShadow.rotation.x = -Math.PI / 2; this.scene.add(this.groundShadow);
     this.chunks = new Map(); this.objects = []; this.pickups = new Map(); this.particles = [];
-    this.coinInstances = new CoinInstances(this.scene, pickup({ kind: 'cycle', x: 0, y: 0, d: 0 }));
+    this.coinInstances = new CourseTokens(this.scene);
     this.trail = []; this.trailMesh = null;
     this.launchGuide = new LaunchGuide(this.scene);
     const trailGeom = new T.BufferGeometry(); trailGeom.setAttribute('position', new T.Float32BufferAttribute(new Float32Array(75 * 3), 3));
@@ -419,7 +415,7 @@ export class GameView {
       if (i >= 0) for (const obj of makeObjects(this.seed, i)) {
         const mesh = pickup(obj);
         if (obj.kind !== 'cycle') this.scene.add(mesh);
-        this.pickups.set(obj.id, { mesh, obj, phase: (obj.d % 11) }); this.objects.push(obj);
+        this.pickups.set(obj.id, { mesh, obj, zone: obj.kind === 'cycle' ? ZONES[zoneIndex(obj.d)] : null, phase: obj.d % 11 }); this.objects.push(obj);
       }
     }
     for (const [i, group] of this.chunks) if (i < first || i > last) {
@@ -460,11 +456,11 @@ export class GameView {
   }
   burst(x, y, d, type) {
     const z = -d;
-    if (type === 'cycle') this.sparks.coin(x, y, z);
+    if (type === 'cycle') this.sparks.coin(x, y, z, ZONES[zoneIndex(d)].color, this.motionReduced);
     else if (type === 'destroy') this.sparks.explosion(x, y, z, 1.1);
     else if (['hazard', 'mine', 'mine-destroy'].includes(type)) this.sparks.explosion(x, y, z, .8);
     else if (type === 'boost') this.sparks.burst(x, y, z, { count: 26, color: '#9df4ff', color2: '#ffffff', speed: 16, size: 1.3, life: .6, up: 2 });
-    else this.sparks.burst(x, y, z, { count: 22, color: '#bafaad', color2: '#e8ffe0', speed: 13, size: 1.2, life: .7, up: 4 });
+    else this.sparks.burst(x, y, z, { count: 22, color: POWERUPS[type]?.color || '#bafaad', color2: '#e8ffe0', speed: 13, size: 1.2, life: .7, up: 4 });
   }
   kick(amount) { this.shake = Math.min(1.6, this.shake + amount); }
   event(e, run) {
@@ -480,7 +476,12 @@ export class GameView {
     if (['collect','destroy','mine-destroy'].includes(e.kind)) {
       const found = this.pickups.get(e.id); if (found) found.mesh.visible = false;
       this.burst(e.x, e.y + ascentAt(e.d), e.d, ['destroy','mine-destroy'].includes(e.kind) ? 'destroy' : e.type);
-      if (e.kind === 'collect' && e.type === 'cycle') this.labels.show('+50', e.x, y + 2.2, -e.d, { color: run.combo % 5 === 0 && run.combo > 0 ? '#fff6c8' : '#ffd36b', scale: run.combo % 5 === 0 && run.combo > 0 ? 1.2 : .85, duration: .8 });
+      if (e.kind === 'collect' && e.type === 'cycle') {
+        const zone = ZONES[zoneIndex(e.d)], streak = run.combo > 0 && run.combo % 5 === 0;
+        this.labels.show('+50', x, y + 2.2, -d, { color: zone.color, scale: streak ? 1.2 : .85, duration: .8 });
+        if (streak && !this.motionReduced) this.fx.wave(x, y, d, zone.color, .45);
+      }
+      if (e.kind === 'collect' && POWERUPS[e.type] && !this.motionReduced) this.fx.wave(x, y, d, POWERUPS[e.type].color, .55);
       if (e.kind === 'collect' && !['cycle', 'pad', 'hazard', 'mine'].includes(e.type)) this.labels.show((POWERUPS[e.type]?.name || e.type).toUpperCase(), e.x, y + 3, -e.d, { color: cosmos.colorOf(e.type), scale: 1.1 });
       if (e.kind !== 'collect') { this.kick(.3); this.labels.show('CLEARED', e.x, y + 3, -e.d, { color: '#ffb27a', scale: 1 }); }
     }
@@ -551,7 +552,10 @@ export class GameView {
       // the next lane. Derive visibility each frame so the warm-up resets safely.
       mesh.visible = !run.hits.has(obj.id) && obj.d >= run.d - obj.radius - 1.25;
       if (!mesh.visible) continue;
-      if (obj.kind === 'cycle') mesh.rotation.y = t * 1.6 + phase;
+      if (obj.kind === 'cycle') {
+        mesh.quaternion.copy(this.camera.quaternion);
+        mesh.rotateY(this.motionReduced ? .14 : .18 + Math.sin(t * 1.2 + phase * .15) * .27);
+      }
       if (obj.kind === 'coffee') mesh.rotation.y = t * .65;
       if (obj.kind === 'portal') mesh.rotation.z = Math.sin(t + phase) * .035;
       // Collision centers remain fixed. Mesh wobble is cosmetic and smaller than the pickup margin.

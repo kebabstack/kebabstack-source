@@ -31,3 +31,36 @@ test('capacity growth replaces only instance buffers and keeps scene resource co
   assert.equal(batch.parts[0].mesh.geometry,template.children[0].geometry);
   assert.equal(batch.parts[0].mesh.count,3);
 });
+
+test('chapter stamps differ and batch counts follow collection, chapter changes and restart', async t => {
+  const { context } = await import('./canvas-context.mjs');
+  const { CourseTokens } = await import('../src/cycle-token.js');
+  const { ZONES } = await import('../src/ecosystem.js');
+  const traces = [];
+  const previous = [globalThis.document, globalThis.Path2D];
+  t.after(() => {
+    if (previous[0] === undefined) delete globalThis.document; else globalThis.document = previous[0];
+    if (previous[1] === undefined) delete globalThis.Path2D; else globalThis.Path2D = previous[1];
+  });
+  globalThis.Path2D = class { constructor(data) { this.data = data; } };
+  globalThis.document = {createElement() {
+    const commands = [];
+    traces.push(commands);
+    return {getContext: () => context((name,args) => commands.push([name,args]))};
+  }};
+  const scene = new T.Scene(), course = new CourseTokens(scene);
+  const items = ZONES.map((zone,i) => ({...coin(i*8),zone}));
+  course.update(items);
+  assert.equal(new Set(traces.map(commands => JSON.stringify(commands))).size, ZONES.length);
+  assert.equal(scene.children.length, ZONES.length * 2);
+  items[0].mesh.visible = false;
+  course.update(items.slice(0,2));
+  for (const [i,zone] of ZONES.entries()) {
+    const { batch } = course.batches.get(zone.key);
+    assert.equal(batch.template.name, zone.token);
+    assert.ok(batch.parts.every(({mesh}) => mesh.count === (i === 1 ? 1 : 0)));
+  }
+  items[0].mesh.visible = true; course.update([items[0]]);
+  assert.equal(course.batches.get(ZONES[0].key).batch.parts[0].mesh.count, 1);
+  assert.equal(traces.length, ZONES.length, 'no repeated texture generation');
+});

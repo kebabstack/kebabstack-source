@@ -190,7 +190,7 @@ export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
       for (let i = 0; i < 3; i++) {
         const c = capsule(g, (i % 2 ? -1 : 1) * (60 + i * 16), h + 30 + i * 22, -d - i * 26, 3.5 + i * .6); c.rotation.z = (i - 1) * .2;
       }
-      label(g, 'CODE + STATE', 38, -72, h + 53, -d + 4, { bg: null, fg: '#b8faff' });
+      label(g, 'OPENSAAS DISPATCH', 38, -72, h + 53, -d + 4, { bg: null, fg: '#b8faff' });
     } else if (zone.key === 'identity') {
       for (let side of [-1, 1]) {
         shape(g, 'box', '#153848', side * 48, h + 31, -d, 8, 66, 9);
@@ -203,7 +203,6 @@ export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
       shape(g, 'sphere', mat('#59529a', { metalness: .6, roughness: .3 }), -100, h + 52, -d - 25, 38);
       const orbit = shape(g, 'ring', glow('#b9a8ff', 1), -100, h + 52, -d - 25, 55); orbit.rotation.x = 1.05; orbit.rotation.y = .3;
       label(g, 'OISY', 43, -100, h + 55, -d + 14, { bg: null, fg: '#e6dfff', size: 110, height: .4 });
-      for (let i = 0; i < 6; i++) shape(g, 'coin', glow('#ead4ff'), 65 + Math.sin(i) * 13, h + 20 + i * 8, -d + i * 9, 5);
     } else if (zone.key === 'fusion') {
       const c = new T.Group(); c.position.set(0, h + 26, -d); g.add(c); chain(c, 9);
       label(g, 'CHAIN FUSION', 52, 0, h + 10, -d + 2, { bg: null, fg: '#ffd8b3' });
@@ -215,24 +214,26 @@ export function createCosmosKit({ V, shape, bar, label, mat, infinity }) {
         }
         const exhaust = shape(g, 'cone', glow('#579ef7', 1.4), side * 63, h - 6, -d, 5, 23, 5); exhaust.rotation.x = Math.PI;
       }
-      label(g, 'OPEN CLOUD', 47, 0, h + 72, -d, { bg: null, fg: '#a8ecff' });
+      label(g, 'OPENCLOUD', 47, 0, h + 72, -d, { bg: null, fg: '#a8ecff' });
     } else if (zone.key === 'nns') {
       const n = new T.Group(); n.position.set(-80, h + 55, -d); g.add(n); neuron(n, 11);
       label(g, 'N N S', 40, 68, h + 48, -d + 10, { bg: null, fg: '#ffc8e4' });
       label(g, 'PROPOSAL #BUG', 43, 68, h + 39, -d + 10, { bg: null, fg: '#ff99c5' });
     } else if (zone.key === 'mainnet') {
       infinity(g, 0, h + 43, -d - 100, 32, true);
-      label(g, 'INTERNET COMPUTER', 69, 0, h + 9, -d - 99, { bg: null, fg: '#d5efff', size: 80 });
+      label(g, 'GENESIS · INTERNET COMPUTER', 69, 0, h + 9, -d - 99, { bg: null, fg: '#d5efff', size: 80 });
       for (let side of [-1, 1]) {
         const r = shape(g, 'ring', glow(side < 0 ? '#ff6dbf' : '#5edfff', .6), side * 145, h + 22, -d - 50, 23); r.rotation.y = side * .4;
       }
     }
     }
-    // Curved orbital arches give depth and a visible route through the world.
+    // Low beacons mark the two edges without drawing a bright arch across
+    // distant collectibles, landmarks or the companion's visor.
     if (chunk >= 3) {
-      const pts = [];
-      for (let i = 0; i <= 30; i++) { const a = i / 30 * Math.PI; pts.push(V(Math.cos(a) * 43, h + Math.sin(a) * 57 - 2, -d)); }
-      tube(g, pts, color, .23);
+      for (const side of [-1, 1]) {
+        const mast = shape(g, 'box', glow(color, .40), side * 38, h + 2.1, -d, .22, 4.5, .25);
+        mast.rotation.z = -side * .18;
+      }
     }
     g.userData.floaters = []; g.traverse(m => { if (m.userData.float) g.userData.floaters.push(m); });
     return g;
