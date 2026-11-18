@@ -179,11 +179,6 @@ a:hover{color:var(--ks-accent)}
 /* toast + modal */
 #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--ks-bg-cta-inverse);color:var(--ks-bg);font:500 13px var(--ks-ui);padding:12px 22px;border-radius:var(--ks-radius-pill);transition:transform .25s ease;z-index:90;max-width:90vw}
 #toast.on{transform:translateX(-50%)}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
-.modal.on{display:flex}
-.modal .mbox{background:var(--ks-bg);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:26px;max-width:440px;width:100%}
-.modal .mbox .tt{font-family:var(--ks-ui);font-weight:600;font-size:14px;letter-spacing:.05em;margin-bottom:14px}
-.modal .mbox .ta{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
 
 .view{display:none}
 .view.on{display:block}
@@ -204,22 +199,16 @@ a:hover{color:var(--ks-accent)}
 
 <section id="login" aria-busy="true" class="is-waiting app-auth">
   <div class="auth-shell">
-    <aside class="auth-story">
-      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
-      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
-      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
-    </aside>
+    <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
     <section class="auth-main" aria-labelledby="loginTitle">
       <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
       <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
-      <h1 id="loginTitle"><span class="auth-ready">Welcome to Forms.</span><span class="auth-waiting">Opening Forms…</span></h1>
-      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <h1 id="loginTitle"><span class="auth-ready">Sign in to Forms</span><span class="auth-waiting">Opening Forms…</span></h1>
       <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
       <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
       <div id="loginStatus" class="status" role="alert"></div>
       <div id="loginWarn" class="warnbox hidden"></div>
       <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
-      <p class="lfoot">Access is managed by your company in the Hub.</p>
     </section>
   </div>
 </section>
@@ -292,6 +281,12 @@ a:hover{color:var(--ks-accent)}
         <div class="kv" id="sMeta" style="margin-top:10px"></div>
       </div>
       <div class="scard">
+        <h3>Cloudflare Turnstile</h3>
+        <p>Use the widget registered for this Forms hostname. Enable verification separately for each public form.</p>
+        <label>Site key<input id="sBotKey" autocomplete="off"></label>
+        <label>Secret key<input id="sBotSecret" type="password" autocomplete="new-password"></label>
+        <button id="sBotSave" class="pill outline">Save widget</button><p id="sBotStatus" role="status"></p>
+      </div><div class="scard">
         <h3>Sample form</h3>
         <div class="kv">An open sample form with three submissions to try the review pipeline. Removable in one click.</div>
         <div class="btnrow"><button id="sSeed" class="pill outline sm">ADD SAMPLE FORM</button><button id="sUnseed" class="pill outline sm">REMOVE SAMPLE FORM</button><span id="sSeedStatus" class="status"></span></div>
@@ -336,12 +331,12 @@ a:hover{color:var(--ks-accent)}
   <div class="dbody" id="dBody"></div>
 </div>
 
-<div class="modal" id="importModal">
-  <div class="mbox" style="max-width:680px">
-    <div class="tt">IMPORT A FORM</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <span class="tag clickable sel" data-imp="google">GOOGLE FORMS JSON</span>
-      <span class="tag clickable" data-imp="text">TEXT OUTLINE</span>
+<dialog class="modal ks-dialog" id="importModal" aria-labelledby="importModalTitle" style="--ks-dialog-width:680px">
+  <div class="mbox">
+    <h2 class="tt" id="importModalTitle">Import a form</h2>
+    <div class="import-modes" role="group" aria-label="Import format">
+      <button type="button" data-imp="google" aria-pressed="true">Google Forms JSON</button>
+      <button type="button" data-imp="text" aria-pressed="false">Text outline</button>
     </div>
     <div id="impHelpG" style="font:400 13px var(--ks-ui);color:var(--ks-fg-secondary);line-height:1.55;margin-bottom:10px">
       Paste the JSON from the official Forms API (<span style="font-family:var(--ks-mono);font-size:12px">forms.get</span>).
@@ -349,49 +344,53 @@ a:hover{color:var(--ks-accent)}
       <a href="https://developers.google.com/workspace/forms/api/reference/rest/v1/forms/get" target="_blank" rel="noopener" style="color:var(--ks-accent)">the forms.get reference ↗</a>,
       use the "Try it" panel with your Google login, execute, copy the JSON here.
     </div>
-    <div id="impHelpT" style="display:none;font:400 13px var(--ks-ui);color:var(--ks-fg-secondary);line-height:1.55;margin-bottom:10px">
-      One question per line, options as "- option" lines below it. Tags in brackets:
+    <details id="impHelpT" class="outline-help" style="display:none">
+      <summary>Outline guide and copyable prompt</summary>
+      <p>One question per line, options as "- option" lines below it. Tags in brackets:
       <span style="font-family:var(--ks-mono);font-size:12px">[choice] [checkboxes] [dropdown] [short] [paragraph] [date] [scale 1-5] [required]</span>.
-      "#&nbsp;Title" names the form, "##&nbsp;Title" starts a new section. A question with option lines and no tag becomes multiple choice.
+      "#&nbsp;Title" names the form, "##&nbsp;Title" starts a new section. A question with option lines and no tag becomes multiple choice.</p>
       <div style="margin-top:10px;padding:10px 14px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);background:var(--ks-bg-sunk)">
         <b style="font-weight:500">Got a PDF, Word file or screenshot of a form?</b> Drop it into your AI assistant together with this prompt, then paste the result here.
-        <button class="linkbtn" id="impCopyPrompt" style="margin-left:8px">COPY PROMPT</button>
+        <button class="linkbtn" id="impCopyPrompt" style="margin-left:8px">Copy prompt</button> <span id="impCopyStatus" role="status"></span>
       </div>
-    </div>
+    </details>
+    <label for="impSrc">Source text</label>
     <textarea id="impSrc" rows="8" style="width:100%;font-family:var(--ks-mono);font-size:12px" spellcheck="false" placeholder='{"formId":"…","info":{"title":"…"},"items":[…]}'></textarea>
-    <div class="ta" style="margin-top:12px">
-      <button class="pill outline sm" id="impAnalyze">ANALYZE</button>
-      <button class="pill primary sm" id="impCreate" disabled>CREATE DRAFT</button>
+    <div class="actions" style="margin-top:12px">
+      <button class="pill outline sm" id="impAnalyze">Analyze</button>
+      <button class="pill primary sm" id="impCreate" disabled>Create draft</button>
       <button class="pill outline sm" id="impCancel">Cancel</button>
     </div>
-    <div id="impReport" style="margin-top:14px;max-height:260px;overflow-y:auto"></div>
+    <div id="impReport" role="status"></div>
   </div>
-</div>
+</dialog>
 
-<div class="modal" id="shareModal">
-  <div class="mbox" style="max-width:560px">
-    <div class="tt">SHARE THIS FORM</div>
+<dialog class="modal ks-dialog" id="shareModal" aria-labelledby="shareModalTitle" style="--ks-dialog-width:560px">
+  <div class="mbox">
+    <h2 class="tt" id="shareModalTitle">Share this form</h2>
+    <label for="shSearch">Find people</label>
     <input id="shSearch" placeholder="Search people from the directory…" style="width:100%" autocomplete="off">
-    <div id="shResults" style="max-height:180px;overflow-y:auto;margin-top:6px"></div>
-    <div style="font:500 11px var(--ks-mono);letter-spacing:.12em;color:var(--ks-fg-secondary);text-transform:uppercase;margin:16px 0 8px">People with access</div>
-    <div id="shList" style="max-height:220px;overflow-y:auto"></div>
+    <div id="shResults"></div>
+    <h3 class="share-heading">People with access</h3>
+    <div id="shList"></div>
     <div style="font:400 12px var(--ks-ui);color:var(--ks-fg-muted);margin-top:12px">Editors can build the form and review submissions, viewers are read-only. The form owner and app admins can delete or share.</div>
-    <div class="ta">
+    <div id="shStatus" role="status"></div>
+    <div class="actions">
       <button class="pill primary sm" id="shSave">Save</button>
       <button class="pill outline sm" id="shCancel">Cancel</button>
     </div>
   </div>
-</div>
+</dialog>
 
-<div class="modal" id="confirmModal">
+<dialog class="modal ks-dialog" id="confirmModal" aria-labelledby="cmText">
   <div class="mbox">
-    <div class="tt" id="cmText"></div>
-    <div class="ta">
-      <button class="pill primary sm" id="cmYes">CONFIRM</button>
-      <button class="pill outline sm" id="cmNo">Cancel</button>
+    <h2 class="tt" id="cmText"></h2>
+    <div class="actions">
+      <button class="pill primary sm" id="cmYes">Confirm</button>
+      <button class="pill outline sm" id="cmNo" autofocus>Cancel</button>
     </div>
   </div>
-</div>
+</dialog>
 
 <div id="toast"></div>
 <script type="module" src="./app.js"></script>

@@ -1,6 +1,6 @@
 # kebabstack product website
 
-Version **0.5.12**. A standalone, bilingual product website intended for
+Version **0.6.0**. A standalone, bilingual product website intended for
 **kebabstack.dev**, suitable for static web hosting.
 
 The site explains the working alpha suite, including Crumbs analytics and Desk
@@ -22,8 +22,7 @@ npm run preview
 ```
 
 Open http://127.0.0.1:4177. German is `/`; English is `/en/`. Both are rendered
-as complete HTML, including all module descriptions. JavaScript enhances the
-app explorer and mobile menu; reading and language switching work without it.
+as complete HTML, including all module descriptions. The native mobile menu, reading and language switching work without JavaScript. JavaScript enhances the product explorer and provides Escape dismissal.
 There are no runtime packages, remote fonts or forms. The website contains no analytics or marketing tracker.
 The optional appearance choice is the only local-storage preference.
 

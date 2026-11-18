@@ -1,4 +1,5 @@
 // Version: 1.0.0
+type Config__1041906472 = {hostname : Text; secret : Text; siteKey : Text};
 type ConnectorUser__173861307 =
   {
     active : Bool;
@@ -97,6 +98,7 @@ actor {
   stable var answerBytesCounted : Bool;
   stable var answerBytesTotal : Nat;
   stable var appUrl : Text;
+  stable var botCheck : ?Config__1041906472;
   stable var demoSeeded : Bool;
   stable deskDeliveries :
     {
@@ -155,6 +157,8 @@ actor {
   stable var nextFormId : Nat;
   stable var nextLogId : Nat;
   stable var nextSubId : Nat;
+  stable notificationPeople :
+    {var root : Node__430031793<Nat, [Text]>; var size : Nat__58649523};
   stable var orgName : Text;
   stable var owner : ?Principal;
   stable people :
@@ -162,6 +166,8 @@ actor {
       var root : Node__430031793<Text, ConnectorUser__173861307>;
       var size : Nat__58649523
     };
+  stable protectedForms :
+    {var root : Node__430031793<Nat, Bool>; var size : Nat__58649523};
   stable sessions :
     {
       var root : Node__430031793<Text, Session__739831475>;
@@ -174,5 +180,7 @@ actor {
       var root : Node__430031793<Nat, Submission__1039216767>;
       var size : Nat__58649523
     };
-  stable var subsTotal : Nat
+  stable var subsTotal : Nat;
+  stable var tokenCounter : Nat;
+  stable var tokenSeed : ?Blob
 };

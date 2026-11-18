@@ -74,34 +74,26 @@
     );
     explorer.classList.add("enhanced");
   }
-  const toggle = document.querySelector(".menu-toggle");
-  const menu = document.getElementById("mobile-nav");
-  if (toggle && menu) {
-    toggle.hidden = false;
-    const close = (focus = false) => {
-      toggle.setAttribute("aria-expanded", "false");
-      toggle.setAttribute("aria-label", toggle.dataset.openLabel);
-      menu.hidden = true;
-      if (focus) toggle.focus();
-    };
-    toggle.addEventListener("click", () => {
-      const expanded = toggle.getAttribute("aria-expanded") !== "true";
-      toggle.setAttribute("aria-expanded", String(expanded));
-      toggle.setAttribute(
-        "aria-label",
-        expanded ? toggle.dataset.closeLabel : toggle.dataset.openLabel,
-      );
-      menu.hidden = !expanded;
+  const disclosure = document.querySelector(".site-menu");
+  if (disclosure) {
+    const toggle = disclosure.querySelector("summary");
+    disclosure.querySelector("nav").addEventListener("click", (event) => {
+      if (event.target.closest("a")) disclosure.open = false;
     });
-    menu
-      .querySelectorAll("a")
-      .forEach((a) => a.addEventListener("click", () => close()));
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !menu.hidden) close(true);
+      if (event.key === "Escape" && disclosure.open) {
+        disclosure.open = false;
+        toggle.focus();
+      }
     });
-    const wide = window.matchMedia("(min-width: 1121px)");
-    wide.addEventListener("change", (event) => {
-      if (event.matches) close();
+    document.addEventListener("focusin", (event) => {
+      if (!disclosure.contains(event.target)) disclosure.open = false;
+    });
+    document.addEventListener("click", (event) => {
+      if (!disclosure.contains(event.target)) disclosure.open = false;
+    });
+    window.matchMedia("(min-width: 1121px)").addEventListener("change", (event) => {
+      if (event.matches) disclosure.open = false;
     });
   }
   // Scenes are a local, editorial walkthrough. These controls never call an app.

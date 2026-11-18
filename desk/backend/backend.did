@@ -163,6 +163,12 @@ type TicketFull =
                            run: Run;
                          };
    events: vec Event__1;
+   falcon:
+    opt record {
+          alert: FalconInput;
+          edit: opt FalconEdit;
+          pending: bool;
+        };
    files: vec FileMeta;
    internal: bool;
    lifecycle: opt LifecycleCase;
@@ -1258,6 +1264,48 @@ type Field =
    sensitive: bool;
    title: text;
  };
+type FalconInput =
+ record {
+   compositeId: text;
+   host: text;
+   identity: opt FalconIdentity;
+   providerStatus: text;
+   resolutions: opt vec text;
+   severity: text;
+   title: text;
+   updated: text;
+   url: text;
+ };
+type FalconIdentity =
+ record {
+   basis: text;
+   person: text;
+   serial: text;
+ };
+type FalconEdit =
+ record {
+   by: text;
+   key: text;
+   priorReasons: vec text;
+   priorStatus: text;
+   reason: text;
+   revision: int;
+   status: text;
+ };
+type FalconDeviceView =
+ record {
+   device:
+    opt
+     record {
+       id: nat;
+       owner: text;
+       ownerName: text;
+       serial: text;
+       title: text;
+     };
+   state: text;
+   url: text;
+ };
 type Export =
  variant {
    err: text;
@@ -1543,6 +1591,10 @@ type BulkAction =
  variant {
    assign: text;
    due: opt int;
+   finish: record {
+             falconResolution: text;
+             status: text;
+           };
    status: record {
              status: text;
              waitingOn: text;
@@ -1824,6 +1876,7 @@ service : {
    text) -> (Result);
   exportCustomerTicket: (tok: text, id: nat) -> (opt text) query;
   exportReportingPeriod: (tok: text, id: nat) -> (Export);
+  falconDeviceView: (tok: text, id: nat) -> (FalconDeviceView);
   fileData: (tok: text, fid: nat) ->
    (opt record {
           data: blob;
@@ -1860,6 +1913,27 @@ service : {
   http_request: (req: HttpGwRequest) -> (HttpGwResponse) query;
   http_request_update: (req: HttpGwRequest) -> (HttpGwResponse);
   hub_deactivate: (emails: vec text) -> (nat);
+  hub_falconCounts: (viewer: text, cid: text) ->
+   (opt record {
+          nat;
+          nat;
+        }) query;
+  hub_falconEdited: (id: nat, revision: int, observed: text, reasons:
+   vec text, confirmed: bool) -> ();
+  hub_falconEdits: (after: nat) -> (vec record {
+                                          nat;
+                                          FalconEdit;
+                                        }) query;
+  hub_falconIntake: (alert: FalconInput) -> (nat);
+  hub_falconLegacy: (after: nat) -> (vec record {
+                                           nat;
+                                           text;
+                                         }) query;
+  hub_falconPending: (after: nat) -> (vec record {
+                                            nat;
+                                            text;
+                                          }) query;
+  hub_falconResult: (id: nat, compositeId: text, observed: text) -> ();
   hub_hardwareCase: (id: nat) -> (opt Case) query;
   hub_knowledgeEvidence: (viewer: text, id: nat) -> (Result__2) query;
   hub_manifest: () -> (Manifest) query;
@@ -2161,6 +2235,11 @@ service : {
       detail: text;
       ok: bool;
     });
+  setFalconStatus: (tok: text, id: nat, status: text, reason: text, expected:
+   int) -> (record {
+              detail: text;
+              ok: bool;
+            });
   setFields: (tok: text, id: nat, fields: vec record {
                                                 text;
                                                 text;
@@ -2265,6 +2344,10 @@ service : {
                              detail: text;
                              ok: bool;
                            });
+  takeFalconTicket: (tok: text, id: nat) -> (record {
+                                               detail: text;
+                                               ok: bool;
+                                             });
   updateOncallProject: (tok: text, id: nat, revision: nat, name: text,
    description: text, services: vec text, retentionDays: nat) -> (Result);
   updateSettings: (tok: text, args:

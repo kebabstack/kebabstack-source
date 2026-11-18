@@ -24,3 +24,21 @@ test('navigation/sign-out stops later batches and rejects late selection results
 test('changing selection preserves the chosen action and date; queue loading disables writes',async()=>{const x=setup();x.table.querySelector('input').click();choose(x,'due');x.d.querySelector('#bulk-date').value='2026-10-05';x.table.querySelectorAll('input')[1].click();assert.equal(x.d.querySelector('#bulk-action').value,'due');assert.equal(x.d.querySelector('#bulk-date').value,'2026-10-05');x.ui.loading(true);submit(x);assert.equal(x.calls.length,0);assert.equal(x.selectAll.disabled,true);x.ui.loading(false);assert.equal(x.d.querySelector('#bulk-date').value,'2026-10-05');submit(x);await tick();assert.equal(x.calls[0].items.length,2);assert.ok('due'in x.calls[0].action);});
 
 test('a denied batch has a clear access error and does not submit later batches',async()=>{const x=setup(60);let calls=0;x.api.bulkInternalTickets=async()=>{calls++;return{denied:null};};x.selectAll.click();submit(x);await tick();assert.equal(calls,1);assert.match(x.root.textContent,/60 need review/);assert.match(x.root.textContent,/Desk access is unavailable/);assert.doesNotMatch(x.root.textContent,/Result not confirmed/);});
+
+test('agent closes a mixed selection with an explicit choice for open Falcon detections', async()=>{
+  const x=setup(64);
+  x.rows.slice(0,63).forEach(row=>row.channel='falcon');
+  x.selectAll.click();
+  choose(x,'status');
+  const status=x.d.querySelector('#bulk-state');
+  status.value='closed';
+  status.dispatchEvent(new x.dom.window.Event('change'));
+  const resolution=x.d.querySelector('#bulk-falcon-resolution');
+  assert.equal(resolution.value,'');
+  resolution.value='ignored';
+  submit(x);
+  await tick();
+  assert.deepEqual(x.calls.map(call=>call.items.length),[50,14]);
+  assert.ok(x.calls.every(call=>call.action.finish.falconResolution==='ignored'));
+  assert.match(x.root.textContent,/1 updated · 63 awaiting Falcon confirmation/);
+});

@@ -22,12 +22,13 @@ module {
   public func hex(value : Text, size : Nat) : Bool {
     value.size() == size and value.chars().all(func c = (c >= '0' and c <= '9') or (c >= 'a' and c <= 'f'));
   };
-  public func sources(grant : Grant) : [Source] { grant.scopes.map(func s = { cid = s.cid; app = s.app }) };
-  public type Options = { workboard : Bool; lifecycle : Bool; sales : Bool; personal : Bool; personalEmail : ?Text };
-  public let defaults : Options = { workboard = false; lifecycle = false; sales = false; personal = false; personalEmail = null };
+  public func sources(grant : Grant) : [Source] { grant.scopes.map(func s = { cid = s.cid; app = if (falconScope(s.app)) "trust-falcon" else s.app }) };
+  public type Options = { falcon : ?Bool; workboard : Bool; lifecycle : Bool; sales : Bool; personal : Bool; personalEmail : ?Text };
+  public let defaults : Options = { falcon = null; workboard = false; lifecycle = false; sales = false; personal = false; personalEmail = null };
   let deskModes = ["desk", "desk-workboard", "desk-lifecycle", "desk-workboard-lifecycle", "desk-workboard-personal", "desk-workboard-lifecycle-personal"];
+  public func falconScope(app : Text) : Bool { Text.startsWith(app, #text "trust-falcon:") };
   public func sourceApp(app : Text) : Text {
-    if (deskModes.any(func a = a == app)) "desk" else if (app == "assets-sales") "assets" else app
+    if (deskModes.any(func a = a == app)) "desk" else if (falconScope(app)) "trust" else if (app == "assets-sales") "assets" else app
   };
   public func scopeApp(app : Text, options : Options) : Text {
     if (app == "desk") "desk" # (if (options.workboard) "-workboard" else "") # (if (options.lifecycle) "-lifecycle" else "") # (if (options.personal) "-personal" else "")

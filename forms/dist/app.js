@@ -18,9 +18,9 @@ const rndHex = (n) => { const b = new Uint8Array(n); crypto.getRandomValues(b); 
 let toastT = null;
 function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600); }
 function confirmBox(text, cb) {
-  $("cmText").textContent = text; $("confirmModal").classList.add("on");
-  $("cmYes").onclick = () => { $("confirmModal").classList.remove("on"); cb(); };
-  $("cmNo").onclick = () => $("confirmModal").classList.remove("on");
+  $("cmText").textContent = text; $("confirmModal").showModal();
+  $("cmYes").onclick = () => { $("confirmModal").close(); cb(); };
+  $("cmNo").onclick = () => $("confirmModal").close();
 }
 
 
@@ -50,6 +50,7 @@ async function refreshMe() {
   return true;
 }
 function signOut() {
+  document.querySelectorAll("dialog.ks-dialog[open]").forEach(dialog => dialog.close());
   suiteCookie.clear(); // leaving this tool also stops the automatic suite sign-in until the Hub is opened again
   const t = session.load(); session.clear();
   if (t) backend.signOut(t).catch(() => {});
@@ -67,6 +68,12 @@ const isFillRoute = () => /^#\/f\//.test(location.hash || "");
 function route() {
   const h = location.hash || "";
   const mf = h.match(/^#\/f\/([0-9a-f]{6,40})(\?[^#]*)?/);
+  if (window.parent !== window && (!mf || /[?&]p=1(?:&|$)/.test(h))) {
+    $("layout").classList.remove("on"); $("login").style.display = "none";
+    $("fillShell").classList.remove("hidden");
+    $("fillWrap").textContent = "Open Forms directly to manage or preview a form.";
+    return;
+  }
   if (mf) {
     // the public fill page: no sign-in, no topbar — respondents are anonymous
     $("login").style.display = "none"; $("layout").classList.remove("on"); $("fillShell").classList.remove("hidden");
@@ -84,13 +91,17 @@ function route() {
   if (mw) { enterWorkspace(Number(mw[1]), mw[2] || "build"); return; }
   enterDash();
 }
-window.addEventListener("hashchange", route);
+window.addEventListener("hashchange", () => {
+  document.querySelectorAll("dialog.ks-dialog[open]").forEach(dialog => dialog.close());
+  route();
+});
 
 async function boot() {
   const { HttpAgent, Actor } = await import("./agent-bundle.js");
   const agent = await HttpAgent.create({ host: IC_HOST });
   backend = Actor.createActor(idlFactory, { agent, canisterId: BACKEND_CANISTER_ID });
   try { info = await backend.info(); if (info.hubId) hubActor = Actor.createActor(topbarIdlFactory, { agent, canisterId: info.hubId }); if (info.orgName) { $("loginSub").textContent = `${info.orgName} · forms`; $("fillOrg").textContent = info.orgName; } if (!info.hubSet) { $("loginWarn").classList.remove("hidden"); $("loginWarn").textContent = "This app is not connected to your company Hub yet. Contact your IT team."; } } catch (e) {}
+  if (window.parent !== window) { route(); return; }
   if (isFillRoute()) {
     // respondents never touch the hub — but an internal PREVIEW (?p=1) needs the signed-in person, without the topbar
     if (/[?&]p=1/.test(location.hash) && session.load()) { try { const w = opt(await backend.whoami(session.load())); if (w) { me = w; hubTok = session.load(); } } catch (_) {} }
@@ -218,9 +229,9 @@ $("newFormBtn").onclick = async () => {
 /* ============================== import ============================== */
 let IMP = null; // analyzed result: { title, desc, schema, rep }
 let impMode = "google";
-$("importBtn").onclick = () => { IMP = null; $("impSrc").value = ""; $("impReport").innerHTML = ""; $("impCreate").disabled = true; $("importModal").classList.add("on"); };
-$("impCancel").onclick = () => $("importModal").classList.remove("on");
-$("impCopyPrompt").onclick = () => {
+$("importBtn").onclick = () => { clearImportAnalysis(); $("impSrc").value = ""; $("impHelpT").open = false; $("impCopyStatus").textContent = ""; $("importModal").showModal(); };
+$("impCancel").onclick = () => $("importModal").close();
+$("impCopyPrompt").onclick = async () => {
   const p = `Convert the attached form (PDF, document or screenshot) into this plain-text outline format, and output ONLY the outline:
 
 # <form data-ks-form title>
@@ -230,16 +241,21 @@ $("impCopyPrompt").onclick = () => {
 ## <section title>   (only if the form has sections/pages)
 
 Rules: one question per line. Type tags: [choice] (single select), [checkboxes] (multi select), [dropdown], [short] (single-line text), [paragraph] (long text), [date], [scale a-b] for rating/linear scales (e.g. [scale 1-5]). Add [required] where the form marks the question mandatory. Options go on "- " lines directly below their question. Skip images, grids and file-upload questions but list them at the very end as comment lines starting with "SKIPPED: ".`;
-  navigator.clipboard.writeText(p).then(() => toast("Prompt copied — paste it into your AI assistant with your file"));
+  try {
+    await navigator.clipboard.writeText(p);
+    $("impCopyStatus").textContent = "Prompt copied.";
+  } catch (_) {
+    $("impCopyStatus").textContent = "Could not copy. Allow clipboard access and try again.";
+  }
 };
 document.querySelectorAll("#importModal [data-imp]").forEach((t) => {
   t.onclick = () => {
     impMode = t.dataset.imp;
-    document.querySelectorAll("#importModal [data-imp]").forEach((x) => x.classList.toggle("sel", x === t));
+    document.querySelectorAll("#importModal [data-imp]").forEach((x) => x.setAttribute("aria-pressed", String(x === t)));
     $("impHelpG").style.display = impMode === "google" ? "" : "none";
     $("impHelpT").style.display = impMode === "text" ? "" : "none";
     $("impSrc").placeholder = impMode === "google" ? '{"formId":"…","info":{"title":"…"},"items":[…]}' : "# Offsite feedback\nHow was the venue? [scale 1-5] [required]\nWhich sessions did you attend? [checkboxes]\n- Keynote\n- Workshops\nAnything else? [paragraph]";
-    IMP = null; $("impReport").innerHTML = ""; $("impCreate").disabled = true;
+    clearImportAnalysis();
   };
 });
 
@@ -350,14 +366,21 @@ function mapOutline(txt) {
   return { title, desc: "", schema: sc, rep };
 }
 
+function clearImportAnalysis() {
+  IMP = null;
+  $("impCreate").disabled = true;
+  $("impReport").replaceChildren();
+}
+$("impSrc").oninput = clearImportAnalysis;
 $("impAnalyze").onclick = () => {
+  clearImportAnalysis();
   const src = $("impSrc").value.trim();
   if (!src) { $("impReport").innerHTML = `<div class="notice">Paste something first.</div>`; return; }
   let r;
   if (impMode === "google") {
-    let g = null;
-    try { g = JSON.parse(src); } catch (e) { r = { err: "Not valid JSON: " + esc(String(e.message).slice(0, 120)) }; }
-    if (g) r = mapGoogleForm(g);
+    let data;
+    try { data = JSON.parse(src); } catch (e) { r = { err: "Not valid JSON: " + String(e.message).slice(0, 120) }; }
+    if (!r) r = mapGoogleForm(data);
   } else r = mapOutline(src);
   if (r.err) { IMP = null; $("impCreate").disabled = true; $("impReport").innerHTML = `<div class="notice">${esc(r.err)}</div>`; return; }
   IMP = r;
@@ -370,16 +393,36 @@ $("impAnalyze").onclick = () => {
   $("impCreate").disabled = nq === 0;
 };
 
+let creatingImport = false;
+$("importModal").addEventListener("cancel", event => { if (creatingImport) event.preventDefault(); });
 $("impCreate").onclick = async () => {
-  if (!IMP) return;
-  $("impCreate").disabled = true;
-  const a = backend;
-  const m = opt(await a.createForm(hubTok, IMP.title.slice(0, 300) || "Imported form"));
-  if (!m) { toast("Could not create the form"); $("impCreate").disabled = false; return; }
-  const ok = (await a.updateForm(hubTok, m.id, { title: IMP.title.slice(0, 300) || "Imported form", description: (IMP.desc || "").slice(0, 2000), schema: JSON.stringify(IMP.schema), allowEdit: false, cap: 0n })).ok;
-  $("importModal").classList.remove("on");
-  if (ok) { toast("Imported as a new draft — review it, then open it"); location.hash = "#/form/" + m.id; }
-  else toast("Form created but the content could not be saved — open it and try again");
+  if (!IMP || creatingImport) return;
+  const draft = IMP, dialog = $("importModal");
+  const controls = [...dialog.querySelectorAll("button, textarea")];
+  creatingImport = true;
+  controls.forEach(control => { control.disabled = true; });
+  let created;
+  try {
+    const title = draft.title.slice(0, 300) || "Imported form";
+    created = opt(await backend.createForm(hubTok, title));
+    if (!created) { $("impReport").textContent = "Could not create the draft."; return; }
+    const result = await backend.updateForm(hubTok, created.id, { title, description: (draft.desc || "").slice(0, 2000), schema: JSON.stringify(draft.schema), allowEdit: false, cap: 0n });
+    dialog.close();
+    location.hash = "#/form/" + created.id;
+    toast(result.ok ? "Imported as a new draft — review it, then open it" : "Draft created. The imported questions could not be saved.");
+  } catch (_) {
+    if (created) {
+      dialog.close();
+      location.hash = "#/form/" + created.id;
+      toast("Draft created. Check whether the imported questions were saved.");
+    } else {
+      $("impReport").textContent = "Could not confirm draft creation. Check your forms before trying again.";
+    }
+  } finally {
+    creatingImport = false;
+    controls.forEach(control => { control.disabled = false; });
+    $("impCreate").disabled = !IMP;
+  }
 };
 
 /* ============================== form workspace ============================== */
@@ -413,7 +456,7 @@ async function enterWorkspace(id, tab) {
   $("tabSubs").style.display = tab === "subs" ? "" : "none";
   $("tabInsights").style.display = tab === "insights" ? "" : "none";
   $("tabPublish").hidden = tab !== "publish";
-  if (tab === "publish") { await renderPublish({root:$("tabPublish"),backend,token:hubTok,form:f,editable:sh.myRole!=="viewer",canDelete:sh.myRole==="owner",isAdmin:me.role==="admin",backendId:BACKEND_CANISTER_ID,escape:esc,url:fillUrl(f.slug)}); return; }
+  if (tab === "publish") { await renderPublish({root:$("tabPublish"),backend,token:hubTok,form:f,editable:sh.myRole!=="viewer",canDelete:sh.myRole==="owner",isAdmin:me.role==="admin",backendId:BACKEND_CANISTER_ID,attachPicker,escape:esc,url:fillUrl(f.slug)}); return; }
   if (tab === "build") renderBuilder();
   else { await loadSubs(); if (tab === "subs") renderSubs(); else renderInsights(); }
 }
@@ -460,48 +503,76 @@ function renderWorkspaceHead() {
 
 /* ---------- sharing ---------- */
 let SH = null; // working copy [(email, role)]
-async function openShareModal() {
+function openShareModal() {
   SH = FW.shares.map(([e, r]) => [e, r]);
   $("shSearch").value = "";
+  $("shStatus").textContent = "";
   renderShareModal();
-  $("shareModal").classList.add("on");
+  $("shareModal").showModal();
 }
 let shTimer = 0, shHits = [];
 async function shSearchNow() {
-  const q = $("shSearch").value.trim();
-  const taken = new Set(SH.map(([e]) => e));
-  shHits = [];
-  if (q) { try { shHits = (await backend.directory(session.load(), q)).filter((d) => d.email !== me.email && !taken.has(d.email)).slice(0, 8); } catch (_) {} }
+  const q = $("shSearch").value.trim(), draft = SH;
+  let people;
+  try { people = q ? await backend.directory(session.load(), q) : []; }
+  catch (_) {
+    if ($("shareModal").open && draft === SH && q === $("shSearch").value.trim()) $("shResults").textContent = "Could not load directory matches.";
+    return;
+  }
+  if (!$("shareModal").open || $("shSave").disabled || draft !== SH || q !== $("shSearch").value.trim()) return;
+  const taken = new Set(SH.map(([email]) => email));
+  shHits = people.filter(person => person.email !== me.email && !taken.has(person.email)).slice(0, 8);
   renderShareModal();
 }
 function renderShareModal() {
   const q = $("shSearch").value.trim();
   const hits = q ? shHits : [];
-  $("shResults").innerHTML = hits.map((d) => `<div class="opt-item" data-e="${esc(d.email)}" data-n="${esc(d.displayName)}" style="justify-content:space-between"><span>${esc(d.displayName)} <span style="color:var(--ks-fg-muted);font-size:12.5px">· ${esc(d.email)}</span></span><span class="linkbtn">ADD</span></div>`).join("") ||
+  $("shResults").innerHTML = hits.map((d) => `<button class="share-result" type="button" data-e="${esc(d.email)}" data-n="${esc(d.displayName)}"><span>${esc(d.displayName)} <span style="color:var(--ks-fg-muted);font-size:12.5px">· ${esc(d.email)}</span></span><span>Add</span></button>`).join("") ||
     (q ? `<div style="font:400 13px var(--ks-ui);color:var(--ks-fg-muted);padding:6px 0">No matches in the directory.</div>` : "");
-  $("shResults").querySelectorAll("[data-e]").forEach((r) => { r.onclick = () => { SH.push([r.dataset.e, "viewer"]); FW.names[r.dataset.e] = r.dataset.n; $("shSearch").value = ""; shHits = []; renderShareModal(); }; });
+  $("shResults").querySelectorAll("[data-e]").forEach((r) => { r.onclick = () => { SH.push([r.dataset.e, "viewer"]); FW.names[r.dataset.e] = r.dataset.n; $("shSearch").value = ""; shHits = []; renderShareModal(); $("shSearch").focus(); }; });
   $("shList").innerHTML = SH.length ? SH.map(([e, role], i) => {
     const nm = (FW.names || {})[e] || e;
-    return `<div class="opt-item" style="justify-content:space-between;gap:10px">
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)} <span style="color:var(--ks-fg-muted);font-size:12.5px">· ${esc(e)}</span></span>
-      <span style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <select data-i="${i}" style="padding:5px 8px;font-size:12px"><option value="viewer" ${role === "viewer" ? "selected" : ""}>Viewer</option><option value="editor" ${role === "editor" ? "selected" : ""}>Editor</option></select>
-        <button class="iconbtn" data-rm="${i}">✕</button>
+    return `<div class="share-person">
+      <span class="share-name">${esc(nm)} <span style="color:var(--ks-fg-muted);font-size:12.5px">· ${esc(e)}</span></span>
+      <span class="share-controls">
+        <select aria-label="Role for ${esc(nm)}" data-i="${i}"><option value="viewer" ${role === "viewer" ? "selected" : ""}>Viewer</option><option value="editor" ${role === "editor" ? "selected" : ""}>Editor</option></select>
+        <button class="iconbtn" aria-label="Remove ${esc(nm)}" data-rm="${i}">✕</button>
       </span></div>`;
   }).join("") : `<div style="font:400 13px var(--ks-ui);color:var(--ks-fg-muted)">Only you have access.</div>`;
   $("shList").querySelectorAll("select[data-i]").forEach((s) => { s.onchange = () => { SH[Number(s.dataset.i)][1] = s.value; }; });
-  $("shList").querySelectorAll("[data-rm]").forEach((b) => { b.onclick = () => { SH.splice(Number(b.dataset.rm), 1); renderShareModal(); }; });
+  $("shList").querySelectorAll("[data-rm]").forEach((b) => { b.onclick = () => { SH.splice(Number(b.dataset.rm), 1); renderShareModal(); $("shSearch").focus(); }; });
 }
-$("shSearch").oninput = () => { clearTimeout(shTimer); shTimer = setTimeout(shSearchNow, 180); };
-$("shCancel").onclick = () => $("shareModal").classList.remove("on");
+$("shSearch").oninput = () => {
+  clearTimeout(shTimer);
+  shHits = [];
+  $("shResults").textContent = "";
+  shTimer = setTimeout(shSearchNow, 180);
+};
+$("shCancel").onclick = () => $("shareModal").close();
+$("shareModal").addEventListener("cancel", event => { if ($("shSave").disabled) event.preventDefault(); });
 $("shSave").onclick = async () => {
-  const a = backend;
-  const r = await a.setShares(hubTok, FW.form.id, SH);
-  if (!r.ok) { toast(r.detail || "Could not save"); return; }
-  FW.shares = SH.map(([e, ro]) => [e, ro]);
-  $("shareModal").classList.remove("on");
-  renderWorkspaceHead();
-  toast("Sharing updated");
+  const save = $("shSave"), dialog = $("shareModal");
+  if (save.disabled) return;
+  clearTimeout(shTimer);
+  const form = FW, draft = SH.map(([email, role]) => [email, role]);
+  const controls = [...dialog.querySelectorAll("button, input, select")];
+  controls.forEach(control => { control.disabled = true; });
+  $("shStatus").textContent = "Saving…";
+  try {
+    const result = await backend.setShares(hubTok, form.form.id, draft);
+    if (FW !== form || !dialog.open) return;
+    if (!result.ok) { $("shStatus").textContent = result.detail || "Could not save shares."; return; }
+    form.shares = draft;
+    dialog.close();
+    renderWorkspaceHead();
+    $("shareBtn")?.focus();
+    toast("Sharing updated");
+  } catch (_) {
+    if (FW !== form || !dialog.open) return;
+    $("shStatus").textContent = "Could not confirm the update. Reopen the form to check its access.";
+  } finally {
+    controls.forEach(control => { control.disabled = false; });
+  }
 };
 
 /* ---------- autosave ---------- */
@@ -947,7 +1018,10 @@ async function enterFill(slug, urlTok, isPreview) {
   document.documentElement.classList.toggle('embed-form', embedded);
   if (embedded) {
     const parent = params.get('parent');
-    if (!FILL.policy?.origins.includes(parent)) { w.innerHTML='<div class="notice">This website is not enabled for embedding. Open the form directly.</div>'; return; }
+    const origins = FILL.policy?.origins || [];
+    let publicHost = false;
+    try { const host = new URL(parent); publicHost = host.protocol === 'https:' && host.origin === parent && origins.includes('https://*'); } catch {}
+    if (!publicHost && !origins.includes(parent)) { w.innerHTML='<div class="notice">This website is not enabled for embedding. Open the form directly.</div>'; return; }
     const verifiedHost=await new Promise(resolve=>{let timer;const check=e=>{if(e.source===window.parent&&e.origin===parent&&e.data?.type==='kebabstack.forms.host'){clearTimeout(timer);window.removeEventListener('message',check);resolve(true);}};window.addEventListener('message',check);timer=setTimeout(()=>{window.removeEventListener('message',check);resolve(false);},4000);window.parent.postMessage({type:'kebabstack.forms.ready'},parent);});
     if(!verifiedHost){w.innerHTML='<div class="notice">Could not verify the embedding website. Use the current embed script or open the form separately.</div>';return;}
     const theme=params.get('theme');if(theme==='dark'||theme==='light')document.documentElement.setAttribute('data-theme',theme);else document.documentElement.setAttribute('data-theme',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
@@ -1072,7 +1146,7 @@ function fillQuestionHtml(q) {
   const v = FILL.A[q.id];
   let body = "";
   if (q.type === "short") body = `<input style="width:100%" data-q="${q.id}" maxlength="1000" value="${esc(v || "")}">`;
-  else if (q.type === "para") body = `<textarea style="width:100%" data-q="${q.id}" maxlength="10000">${esc(v || "")}</textarea>`;
+  else if (q.type === "para") body = `<textarea style="width:100%" data-q="${q.id}" maxlength="20000" aria-describedby="count-${q.id}">${esc(v || "")}</textarea><small id="count-${q.id}">${Array.from(v || "").length} / 10,000 characters</small>`;
   else if (q.type === "date") body = `<input type="date" data-q="${q.id}" value="${esc(v || "")}">`;
   else if (q.type === "drop") body = `<select data-q="${q.id}" style="min-width:min(320px,100%)"><option value="">— choose —</option>${(q.opts || []).map((o) => `<option ${v === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
   else if (q.type === "choice") body = (q.opts || []).map((o, i) => `<label class="opt-item"><input type="radio" name="q${q.id}" value="${esc(o)}" ${v === o ? "checked" : ""}> ${esc(o)}</label>`).join("");
@@ -1095,7 +1169,18 @@ function bindFillPage(s) {
   const w = $("fillWrap");
   w.querySelectorAll("input[data-q],textarea[data-q],select[data-q]").forEach((el) => {
     if (el.type === "radio") return;
-    el.oninput = () => { FILL.A[Number(el.dataset.q)] = el.value; };
+    el.oninput = () => {
+      FILL.A[Number(el.dataset.q)] = el.value;
+      if (el.tagName === "TEXTAREA") {
+        const length = Array.from(el.value).length;
+        const overLimit = length > 10000;
+        document.getElementById("count-" + el.dataset.q).textContent = overLimit
+          ? length + " / 10,000 characters — shorten this answer before continuing."
+          : length + " / 10,000 characters";
+        el.setCustomValidity(length > 10000 ? "Use up to 10,000 characters." : "");
+        el.setAttribute("aria-invalid", String(length > 10000));
+      }
+    };
   });
   s.questions.forEach((q) => {
     if (q.type === "choice") w.querySelectorAll(`input[name="q${q.id}"]`).forEach((r) => { r.onchange = () => { FILL.A[q.id] = r.value; }; });
@@ -1151,7 +1236,9 @@ function validatePage(s) {
   let ok = true;
   s.questions.forEach((q) => {
     const el = document.querySelector(`.fq[data-fq="${q.id}"]`);
-    const bad = q.req && answeredVal(q) === null;
+    const tooLong = q.type === "para" && Array.from(FILL.A[q.id] || "").length > 10000;
+    const bad = tooLong || (q.req && answeredVal(q) === null);
+    if (el && q.type === "para") el.querySelector(".errmsg").textContent = tooLong ? "Use up to 10,000 characters." : "This question is required.";
     if (el) el.classList.toggle("err", bad);
     if (bad) ok = false;
   });
@@ -1181,6 +1268,38 @@ function nextTarget(s) {
   return target;
 }
 
+let turnstileScript;
+async function verifyVisitor(fill) {
+  if (!turnstileScript) {
+    turnstileScript = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.onload = resolve;
+      script.onerror = () => { script.remove(); reject(new Error("Could not load verification. Please retry.")); };
+      document.head.append(script);
+    }).catch(error => { turnstileScript = null; throw error; });
+  }
+  await turnstileScript;
+  const bytes = new TextEncoder().encode(fill.slug + ":" + fill.requestId);
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const binding = Array.from(hash, byte => byte.toString(16).padStart(2, "0")).join("");
+  const container = document.createElement("div");
+  $("fNext").before(container);
+  let widget, timer;
+  try {
+    return await new Promise((resolve, reject) => {
+      const failed = () => reject(new Error("Verification expired or unavailable. Please retry."));
+      timer = setTimeout(failed, 300000);
+      widget = window.turnstile.render(container, { sitekey: fill.siteKey, action: "forms_submit", cData: binding,
+        size: container.parentElement.getBoundingClientRect().width < 300 ? "compact" : "flexible", callback: resolve, "expired-callback": failed, "error-callback": failed, "timeout-callback": failed });
+    });
+  } finally {
+    clearTimeout(timer);
+    if (widget !== undefined) window.turnstile.remove(widget);
+    container.remove();
+  }
+}
+
 async function doSubmit() {
   const submittingFill = FILL;
   if (FILL.preview) { renderPreviewDone(); return; }
@@ -1199,6 +1318,15 @@ async function doSubmit() {
       return;
     }
     const editToken = FILL.requestId;
+    let proof;
+    try {
+      [FILL.siteKey] = await a.intakeSiteKey(FILL.slug);
+      if (FILL.siteKey) proof = await verifyVisitor(submittingFill);
+    } catch (error) {
+      if (FILL === submittingFill) { toast(error.message); btn.disabled = false; btn.textContent = "Retry submission"; }
+      return;
+    }
+    if (FILL !== submittingFill) return;
     FILL.pending ||= {slug:FILL.slug,name:(FILL.idName || "").trim().slice(0,200),email:(FILL.idEmail || "").trim().slice(0,200),payload,context:FILL.context || [],website:$("intakeWebsite")?.value || ""};
     FILL.pendingAt ||= Date.now();
     try {
@@ -1206,7 +1334,8 @@ async function doSubmit() {
     } catch { FILL.recoveryUnavailable = true; }
     const pending=FILL.pending;
     $("fillWrap").querySelectorAll('input,textarea,select,button').forEach(el=>{if(el!==btn)el.disabled=true;});
-    const r = await a.submitIntake(pending.slug,pending.name,pending.email,pending.payload,editToken,pending.context,pending.website);
+    const args = [pending.slug,pending.name,pending.email,pending.payload,editToken,pending.context,pending.website];
+    const r = proof ? await a.submitVerified(...args,proof) : await a.submitIntake(...args);
     if (FILL !== submittingFill) return;
     if (!r.ok) {
       if (FILL.recovering) { renderPending({pending:FILL.pending,requestId:FILL.requestId,at:FILL.pendingAt}); toast(r.detail || "Receipt could not be confirmed. Contact the form owner."); return; }
@@ -1252,6 +1381,14 @@ $("sSave").onclick = async () => {
   const r = await backend.setSettings(session.load(), { adminGroup: "", appUrl: $("sAppUrl").value.trim(), orgName: $("sOrg").value.trim() });
   setStatus("sStatus", r.ok ? "ok" : "err", r.ok ? "saved" : r.detail);
   await refreshMe(); enterSettings();
+};
+$("sBotSave").onclick = async () => {
+  const secret = $("sBotSecret").value.trim();
+  $("sBotSecret").value = "";
+  try {
+    const ok = await backend.configureTurnstile(session.load(),location.hostname,$("sBotKey").value.trim(),secret);
+    $("sBotStatus").textContent = ok ? "Widget saved. Enable verification under Publish & connect." : "Check the keys and your administrator access.";
+  } catch { $("sBotStatus").textContent = "Could not confirm the widget configuration."; }
 };
 $("sSync").onclick = async () => { const r = await backend.syncNow(session.load()); setStatus("sStatus", r.ok ? "ok" : "err", r.detail); enterSettings(); };
 $("sSeed").onclick = async () => { const r = await backend.seedDemo(session.load()); setStatus("sSeedStatus", r.ok ? "ok" : "err", r.detail); enterSettings(); };

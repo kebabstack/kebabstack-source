@@ -1,3 +1,4 @@
+import Falcon "Falcon";
 import OpenTeam "OpenTeam";
 import Displays "Displays";
 import Brand "Brand";
@@ -120,7 +121,7 @@ persistent actor UserHub {
   /// The frontend shows it bottom-left with the changelog and warns when backend and frontend differ.
   /// `transient`: in a persistent actor every plain `let` is STABLE and keeps its first-install value across upgrades —
   /// a stable constant is frozen forever (that is how 0.8.1 kept reporting 0.8.0). Constants belong in `transient let`.
-  transient let BUILD_VERSION : Text = "0.45.1";
+  transient let BUILD_VERSION : Text = "0.48.0";
   /// stable since 0.8.0 and therefore frozen at "0.8.0"; kept only because a stable field cannot be dropped without a migration. Do not read.
   let HUB_VERSION : Text = "0.13.0";
   public query func version() : async Text { BUILD_VERSION };
@@ -450,7 +451,7 @@ persistent actor UserHub {
     max_response_bytes : ?Nat64;
     headers : [HttpHeader];
     body : ?Blob;
-    method : { #get; #post; #head };
+    method : { #get; #post; #head; #patch };
     transform : ?{ function : shared query TransformArgs -> async HttpResponsePayload; context : Blob };
     is_replicated : ?Bool; // false = single node, no consensus/transform — right for live APIs
   };
@@ -4947,6 +4948,18 @@ persistent actor UserHub {
   };
   let notifications : Map.Map<Nat, Notification> = Map.empty<Nat, Notification>();
   var nextNotifId : Nat = 1;
+  // Only the connector which submitted a notification may read its delivery receipt.
+  let trackedSlack = Map.empty<Text, Nat>();
+  public shared query ({caller}) func hub_notificationDelivery(key : Text) : async ?Text {
+    let c = connectorByPrincipal(caller) ?? (return null);
+    if (not hasLane(c.id,"notify") or key.size() > 120) return null;
+    let id = trackedSlack.get(c.id.toText() # ":" # key) ?? (return null);
+    let n = notifications.get(id) ?? (return ?"unconfirmed");
+    if (Text.startsWith(n.slack,#text "sent (")) ?"sent"
+    else if (Text.startsWith(n.slack,#text "failed:")) ?"failed"
+    else if (Text.startsWith(n.slack,#text "skipped:")) ?"skipped"
+    else if (n.slack == "off") ?"off" else ?"queued"
+  };
   let notifSlackOptOut : Map.Map<Text, Bool> = Map.empty<Text, Bool>(); // email -> opted out (default = DMs ON)
   let notifDedupe : Map.Map<Text, Int> = Map.empty<Text, Int>(); // "<connectorId>:<dedupeKey>" -> at
   var slackBotToken : Text = ""; // LEGACY (single-bot era) — folded into slackBots via migrateLegacySlackBot()
@@ -5055,6 +5068,7 @@ persistent actor UserHub {
     let slackState = if (not slackEnabled or enabledBotsSnapshot().size() == 0) "off" else if (optedOut) "skipped: user opted out" else "queued";
     let id = nextNotifId;
     nextNotifId += 1;
+    if (args.kind == "forms.ticket" and args.dedupeKey != "") trackedSlack.add(connId.toText() # ":" # args.dedupeKey,id);
     Map.add(notifications, Nat.compare, id, { id; email; fromApp; title; url = notificationUrl(args.url); kind = args.kind; at = now; read = false; slack = slackState });
     if (slackState == "queued") ignore Timer.setTimer<system>(#seconds 1, deliverSlack);
     { ok = true; detail = "" };
@@ -5249,10 +5263,12 @@ persistent actor UserHub {
                 // AUDIT FIX (H7): neutralize Slack mrkdwn control chars in
                 // free-text fields — a tool must not smuggle <url|label> links.
                 let mrk = func(t : Text) : Text = Text.replace(Text.replace(Text.replace(t, #char '&', "&amp;"), #char '<', "&lt;"), #char '>', "&gt;");
-                let link = if (n.url != "") "\n<" # jsonEsc(notificationUrl(n.url)) # "|Open in " # jsonEsc(mrk(n.fromApp)) # " →>" else "";
-                let payload = "{\"channel\":\"" # jsonEsc(uid) # "\",\"unfurl_links\":false,\"text\":\"*" # jsonEsc(mrk(n.title)) # "*  —  " # jsonEsc(mrk(n.fromApp)) # link # "\"}";
+                let link = if (n.url == "") "" else "\n<" # notificationUrl(n.url) # "|Open in " # mrk(n.fromApp) # " →>";
+                let message = "*" # mrk(n.title) # "*  —  " # mrk(n.fromApp) # link;
+                let payload = Json.stringify(Json.obj([("channel",#string uid),("unfurl_links",#bool false),("text",#string message)]),null);
                 let r = await slackApi(bot.token, "https://slack.com/api/chat.postMessage", ?payload);
-                if (r.ok and Text.contains(r.body, #text "\"ok\":true")) "sent (" # bot.name # ")" else "failed: " # snippet(r.body, 120);
+                let accepted = switch(Json.parse(r.body)){case (#ok j) Json.get(j,"ok") == ?(#bool true);case _ false};
+                if (r.ok and accepted) "sent (" # bot.name # ")" else "failed: " # snippet(r.body, 120);
               };
             };
             switch (Map.get(notifications, Nat.compare, id)) {
@@ -5275,7 +5291,7 @@ persistent actor UserHub {
     for (id in List.values(doomed)) ignore Map.delete(notifications, Nat.compare, id);
     let doomedD = List.empty<Text>();
     for ((k, t) in Map.entries(notifDedupe)) if (now - t > NOTIF_DEDUPE_NS) List.add(doomedD, k);
-    for (k in List.values(doomedD)) ignore Map.delete(notifDedupe, Text.compare, k);
+    for (k in List.values(doomedD)) { notifDedupe.remove(k); trackedSlack.remove(k) };
   };
 
   // ---- portal inbox (session-gated, same pattern as portalApps) ----
@@ -7468,6 +7484,204 @@ persistent actor UserHub {
     hardwareCase(desk.canisterId, result ?? (return null));
   };
 
+  // One Falcon tenant feeds one explicitly selected internal Desk.
+  var falconConfig : ?Falcon.Config = null;
+  var falconLegacyCursor : Nat = 0;
+  var falconEditCursor : Nat = 0;
+  var falconAckCursor : Nat = 0;
+  var falconSince = "";
+  var falconAfter = "";
+  var falconWindowEnd : Int = 0;
+  var falconSuccess : Int = 0;
+  var falconMessage = "Disconnected";
+  transient var falconRunning = false;
+
+  public shared query ({caller}) func falconSettings() : async { connected : Bool; lastSuccess : Int; detail : Text; running : Bool } {
+    assert isOwnerRole(caller);
+    { connected = falconConfig != null; lastSuccess = falconSuccess; detail = falconMessage; running = falconRunning }
+  };
+  public shared ({caller}) func connectFalcon(region : Text, cid : Text, clientId : Text, secret : Text, deskId : Nat, since : Text) : async Bool {
+    assert isOwnerRole(caller);
+    if (falconRunning or falconConfig != null or Falcon.api(region) == "" or not Falcon.hexId(cid) or not Falcon.hexId(clientId) or secret == "" or secret.size() > 512 or not Falcon.timestamp(since)) return false;
+    let c = connectors.get(deskId) ?? (return false);
+    let p = appPermissionPolicies.get(deskId) ?? (return false);
+    if (p.policy.app != "desk") return false;
+    falconConfig := ?{region; cid; clientId; secret; desk = c.canisterId; connector = deskId};
+    falconSince := since; falconWindowEnd := 0; falconAfter := ""; falconSuccess := 0; falconMessage := "Waiting for first sync";
+    true
+  };
+  public shared ({caller}) func disconnectFalcon() : async Bool {
+    assert isOwnerRole(caller);
+    if (falconRunning) return false;
+    falconConfig := null; falconMessage := "Disconnected"; falconSuccess := 0; true
+  };
+  func falconBound(c : Falcon.Config) : Bool {
+    switch (connectors.get(c.connector), appPermissionPolicies.get(c.connector)) {
+      case (?desk, ?p) desk.canisterId == c.desk and p.policy.app == "desk" and falconConfig == ?c;
+      case _ false
+    }
+  };
+  func falconRequest(c : Falcon.Config, token : Text, path : Text, method : {#post; #patch}, body : Text) : async Json.Json {
+    if (not falconBound(c)) throw Error.reject("Desk connection changed");
+    let headers = if (token == "") [{name="Content-Type";value="application/x-www-form-urlencoded"}] else [{name="Content-Type";value="application/json"},{name="Authorization";value="Bearer " # token}];
+    let r = await (with timeout = 45) ic00.http_request({url=Falcon.api(c.region) # path; method; headers; max_response_bytes=?1_900_000; body=?Text.encodeUtf8(body); transform=null; is_replicated=?false});
+    await* Falcon.decode(r.status, r.body)
+  };
+  func falconAssets() : ?Connector {
+    var found : ?Connector = null;
+    for ((id, policy) in appPermissionPolicies.entries()) if (policy.policy.app == "assets") {
+      if (found != null) return null;
+      found := connectors.get(id);
+    };
+    found
+  };
+  func falconDevice(host : Text, serial : Text, viewer : Text) : async Falcon.DeviceView {
+    let unavailable = {state="unavailable";device=null;url=""};
+    let c = falconAssets() ?? (return unavailable);
+    func allowedRole() : Text {
+      if (viewer == "") return "intake";
+      let p = personOf(viewer) ?? (return "none");
+      let policy = appPermissionPolicies.get(c.id) ?? (return "none");
+      if (p.sealedAt != 0 or pidForEmail(p.email) != viewer or accessForConn(p.email,c.id) != #active) return "none";
+      permissionDecision(c.id,policy.policy,p.email).role
+    };
+    let role = allowedRole();
+    if (role == "none") return unavailable;
+    let app : actor {hub_falconDevice : shared query (Text,Text,Text,Text) -> async {state:Text;device:?Falcon.Device}} = actor(c.canisterId.toText());
+    let result = try { await (with timeout = 12) app.hub_falconDevice(host,serial,viewer,role) } catch (_) { return unavailable };
+    if (falconAssets() != ?c or allowedRole() != role) return unavailable;
+    var url = "";
+    for ((id,tile) in appLinks.entries()) if (connectorOfTile(id) == c.id and Text.startsWith(tile.url,#text "https://")) url := tile.url;
+    {state=result.state;device=result.device;url}
+  };
+  func falconIdentity(j : Json.Json, host : Text) : async Falcon.Identity {
+    let serial = Falcon.field(j,"device.serial_number");
+    for (key in ["user_principal","user_name"].vals()) {
+      let email = lower(norm(Falcon.field(j,key)));
+      let pid = pidForEmail(email);
+      if (Text.contains(email,#char '@') and pid != "") return {person=pid;serial;basis="Falcon user"};
+    };
+    let result = await falconDevice(host,serial,"");
+    let owner = switch(result.device){case (?d) d.owner; case null ""};
+    let pid = if (Text.contains(owner,#char '@')) pidForEmail(owner) else owner;
+    {person=if (personOf(pid) != null) pid else "";serial;basis="Assets assignment"}
+  };
+  public shared ({caller}) func hub_falconDeviceView(viewer : Text, host : Text, serial : Text) : async Falcon.DeviceView {
+    assert supportViewer(caller,viewer);
+    let result = await falconDevice(host,serial,viewer);
+    if (not supportViewer(caller,viewer)) return {state="unavailable";device=null;url=""};
+    result
+  };
+  func syncFalconEdit(c:Falcon.Config, desk:Falcon.Desk, token:Text, id:Nat, e:Falcon.Edit) : async () {
+    if (not Text.startsWith(e.key,#text(c.cid # ":"))) throw Error.reject("Falcon tenant mismatch");
+    let ids=Json.obj([("composite_ids",#array([#string(e.key)]))]);
+    func read() : async (Text,[Text]) {
+      let j=await falconRequest(c,token,"/alerts/entities/alerts/v2",#post,Json.stringify(ids,null));
+      let rows=await* Falcon.items(j);
+      if (rows.size()!=1 or Falcon.field(rows[0],"cid")!=c.cid or Falcon.field(rows[0],"composite_id")!=e.key) throw Error.reject("Falcon alert lookup mismatch");
+      (Falcon.field(rows[0],"status"),Falcon.reasons(rows[0]))
+    };
+    let initial=await read(); var status=initial.0; var reasons=initial.1;
+    func matches() : Bool = status == e.status and (e.reason == "" or reasons == [e.reason]);
+    func report(ok:Bool) : async () {
+      if (not falconBound(c)) throw Error.reject("Desk connection changed");
+      await (with timeout=20) desk.hub_falconEdited(id,e.revision,status,reasons,ok)
+    };
+    if (not matches()) {
+      // Re-read before retrying. Never overwrite a new decision from the console.
+      if ((status != e.priorStatus and status != e.status) or (e.reason != "" and reasons != e.priorReasons and reasons != [e.reason]) or (e.status=="closed" and e.reason=="")) {await report(false);return};
+      let actions=List.empty<Json.Json>();
+      func action(name:Text,value:Text) { actions.add(Json.obj([("name",#string(name)),("value",#string(value))])) };
+      if (e.reason != "") {
+        for (r in reasons.vals()) if (r != e.reason) action("remove_tag",r);
+        if (not reasons.any(func r = r == e.reason)) action("add_tag",e.reason);
+      };
+      if (status != e.status) action("update_status",e.status);
+      let body=Json.obj([("composite_ids",#array([#string(e.key)])),("action_parameters",#array(actions.toArray()))]);
+      ignore await falconRequest(c,token,"/alerts/entities/alerts/v3",#patch,Json.stringify(body,null));
+      let actual=await read();status:=actual.0;reasons:=actual.1;
+      if (not matches()) throw Error.reject("Waiting for Falcon status and resolution");
+    };
+    await report(true)
+  };
+  func falconWriteback(c : Falcon.Config, desk : Falcon.Desk, token : Text) : async () {
+    for ((id, compositeId) in (await (with timeout = 20) desk.hub_falconPending(falconAckCursor)).vals()) {
+      falconAckCursor := id;
+      let ids = Json.obj([("composite_ids",#array([#string(compositeId)]))]);
+      func read() : async Text {
+        let j = await falconRequest(c,token,"/alerts/entities/alerts/v2",#post,Json.stringify(ids,null));
+        let rows = await* Falcon.items(j);
+        if (rows.size() != 1 or Falcon.field(rows[0],"cid") != c.cid or Falcon.field(rows[0],"composite_id") != compositeId) throw Error.reject("Falcon alert lookup mismatch");
+        Falcon.field(rows[0],"status")
+      };
+      var observed = await read();
+      if (observed == "new" or observed == "reopened") {
+        let action = Json.obj([("name",#string("update_status")),("value",#string("in_progress"))]);
+        let payload = Json.obj([("composite_ids",#array([#string(compositeId)])),("action_parameters",#array([action]))]);
+        ignore await falconRequest(c,token,"/alerts/entities/alerts/v3",#patch,Json.stringify(payload,null));
+        observed := await read();
+        if (observed == "new" or observed == "reopened") throw Error.reject("Falcon has not confirmed the change");
+      };
+      if (not falconBound(c)) throw Error.reject("Desk connection changed");
+      await (with timeout = 20) desk.hub_falconResult(id,compositeId,observed);
+    }
+  };
+  func falconSync() : async () {
+    let c = falconConfig ?? (return);
+    if (falconRunning) return;
+    falconRunning := true;
+    try {
+      let auth = await falconRequest(c,"","/oauth2/token",#post,"client_id=" # urlEnc(c.clientId) # "&client_secret=" # urlEnc(c.secret));
+      let token = Falcon.field(auth,"access_token");
+      if (token == "") throw Error.reject("Falcon authentication failed");
+      let desk : Falcon.Desk = actor (c.desk.toText());
+      var ackFailed = false;
+      try { await falconWriteback(c,desk,token) } catch (_) { ackFailed := true };
+      try {
+        for ((id,e) in (await (with timeout=15) desk.hub_falconEdits(falconEditCursor)).vals()) {
+          falconEditCursor:=id;
+          try { await syncFalconEdit(c,desk,token,id,e) } catch (_) { ackFailed:=true }
+        }
+      } catch (_) { ackFailed:=true };
+      let legacy = try { await (with timeout = 15) desk.hub_falconLegacy(falconLegacyCursor) } catch (_) { [] };
+      for ((id,key) in legacy.vals()) {
+        falconLegacyCursor := id;
+        try { if (Text.startsWith(key,#text(c.cid # ":"))) {
+          let ids = Json.obj([("composite_ids",#array([#string(key)]))]);
+          let body = await falconRequest(c,token,"/alerts/entities/alerts/v2",#post,Json.stringify(ids,null));
+          for (j in (await* Falcon.items(body)).vals()) if (Falcon.field(j,"composite_id") == key) {
+            let raw = await* Falcon.alert(j,c.cid);
+            let identity = await falconIdentity(j,raw.host);
+            if (not falconBound(c)) throw Error.reject("Desk connection changed");
+            ignore await (with timeout = 15) desk.hub_falconIntake({raw with identity=?identity});
+          };
+        };
+        } catch (_) { /* A retired detection must not block new alerts. */ };
+      };
+      if (legacy.size() == 0) falconLegacyCursor := 0;
+      if (falconWindowEnd == 0) falconWindowEnd := Time.now();
+      let filter = "cid:'" # c.cid # "'+product:'epp'+updated_timestamp:>='" # falconSince # "'+updated_timestamp:<='" # Falcon.utcSecond(falconWindowEnd) # "'";
+      let params : [(Text,Json.Json)] = [("filter",#string(filter)),("sort",#string("composite_id|asc")),("limit",#number(#int(20)))];
+      let body = Json.obj(if (falconAfter == "") params else params.concat([("after",#string(falconAfter))]));
+      let page = await falconRequest(c,token,"/alerts/combined/alerts/v1",#post,Json.stringify(body,null));
+      for (j in (await* Falcon.items(page)).vals()) {
+        let raw = await* Falcon.alert(j,c.cid);
+        let identity = await falconIdentity(j,raw.host);
+        let alert = {raw with identity=?identity};
+        if (not falconBound(c)) throw Error.reject("Desk connection changed");
+        ignore await (with timeout = 20) desk.hub_falconIntake(alert);
+      };
+      falconAfter := Falcon.field(page,"meta.pagination.after");
+      if (falconAfter == "") { let overlap = Falcon.utcSecond(falconWindowEnd - 120_000_000_000);
+        if (overlap > falconSince) falconSince := overlap;
+        falconWindowEnd := 0; falconSuccess := Time.now() };
+      falconMessage := if (ackFailed) "Check Falcon writeback · retry scheduled" else if (falconAfter != "") "More alerts queued" else "Up to date";
+    } catch (e) { falconMessage := "Sync incomplete · " # Error.message(e) };
+    falconRunning := false;
+  };
+  public shared ({caller}) func syncFalcon() : async () { assert isOwnerRole(caller); await falconSync() };
+  transient let _falconTimer = Timer.recurringTimer<system>(#seconds 60, falconSync);
+
   transient let _autoSyncTimer = Timer.recurringTimer<system>(#seconds 300, func() : async () { await tick() });
   // push lane: every 15 min the scoped, lane-filtered directory goes into hub_upsert of apps that asked for it
   transient let _pushTimer = Timer.recurringTimer<system>(#seconds 900, func() : async () {
@@ -7508,6 +7722,15 @@ persistent actor UserHub {
     };
     out.toArray();
   };
+  func falconTicketCounts(f : Falcon.Config, viewer : Text) : async [(Text,Nat)] {
+    let desk : actor { hub_falconCounts : shared query (Text,Text) -> async ?(Nat,Nat) } = actor(f.desk.toText());
+    let counts = try { await (with timeout = 10) desk.hub_falconCounts(viewer,f.cid) } catch (_) { null };
+    switch counts {
+      case (?(open,critical)) { if (critical <= open and open <= 9_007_199_254_740_991) return [("falconOpen",open),("falconCritical",critical)] };
+      case null {};
+    };
+    []
+  };
   public shared ({ caller }) func operationsSnapshot(cid : Nat) : async Operations.Snapshot {
     let viewer = operationsViewer(caller, cid) ?? (return Operations.denied());
     let c = connectors.get(cid) ?? (return Operations.unavailable());
@@ -7516,6 +7739,15 @@ persistent actor UserHub {
     let result = try { await (with timeout = 15) source.hub_operations(viewer) } catch (_) { Operations.unavailable() };
     if (operationsViewer(caller, cid) != ?viewer or connectors.get(cid) != ?c or appPermissionPolicies.get(cid) != policy) return Operations.denied();
     if (result.schema != 1 or result.metrics.size() > 32 or result.metrics.any(func (key, value) = key.size() > 32 or value > 9_007_199_254_740_991) or result.checkedAt > Time.now() or Time.now() - result.checkedAt > 60_000_000_000) return Operations.unavailable();
+    switch (falconConfig) {
+      case (?f) { if (f.connector == cid and f.desk == c.canisterId and result.state == #ready) {
+        let totals = await falconTicketCounts(f,viewer);
+        if (not falconBound(f) or operationsViewer(caller,cid) != ?viewer or connectors.get(cid) != ?c or appPermissionPolicies.get(cid) != policy) return Operations.denied();
+        let rest = result.metrics.filter(func(k,_) = k != "falconOpen" and k != "falconCritical");
+        return { result with metrics = rest.concat(totals).concat([("falconLastSyncMs",Int.abs(falconSuccess)/1_000_000)]) }
+      } };
+      case null {};
+    };
     result;
   };
 
@@ -7627,9 +7859,9 @@ persistent actor UserHub {
       let c = connectors.get(cid) ?? (return #invalid);
       let policy = appPermissionPolicies.get(cid) ?? (return #invalid);
       if (scopes.values().any(func s = s.cid == cid or Displays.sourceApp(s.app) == policy.policy.app)) return #invalid;
-      scopes.add({ cid; app = Displays.scopeApp(policy.policy.app, options); canisterId = c.canisterId });
+      scopes.add({ cid; app = displayApp(policy.policy.app, options); canisterId = c.canisterId });
     };
-    if (not validDisplayOptions(scopes.toArray(), options)) return #invalid;
+    if (not validDisplayOptions(caller, scopes.toArray(), options)) return #invalid;
     let personalPid = displayPerson(options, personId);
     if (options.personal and not displayPersonAllowed(personalPid, scopes.toArray())) return #denied;
     ignore operationsPairs.delete(codeHash);
@@ -7659,9 +7891,9 @@ persistent actor UserHub {
       let c = connectors.get(cid) ?? (return #invalid);
       let policy = appPermissionPolicies.get(cid) ?? (return #invalid);
       if (scopes.values().any(func s = s.cid == cid or Displays.sourceApp(s.app) == policy.policy.app)) return #invalid;
-      scopes.add({ cid; app = Displays.scopeApp(policy.policy.app, options); canisterId = c.canisterId });
+      scopes.add({ cid; app = displayApp(policy.policy.app, options); canisterId = c.canisterId });
     };
-    if (not validDisplayOptions(scopes.toArray(), options)) return #invalid;
+    if (not validDisplayOptions(caller, scopes.toArray(), options)) return #invalid;
     let personalPid = displayPerson(options, personId);
     if (options.personal and not displayPersonAllowed(personalPid, scopes.toArray())) return #denied;
     operationsDisplayNext += 1;
@@ -7708,7 +7940,20 @@ persistent actor UserHub {
     journal("display", "Screen " # id.toText() # " joined dashboard profile " # p.id.toText(), Principal.anonymous());
     #ok(id)
   };
-  func validDisplayOptions(scopes : [Displays.Scope], options : Displays.Options) : Bool {
+  func falconDisplayBinding(f : Falcon.Config) : Text {
+    "trust-falcon:" # f.connector.toText() # ":" # f.desk.toText() # ":" # f.cid
+  };
+  func displayApp(app : Text, options : Displays.Options) : Text {
+    if (app == "trust" and options.falcon == ?true) {
+      switch (falconConfig) { case (?f) return falconDisplayBinding(f); case null {} }
+    };
+    Displays.scopeApp(app, options)
+  };
+  func validDisplayOptions(caller : Principal, scopes : [Displays.Scope], options : Displays.Options) : Bool {
+    if (options.falcon == ?true) {
+      let f = falconConfig ?? (return false);
+      if (not falconBound(f) or operationsViewer(caller, f.connector) == null or not scopes.any(func s = Displays.sourceApp(s.app) == "trust")) return false;
+    };
     (not options.personal or options.workboard) and
     (not (options.workboard or options.lifecycle or options.personal) or scopes.any(func s = Displays.sourceApp(s.app) == "desk")) and
     (not options.sales or scopes.any(func s = Displays.sourceApp(s.app) == "assets"))
@@ -7719,9 +7964,9 @@ persistent actor UserHub {
     let personId = displayOwner(caller) ?? (return #denied);
     for ((hash, grant) in operationsDisplays.entries()) if (grant.id == id) {
       if (grant.by != caller or grant.personId != personId or not displayActive(grant)) return #denied;
-      if (not validDisplayOptions(grant.scopes, options)) return #invalid;
+      if (not validDisplayOptions(caller, grant.scopes, options)) return #invalid;
       for (scope in grant.scopes.vals()) if (displayScope(grant, scope.cid) == null) return #denied;
-      let scopes = grant.scopes.map(func scope = { scope with app = Displays.scopeApp(Displays.sourceApp(scope.app), options) });
+      let scopes = grant.scopes.map(func scope = { scope with app = displayApp(Displays.sourceApp(scope.app), options) });
       let personalPid = displayPerson(options, personId);
       if (options.personal and not displayPersonAllowed(personalPid, scopes)) return #denied;
       if (options.personal) operationsDisplayPeople.add(id, personalPid) else ignore operationsDisplayPeople.delete(id);
@@ -7782,7 +8027,17 @@ persistent actor UserHub {
     let result = try { await (with timeout = 15) source.hub_operations(viewer) } catch (_) { Operations.unavailable() };
     if (operationsDisplays.get(hash) != ?grant or displayViewer(grant, scope) != ?viewer or displayScope(grant, cid) != ?scope or connectors.get(cid) != ?c or appPermissionPolicies.get(cid) != policy) return Operations.denied();
     if (result.schema != 1 or result.metrics.size() > 32 or result.metrics.any(func (key, value) = key.size() > 32 or value > 9_007_199_254_740_991) or result.checkedAt > Time.now() or Time.now() - result.checkedAt > DISPLAY_MINUTE) return Operations.unavailable();
-    Displays.filter(scope.app, result);
+    let fleet = Displays.filter(scope.app, result);
+    if (not Displays.falconScope(scope.app) or fleet.state != #ready) return fleet;
+    let f = falconConfig ?? (return fleet);
+    func canReadFalcon() : Bool {
+      falconDisplayBinding(f) == scope.app and falconBound(f) and operationsViewer(grant.by, f.connector) == ?viewer
+    };
+    if (not canReadFalcon()) return fleet;
+    let totals = await falconTicketCounts(f,viewer);
+    if (operationsDisplays.get(hash) != ?grant or displayScope(grant, cid) != ?scope or connectors.get(cid) != ?c or appPermissionPolicies.get(cid) != policy) return Operations.denied();
+    if (not canReadFalcon() or totals.size() != 2) return fleet;
+    { fleet with metrics = fleet.metrics.concat(totals).concat([("falconLastSyncMs", Int.abs(falconSuccess) / 1_000_000)]) };
   };
 
 };

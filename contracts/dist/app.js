@@ -44,18 +44,28 @@ async function loadTypes(force = false) { if (contractTypesCache.length && !forc
 const tag = (st, lbl) => `<span class="tag ${esc(st)}"><span class="dot"></span>${esc(lbl || st)}</span>`;
 const days = (d) => (d === null || d === undefined ? "" : (N(d) < 0 ? `${-N(d)} days ago` : N(d) === 0 ? "today" : `in ${N(d)} days`));
 let toastT = null;
-function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2800); }
+function toast(message) {
+  const toast = $("toast");
+  toast.textContent = message;
+  if ($("confirmModal").open) $("cmStatus").textContent = message;
+  toast.classList.add("on");
+  clearTimeout(toastT);
+  toastT = setTimeout(() => toast.classList.remove("on"), 2800);
+}
+$("confirmModal").addEventListener("cancel", event => { if ($("cmYes").disabled) event.preventDefault(); });
 function confirmBox(text, cb, {confirmLabel="Confirm", pendingLabel="Working…"} = {}) {
   const yes=$("cmYes"), no=$("cmNo");
-  $("cmText").textContent = text; $("confirmModal").classList.add("on"); yes.textContent=confirmLabel;
+  $("cmFields").replaceChildren();
+  $("cmStatus").textContent = "";
+  $("cmText").textContent = text; $("confirmModal").showModal(); yes.textContent=confirmLabel;
   yes.onclick = async () => {
     if (yes.disabled) return;
     yes.disabled=true; no.disabled=true; yes.textContent=pendingLabel; yes.setAttribute("aria-busy","true");
-    try { if (await cb() !== false) $("confirmModal").classList.remove("on"); }
+    try { if (await cb() !== false) $("confirmModal").close(); }
     catch (_) { $("cmText").textContent = "The change could not be confirmed. Check your connection and refresh before retrying."; }
     finally { yes.disabled=false; no.disabled=false; yes.textContent=confirmLabel; yes.removeAttribute("aria-busy"); }
   };
-  no.onclick = () => $("confirmModal").classList.remove("on");
+  no.onclick = () => $("confirmModal").close();
 }
 function setStatus(id, cls, text) { if (id === "loginStatus") signIn.status(cls, text); const el = $(id); if (!el) return; el.className = "status " + (cls || ""); el.textContent = text || ""; }
 function download(name, text, mime) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: mime || "text/plain" })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
@@ -113,6 +123,7 @@ async function refreshMe() {
   return true;
 }
 function signOut() {
+  document.querySelectorAll("dialog.ks-dialog[open]").forEach(dialog => dialog.close());
   closeDocumentPreview(); closeDocumentPreview = () => {};
   suiteCookie.clear(); // leaving this tool also stops the automatic suite sign-in until the Hub is opened again
   routeEpoch++;
@@ -184,7 +195,10 @@ async function route() {
     $("workspaceState").classList.remove("hidden"); $("retryView").onclick = route;
   }
 }
-window.addEventListener("hashchange", route);
+window.addEventListener("hashchange", () => {
+  document.querySelectorAll("dialog.ks-dialog[open]").forEach(dialog => dialog.close());
+  route();
+});
 
 async function boot() {
   const { HttpAgent, Actor } = await import("./agent-bundle.js");
@@ -232,7 +246,8 @@ async function chooseSpace(id, navigate = true) {
   switchingSpace = true; routeEpoch++;
   const previous = { token: hubTok, space: currentSpace, person: me, hash: location.hash };
   let opened = false, denied = false;
-  document.querySelectorAll(".modal.on,.drawer.on").forEach(el => el.classList.remove("on"));
+  document.querySelectorAll("dialog.ks-dialog[open]").forEach(dialog => dialog.close());
+  document.querySelectorAll(".drawer.on").forEach(el => el.classList.remove("on"));
   document.querySelectorAll(".view").forEach(el => el.classList.remove("on"));
   $("workspaceState").textContent = "Opening workspace…"; $("workspaceState").classList.remove("hidden");
   $("spaceSelect").disabled = true;
@@ -265,14 +280,14 @@ async function chooseSpace(id, navigate = true) {
 $("spaceSelect").onchange = () => chooseSpace($("spaceSelect").value);
 $("spaceManage").onclick = () => { location.hash = "#/space"; };
 $("spBack").onclick = () => { location.hash = "#/contracts"; };
-$("spaceCreate").onclick = () => { $("spNewName").value = ""; $("spNewDescription").value = ""; setStatus("spNewStatus", "", ""); $("spaceModal").classList.add("on"); $("spNewName").focus(); };
-$("spNewCancel").onclick = () => $("spaceModal").classList.remove("on");
+$("spaceCreate").onclick = () => { $("spNewName").value = ""; $("spNewDescription").value = ""; setStatus("spNewStatus", "", ""); $("spaceModal").showModal(); $("spNewName").focus(); };
+$("spNewCancel").onclick = () => $("spaceModal").close();
 $("spNewSave").onclick = async () => {
   $("spNewSave").disabled = true;
   try {
     const r = await backend.createSpace(session.load(), $("spNewName").value.trim(), $("spNewDescription").value.trim());
     if (!r.ok) { setStatus("spNewStatus", "err", r.detail); return; }
-    $("spaceModal").classList.remove("on"); await loadSpaces(); await chooseSpace(r.id, false); location.hash = "#/space"; await enterSpace(); toast("Teamspace created — add your colleagues");
+    $("spaceModal").close(); await loadSpaces(); await chooseSpace(r.id, false); location.hash = "#/space"; await enterSpace(); toast("Teamspace created — add your colleagues");
   } catch (e) { setStatus("spNewStatus", "err", "Could not create the teamspace. Please retry."); }
   finally { $("spNewSave").disabled = false; }
 };
@@ -334,15 +349,18 @@ function attachPicker(inputId, listId, onPick, exclude) {
   input.oninput = () => { clearTimeout(timer); timer = setTimeout(async () => {
     const q = input.value.trim();
     if (q.length < 1) { list.classList.add("hidden"); return; }
-    if (input.dataset.allowGroup === "1" && /^group:/i.test(q)) { list.innerHTML = `<div data-id="${esc(q)}" data-name="${esc(q)}">${esc(q)}<small>a hub group as deputy</small></div>`; list.classList.remove("hidden"); return; }
+    if (input.dataset.allowGroup === "1" && /^group:/i.test(q)) { list.innerHTML = `<button type="button" data-id="${esc(q)}" data-name="${esc(q)}">${esc(q)}<small>a hub group as deputy</small></button>`; list.classList.remove("hidden"); return; }
     let rows = [];
     try { rows = await backend.directory(hubTok, q); } catch (_) {}
+    if (q !== input.value.trim()) return;
     rows = rows.filter((r) => !(exclude && exclude().includes(r.id)));
-    list.innerHTML = rows.map((r) => `<div data-id="${esc(r.id)}" data-email="${esc(r.email)}" data-name="${esc(r.displayName)}">${esc(r.displayName || r.email)}<small>${esc(r.email)}${r.department ? " · " + esc(r.department) : ""}</small></div>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">nobody in the directory matches</div>';
+    list.innerHTML = rows.map((r) => `<button type="button" data-id="${esc(r.id)}" data-email="${esc(r.email)}" data-name="${esc(r.displayName)}">${esc(r.displayName || r.email)}<small>${esc(r.email)}${r.department ? " · " + esc(r.department) : ""}</small></button>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">nobody in the directory matches</div>';
     list.classList.remove("hidden");
   }, 180); };
   list.onclick = (e) => { const d = e.target.closest("[data-id]"); if (!d) return; input.value = ""; list.classList.add("hidden"); onPick({ id: d.dataset.id, email: d.dataset.email || "", displayName: d.dataset.name || d.dataset.email || d.dataset.id }); };
-  input.onblur = () => setTimeout(() => list.classList.add("hidden"), 200);
+  input.parentElement.addEventListener("focusout", event => {
+    if (!input.parentElement.contains(event.relatedTarget)) list.classList.add("hidden");
+  });
 }
 const chip = (name, id, gone) => `<span class="chipp${gone ? " gone" : ""}" data-id="${esc(id)}">${esc(name)}<button title="Remove" data-rm="${esc(id)}">×</button></span>`;
 function attachContractPicker(inputId, listId, onPick) {
@@ -353,11 +371,14 @@ function attachContractPicker(inputId, listId, onPick) {
     if (q.length < 1) { list.classList.add("hidden"); return; }
     let rows = [];
     try { rows = await backend.listContracts(hubTok, { q, status: "", responsible: "", onlyIncomplete: false, onlyDue: false, includeArchived: false, typeId: [] }); } catch (_) {}
-    list.innerHTML = rows.slice(0, 12).map((r) => `<div data-cid="${r.id}" data-name="${esc(r.title)}">${esc(r.title)}<small>${esc(r.vendor)}${r.product ? " · " + esc(r.product) : ""} · ${esc(CSTATUS_LBL[r.status] || r.status)}</small></div>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">no contract matches</div>';
+    if (q !== input.value.trim()) return;
+    list.innerHTML = rows.slice(0, 12).map((r) => `<button type="button" data-cid="${r.id}" data-name="${esc(r.title)}">${esc(r.title)}<small>${esc(r.vendor)}${r.product ? " · " + esc(r.product) : ""} · ${esc(CSTATUS_LBL[r.status] || r.status)}</small></button>`).join("") || '<div style="cursor:default;color:var(--ks-fg-muted)">no contract matches</div>';
     list.classList.remove("hidden");
   }, 180); };
   list.onclick = (e) => { const d = e.target.closest("[data-cid]"); if (!d) return; input.value = ""; list.classList.add("hidden"); onPick(Number(d.dataset.cid), d.dataset.name); };
-  input.onblur = () => setTimeout(() => list.classList.add("hidden"), 200);
+  input.parentElement.addEventListener("focusout", event => {
+    if (!input.parentElement.contains(event.relatedTarget)) list.classList.add("hidden");
+  });
 }
 // one-person modal (assign a proposal or task)
 let ppPicked = null, ppCb = null;
@@ -365,12 +386,12 @@ attachPicker("ppIn", "ppList", (p) => { ppPicked = p; $("ppChip").innerHTML = ch
 $("ppChip").onclick = (e) => { if (e.target.dataset.rm) { ppPicked = null; $("ppChip").innerHTML = ""; } };
 // snooze picker (tasks and proposals share it)
 let snCb = null;
-function snooze(cb) { snCb = cb; $("snSel").value = "7"; setStatus("snStatus", "", ""); $("snoozeModal").classList.add("on"); }
-$("snCancel").onclick = () => $("snoozeModal").classList.remove("on");
-$("snSave").onclick = async () => { const r = await snCb(Number($("snSel").value)); if (r && r.ok === false) { setStatus("snStatus", "err", r.detail); return; } $("snoozeModal").classList.remove("on"); };
-function pickPerson(title, cb) { ppPicked = null; ppCb = cb; $("ppTitle").textContent = title; $("ppChip").innerHTML = ""; $("ppIn").value = ""; setStatus("ppStatus", "", ""); $("pickPersonModal").classList.add("on"); $("ppIn").focus(); }
-$("ppCancel").onclick = () => $("pickPersonModal").classList.remove("on");
-$("ppSave").onclick = async () => { if (!ppPicked) { setStatus("ppStatus", "err", "pick a person"); return; } const r = await ppCb(ppPicked); if (r && r.ok === false) { setStatus("ppStatus", "err", r.detail); return; } $("pickPersonModal").classList.remove("on"); };
+function snooze(cb) { snCb = cb; $("snSel").value = "7"; setStatus("snStatus", "", ""); $("snoozeModal").showModal(); }
+$("snCancel").onclick = () => $("snoozeModal").close();
+$("snSave").onclick = async () => { const r = await snCb(Number($("snSel").value)); if (r && r.ok === false) { setStatus("snStatus", "err", r.detail); return; } $("snoozeModal").close(); };
+function pickPerson(title, cb) { ppPicked = null; ppCb = cb; $("ppTitle").textContent = title; $("ppChip").innerHTML = ""; $("ppIn").value = ""; setStatus("ppStatus", "", ""); $("pickPersonModal").showModal(); $("ppIn").focus(); }
+$("ppCancel").onclick = () => $("pickPersonModal").close();
+$("ppSave").onclick = async () => { if (!ppPicked) { setStatus("ppStatus", "err", "pick a person"); return; } const r = await ppCb(ppPicked); if (r && r.ok === false) { setStatus("ppStatus", "err", r.detail); return; } $("pickPersonModal").close(); };
 
 async function trashItem(kind,id,title) {
   const token=hubTok, stale=viewGuard("trashItem");
@@ -449,13 +470,13 @@ let dnTask = null;
 function completeTask(id, kind, title) {
   dnTask = id; $("dnTitle").textContent = "Complete: " + (title || "task"); $("dnNote").value = ""; setStatus("dnStatus", "", "");
   $("dnDecision").classList.toggle("hidden", kind !== "decide"); $("dnSel").value = kind === "decide" ? "continue" : "";
-  $("doneModal").classList.add("on");
+  $("doneModal").showModal();
 }
-$("dnCancel").onclick = () => $("doneModal").classList.remove("on");
+$("dnCancel").onclick = () => $("doneModal").close();
 $("dnSave").onclick = async () => {
   const r = await backend.completeTask(hubTok, BigInt(dnTask), $("dnDecision").classList.contains("hidden") ? "" : $("dnSel").value, $("dnNote").value.trim());
   if (!r.ok) { setStatus("dnStatus", "err", r.detail); return; }
-  $("doneModal").classList.remove("on"); toast(r.detail || "Done"); route();
+  $("doneModal").close(); toast(r.detail || "Done"); route();
 };
 
 /* ============================== inbox ============================== */
@@ -555,15 +576,15 @@ async function enterIntake(id, analysis = null, opts = {}) {
 
 }
 // paste a message (kind manual)
-$("ibPaste").onclick = () => { ["pmFrom", "pmSubject", "pmText"].forEach((i) => { $(i).value = ""; }); $("pmDate").value = new Date().toISOString().slice(0, 10); setStatus("pmStatus", "", ""); $("pasteModal").classList.add("on"); };
-$("pmCancel").onclick = () => $("pasteModal").classList.remove("on");
+$("ibPaste").onclick = () => { ["pmFrom", "pmSubject", "pmText"].forEach((i) => { $(i).value = ""; }); $("pmDate").value = new Date().toISOString().slice(0, 10); setStatus("pmStatus", "", ""); $("pasteModal").showModal(); };
+$("pmCancel").onclick = () => $("pasteModal").close();
 $("pmSend").onclick = () => withAction($("pmSend"), "pmStatus", async (token) => {
   const text = $("pmText").value.trim(); if (!text) { setStatus("pmStatus", "err", "paste the text"); return; }
   const meta = { kind: "manual", mailbox: "", providerId: "", messageId: "", inReplyTo: "", references: "", fromAddr: $("pmFrom").value.trim(), fromName: "", to: [], cc: [], subject: $("pmSubject").value.trim() || "(pasted text)", sentAt: $("pmDate").value ? $("pmDate").value + "T00:00:00Z" : "", text: text.slice(0, 190000), html: "", attachments: [] };
   const b = await backend.intakeBegin(token, meta); if (!b.ok) { setStatus("pmStatus", "err", b.detail); return; }
   const c = await backend.intakeCommit(token, b.id); if (!c.ok) { setStatus("pmStatus", "err", c.detail); return; }
   if (token !== hubTok) return;
-  $("pasteModal").classList.remove("on"); toast("Handed in — " + (c.status || "")); location.hash = "#/intake/" + c.sourceId;
+  $("pasteModal").close(); toast("Handed in — " + (c.status || "")); location.hash = "#/intake/" + c.sourceId;
 });
 
 /* ============================== one message (source) ============================== */
@@ -642,19 +663,19 @@ function wireDocs(root) {
   root.querySelectorAll('[data-txt]').forEach(b=>{b.onclick=async()=>{
     const token=hubTok,epoch=routeEpoch;
     try{const t=opt(await backend.documentText(token,BigInt(b.dataset.txt)));if(token!==hubTok||epoch!==routeEpoch)return;
-      $('txTitle').textContent='EXTRACTED TEXT · AI ALSO RECEIVES SUPPORTED ORIGINALS';$('txBody').textContent=t||'(no extracted text)';$('textModal').classList.add('on');
+      $('txTitle').textContent='EXTRACTED TEXT · AI ALSO RECEIVES SUPPORTED ORIGINALS';$('txBody').textContent=t||'(no extracted text)';$('textModal').showModal();
     }catch(_){if(token===hubTok&&epoch===routeEpoch)toast('Could not open the extracted text.');}
   };});
 }
-$("txClose").onclick = () => $("textModal").classList.remove("on");
+$("txClose").onclick = () => $("textModal").close();
 // filing modal
 let lkSrc = null, lkPicked = null;
 attachContractPicker("lkIn", "lkList", (cid, name) => { lkPicked = cid; $("lkChip").innerHTML = `<span class="chipp" data-id="${cid}">${esc(name)}<button data-rm="1">×</button></span>`; });
 $("lkChip").onclick = (e) => { if (e.target.dataset.rm) { lkPicked = null; $("lkChip").innerHTML = ""; } };
-function openLink(s) { lkSrc = s; lkPicked = null; $("lkChip").innerHTML = ""; $("lkIn").value = ""; $("lkRule").checked = false; setStatus("lkStatus", "", ""); $("lkUnlink").classList.toggle("hidden", !s.contractId.length); $("linkModal").classList.add("on"); $("lkIn").focus(); }
-$("lkCancel").onclick = () => $("linkModal").classList.remove("on");
-$("lkSave").onclick = async () => { if (!lkPicked) { setStatus("lkStatus", "err", "pick a contract"); return; } const rule = $("lkRule").checked && lkSrc.fromAddr ? [{ kind: "senderAddress", value: lkSrc.fromAddr }] : []; const r = await backend.linkSource(hubTok, lkSrc.id, [BigInt(lkPicked)], rule); if (!r.ok) { setStatus("lkStatus", "err", r.detail); return; } $("linkModal").classList.remove("on"); toast("Filed"); curSrc = null; route(); };
-$("lkUnlink").onclick = async () => { const r = await backend.linkSource(hubTok, lkSrc.id, [], []); if (!r.ok) { setStatus("lkStatus", "err", r.detail); return; } $("linkModal").classList.remove("on"); toast("Unlinked"); curSrc = null; route(); };
+function openLink(s) { lkSrc = s; lkPicked = null; $("lkChip").innerHTML = ""; $("lkIn").value = ""; $("lkRule").checked = false; setStatus("lkStatus", "", ""); $("lkUnlink").classList.toggle("hidden", !s.contractId.length); $("linkModal").showModal(); $("lkIn").focus(); }
+$("lkCancel").onclick = () => $("linkModal").close();
+$("lkSave").onclick = async () => { if (!lkPicked) { setStatus("lkStatus", "err", "pick a contract"); return; } const rule = $("lkRule").checked && lkSrc.fromAddr ? [{ kind: "senderAddress", value: lkSrc.fromAddr }] : []; const r = await backend.linkSource(hubTok, lkSrc.id, [BigInt(lkPicked)], rule); if (!r.ok) { setStatus("lkStatus", "err", r.detail); return; } $("linkModal").close(); toast("Filed"); curSrc = null; route(); };
+$("lkUnlink").onclick = async () => { const r = await backend.linkSource(hubTok, lkSrc.id, [], []); if (!r.ok) { setStatus("lkStatus", "err", r.detail); return; } $("linkModal").close(); toast("Unlinked"); curSrc = null; route(); };
 
 /* ============================== proposals — the decision UI (inbox + record) ============================== */
 const contractTitleCache = new Map();
@@ -909,16 +930,16 @@ async function enterRecord(id, tabName) {
     button.onclick = () => {
       const destinations = spaces.filter(s => s.id !== me.space && !s.archived && Object.keys(s.role)[0] === "owner");
       $("cmText").textContent = "Move this contract and its related documents? Members of the destination workspace will gain access under its rules.";
-      const select = document.createElement("select"); select.id = "moveSpaceTarget"; select.setAttribute("aria-label", "Destination workspace"); select.innerHTML = destinations.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join(""); $("cmText").appendChild(select);
-      $("confirmModal").classList.add("on");
-      $("cmNo").onclick = () => $("confirmModal").classList.remove("on");
+      const select = document.createElement("select"); select.id = "moveSpaceTarget"; select.setAttribute("aria-label", "Destination workspace"); select.innerHTML = destinations.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join(""); $("cmFields").replaceChildren(select); $("cmStatus").textContent = "";
+      $("confirmModal").showModal();
+      $("cmNo").onclick = () => $("confirmModal").close();
       $("cmYes").onclick = async () => {
         const dest = select.value, token = hubTok;
         $("cmYes").disabled = true;
         try {
           const result = await backend.moveContract(token, c.id, c.revision, dest);
-          if (!result.ok) { toast(result.detail); return; }
-          $("confirmModal").classList.remove("on"); await chooseSpace(dest, false); location.hash = "#/c/" + c.id; await enterRecord(Number(c.id), "terms"); toast("Contract moved");
+          if (!result.ok) { $("cmStatus").textContent = result.detail; return; }
+          $("confirmModal").close(); await chooseSpace(dest, false); location.hash = "#/c/" + c.id; await enterRecord(Number(c.id), "terms"); toast("Contract moved");
         } finally { $("cmYes").disabled = false; }
       };
     };
@@ -932,29 +953,29 @@ async function saveInput(patch, id, tabName) {
   enterRecord(id, tabName);
 }
 // change status
-$("rSetStatus").onclick = () => { $("stSel").value = cur.contract.status; $("stNote").value = ""; setStatus("stStatus", "", ""); $("statusModal").classList.add("on"); };
-$("stCancel").onclick = () => $("statusModal").classList.remove("on");
-$("stSave").onclick = async () => { const c = cur.contract; const r = await backend.setStatus(hubTok, c.id, c.revision, $("stSel").value, $("stNote").value.trim()); if (!r.ok) { setStatus("stStatus", "err", r.detail); return; } $("statusModal").classList.remove("on"); toast("Status changed"); cur = null; route(); };
+$("rSetStatus").onclick = () => { $("stSel").value = cur.contract.status; $("stNote").value = ""; setStatus("stStatus", "", ""); $("statusModal").showModal(); };
+$("stCancel").onclick = () => $("statusModal").close();
+$("stSave").onclick = async () => { const c = cur.contract; const r = await backend.setStatus(hubTok, c.id, c.revision, $("stSel").value, $("stNote").value.trim()); if (!r.ok) { setStatus("stStatus", "err", r.detail); return; } $("statusModal").close(); toast("Status changed"); cur = null; route(); };
 // add task
 let tkAss = null;
 attachPicker("tkAssIn", "tkAssList", (p) => { tkAss = p; $("tkAssChip").innerHTML = chip(p.displayName, p.id); });
 $("tkAssChip").onclick = (e) => { if (e.target.dataset.rm) { tkAss = null; $("tkAssChip").innerHTML = ""; } };
-function openTask() { tkAss = null; $("tkText").value = ""; $("tkDue").value = ""; $("tkAssChip").innerHTML = ""; setStatus("tkStatus", "", ""); $("taskModal").classList.add("on"); $("tkText").focus(); }
-$("tkCancel").onclick = () => $("taskModal").classList.remove("on");
-$("tkSave").onclick = async () => { const title = $("tkText").value.trim(); if (!title) { setStatus("tkStatus", "err", "say what needs doing"); return; } const r = await backend.addTask(hubTok, cur.contract.id, title, $("tkDue").value, tkAss ? tkAss.id : ""); if (!r.ok) { setStatus("tkStatus", "err", r.detail); return; } $("taskModal").classList.remove("on"); toast("Task added"); cur = null; route(); };
+function openTask() { tkAss = null; $("tkText").value = ""; $("tkDue").value = ""; $("tkAssChip").innerHTML = ""; setStatus("tkStatus", "", ""); $("taskModal").showModal(); $("tkText").focus(); }
+$("tkCancel").onclick = () => $("taskModal").close();
+$("tkSave").onclick = async () => { const title = $("tkText").value.trim(); if (!title) { setStatus("tkStatus", "err", "say what needs doing"); return; } const r = await backend.addTask(hubTok, cur.contract.id, title, $("tkDue").value, tkAss ? tkAss.id : ""); if (!r.ok) { setStatus("tkStatus", "err", r.detail); return; } $("taskModal").close(); toast("Task added"); cur = null; route(); };
 // propose a change
 const PROPOSABLE = [...commercialFields.map(([key])=>key),"amountMinor", "currency", "taxBasis", "interval", "quantity", "unitMinor", "start", "end", "renewalRule", "renewalDate", "noticeMonths", "noticeDays", "noticeDate", "seats", "vendor", "product", "customerRef", "title", "note"];
 function prRow() { return `<div class="row" style="margin-top:8px"><div><select data-pf>${PROPOSABLE.map((f) => `<option value="${f}">${esc(FIELD_LBL[f])}</option>`).join("")}</select></div><div class="w2"><input type="text" data-pv placeholder="new value (amounts as 1500.00, dates as YYYY-MM-DD)"></div></div>`; }
-function openPropose() { $("prRows").innerHTML = prRow(); $("prSummary").value = ""; setStatus("prStatus", "", ""); $("proposeModal").classList.add("on"); }
+function openPropose() { $("prRows").innerHTML = prRow(); $("prSummary").value = ""; setStatus("prStatus", "", ""); $("proposeModal").showModal(); }
 $("prAdd").onclick = () => $("prRows").insertAdjacentHTML("beforeend", prRow());
-$("prCancel").onclick = () => $("proposeModal").classList.remove("on");
+$("prCancel").onclick = () => $("proposeModal").close();
 $("prSave").onclick = async () => {
   const changes = [...$("prRows").querySelectorAll(".row")].map((r) => { const f = r.querySelector("[data-pf]").value; let v = r.querySelector("[data-pv]").value.trim(); if (MONEY_FIELDS.includes(f) && /^-?\d+$/.test(v)) v += ".00"; return { field: f, value: v }; }).filter((x) => x.value !== "");
   if (!changes.length) { setStatus("prStatus", "err", "enter at least one value"); return; }
   const r = await backend.proposeChange(hubTok, cur.contract.id, [], changes, $("prSummary").value.trim());
   if (!r.ok) { setStatus("prStatus", "err", r.detail); return; }
   const cid = cur.contract.id; cur = null;
-  $("proposeModal").classList.remove("on"); toast("Proposed — confirm it under Proposals");
+  $("proposeModal").close(); toast("Proposed — confirm it under Proposals");
   if (location.hash === `#/c/${cid}/proposals`) route(); else location.hash = `#/c/${cid}/proposals`;
 };
 

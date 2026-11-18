@@ -39,7 +39,7 @@ future calls. An already dispatched call can still finish. Changing the source
 never silently reroutes old responses. Reconnect the original source to resume
 its queue. The first version does not map answers into required Desk custom fields.
 
-Public submission retries use a 30-day receipt. After an uncertain network result, the browser freezes the draft and retries the identical payload. The browser saves the exact pending payload and reference in tab-scoped session storage before sending. Reloading the same tab offers an explicit retry, including when the form has closed or its schema changed; the backend still decides whether it can confirm or accept it. Recovery is allowed for 24 hours. Success removes the copy; on the next access after expiry, answer contents are replaced by an expired marker requiring explicit clearing. Closing a tab normally removes session storage, but browser session restoration can retain it. This is not cross-device recovery. Blocked/full browser storage leaves only the in-memory retry and displays a warning to keep the tab open. No reliable bot detection is provided.
+Public submission retries use a 30-day receipt. After an uncertain network result, the browser freezes the draft and retries the identical payload. The browser saves the exact pending payload and reference in tab-scoped session storage before sending. Reloading the same tab offers an explicit retry, including when the form has closed or its schema changed; the backend still decides whether it can confirm or accept it. Recovery is allowed for 24 hours. Success removes the copy; on the next access after expiry, answer contents are replaced by an expired marker requiring explicit clearing. Closing a tab normally removes session storage, but browser session restoration can retain it. This is not cross-device recovery. Blocked/full browser storage leaves only the in-memory retry and displays a warning to keep the tab open. Managed Turnstile verification is optional.
 A hidden trap field, bounds, quotas and server validation reduce accidental and
 basic abusive input; they do not replace a production anti-abuse gateway.
 
@@ -66,3 +66,23 @@ integration, not full Jotform parity. Before replacing a live suspension appeal
 form, test the actual hosting page/CSP, mobile browsers, abuse controls, delivery
 recovery and team ownership. Host Forms outside the application whose suspension
 or outage it reports. A platform-wide outage can still affect both.
+
+## Managed bot protection for public forms
+
+Create a Cloudflare Managed Turnstile widget for the Forms hostname. In Forms
+Settings enter its site key and secret. In **Publish & connect**, a Forms admin
+can enable verification on a form with respondent editing disabled. The browser
+loads Cloudflare on submission. The backend sends the token and widget secret to
+Siteverify and checks success, hostname, action and the hashed request reference.
+Provider failure blocks the submission and allows a retry. The backend limits
+verification attempts to 120 per minute across the installation. This mitigates
+automated submissions but cannot identify every AI-assisted visitor.
+
+For a public suspension appeal served on changing domains, enter `https://*`
+in Allowed embedding websites. Any HTTPS site can then frame that public form.
+Admin screens and internal previews require a top-level window. Copy the embed
+snippet and the direct link after publishing the form on its permanent hostname.
+
+Paragraph fields accept 10,000 Unicode code points. A Forms ticket can contain up to 64,000 characters including labels and page context, with a 160,000-byte queued JSON envelope. Update Desk to 0.40.1 or later before updating Forms to 0.9.1.
+
+In Publish & connect, the form owner or a Forms administrator can select up to 20 active colleagues under Slack notifications. The selection applies to new responses. When connected to Desk, the bot sends a ticket reference and link. The recipient keeps their existing project permissions.

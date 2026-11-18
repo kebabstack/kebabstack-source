@@ -4,22 +4,16 @@
 </head><body class="ks-workspace">
 <section id="login" aria-busy="true" class="is-waiting app-auth">
   <div class="auth-shell">
-    <aside class="auth-story">
-      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
-      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
-      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
-    </aside>
+    <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
     <section class="auth-main" aria-labelledby="loginTitle">
       <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
       <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
-      <h1 id="loginTitle"><span class="auth-ready">Welcome to Crumbs.</span><span class="auth-waiting">Opening Crumbs…</span></h1>
-      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <h1 id="loginTitle"><span class="auth-ready">Sign in to Crumbs</span><span class="auth-waiting">Opening Crumbs…</span></h1>
       <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
       <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
       <div id="loginStatus" class="status" role="alert"></div>
       <div id="loginWarn" class="warnbox hidden"></div>
       <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
-      <p class="lfoot">Access is managed by your company in the Hub.</p>
     </section>
   </div>
 </section>
@@ -67,5 +61,5 @@
 </section>
 <section id="v-api" class="view" hidden><article class="panel"><div class="panel-heading"><div><h2>API & integrations</h2><p class="subtle">Keys below are limited to this website and your current access.</p></div><a class="button" href="api.html" target="_blank" rel="noopener">API documentation ↗</a></div><p><a href="integrations.html">Search Console, Looker Studio &amp; integration guide</a></p><p><a href="openapi.json" download>Download OpenAPI specification</a></p></article><article class="panel"><h2>API keys & shared reports</h2><form data-ks-form id="keyForm" class="inline-form"><label>Name<input name="name" maxlength="100" placeholder="Monthly reporting"></label><label>Access<select data-ks-search name="scope"><option value="read">Read reports</option><option value="manage">Manage website content</option><option value="share">Share a read-only dashboard</option></select></label><label>Expires after (days)<input name="days" type="number" min="1" max="365" value="90" required></label><button class="primary">Create</button></form><div id="keyResult" class="key-result" hidden><p id="keyResultLabel"></p><pre id="newKey"></pre><div class="form-actions"><button id="copyKey">Copy</button><button id="dismissKey">Done</button><span id="keyCopyStatus" role="status"></span></div></div><p id="keyStatus" class="form-status" role="status"></p><div id="keys"></div></article><article class="panel"><h2>Export events</h2><p class="subtle">Download all retained events for this website as JSON, up to 100,000 events. This export is independent of report dates and filters.</p><button id="export">Download events</button><p id="exportStatus" role="status" class="form-status"></p></article><details class="panel admin-only"><summary>Collection health · all websites</summary><div id="health"></div></details></section>
 <dialog id="confirmDialog" aria-labelledby="confirmTitle"><form data-ks-form method="dialog"><h2 id="confirmTitle"></h2><p id="confirmText"></p><div class="form-actions"><button value="cancel">Cancel</button><button id="confirmAccept" class="danger" value="confirm">Delete</button></div></form></dialog>
-<footer><span>Crumbs <span id="version">0.9.1</span> · kebab-stack</span><span><a href="api.html" target="_blank" rel="noopener">API documentation</a><span aria-hidden="true"> · </span><a href="privacy.html">Data & privacy</a></span></footer>
+<footer><span>Crumbs <span id="version">0.13.1</span> · kebab-stack</span><span><a href="api.html" target="_blank" rel="noopener">API documentation</a><span aria-hidden="true"> · </span><a href="privacy.html">Data & privacy</a></span></footer>
 </main></div><script type="module" src="app.js"></script></body></html>

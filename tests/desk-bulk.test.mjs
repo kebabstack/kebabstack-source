@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import {test,before,after} from 'node:test';
 import {PocketIcServer} from '@dfinity/pic';
-import {setup,identity} from './helpers/workboard.mjs';
+import {assertTicketPreserved,setup,identity} from './helpers/workboard.mjs';
 let server;before(async()=>{server=await PocketIcServer.start();});after(async()=>server?.stop());
 const filter={view:'all',status:'',queue:'',assignee:'',q:''};
 for(const baseline of [false,true])test(`internal bulk: ${baseline?'populated production upgrade':'fresh install'}`,{skip:baseline&&!process.env.KEBAB_WORKBOARD_BASELINE},async()=>{
  const x=await setup(server.getUrl(),baseline);try{
-  const original=(await x.apps.desk.app.getTicket(x.tokens.owner,x.ticketId))[0];
+  const original=await x.apps.desk.app.getTicket(x.tokens.owner,x.ticketId);
   if(baseline)await x.upgrade();const d=x.apps.desk.app;
-  assert.deepEqual((await d.getTicket(x.tokens.owner,x.ticketId))[0],original);
+  assertTicketPreserved(await d.getTicket(x.tokens.owner,x.ticketId),original);
   const get=async id=>(await d.getTicket(x.tokens.owner,id))[0];
   const target=async id=>{const f=await get(id);return {id,updatedAt:f.ticket.updatedAt};};
   const apply=async(ids,action,tok=x.tokens.alpha)=>d.bulkInternalTickets(tok,await Promise.all(ids.map(target)),action);

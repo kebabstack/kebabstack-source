@@ -31,6 +31,15 @@ type Assistant__1021639104 =
     revokedAt : Int;
     uses : Nat
   };
+type Config__290987221 =
+  {
+    cid : Text;
+    clientId : Text;
+    connector : Nat;
+    desk : Principal;
+    region : Text;
+    secret : Text
+  };
 type Conn__58803623 =
   {
     baseUrl : Text;
@@ -66,7 +75,7 @@ type Event__445430861 =
     at : Int;
     effectiveActive : Bool;
     email : Text;
-    kind : {#deactivated; #reactivated};
+    kind : {#created; #deactivated; #reactivated};
     name : Text;
     personId : Text;
     seq : Nat;
@@ -192,6 +201,14 @@ type Policy__630656513 =
     groups : [GroupGrant__29097267];
     people : [PersonGrant__328057996]
   };
+type Profile__537934921 =
+  {
+    codeHash : Text;
+    days : Nat;
+    grant : Grant__382912696;
+    id : Nat;
+    personalId : ?Text
+  };
 type ReportingGrant__531340435 =
   {
     capabilities : [Text];
@@ -279,8 +296,27 @@ type Status__947094800 =
     model : Nat;
     revision : Text
   };
+type StoredLifecycleEvent__447959000 =
+  {
+    at : Int;
+    effectiveActive : Bool;
+    email : Text;
+    kind : {#deactivated; #reactivated};
+    name : Text;
+    personId : Text;
+    seq : Nat;
+    source : Text
+  };
 type StoredPolicy__98989417 =
   {policy : Policy__630656513; revision : Nat; updatedAt : Int};
+type SuiteLogin__457254464 =
+  {
+    createdAt : Int;
+    displayName : Text;
+    email : Text;
+    expiresAt : Int;
+    sessionKey : Text
+  };
 type SuiteToken__720076457 =
   {
     connId : Nat;
@@ -426,6 +462,15 @@ actor {
   stable var directoryMode : Text;
   stable emailToPid :
     {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable var falconAckCursor : Nat;
+  stable var falconAfter : Text;
+  stable var falconConfig : ?Config__290987221;
+  stable var falconEditCursor : Nat;
+  stable var falconLegacyCursor : Nat;
+  stable var falconMessage : Text;
+  stable var falconSince : Text;
+  stable var falconSuccess : Int;
+  stable var falconWindowEnd : Int;
   stable var financeTeam :
     {
       apps : [FinanceBinding__345430488];
@@ -460,6 +505,11 @@ actor {
   stable var lastHookAt : ?Int;
   stable lifecycleEvents :
     {
+      var root : Node__430031793<Nat, StoredLifecycleEvent__447959000>;
+      var size : Nat__58649523
+    };
+  stable lifecycleJoins :
+    {
       var root : Node__430031793<Nat, Event__445430861>;
       var size : Nat__58649523
     };
@@ -468,7 +518,10 @@ actor {
       var root : Node__430031793<Text, Observation__33797346>;
       var size : Nat__58649523
     };
+  stable var lifecycleSeeded : Bool;
   stable var lifecycleSequence : Nat;
+  stable lifecycleSources :
+    {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
   stable var lunchCanister : Text;
   stable var nextAccessRequestId : Nat;
   stable var nextAppLinkId : Nat;
@@ -542,7 +595,17 @@ actor {
       var root : Node__430031793<Nat, {at : Int; seq : Nat; version : Text}>;
       var size : Nat__58649523
     };
+  stable var operationsDisplayJoinFailures : Nat;
   stable var operationsDisplayNext : Nat;
+  stable operationsDisplayPeople :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable operationsDisplayProfileOf :
+    {var root : Node__430031793<Nat, Nat>; var size : Nat__58649523};
+  stable operationsDisplayProfiles :
+    {
+      var root : Node__430031793<Nat, Profile__537934921>;
+      var size : Nat__58649523
+    };
   stable operationsDisplays :
     {
       var root : Node__430031793<Text, Grant__382912696>;
@@ -615,6 +678,11 @@ actor {
       var root : Node__430031793<Nat, SsoProvider__2676149>;
       var size : Nat__58649523
     };
+  stable suiteLogins :
+    {
+      var root : Node__430031793<Text, SuiteLogin__457254464>;
+      var size : Nat__58649523
+    };
   stable suiteTokens :
     {
       var root : Node__430031793<Text, SuiteToken__720076457>;
@@ -626,6 +694,10 @@ actor {
     {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
   stable tileIcons :
     {var root : Node__430031793<Nat, Blob>; var size : Nat__58649523};
+  stable var tokenCounter : Nat;
+  stable var tokenSeed : ?Blob;
+  stable trackedSlack :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
   stable userAvatars :
     {var root : Node__430031793<Text, Blob>; var size : Nat__58649523};
   stable userKeyToPid :

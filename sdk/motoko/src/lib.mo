@@ -128,6 +128,7 @@ module {
     connectorAvatar : shared query (Text) -> async ?Blob;
     connectorAvatars : shared query ([Text]) -> async [(Text, Blob)];
     groupsOf : shared query (Text) -> async [Text];
+    hub_notificationDelivery : shared query Text -> async ?Text;
     hub_notify : shared (Notify) -> async { ok : Bool; detail : Text };
     hub_aiCredentials : shared () -> async ?AiCredentials; // lane "ai": the company's AI key, one for the suite — cache ≤ 5 min, never store
     hub_aiUsed : shared (Nat) -> async (); // report your calls in batches so owners see who uses the key

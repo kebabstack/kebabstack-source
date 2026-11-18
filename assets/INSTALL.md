@@ -388,3 +388,41 @@ search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
 ### Operations summaries (2026-10-19)
 
 Deploy this release before Hub 0.42 using the shared Kitchen update workflow. Existing central app Admin permissions remain required; no additional service or configuration is needed. Older Hub/TV clients keep their previous aggregate scope. See [Operations definitions](../docs/HUB-OPERATIONS.md).
+
+## Iru inventory number writeback (0.18.0)
+
+1. Review the inventory numbers in Assets; enabled writeback replaces differing Iru
+   `asset_tag` values with non-empty Assets numbers. Assignments, blueprints, device
+   names, device tags and erase commands are outside this writeback.
+2. In Iru, grant the existing API token **Update Device** permission as well as
+   device read permission. If replacing the token, save it under Assets → Settings
+   → Connections → Edit. The app cannot grant external API rights.
+3. On that Iru connection, choose **Enable inventory number writeback** and review
+   the confirmation. Existing/upgraded connections default to read only.
+4. Choose **Sync now**. Check the count confirmed in Iru and any pending/error
+   message. Writes also run with the six-hour sync. Each run attempts at most 25
+   devices; run again to continue larger backlogs. A full 100-page response is rejected as incomplete (no import or writes);
+   malformed list responses also fail closed. A permission/rate-limit/unknown
+   result stops further writes in that run. Read-only Test does not test write rights.
+5. A unique serial and external device ID are required. Duplicate or missing IDs
+   stay pending for operator review. Empty Assets numbers never clear Iru values.
+   Assets allocates immutable inventory numbers automatically; Iru does not supply them.
+6. If a write times out, its outcome is unknown. Sync again: Assets reads the actual
+   device before retrying, so an already-current value needs no PATCH. A 2xx without
+   the expected device identity/number is not reported as confirmed.
+7. Pause the connection or disable writeback to stop new requests. Already-sent
+   requests may still finish. A concurrent local device or connection change is reported and
+   reconciled on the next run. Per-device history records confirmed writes.
+
+This reduces duplicate entry for inventory numbers; IT still owns correct serials,
+source numbers, API permissions and failed/pending reconciliation. API availability
+and the engine's non-replicated PATCH support are dependencies. Requests go directly
+from the engine to Iru using the stored connection token; infrastructure operators
+remain within the confidentiality boundary. No additional service or subscription
+savings are assumed. Jamf Pro, Intune and ABM do not gain writeback.
+
+The API is Candid-only: `setMdmTagWriteback(token, connectionId, enabled)` requires
+an Assets administrator; `listMdm` returns `tagWriteback`. Existing consumers keep
+their method signatures. Kitchen reads the release version from `mops.toml`.
+Provider contract: [Iru Endpoint Management API](https://api-docs.iru.com/),
+Update Device (`PATCH /api/v1/devices/{device_id}`), checked 2026-11-09.

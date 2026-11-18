@@ -286,6 +286,7 @@ type OwnedObject =
  };
 type Options =
  record {
+   falcon: opt bool;
    lifecycle: bool;
    personal: bool;
    personalEmail: opt text;
@@ -511,6 +512,20 @@ type Event =
    personId: text;
    seq: nat;
    source: text;
+ };
+type DeviceView =
+ record {
+   device: opt Device;
+   state: text;
+   url: text;
+ };
+type Device =
+ record {
+   id: nat;
+   owner: text;
+   ownerName: text;
+   serial: text;
+   title: text;
  };
 type DeskReportingAccess =
  record {
@@ -905,6 +920,8 @@ service : {
             ok: bool;
             tileId: nat;
           });
+  connectFalcon: (region: text, cid: text, clientId: text, secret: text,
+   deskId: nat, since: text) -> (bool);
   /// Profile picture for connected tools (registered connectors + admins).
   connectorAvatar: (email: text) -> (opt blob) query;
   /// Bulk variant: one query returns every stored picture for the given
@@ -947,6 +964,14 @@ service : {
                                          detail: text;
                                          ok: bool;
                                        });
+  disconnectFalcon: () -> (bool);
+  falconSettings: () ->
+   (record {
+      connected: bool;
+      detail: text;
+      lastSuccess: int;
+      running: bool;
+    }) query;
   /// Owners: generate or rotate the token of source 1 (creates the source when the hub had none).
   genScimToken: () -> (text);
   getAppPermissions: (cid: nat) -> (opt AppPermissionView) query;
@@ -1083,6 +1108,8 @@ service : {
      }) query;
   /// Apps report their calls so the owner sees who uses the key (best effort, one call per batch is fine).
   hub_aiUsed: (calls: nat) -> ();
+  hub_falconDeviceView: (viewer: text, host: text, serial: text) ->
+   (DeviceView);
   hub_financeTeam: () ->
    (record {
       enabled: bool;
@@ -1094,6 +1121,7 @@ service : {
   hub_knowledgeEvidence: (viewer: text, cid: nat, ticketId: nat) -> (Result);
   hub_knowledgeTargets: (viewer: text) -> (vec Target) query;
   hub_lifecycleEvents: (after: nat) -> (Batch) query;
+  hub_notificationDelivery: (key: text) -> (opt text) query;
   /// CONTRACT (return lane): a registered connector notifies a person.
   /// Admins may call too (testing). Recipient must be ACTIVE and inside the
   /// caller's source scope — the same population rule as connectorDirectory.
@@ -1891,6 +1919,7 @@ service : {
                         nat;
                         SyncResult;
                       });
+  syncFalcon: () -> ();
   syncNow: (id: nat) -> (SyncResult);
   team_info: () -> (TdTeamInfo) query;
   team_members: () -> (vec TdTeamMember) query;

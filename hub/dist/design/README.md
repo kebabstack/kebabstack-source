@@ -1,6 +1,6 @@
 # Kebabstack Brand & Product System
 
-**Version 1.2.0 · 23 September 2026 · Normative target for new and revised work.**
+**Version 1.3.0 · 18 November 2026 · Normative target for new and revised work.**
 
 Less work. More confidence. Kebabstack should remove repetitive IT work, help
 operators automate and extend the suite, and make state, responsibility and
@@ -55,6 +55,8 @@ third-party integrations keep their own design and directory contracts.
 
 Examples on this site are design demonstrations, not a running job queue, a new
 backend API, an AI integration or an automated compliance certification.
+
+See the [workspace relaunch review](reviews/2026-11-18-workspace-relaunch.md) for measured dialog, navigation and sign-in behavior.
 
 ## Build and verify
 

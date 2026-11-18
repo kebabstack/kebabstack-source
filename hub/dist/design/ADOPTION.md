@@ -1,6 +1,6 @@
 # Adopting the Kebabstack product standard
 
-Version 1.2.0. Shared visual foundations implemented across official apps. Workflow and accessibility evidence remains scoped to the recorded checks; this is not a blanket certification.
+Version 1.3.0. Shared visual foundations implemented across official apps. Workflow and accessibility evidence remains scoped to the recorded checks; this is not a blanket certification.
 
 Step one defines the shared standard. Step two reviews and migrates actual apps.
 The order below is a plan, not a claim that the work has already been done.

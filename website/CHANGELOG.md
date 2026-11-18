@@ -1,5 +1,22 @@
 # Product website changes
 
+## [0.6.0] — 2026-11-18
+
+- The German and English homepages now lead with support, inventory and contracts. A compact application directory links each product to its illustrated workflow. Dashboard and SDK links remain in the directory.
+- Mobile navigation uses a native disclosure and works with JavaScript disabled. Keyboard users can open the menu, follow a link, or dismiss it with Escape when scripts are available.
+
+## [0.5.16] — 2026-11-17
+
+- Describe Desk 0.40 public conversation review and Slack thread follow-ups in both languages.
+
+## [0.5.15] — 2026-11-17
+
+- Describe Falcon alert disposition in Desk and optional aggregate counts in Trust screen profiles.
+
+## [0.5.14] — 2026-11-17
+
+- Describe the optional CrowdStrike integration in the German and English Desk overview.
+
 ## [0.5.12] — 2026-10-29
 
 - Align the DE/EN Operations guide with shared six-digit dashboard profiles, independent device credentials and until-revoked access. Clarify explicitly selected lifecycle, sales and personal task totals.

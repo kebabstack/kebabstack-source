@@ -35,13 +35,16 @@ export const idlFactory = ({ IDL }) => {
   const Hold = IDL.Record({ reason: IDL.Text, until: IDL.Int });
   const Run = IDL.Record({ checked: IDL.Vec(IDL.Bool), definition: Type, outcome: IDL.Text, revision: IDL.Nat, step: IDL.Nat });
   const Event__1 = IDL.Record({ actorKind: IDL.Text, at: IDL.Int, body: IDL.Text, id: IDL.Nat, kind: IDL.Text, meta: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), ticketId: IDL.Nat, who: IDL.Text });
+  const FalconIdentity = IDL.Record({ basis: IDL.Text, person: IDL.Text, serial: IDL.Text });
+  const FalconInput = IDL.Record({ compositeId: IDL.Text, host: IDL.Text, identity: IDL.Opt(FalconIdentity), providerStatus: IDL.Text, resolutions: IDL.Opt(IDL.Vec(IDL.Text)), severity: IDL.Text, title: IDL.Text, updated: IDL.Text, url: IDL.Text });
+  const FalconEdit = IDL.Record({ by: IDL.Text, key: IDL.Text, priorReasons: IDL.Vec(IDL.Text), priorStatus: IDL.Text, reason: IDL.Text, revision: IDL.Int, status: IDL.Text });
   const FileMeta = IDL.Record({ at: IDL.Int, by: IDL.Text, id: IDL.Nat, mime: IDL.Text, name: IDL.Text, size: IDL.Nat });
   const LifecycleCase = IDL.Record({ decidedBy: IDL.Text, detectedAt: IDL.Int, effectiveActive: IDL.Bool, email: IDL.Text, lastEvent: IDL.Nat, name: IDL.Text, note: IDL.Text, personId: IDL.Text, source: IDL.Text, state: IDL.Variant({ notDeparture: IDL.Null, offboarding: IDL.Null, reactivated: IDL.Null, review: IDL.Null }) });
   const PersonCard = IDL.Record({ active: IDL.Bool, department: IDL.Text, displayName: IDL.Text, email: IDL.Text, groups: IDL.Vec(IDL.Text), id: IDL.Text, known: IDL.Bool, location: IDL.Text, manager: IDL.Text, title: IDL.Text });
   const RequestType = IDL.Record({ approval: IDL.Text, checklist: IDL.Vec(IDL.Text), defaultPriority: IDL.Text, description: IDL.Text, dueField: IDL.Text, enabled: IDL.Bool, fields: IDL.Vec(FieldDef), icon: IDL.Text, id: IDL.Nat, name: IDL.Text, queue: IDL.Text, resolveH: IDL.Nat, respondH: IDL.Nat, sortOrder: IDL.Nat, visibility: IDL.Text });
   const Task = IDL.Record({ at: IDL.Int, by: IDL.Text, state: IDL.Text, title: IDL.Text });
   const Ticket = IDL.Record({ assignee: IDL.Text, body: IDL.Text, channel: IDL.Text, closedAt: IDL.Opt(IDL.Int), createdAt: IDL.Int, dueAt: IDL.Opt(IDL.Int), fields: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), firstResponseAt: IDL.Opt(IDL.Int), id: IDL.Nat, key: IDL.Text, links: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), priority: IDL.Text, queue: IDL.Text, requester: IDL.Text, resolvedAt: IDL.Opt(IDL.Int), respondBy: IDL.Opt(IDL.Int), status: IDL.Text, subject: IDL.Text, typeId: IDL.Nat, updatedAt: IDL.Int, waitingOn: IDL.Text });
-  const TicketFull = IDL.Record({ approval: IDL.Opt(Approval), canAct: IDL.Bool, canApprove: IDL.Bool, customer: IDL.Opt(IDL.Record({ deleteAt: IDL.Int, email: IDL.Text, hold: IDL.Opt(Hold), linkExpiresAt: IDL.Int, name: IDL.Text, projectId: IDL.Nat, projectName: IDL.Text })), customerWorkflow: IDL.Opt(IDL.Record({ canProgress: IDL.Bool, run: Run })), events: IDL.Vec(Event__1), files: IDL.Vec(FileMeta), internal: IDL.Bool, lifecycle: IDL.Opt(LifecycleCase), people: IDL.Vec(PersonCard), requestType: IDL.Opt(RequestType), requester: PersonCard, role: IDL.Text, row: TicketRow, slack: IDL.Opt(IDL.Record({ channel: IDL.Text, channelName: IDL.Text })), tasks: IDL.Vec(Task), ticket: Ticket });
+  const TicketFull = IDL.Record({ approval: IDL.Opt(Approval), canAct: IDL.Bool, canApprove: IDL.Bool, customer: IDL.Opt(IDL.Record({ deleteAt: IDL.Int, email: IDL.Text, hold: IDL.Opt(Hold), linkExpiresAt: IDL.Int, name: IDL.Text, projectId: IDL.Nat, projectName: IDL.Text })), customerWorkflow: IDL.Opt(IDL.Record({ canProgress: IDL.Bool, run: Run })), events: IDL.Vec(Event__1), falcon: IDL.Opt(IDL.Record({ alert: FalconInput, edit: IDL.Opt(FalconEdit), pending: IDL.Bool })), files: IDL.Vec(FileMeta), internal: IDL.Bool, lifecycle: IDL.Opt(LifecycleCase), people: IDL.Vec(PersonCard), requestType: IDL.Opt(RequestType), requester: PersonCard, role: IDL.Text, row: TicketRow, slack: IDL.Opt(IDL.Record({ channel: IDL.Text, channelName: IDL.Text })), tasks: IDL.Vec(Task), ticket: Ticket });
   const Column = IDL.Variant({ active: IDL.Null, done: IDL.Null, planned: IDL.Null, waiting: IDL.Null });
   const TaskView = IDL.Record({ archived: IDL.Bool, assignee: IDL.Text, assigneeAvailable: IDL.Bool, assigneeName: IDL.Text, column: Column, createdAt: IDL.Int, createdBy: IDL.Text, dueOn: IDL.Text, id: IDL.Nat, note: IDL.Text, projectId: IDL.Opt(IDL.Nat), projectName: IDL.Text, revision: IDL.Nat, subtaskCount: IDL.Nat, subtasksDone: IDL.Nat, title: IDL.Text, updatedAt: IDL.Int, waitingFor: IDL.Text });
   const TaskInput = IDL.Record({ assignee: IDL.Text, column: Column, dueOn: IDL.Text, note: IDL.Text, projectId: IDL.Opt(IDL.Nat), title: IDL.Text, waitingFor: IDL.Text });
@@ -127,6 +130,7 @@ export const idlFactory = ({ IDL }) => {
   const FormsDelivery = IDL.Record({ detail: IDL.Text, ok: IDL.Bool, ticketId: IDL.Nat });
   const Filter__1 = IDL.Record({ assignee: IDL.Text, q: IDL.Text, queue: IDL.Text, status: IDL.Text, view: IDL.Text });
   const Filter = IDL.Record({ completed: IDL.Bool, mine: IDL.Bool, offset: IDL.Nat, projectId: IDL.Opt(IDL.Nat), search: IDL.Text });
+  const FalconDeviceView = IDL.Record({ device: IDL.Opt(IDL.Record({ id: IDL.Nat, owner: IDL.Text, ownerName: IDL.Text, serial: IDL.Text, title: IDL.Text })), state: IDL.Text, url: IDL.Text });
   const Export = IDL.Variant({ err: IDL.Text, ok: IDL.Record({ batchId: IDL.Text, csv: IDL.Text, filename: IDL.Text }) });
   const Example = IDL.Record({ amount: IDL.Nat, divisorSeconds: IDL.Nat, payableSeconds: IDL.Nat, rate: IDL.Nat, seconds: IDL.Nat, title: IDL.Text, unit: Unit });
   const DirectoryRow = IDL.Record({ active: IDL.Bool, attributes: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), displayName: IDL.Text, email: IDL.Text, externalId: IDL.Text, firstName: IDL.Text, id: IDL.Opt(IDL.Text), lastName: IDL.Text, source: IDL.Text });
@@ -144,7 +148,7 @@ export const idlFactory = ({ IDL }) => {
   const Cancellation = IDL.Record({ at: IDL.Int, by: IDL.Text, from: IDL.Int, reason: IDL.Text });
   const BulkTarget = IDL.Record({ id: IDL.Nat, updatedAt: IDL.Int });
   const BulkOutcome = IDL.Record({ id: IDL.Nat, result: IDL.Variant({ skipped: IDL.Text, unchanged: IDL.Null, updated: IDL.Null }) });
-  const BulkAction = IDL.Variant({ assign: IDL.Text, due: IDL.Opt(IDL.Int), status: IDL.Record({ status: IDL.Text, waitingOn: IDL.Text }) });
+  const BulkAction = IDL.Variant({ assign: IDL.Text, due: IDL.Opt(IDL.Int), finish: IDL.Record({ falconResolution: IDL.Text, status: IDL.Text }), status: IDL.Record({ status: IDL.Text, waitingOn: IDL.Text }) });
   const Audit__1 = IDL.Record({ action: IDL.Text, at: IDL.Int, by: IDL.Text, reason: IDL.Text, recordId: IDL.Nat });
   const Audit = IDL.Record({ action: IDL.Text, at: IDL.Int, by: IDL.Text });
   const Absence = IDL.Record({ at: IDL.Int, by: IDL.Text, cancelledAt: IDL.Int, endAt: IDL.Int, id: IDL.Nat, name: IDL.Text, personId: IDL.Text, projectId: IDL.Nat, startAt: IDL.Int });
@@ -209,6 +213,7 @@ export const idlFactory = ({ IDL }) => {
     explainReportingCoverage: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text], [Result], []),
     exportCustomerTicket: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Text)], ["query"]),
     exportReportingPeriod: IDL.Func([IDL.Text, IDL.Nat], [Export], []),
+    falconDeviceView: IDL.Func([IDL.Text, IDL.Nat], [FalconDeviceView], []),
     fileData: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(IDL.Record({ data: IDL.Vec(IDL.Nat8), mime: IDL.Text, name: IDL.Text }))], ["query"]),
     formsSourceInfo: IDL.Func([IDL.Nat, IDL.Nat], [IDL.Opt(IDL.Record({ deskUrl: IDL.Text, name: IDL.Text }))], []),
     getAutoAssignment: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ config: Config, people: IDL.Vec(Person), requestTypes: IDL.Vec(IDL.Record({ enabled: IDL.Bool, id: IDL.Nat, name: IDL.Text })), warnings: IDL.Vec(IDL.Text) }))], ["query"]),
@@ -220,6 +225,13 @@ export const idlFactory = ({ IDL }) => {
     http_request: IDL.Func([HttpGwRequest], [HttpGwResponse], ["query"]),
     http_request_update: IDL.Func([HttpGwRequest], [HttpGwResponse], []),
     hub_deactivate: IDL.Func([IDL.Vec(IDL.Text)], [IDL.Nat], []),
+    hub_falconCounts: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Tuple(IDL.Nat, IDL.Nat))], ["query"]),
+    hub_falconEdited: IDL.Func([IDL.Nat, IDL.Int, IDL.Text, IDL.Vec(IDL.Text), IDL.Bool], [], []),
+    hub_falconEdits: IDL.Func([IDL.Nat], [IDL.Vec(IDL.Tuple(IDL.Nat, FalconEdit))], ["query"]),
+    hub_falconIntake: IDL.Func([FalconInput], [IDL.Nat], []),
+    hub_falconLegacy: IDL.Func([IDL.Nat], [IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))], ["query"]),
+    hub_falconPending: IDL.Func([IDL.Nat], [IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))], ["query"]),
+    hub_falconResult: IDL.Func([IDL.Nat, IDL.Text, IDL.Text], [], []),
     hub_hardwareCase: IDL.Func([IDL.Nat], [IDL.Opt(Case)], ["query"]),
     hub_knowledgeEvidence: IDL.Func([IDL.Text, IDL.Nat], [Result__2], ["query"]),
     hub_manifest: IDL.Func([], [Manifest], ["query"]),
@@ -309,6 +321,7 @@ export const idlFactory = ({ IDL }) => {
     setAiTriage: IDL.Func([IDL.Text, IDL.Bool], [IDL.Bool], []),
     setApprover: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setDue: IDL.Func([IDL.Text, IDL.Nat, IDL.Opt(IDL.Int)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setFalconStatus: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Int], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setFields: IDL.Func([IDL.Text, IDL.Nat, IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setHub: IDL.Func([IDL.Text], [IDL.Bool], []),
     setOnboardingFromDirectory: IDL.Func([IDL.Text, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
@@ -334,6 +347,7 @@ export const idlFactory = ({ IDL }) => {
     stats: IDL.Func([IDL.Text], [IDL.Record({ approvals: IDL.Nat, breached: IDL.Nat, closed: IDL.Nat, mine: IDL.Nat, new: IDL.Nat, open: IDL.Nat, resolved: IDL.Nat, total: IDL.Nat, unassigned: IDL.Nat, waiting: IDL.Nat })], ["query"]),
     syncLifecycle: IDL.Func([IDL.Text], [IDL.Bool], []),
     syncNow: IDL.Func([IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    takeFalconTicket: IDL.Func([IDL.Text, IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     updateOncallProject: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text, IDL.Vec(IDL.Text), IDL.Nat], [Result], []),
     updateSettings: IDL.Func([IDL.Text, IDL.Record({ adminGroup: IDL.Text, agentGroup: IDL.Text, appUrl: IDL.Text, autoCloseDays: IDL.Nat, keyPrefix: IDL.Text, orgName: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     updateSlackIntake: IDL.Func([IDL.Text, IDL.Nat, IDL.Record({ enabled: IDL.Bool, name: IDL.Text, typeId: IDL.Nat })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),

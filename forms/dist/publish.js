@@ -1,4 +1,4 @@
-export async function renderPublish({root,backend,token,form,editable,canDelete,isAdmin,backendId,escape:esc,url}) {
+export async function renderPublish({root,backend,token,form,editable,canDelete,isAdmin,backendId,attachPicker,escape:esc,url}) {
  const generation=(root.__publishGeneration||0)+1;root.__publishGeneration=generation;const current=()=>root.__publishGeneration===generation&&!root.hidden;
  root.innerHTML='<p role="status">Loading publication settings…</p>';
  try {
@@ -6,17 +6,47 @@ export async function renderPublish({root,backend,token,form,editable,canDelete,
  const origins=p.origins.join('\n'), keys=p.contextKeys.join(', ');
  root.innerHTML=`<section class="publish-panel"><h2>Website & privacy</h2><p>Choose where this form can be embedded and how long responses are kept.</p>
  <form id="publicationSettings"><fieldset ${editable?'':'disabled'}>
- <label>Allowed embedding websites<textarea id="embedOrigins" rows="3" placeholder="https://product.example.com">${esc(origins)}</textarea></label><p class="kv">Exact HTTPS origins, one per line. The public link remains accessible. Origin checks limit browser embedding, not who may submit.</p>
+ <label>Allowed embedding websites<textarea id="embedOrigins" rows="3" placeholder="https://product.example.com">${esc(origins)}</textarea></label><p class="kv">Enter one HTTPS origin per line. For a public form on arbitrary HTTPS websites, enter https://*. The public link remains accessible. Origin checks limit browser embedding, not who may submit.</p>
  <label>Context keys<input id="contextKeys" value="${esc(keys)}" placeholder="domain, resource_id, error_code"></label><p class="kv">Only explicitly supplied values are collected. Context is unverified; never pass passwords, tokens or full URLs containing secrets.</p>
  <label>Privacy notice URL<input id="privacyUrl" type="url" value="${esc(p.privacyUrl)}" placeholder="https://company.example/privacy"></label>
  <label>Delete responses after days<input id="retentionDays" ${canDelete?'':'disabled'} type="number" min="0" max="3650" value="${p.retentionDays}"></label><p class="kv">0 disables automatic deletion; otherwise 7–3650 days from submission. Shortening the period starts a seven-day grace period. Delivered notifications and backups need their own retention policy.</p>
- <button class="pill primary" type="submit">Save settings</button><p id="publishResult" role="status" aria-live="polite"></p></fieldset></form><details><summary>Start from a template</summary><p>Create a separate draft for suspension appeals.</p><button id="appealTemplate" class="pill outline" ${editable?'':'disabled'}>Use appeal template</button></details></section>
+ <button class="pill primary" type="submit">Save settings</button><p id="publishResult" role="status" aria-live="polite"></p></fieldset></form>${isAdmin?'<label><input id="botRequired" type="checkbox"> Require Cloudflare verification for new responses</label><p id="botStatus" role="status"></p>':''}<details><summary>Start from a template</summary><p>Create a separate draft for suspension appeals.</p><button id="appealTemplate" class="pill outline" ${editable?'':'disabled'}>Use appeal template</button></details></section>
+ ${canDelete?'<section class="publish-panel"><h2>Slack notifications</h2><p>Notify these colleagues about new submissions. For connected tickets, Desk records the Slack delivery result. Recipients keep their existing access and notification preferences.</p><ul id="notifyPeople"></ul><div class="pick"><label>Find a colleague<input id="notifySearch" autocomplete="off"></label><div id="notifyMatches" class="list hidden"></div></div><p id="notifyResult" role="status"></p></section>':''}
  <section class="publish-panel"><h2>Embed</h2><label>Appearance<select id="embedTheme"><option value="system">Follow visitor’s system</option><option value="light">Light</option><option value="dark">Dark</option></select></label><pre id="embedCode" tabindex="0"></pre><button class="pill outline" id="copyEmbed">Copy embed code</button><details><summary>Integration guide</summary><ol><li>Save your website origin above.</li><li>Paste the snippet where the form should appear. Allow this Forms origin in your website’s script-src and frame-src policy.</li><li>Set data-theme to light or dark when the host page has a fixed theme.</li><li>Supply only approved context keys using data-context. The parent page URL is never read automatically.</li><li>Test mobile, successful submission and an interrupted connection before replacing your existing form.</li></ol><p>Always offer the direct public link alongside the embed. Host Forms separately from the application whose outage or suspension it reports.</p></details></section><section class="publish-panel"><h2>Send responses to Desk</h2><p>Forms collects the response. Your Desk project owns the handling steps, assignment and resolution.</p><p id="deskConnection" role="status">Loading connection…</p><div id="deskConnectControls"></div><p class="kv">External mail is not connected. No confirmation or reply emails are sent. Responses and ticket copies have independent retention policies.</p></section>`;
  const [target]=await backend.getDeskTarget(token,form.id);if(!current())return;
  root.querySelector('#deskConnection').textContent=target?(target.enabled?'Connected to ':'Paused · ')+target.name:'Responses currently stay in Forms.';
  if(isAdmin){const controls=root.querySelector('#deskConnectControls');controls.innerHTML=`<details><summary>${target?'Manage connection':'Connect a Desk project'}</summary><p>In Desk → Customer project → Project & integrations → Forms, register backend <code>${esc(backendId)}</code> and form <code>${form.id}</code>. Then paste the connection details here.</p><p>Require an email address and turn off response editing in Build. Choose a Desk request type without required extra fields; all answers arrive as a readable message.</p><form id="deskConnectForm"><label>Desk backend ID<input id="deskBackend" required value="${esc(target?.canister?.toText?.()||'')}" autocomplete="off"></label><label>Source number<input id="deskSource" type="number" min="1" step="1" required value="${target?.sourceId||''}"></label><button class="pill primary">${target?'Reconnect':'Connect'}</button>${target?'<button type="button" class="pill outline" id="pauseDesk">Pause delivery</button>':''}</form><p class="kv">Only new responses are sent. Pausing keeps queued responses for later. Changing the destination does not reroute existing responses.</p></details>`;
  controls.querySelector('#deskConnectForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{const r=await backend.connectDesk(token,form.id,controls.querySelector('#deskBackend').value.trim(),BigInt(controls.querySelector('#deskSource').value));root.querySelector('#deskConnection').textContent=r.detail;}catch{root.querySelector('#deskConnection').textContent='Could not connect. Check the backend ID and source number, then retry.';}finally{button.disabled=false;}};
  const pause=controls.querySelector('#pauseDesk');if(pause)pause.onclick=async()=>{if(await backend.pauseDesk(token,form.id))root.querySelector('#deskConnection').textContent='Delivery paused. Queued responses are retained.';};
+ }
+ if(isAdmin) {
+   const box=root.querySelector('#botRequired');
+   box.disabled=true;
+   const [key]=await backend.intakeSiteKey(form.slug);
+   if(!current())return;
+   box.checked=Boolean(key); box.disabled=false;
+   box.onchange=async()=>{
+     const requested=box.checked; box.disabled=true;
+     try { if(!await backend.protectIntake(token,form.id,requested))throw Error("Configure the widget in Settings and disable response editing first.");
+       root.querySelector('#botStatus').textContent="Verification setting saved.";
+     } catch(error) {box.checked=!requested;root.querySelector('#botStatus').textContent=error.message;} finally {box.disabled=false;}
+   };
+ }
+ if(canDelete){
+   let rows=[];
+   const refresh=async()=>{
+     rows=await backend.notificationRecipients(token,form.id);
+     if(!current())return;
+     root.querySelector('#notifyPeople').innerHTML=rows.map(([pid,name,email])=>`<li>${esc(name || email || 'Former colleague')} <button type="button" class="linkbtn" data-remove-notify="${esc(pid)}">Remove</button></li>`).join('');
+   };
+   const change=async(person,add)=>{
+     try{const result=await backend.changeNotificationRecipient(token,form.id,person,add);
+       if(!current())return;root.querySelector('#notifyResult').textContent=result.detail;if(result.ok)await refresh();
+     }catch{if(current())root.querySelector('#notifyResult').textContent='Could not confirm the change. Reload to check.';}
+   };
+   root.querySelector('#notifyPeople').onclick=e=>{const button=e.target.closest('[data-remove-notify]');if(button)change(button.dataset.removeNotify,false);};
+   attachPicker('notifySearch','notifyMatches',email=>change(email,true),()=>rows.map(r=>r[2]));
+   await refresh(); if(!current())return;
  }
  const makeCode=()=>{const origin=new URL(url).origin;const context=Object.fromEntries(p.contextKeys.map(k=>[k,k==='domain'?'product.example.com':'example']));return '<script defer src="'+origin+'/embed.js" data-form="'+form.slug+'" data-theme="'+root.querySelector('#embedTheme').value+'"'+(p.contextKeys.length?" data-context='"+JSON.stringify(context)+"'":'')+'><'+'/script>\n<a href="'+url+'">Open form separately</a>';};
  const update=()=>root.querySelector('#embedCode').textContent=makeCode();update();root.querySelector('#embedTheme').onchange=update;

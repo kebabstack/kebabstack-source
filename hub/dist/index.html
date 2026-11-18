@@ -2,6 +2,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>kebab-stack · hub</title>
+<link rel="modulepreload" href="./agent-bundle.js">
 <link rel="icon" href="/favicon.svg">
 <script src="/brand.js"></script>
 <link rel="stylesheet" href="/tokens.css">
@@ -233,11 +234,7 @@
 
 <main id="login" aria-busy="true">
   <div class="auth-shell">
-    <aside class="auth-story">
-      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
-      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
-      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
-    </aside>
+    <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
     <section class="auth-main" aria-labelledby="loginTitle">
       <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginOrg">Your company workspace</div></div>
       <h1 id="loginTitle">Welcome back.</h1><h1 class="auth-waiting">Company sign-in</h1>
@@ -266,7 +263,7 @@
 table.apps td { vertical-align:middle; }
 .sw { position:relative; display:inline-block; width:38px; height:22px; } .sw input { opacity:0; width:0; height:0; } .sw span { position:absolute; inset:0; border-radius:11px; background:var(--ks-rule-strong); transition:.15s; } .sw span::before { content:""; position:absolute; width:16px; height:16px; left:3px; top:3px; border-radius:50%; background:#fff; transition:.15s; } .sw input:checked + span { background:var(--ks-indicator-teal, #1f8a70); } .sw input:checked + span::before { transform:translateX(16px); }
 #linkMe:not(.hidden) { display:flex; }
-#pickOv:not(.hidden), #accOv:not(.hidden), #grOv:not(.hidden), #laneOv:not(.hidden), #bkSnapOv:not(.hidden), #bkSchedOv:not(.hidden), #youOv:not(.hidden) { display:flex; }
+#pickOv:not(.hidden), #accOv:not(.hidden), #grOv:not(.hidden), #laneOv:not(.hidden), #bkSnapOv:not(.hidden), #bkSchedOv:not(.hidden) { display:flex; }
 .roundbtn { width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--ks-rule-strong); background:transparent; border-radius:50%; font:400 16px/1 var(--ks-ui); color:var(--ks-fg); cursor:pointer; text-transform:none; letter-spacing:0; }
 .chip { display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 4px; border:1px solid var(--ks-rule); border-radius:9999px; background:var(--ks-bg-sunk); font:400 12.5px var(--ks-ui); color:var(--ks-fg); }
 .chip .avi { width:20px; height:20px; border-radius:50%; background:var(--ks-bg-card); border:1px solid var(--ks-rule); display:flex; align-items:center; justify-content:center; font:500 9px var(--ks-mono); color:var(--ks-fg-secondary); }
@@ -316,7 +313,7 @@ tr.muted td { color:var(--ks-fg-muted); }
   </div>
 </div>
 
-<div id="linkMe" class="hidden" style="position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.35); align-items:center; justify-content:center">
+<div id="linkMe" data-hub-dialog class="hidden" style="position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.35); align-items:center; justify-content:center">
   <div class="card" style="width:min(520px,92vw); margin:0">
     <h3>Your passkey is not a person yet</h3>
     <div class="kv" style="line-height:1.6">Admins sign in with a passkey; the portal and every connected app act on behalf of a <b>directory person</b>. Link this passkey to your own entry once — then the Portal switch shows the workspace as you would see it as an employee, and app tiles sign you in as that person.</div>
@@ -325,7 +322,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div class="btnrow"><button id="lmLink" class="primary">Link &amp; open portal</button><button id="lmPeople" class="hidden">Go to People</button><button id="lmCancel">Cancel</button><span id="lmStatus" class="status"></span></div>
   </div>
 </div>
-<div id="pickOv" class="hidden" style="position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+<div id="pickOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div class="card" style="width:min(560px,94vw);margin:0;max-height:86vh;display:flex;flex-direction:column">
     <h3 id="pickTitle" style="margin:0 0 4px">Pick people</h3>
     <div class="kv" id="pickHint" style="margin-bottom:8px"></div>
@@ -334,7 +331,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div class="btnrow"><button id="pickOk" class="primary">Add</button><button id="pickCancel">Cancel</button><span class="kv" id="pickCount" style="margin-left:auto"></span></div>
   </div>
 </div>
-<div id="grOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+<div id="grOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div class="card" style="width:min(640px,94vw);margin:0;max-height:90vh;overflow:auto">
     <div style="display:flex;align-items:center;gap:10px"><h3 id="grOvTitle" style="margin:0;display:flex;align-items:center;gap:8px"></h3><button id="grOvClose" class="roundbtn" style="margin-left:auto" title="close">×</button></div>
     <div class="kv" id="grOvNote" style="margin-top:4px"></div>
@@ -345,7 +342,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div id="grOvUses"></div>
   </div>
 </div>
-<div id="wzApp" class="hidden" style="position:fixed;inset:0;z-index:65;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+<div id="wzApp" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:65;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
   <div class="card" style="width:min(860px,96vw);margin:0;max-height:92vh;overflow:auto;padding:24px 28px">
     <div style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">🍢 Connect an app</h3><span class="kv" id="wzAppName" style="font:500 15px var(--ks-display)"></span><button id="wzClose" class="roundbtn" style="margin-left:auto" title="close">×</button></div>
     <div class="wzsteps" id="wzSteps"></div>
@@ -427,16 +424,16 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div class="btnrow" style="margin-top:18px;border-top:1px solid var(--ks-rule);padding-top:14px"><button id="wzBack">Back</button><button id="wzNext" class="primary">Next</button><span id="cwStatus" class="status"></span></div>
   </div>
 </div>
-<div id="laneOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+<div id="laneOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div class="card" style="width:min(820px,96vw);margin:0;max-height:92vh;overflow:auto">
     <div style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">Data sharing · <span id="laneName"></span></h3><span id="laneStatus" class="status"></span><button id="laneClose" class="roundbtn" style="margin-left:auto" title="close">×</button></div>
     <div class="kv" style="margin:6px 0 12px;line-height:1.6">Choose what this app can receive or use, then save. Existing app caches may take time to refresh.</div>
     <div id="laneSkewer"></div><div class="btnrow" style="margin-top:20px"><button id="laneSave" class="primary">Save changes</button></div>
   </div>
 </div>
-<div id="youOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center" onclick="if(event.target===this)this.classList.add('hidden')">
-  <div class="card" style="width:min(460px,94vw);margin:0">
-    <div style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">You</h3><span id="youStatus" class="status"></span><button id="youClose" class="roundbtn" style="margin-left:auto" title="close">×</button></div>
+<dialog id="youOv" class="ks-dialog" aria-labelledby="youTitle" style="--ks-dialog-width:460px">
+  <div class="mbox card">
+    <div style="display:flex;align-items:center;gap:12px"><h2 id="youTitle" style="margin:0">Your profile</h2><span id="youStatus" role="status" class="status"></span><button id="youClose" class="roundbtn" style="margin-left:auto" autofocus aria-label="Close profile">×</button></div>
     <div class="youbig" id="youBig">…</div>
     <div class="btnrow" style="justify-content:center;margin:0 0 14px" id="youAviRow"><button id="youAviUpload" class="sm">Change photo</button><button id="youAviRemove" class="sm hidden">Remove photo</button><input type="file" id="youAviFile" accept="image/*" class="hidden"></div>
     <div class="kv" id="youAviHint" style="text-align:center;margin:-6px 0 14px">Your photo travels with you into every connected app that may show photos.</div>
@@ -449,8 +446,8 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div id="youLinkRow" class="warnbox hidden" style="margin:14px 0 0">This key is not linked to a person yet, so it has no photo and no name. <button id="youLink" class="sm primary" style="margin-left:6px">Link it to me</button></div>
 
   </div>
-</div>
-<div id="bkSnapOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+</dialog>
+<div id="bkSnapOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div class="card" style="width:min(720px,94vw);margin:0;max-height:90vh;overflow:auto">
     <div style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">Snapshots of <span id="bkSnapName"></span></h3><span id="bkSnapStatus" class="status"></span><button id="bkSnapClose" class="roundbtn" style="margin-left:auto" title="close">×</button></div>
     <div class="kv" id="bkSnapMeta" style="margin:6px 0 10px"></div>
@@ -459,7 +456,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font:400 13px var(--ks-ui);margin-top:12px"><input type="checkbox" id="bkSafety" checked="" style="width:auto"> take a safety snapshot of the current state before restoring</label>
   </div>
 </div>
-<div id="bkSchedOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+<div id="bkSchedOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div class="card" style="width:min(520px,94vw);margin:0">
     <h3 style="margin:0 0 6px">Schedule for <span id="bkSchedName"></span></h3>
     <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font:400 14px var(--ks-ui);margin-top:10px"><input type="checkbox" id="bkSchedOn" checked="" style="width:auto"> enabled</label>
@@ -467,7 +464,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div class="btnrow"><button id="bkSchedSave" class="primary">Save</button><button id="bkSchedCancel">Cancel</button><span id="bkSchedStatus" class="status"></span></div>
   </div>
 </div>
-<div id="accOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+<div id="accOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div class="card" style="width:min(680px,94vw);margin:0;max-height:90vh;overflow:auto">
     <h3 style="margin:0 0 2px">Who may use <span id="accName"></span></h3>
     <div class="kv" style="margin-bottom:12px">Built from what you already have — groups, roles, people. Enforced on sign-in, directory, notifications and which tiles a person sees.</div>
@@ -490,14 +487,14 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div class="btnrow"><button id="accSave" class="primary">Save</button><button id="accCancel">Cancel</button><span id="accStatus" class="status"></span></div>
   </div>
 </div>
-<div id="clOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center" onclick="if(event.target===this)this.classList.add('hidden')">
+<div id="clOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center" onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="card" style="width:min(720px,94vw);margin:0;max-height:90vh;overflow:auto">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h3 style="margin:0">What's new</h3><span class="pill mono" id="clVer"></span><span class="kv" id="clBackend"></span><button id="clClose" class="roundbtn" style="margin-left:auto" title="close">×</button></div>
     <div class="kv" style="margin:6px 0 4px">Semantic versions: a bigger middle number means a new capability, a bigger last number a fix. Published releases show the same version under Apps → Updates.</div>
     <div class="cl" id="clBody"><div class="kv">loading…</div></div>
   </div>
 </div>
-<div id="askOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+<div id="askOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div class="card" style="width:min(520px,94vw);margin:0">
     <div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0" id="askTitle">Ask for access</h3><button id="askClose" class="roundbtn" style="margin-left:auto" title="Close">×</button></div>
     <div class="kv" style="margin:8px 0 12px">Your hub admins decide and you are told by notification. Say why — it speeds things up.</div>
@@ -506,7 +503,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     <div id="askStatus" class="status" style="margin-top:10px"></div>
   </div>
 </div>
-<div id="apOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
+<div id="apOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
   <div class="card" style="width:min(760px,96vw);margin:0;max-height:92vh;overflow:auto">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h3 style="margin:0" id="apTitle">App</h3><span class="pill" id="apKind"></span><span id="apStatus2" class="status"></span><button id="apClose" class="roundbtn" style="margin-left:auto" title="close">×</button></div>
     <div class="row" style="margin-top:10px"><div><label for="apName">Name</label><input type="text" id="apName" maxlength="60"></div><div><label for="apNote">Note (shown on the menu)</label><input type="text" id="apNote" maxlength="120"></div><div style="flex:0 0 auto;display:flex;align-items:flex-end"><button id="apSaveName" class="sm">Save</button></div></div>
@@ -549,7 +546,7 @@ tr.muted td { color:var(--ks-fg-muted); }
     </div>
   </div>
 </div>
-<div id="oidcOv" class="hidden" style="position:fixed;inset:0;z-index:60;background:var(--ks-bg);align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:20px">
+<div id="oidcOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;z-index:60;background:var(--ks-bg);align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:20px">
   <div class="card" style="max-width:520px;width:100%">
     <div class="eye" style="font:500 11px var(--ks-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--ks-fg-muted)">sign in with your hub</div>
     <div id="oidcIcon" class="mico pic hidden" style="width:48px;height:48px;border-radius:12px;margin:8px 0 2px"></div>
@@ -565,24 +562,24 @@ tr.muted td { color:var(--ks-fg-muted); }
   <div class="kv" id="claimBody" style="max-width:460px"></div>
 </div>
 
-<div id="cropOv" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;display:flex;align-items:center;justify-content:center">
-  <div style="background:var(--ks-bg-card);border:1px solid var(--ks-rule);border-top:3px solid var(--ks-accent);border-radius:var(--ks-radius-card);padding:22px 24px;width:330px">
-    <h3 style="margin:0 0 4px">Position your photo</h3>
+<dialog id="cropOv" class="ks-dialog" aria-labelledby="cropTitle" style="--ks-dialog-width:350px">
+  <div class="mbox">
+    <h2 id="cropTitle">Position your photo</h2>
     <div class="kv" style="margin-bottom:12px">Drag to move, slider to zoom.</div>
     <div id="cropBox" style="position:relative;width:260px;height:260px;margin:0 auto;overflow:hidden;border-radius:var(--ks-radius-card);background:var(--ks-bg-sunk);cursor:grab;touch-action:none">
       <img id="cropImg" alt="" draggable="false" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;pointer-events:none;max-width:none">
       <div style="position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 9999px rgba(26,26,26,.45);pointer-events:none"></div>
     </div>
-    <input type="range" id="cropZoom" min="100" max="300" value="100" style="width:100%;margin:14px 0 4px">
+    <input type="range" id="cropZoom" aria-label="Photo zoom" min="100" max="300" value="100" style="width:100%;margin:14px 0 4px">
     <div class="btnrow" style="margin-top:10px">
       <button id="cropSave" class="primary">Save</button>
       <button id="cropCancel">Cancel</button>
-      <span id="cropStatus" class="status"></span>
+      <span id="cropStatus" role="status" class="status"></span>
     </div>
   </div>
-</div>
+</dialog>
 
-<div id="filtOv" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;display:flex;align-items:center;justify-content:center">
+<div id="filtOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;display:flex;align-items:center;justify-content:center">
   <div style="background:var(--ks-bg-card);border:1px solid var(--ks-rule);border-top:3px solid var(--ks-accent);border-radius:var(--ks-radius-card);padding:22px 24px;width:min(420px,92vw)">
     <h3 style="margin:0 0 4px">Exclude filters</h3>
     <div class="kv" style="margin-bottom:10px">One rule per line, matched case-insensitively against the synced Okta attributes. <code>field=value</code> = exact, <code>field^=prefix</code> = starts with. Matching accounts are hidden from THIS tool only. Empty = no filtering.</div>
@@ -596,7 +593,7 @@ city^=Remote"></textarea>
   </div>
 </div>
 
-<div id="scpOv" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;display:flex;align-items:center;justify-content:center">
+<div id="scpOv" data-hub-dialog class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;display:flex;align-items:center;justify-content:center">
   <div style="background:var(--ks-bg-card);border:1px solid var(--ks-rule);border-top:3px solid var(--ks-accent);border-radius:var(--ks-radius-card);padding:22px 24px;width:min(420px,92vw)">
     <h3 style="margin:0 0 4px">Connection scope</h3>
     <div class="kv" style="margin-bottom:10px">Pick which IdP connections this tool receives users from. Nothing checked = <strong>all</strong> connections.</div>
@@ -639,14 +636,11 @@ city^=Remote"></textarea>
   <main class="pmain">
     <div id="pHome">
     <div class="warnbox" id="pInactive" style="display:none">Your account has been deactivated. Access to connected tools is blocked.</div>
-    <div class="mgreet workspace-hero">
-      <div>
-        <div class="peyebrow" id="pGreetEye">WELCOME</div>
-        <h2 id="pGreet">Hello.</h2>
-        <div class="kv" id="pGreetSub">Your apps, connected. Get straight to what matters.</div>
-      </div>
-      <div class="workspace-art" aria-hidden="true"><svg viewBox="0 0 235 148" fill="none"><path d="M60 42H118V105H178M118 42H180M118 76H59" stroke="#8297B2" stroke-opacity=".5" stroke-width="1.5"></path><circle cx="118" cy="42" r="5" fill="#FFAD88"></circle><circle cx="118" cy="105" r="4" fill="#95D4C1"></circle><rect x="14" y="17" width="66" height="51" rx="12" fill="#304059" stroke="#637792" stroke-opacity=".5"></rect><rect x="30" y="31" width="34" height="22" rx="4" stroke="#B5C6DC" stroke-width="1.5"></rect><path d="M37 58H57M47 53V58" stroke="#B5C6DC" stroke-width="1.5"></path><rect x="158" y="13" width="59" height="59" rx="15" fill="#FB9E77"></rect><path d="M176 33H199M176 42H193M176 51H187" stroke="#61341F" stroke-width="2.5" stroke-linecap="round"></path><rect x="37" y="87" width="58" height="50" rx="13" fill="#324D50" stroke="#95D4C1" stroke-opacity=".35"></rect><path d="M52 111L61 119L78 103" stroke="#A1E0C9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path><rect x="167" y="88" width="49" height="40" rx="11" fill="#304059"></rect><circle cx="186" cy="105" r="5" stroke="#B5C6DC" stroke-width="1.5"></circle><path d="M180 118C180 111 196 111 196 118" stroke="#B5C6DC" stroke-width="1.5"></path><circle cx="142" cy="76" r="2" fill="#95D4C1"></circle></svg></div>
-    </div>
+    <header class="workspace-heading">
+      <div class="peyebrow" id="pGreetEye">Your workspace</div>
+      <h1 id="pGreet" tabindex="-1">Your apps</h1>
+      <div class="kv" id="pGreetSub"></div>
+    </header>
     <div id="pReviews" class="psection hidden" style="margin:0 0 22px;padding:16px 18px;border:1px solid var(--ks-accent);border-radius:var(--ks-radius)">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div class="peyebrow" style="margin:0">ACCESS REVIEW · YOUR DECISION</div><span class="kv" id="pReviewsMeta"></span><span id="pReviewsStatus" class="status" style="margin-left:auto"></span></div>
       <div class="kv" style="margin:6px 0 8px">You answer for these apps. Keep or remove every entry; the person is notified when access is removed. Bundled apps enforce the change within 60 seconds.</div>
@@ -665,7 +659,7 @@ city^=Remote"></textarea>
         <span class="kv" id="pMenuHint"><span class="shortcut-hint"><kbd>/</kbd> to search · <kbd>Enter</kbd> to open · </span>Star an app to keep it in your favourites. Saved in this browser.</span>
       </div>
     </div>
-    <div class="workspace-help"><span class="workspace-help-icon" aria-hidden="true">?</span><div><strong>A little less admin. A little more doing.</strong><p>Your sign-in, apps and notifications work together. Here’s how.</p></div><a href="#" id="pHowitLink">How it works <span aria-hidden="true">→</span></a></div>
+    <div class="workspace-help"><span class="workspace-help-icon" aria-hidden="true">?</span><div><strong>Workspace guide</strong><p>Learn how sign-in, app access and notifications work.</p></div><a href="#" id="pHowitLink">How it works <span aria-hidden="true">→</span></a></div>
     </div><!-- /pHome -->
 
 
@@ -1248,6 +1242,16 @@ icp canister call backend setHub '("<span id="bkHubId"></span>")' -e ic</div>
       </div>
       </div>
       <div class="spane" data-spane="notify">
+      <section class="card hidden" id="falconPanel"><h3>CrowdStrike Falcon</h3>
+      <p>Send endpoint alerts to internal support and acknowledge them when taking a ticket.</p>
+      <form id="falconForm"><div class="row">
+      <label>Falcon cloud<select id="falconRegion"><option value="eu-1">EU-1</option><option value="us-1">US-1</option><option value="us-2">US-2</option></select></label>
+      <label>Customer ID (CID, without checksum)<input id="falconCid" required pattern="[0-9a-fA-F]{32}"></label>
+      <label>Client ID<input id="falconClient" required pattern="[0-9a-fA-F]{32}"></label>
+      <label>Client secret<input type="password" id="falconSecret" autocomplete="off" required></label>
+      <label>Internal helpdesk<select id="falconDesk" required></select></label>
+      </div><button type="submit">Connect and sync new alerts</button></form>
+      <div class="btnrow"><button id="falconSync" class="hidden">Sync now</button><button id="falconRemove" class="hidden">Disconnect</button></div><p id="falconHealth" role="status"></p></section>
       <div class="card">
         <h3>Slack notifications</h3>
         <div class="kv" style="margin-bottom:10px">Hub notifications appear in the bell. Add Slack to offer direct messages as well; people control their own preference.</div>
@@ -1358,7 +1362,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
       <div class="btnrow"><button id="dpSave" class="primary">Save profile</button><span id="dpStatus" class="status"></span></div>
     </div>
     <div class="btnrow">
-      <button id="dKill" title="Locks this person out of the hub and every connected app within seconds">Lock out now</button>
+      <button id="dKill" title="Blocks Hub access. Connected apps apply the change when they refresh access.">Lock out now</button>
       <button id="dForce" class="hidden" title="Keeps this person active even if their source says otherwise">Keep active</button>
       <button id="dClear" class="hidden" title="Removes the manual lock-out or keep-active; the source status applies again">Undo manual change</button>
       <button id="dInvite" title="One-time link; the person signs in with the key on their own device">Invite to sign in</button>
@@ -1373,7 +1377,7 @@ Who can actually log in is decided by the hub either way: only synced, ACTIVE us
 
 <script>
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
-const HUB_VERSION = "0.45.1"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
+const HUB_VERSION = "0.48.0"; // written by hub/tools/sync-sdk.py from hub/mops.toml — do not edit by hand
 const IC_HOST = "https://icp0.io";
 const II_URL = "https://identity.internetcomputer.org";
 
@@ -1416,7 +1420,7 @@ const idlFactory = ({ IDL }) => {
   const Card = IDL.Record({ column: Column, dueOn: IDL.Text, id: IDL.Nat, next: IDL.Text, owner: IDL.Text, path: IDL.Text, reference: IDL.Text, status: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
   const Page = IDL.Record({ checkedAt: IDL.Int, rows: IDL.Vec(Card), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   const OwnedObject = IDL.Record({ id: IDL.Text, kind: IDL.Text, meta: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
-  const Options = IDL.Record({ lifecycle: IDL.Bool, personal: IDL.Bool, personalEmail: IDL.Opt(IDL.Text), sales: IDL.Bool, workboard: IDL.Bool });
+  const Options = IDL.Record({ falcon: IDL.Opt(IDL.Bool), lifecycle: IDL.Bool, personal: IDL.Bool, personalEmail: IDL.Opt(IDL.Text), sales: IDL.Bool, workboard: IDL.Bool });
   const OpenTeamRow = IDL.Record({ action: IDL.Text, email: IDL.Text, memberId: IDL.Text, name: IDL.Text });
   const OpenTeamReview = IDL.Record({ conflicts: IDL.Vec(IDL.Text), created: IDL.Nat, deactivated: IDL.Nat, detail: IDL.Text, fetched: IDL.Nat, ok: IDL.Bool, rows: IDL.Vec(OpenTeamRow), skipped: IDL.Nat, token: IDL.Nat, updated: IDL.Nat });
   const OpenTeamConfig = IDL.Record({ excludeIds: IDL.Vec(IDL.Text), includeExternal: IDL.Bool });
@@ -1438,6 +1442,8 @@ const idlFactory = ({ IDL }) => {
   const FinanceBinding = IDL.Record({ canisterId: IDL.Principal, cid: IDL.Nat });
   const FinanceTeam = IDL.Record({ apps: IDL.Vec(FinanceBinding), groups: IDL.Vec(IDL.Nat), mode: IDL.Text, people: IDL.Vec(IDL.Text), revision: IDL.Nat });
   const Event = IDL.Record({ at: IDL.Int, effectiveActive: IDL.Bool, email: IDL.Text, kind: IDL.Variant({ created: IDL.Null, deactivated: IDL.Null, reactivated: IDL.Null }), name: IDL.Text, personId: IDL.Text, seq: IDL.Nat, source: IDL.Text });
+  const Device = IDL.Record({ id: IDL.Nat, owner: IDL.Text, ownerName: IDL.Text, serial: IDL.Text, title: IDL.Text });
+  const DeviceView = IDL.Record({ device: IDL.Opt(Device), state: IDL.Text, url: IDL.Text });
   const DeskReportingAccess = IDL.Record({ capabilities: IDL.Vec(Role), detail: IDL.Text, grants: IDL.Vec(ReportingGrant), ok: IDL.Bool, revision: IDL.Nat, scopes: IDL.Vec(ReportingScope) });
   const Context = IDL.Record({ checkedAt: IDL.Int, items: IDL.Vec(Item), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   const ConnectorUser = IDL.Record({ active: IDL.Bool, attributes: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text)), displayName: IDL.Text, email: IDL.Text, externalId: IDL.Text, firstName: IDL.Text, id: IDL.Opt(IDL.Text), lastName: IDL.Text, source: IDL.Text });
@@ -1485,6 +1491,7 @@ const idlFactory = ({ IDL }) => {
     clearTileIcon: IDL.Func([IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     closeReview: IDL.Func([IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     connectApp: IDL.Func([IDL.Record({ access: AccessPolicy, canisterId: IDL.Text, lanes: IDL.Vec(IDL.Text), name: IDL.Text, note: IDL.Text, tile: IDL.Opt(IDL.Record({ kind: IDL.Text, name: IDL.Text, url: IDL.Text })) })], [IDL.Record({ detail: IDL.Text, id: IDL.Nat, ok: IDL.Bool, tileId: IDL.Nat })], []),
+    connectFalcon: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text], [IDL.Bool], []),
     connectorAvatar: IDL.Func([IDL.Text], [IDL.Opt(IDL.Vec(IDL.Nat8))], ["query"]),
     connectorAvatars: IDL.Func([IDL.Vec(IDL.Text)], [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Vec(IDL.Nat8)))], ["query"]),
     connectorDirectory: IDL.Func([], [IDL.Vec(ConnectorUser)], ["query"]),
@@ -1495,6 +1502,8 @@ const idlFactory = ({ IDL }) => {
     decideAccessRequest: IDL.Func([IDL.Nat, IDL.Bool, IDL.Opt(IDL.Nat), IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     decideReviewItem: IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     discardOpenTeamSource: IDL.Func([IDL.Nat], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    disconnectFalcon: IDL.Func([], [IDL.Bool], []),
+    falconSettings: IDL.Func([], [IDL.Record({ connected: IDL.Bool, detail: IDL.Text, lastSuccess: IDL.Int, running: IDL.Bool })], ["query"]),
     genScimToken: IDL.Func([], [IDL.Text], []),
     getAppPermissions: IDL.Func([IDL.Nat], [IDL.Opt(AppPermissionView)], ["query"]),
     getCompanyLogo: IDL.Func([], [IDL.Opt(IDL.Record({ img: IDL.Vec(IDL.Nat8), mime: IDL.Text }))], ["query"]),
@@ -1517,11 +1526,13 @@ const idlFactory = ({ IDL }) => {
     hub_aiCredentials: IDL.Func([], [IDL.Opt(IDL.Record({ key: IDL.Text, model: IDL.Text, provider: IDL.Text, url: IDL.Text, visionModel: IDL.Text }))], []),
     hub_aiStatus: IDL.Func([], [IDL.Opt(IDL.Record({ connectorId: IDL.Nat, keySet: IDL.Bool, laneGranted: IDL.Bool, model: IDL.Text, provider: IDL.Text, visionModel: IDL.Text }))], ["query"]),
     hub_aiUsed: IDL.Func([IDL.Nat], [], []),
+    hub_falconDeviceView: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [DeviceView], []),
     hub_financeTeam: IDL.Func([], [IDL.Record({ enabled: IDL.Bool, mode: IDL.Text, recipients: IDL.Vec(IDL.Text), revision: IDL.Nat })], ["query"]),
     hub_hardwareCheck: IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [IDL.Opt(Case)], []),
     hub_knowledgeEvidence: IDL.Func([IDL.Text, IDL.Nat, IDL.Nat], [Result], []),
     hub_knowledgeTargets: IDL.Func([IDL.Text], [IDL.Vec(Target)], ["query"]),
     hub_lifecycleEvents: IDL.Func([IDL.Nat], [Batch], ["query"]),
+    hub_notificationDelivery: IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], ["query"]),
     hub_notify: IDL.Func([IDL.Record({ dedupeKey: IDL.Text, email: IDL.Text, kind: IDL.Text, title: IDL.Text, url: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     hub_slackCredentials: IDL.Func([], [IDL.Vec(IDL.Record({ id: IDL.Nat, name: IDL.Text, signingSecret: IDL.Text, teamName: IDL.Text, token: IDL.Text }))], ["query"]),
     hub_supportContext: IDL.Func([IDL.Text, IDL.Text, IDL.Nat], [Context], []),
@@ -1685,6 +1696,7 @@ const idlFactory = ({ IDL }) => {
     suiteState: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({ active: IDL.Bool, displayName: IDL.Text, email: IDL.Text, expiresAt: IDL.Int, hubRole: IDL.Opt(IDL.Text), id: IDL.Text, provider: IDL.Text, unread: IDL.Nat }))], ["query"]),
     supportDeskUrl: IDL.Func([], [IDL.Text], ["query"]),
     syncAll: IDL.Func([], [IDL.Vec(IDL.Tuple(IDL.Nat, SyncResult))], []),
+    syncFalcon: IDL.Func([], [], []),
     syncNow: IDL.Func([IDL.Nat], [SyncResult], []),
     team_info: IDL.Func([], [TdTeamInfo], ["query"]),
     team_members: IDL.Func([], [IDL.Vec(TdTeamMember)], ["query"]),
@@ -2456,7 +2468,7 @@ function apPaint() {
     $("apPermissionsBtn").classList.toggle("hidden", ap.kind !== "hub");
     $("apAccessSummary").innerHTML = conn.permissionsManaged ? "<b>Managed in Hub Permissions.</b> Open Roles & permissions to see each person's effective role and what it allows. Previous app access rules and source filters no longer grant rights." : a.mode === "selected"
       ? `Only selected: ${[a.groups.length ? `groups <b>${a.groups.map(esc).join(", ")}</b>` : "", a.roles.length ? `hub roles <b>${a.roles.join(", ")}</b>` : "", a.people.length ? `<b>${a.people.length}</b> named people` : ""].filter(Boolean).join(" · ") || "<b>nobody yet</b>"}.`
-      : "<b>Everyone</b> in the directory who is active. A lock-out closes this app within seconds like every other.";
+      : "<b>Everyone</b> in the directory who is active. Locking a person out blocks new Hub sign-ins. Existing app sessions follow the app’s access and expiry rules.";
     const ls = ["identity", ...(conn.lanes || []).filter((l) => l !== "identity")];
     $("apLanes").innerHTML = ls.map((l) => `<span class="pill lane-${esc(l)}" title="${esc((LANE_INFO[l] || {}).desc || l)}">${esc((LANE_INFO[l] || { label: l }).label)}</span>`).join("");
     const ow = conn.owners || [];
@@ -3172,7 +3184,7 @@ const randStr = (n) => { const a = new Uint8Array(n); crypto.getRandomValues(a);
 
 async function renderSsoButtons() {
   try {
-    const provs = await anonBackend.listSsoProvidersPublic();
+    const provs = await handoffCall(anonBackend.listSsoProvidersPublic());
     window._ssoProvs = provs;
     $("ssoButtons").innerHTML = provs.map((p) => {
       const name = String(p.name).replace(/^sign in with\s+/i, "");
@@ -3226,27 +3238,73 @@ async function ssoHandleRedirect() {
   if (qs.has("error")) { loginFailure("Company sign-in was cancelled or refused. You can try again or choose another sign-in method."); return false; }
   loginWait("Verifying your company account…");
   try {
-    const r = await anonBackend.ssoExchange(BigInt(saved.id), qs.get("code"), REDIRECT_URI, saved.verifier);
+    const r = await handoffCall(anonBackend.ssoExchange(BigInt(saved.id), qs.get("code"), REDIRECT_URI, saved.verifier));
     if (!r.ok) { loginFailure(r.detail || "Company sign-in was not accepted. Please try again."); return false; }
     localStorage.setItem("uh-sso-token", r.token);
     await loginLand();
-    await showPortal({ email: r.email, displayName: r.displayName, provider: "", active: true });
+    await showPortal({ email: r.email, displayName: r.displayName, provider: "", active: true }, true);
     return true;
   } catch (e) { loginFailure("We couldn’t finish signing you in. Check your connection and start again."); return false; }
 }
 
 // Suite login (0.40.0): one Hub sign-in, every tool. The cookie lives on the company's parent domain only
 // (sdk suiteCookie.domainFor); tools on a public gateway address keep the ticket hand-off.
-async function ensureSuiteLogin() {
+async function suiteCookieStore() {
+  return globalThis.kebabHub?.suiteCookie || (await import("./sdk/hub-client.js")).suiteCookie;
+}
+async function ensureSuiteLogin(newCompanySession = false) {
   try {
-    const lib = globalThis.kebabHub || (await import("./sdk/hub-client.js"));
-    if (!lib.suiteCookie.domainFor(location.hostname) || lib.suiteCookie.read()) return;
-    const r = await pActor().mintSuiteLogin(pTok());
-    if (r.ok) lib.suiteCookie.write(r.token, Number(r.expiresAt / 1000000000n) - Math.floor(Date.now() / 1000), location.hostname);
+    const actor = pActor(), sessionToken = pTok();
+    const cookie = await suiteCookieStore();
+    if (!cookie.domainFor(location.hostname) || actor !== pActor() || sessionToken !== pTok()) return;
+    if (newCompanySession) cookie.clear(location.hostname);
+    else if (cookie.read()) return;
+    const r = await actor.mintSuiteLogin(sessionToken);
+    if (r.ok && actor === pActor() && sessionToken === pTok() && !sessionStorage.getItem("ks-signout")) {
+      cookie.write(r.token, Number(r.expiresAt / 1000000000n) - Math.floor(Date.now() / 1000), location.hostname);
+    }
   } catch (e) {}
 }
 async function clearSuiteLogin() {
-  try { const lib = globalThis.kebabHub || (await import("./sdk/hub-client.js")); lib.suiteCookie.clear(location.hostname); } catch (e) {}
+  const cookie = await suiteCookieStore();
+  if (!localStorage.getItem("uh-sso-token")) cookie.clear(location.hostname);
+}
+function beginWorkspaceSignOut() {
+  sessionStorage.setItem("ks-signout", "1");
+  if (sessionStorage.getItem("ks-signout-sso") !== null) return;
+  const current = localStorage.getItem("uh-sso-token");
+  sessionStorage.setItem("ks-signout-sso", current || "");
+  if (current) localStorage.removeItem("uh-sso-token");
+}
+function preparePasskey() {
+  return handoffCall(AuthClient.create({ idleOptions: { disableIdle: true, disableDefaultIdleCallback: true } }));
+}
+async function passkeyPrincipal(client) {
+  return await handoffCall(client.isAuthenticated()) ? client.getIdentity().getPrincipal().toText() : "";
+}
+function clearSignOutIntent() {
+  for (const key of ["ks-console-entry","ks-signout","ks-signout-sso","ks-signout-cookie-cleared","ks-signout-key","ks-signout-key-revoked","uh-pkce","uh-jump","ks-oidc"]) sessionStorage.removeItem(key);
+}
+async function finishWorkspaceSignOut() {
+  const currentKey = await passkeyPrincipal(authClient);
+  const originalKey = sessionStorage.getItem("ks-signout-key") ?? currentKey;
+  sessionStorage.setItem("ks-signout-key", originalKey);
+  const token = sessionStorage.getItem("ks-signout-sso");
+  if (token) {
+    if (!await handoffCall(anonBackend.ssoLogout(token))) throw new Error("Company sign-out could not be confirmed.");
+    sessionStorage.setItem("ks-signout-sso", "");
+  }
+  if (originalKey && !sessionStorage.getItem("ks-signout-key-revoked")) {
+    if (currentKey !== originalKey) return false;
+    const agent = await handoffCall(HttpAgent.create({ host: IC_HOST, identity: authClient.getIdentity() }));
+    const signed = Actor.createActor(idlFactory, { agent, canisterId: BACKEND_CANISTER_ID });
+    if (!await handoffCall(signed.revokeSuiteLogin(""))) throw new Error("Passkey sign-out could not be confirmed.");
+    sessionStorage.setItem("ks-signout-key-revoked", "1");
+  }
+  const latestClient = await preparePasskey();
+  if (await passkeyPrincipal(latestClient) === originalKey) await handoffCall(latestClient.logout());
+  clearSignOutIntent();
+  return true;
 }
 // ---------- portal avatar ----------
 const pInitials = (n, e) => ((n || e || "?").trim().split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join("") || "?").toUpperCase();
@@ -3302,7 +3360,9 @@ async function startCrop(f, target) {
   cropTarget = target;
   if (!f) return;
   try {
-    cropBmp = await createImageBitmap(f);
+    const image = await createImageBitmap(f);
+    if (target === "console" && !$("youOv").open) { image.close(); return; }
+    cropBmp = image;
     $("cropImg").src = URL.createObjectURL(f);
     cropMin = Math.max(CROP_D / cropBmp.width, CROP_D / cropBmp.height);
     cropScale = cropMin;
@@ -3311,7 +3371,7 @@ async function startCrop(f, target) {
     $("cropZoom").value = 100;
     $("cropStatus").textContent = "";
     cropPaint();
-    $("cropOv").classList.remove("hidden");
+    $("cropOv").showModal();
   } catch (e) { setStatus(target === "console" ? "youStatus" : "pAviStatus", "err", "could not read that image"); }
 }
 $("pAviFile").onchange = () => { const f = $("pAviFile").files[0]; $("pAviFile").value = ""; startCrop(f, "portal"); };
@@ -3326,9 +3386,20 @@ $("cropZoom").oninput = () => {
 $("cropBox").onpointerdown = (e) => { dragFrom = { x: e.clientX - cropX, y: e.clientY - cropY }; $("cropBox").setPointerCapture(e.pointerId); $("cropBox").style.cursor = "grabbing"; };
 $("cropBox").onpointermove = (e) => { if (!dragFrom) return; cropX = e.clientX - dragFrom.x; cropY = e.clientY - dragFrom.y; cropClamp(); cropPaint(); };
 $("cropBox").onpointerup = $("cropBox").onpointercancel = () => { dragFrom = null; $("cropBox").style.cursor = "grab"; };
-$("cropCancel").onclick = () => { $("cropOv").classList.add("hidden"); cropBmp = null; };
+$("cropCancel").onclick = () => $("cropOv").close();
+$("cropOv").addEventListener("cancel", event => { if ($("cropSave").disabled) event.preventDefault(); });
+$("cropOv").addEventListener("close", () => {
+  if ($("cropOv").open) return;
+  cropBmp?.close();
+  cropBmp = null;
+  const img = $("cropImg");
+  if (img.hasAttribute("src")) { URL.revokeObjectURL(img.src); img.removeAttribute("src"); }
+  if ($("youOv").open) $("youAviUpload").focus({preventScroll:true});
+});
 $("cropSave").onclick = async () => {
-  if (!cropBmp) return;
+  if (!cropBmp || $("cropSave").disabled) return;
+  $("cropSave").disabled = true;
+  $("cropCancel").disabled = true;
   setStatus("cropStatus", "", "saving…");
   try {
     const size = 256;
@@ -3340,14 +3411,16 @@ $("cropSave").onclick = async () => {
     const bytes = [...new Uint8Array(await blob.arrayBuffer())];
     const ok = cropTarget === "console" ? await backend.setMyAvatar("", bytes) : await pActor().setMyAvatar(pTok(), bytes);
     if (!ok) { setStatus("cropStatus", "err", "upload rejected"); return; }
-    $("cropOv").classList.add("hidden");
-    cropBmp = null;
+    $("cropOv").close();
     if (cropTarget === "console") { setStatus("youStatus", "ok", "saved — apps pick it up within minutes"); loadYou(); }
     else { setStatus("pAviStatus", "ok", "saved — tools pick it up within minutes"); loadPortalAvatar({ displayName: (portalTopbar ? portalTopbar.person.displayName : ""), email: (portalTopbar ? portalTopbar.person.email : "") }); }
   } catch (e) {
     const msg = String(e?.message || e);
     const m = msg.match(/Reject text: ([\s\S]*)/);
     setStatus("cropStatus", "err", (m ? m[1] : msg).replace(/\s+/g, " ").slice(0, 140));
+  } finally {
+    $("cropSave").disabled = false;
+    $("cropCancel").disabled = false;
   }
 };
 $("pAviRemove").onclick = async () => {
@@ -3483,13 +3556,18 @@ document.addEventListener("keydown", (e) => {
   if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
   e.preventDefault(); $("pMenuSearch").classList.remove("hidden"); $("pMenuSearch").focus();
 });
+function paintWorkspaceName() {
+  const org = window._setup?.orgName || "";
+  $("pGreetEye").textContent = org || "Your workspace";
+  portalTopbar?.setApp({ eyebrow: org });
+}
 function greet(u) {
   const h = new Date().getHours();
   const part = h < 5 ? "Still up" : h < 11 ? "Good morning" : h < 14 ? "Lunchtime" : h < 18 ? "Good afternoon" : "Good evening";
   const first = (u.displayName || u.email || "").split(/[\s@]/)[0];
-  $("pGreetEye").textContent = (window._setup && window._setup.orgName ? window._setup.orgName.toUpperCase() + " · " : "") + "YOUR WORKSPACE";
+  paintWorkspaceName();
   $("pGreet").innerHTML = `${esc(part)}, <em>${esc(first)}</em>.`;
-  $("pGreetSub").textContent = u.active ? "Your apps, connected. Get straight to what matters." : "Your account is deactivated. Contact your IT team for help.";
+  $("pGreetSub").textContent = u.active ? "" : "Contact your IT team for help.";
 }
 window.openLinkTile = (url) => { if (/^https:\/\//.test(url)) window.open(url, "_blank", "noopener"); }; // F18: https only
 
@@ -3545,11 +3623,12 @@ $("pHowitLink").onclick = (e) => { e.preventDefault(); portalGo("pHowit"); };
 $("pHwBack").onclick = () => portalGo("pHome");
 // logo/brand top left = home (like every web app)
 // A handoff owns the screen until it succeeds or the person explicitly leaves it.
-async function handoffCall(promise) {
+async function handoffCall(promise, timeoutMs = 30000) {
   let timer;
-  try { return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Your Hub is taking too long to respond. Try again.")),30000);})]); } finally { clearTimeout(timer); }
+  try { return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Your Hub is taking too long to respond. Try again.")),timeoutMs);})]); } finally { clearTimeout(timer); }
 }
 let handoffBusy = false, handoffAttempt = 0, handoffRetry = null;
+let suiteLoginReady = null;
 function handoffScreen(message, failed = false) {
   for (const id of ["login", "layout", "portal"]) { $(id).classList.add("hidden"); $(id).inert = true; }
   $("handoff").classList.remove("hidden");
@@ -3580,11 +3659,17 @@ window.jumpApp = async (appId, sameTab = true, asWin = false) => {
   handoffRetry = () => jumpApp(appId, true);
   handoffScreen("Confirming your access with your company Hub…");
   try {
-    const r = await handoffCall(pActor().mintAppTicket(pTok(), BigInt(appId)));
+    const actor = pActor(), sessionToken = pTok();
+    const r = await handoffCall(actor.mintAppTicket(sessionToken, BigInt(appId)));
     if (attempt !== handoffAttempt) return false;
     if (!r.ok) throw new Error(r.detail || "Access was not granted. Contact your IT team.");
     const dest = new URL(r.url);
     if (dest.protocol !== "https:" || dest.username || dest.password) throw new Error("This app has no valid sign-in address. Contact your IT team.");
+    // Both credentials are issued independently. The ticket authorizes this launch even
+    // when the optional company-domain cookie cannot be prepared for later visits.
+    if (suiteLoginReady) await handoffCall(suiteLoginReady, 750).catch(() => {});
+    if (attempt !== handoffAttempt) return false;
+    if (actor !== pActor() || sessionToken !== pTok()) throw new Error("Your Hub sign-in changed. Return to your workspace and open the app again.");
     dest.hash = "uht=" + r.ticket + "&th=" + (document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
     $("handoffTitle").textContent = "You’re signed in.";
     $("handoffStatus").textContent = "Taking you to your app…";
@@ -3633,11 +3718,14 @@ function paintIdentity(u) {
   if (portalTopbar) portalTopbar.setPerson({ email: u.email, displayName: u.displayName });
   $("pInactive").style.display = u.active ? "none" : "block";
 }
-async function showPortal(u) {
+async function showPortal(u, newCompanySession = false) {
   if (oidcPending() && portalMode !== "passkey") { showOidcConsent(anonBackend, localStorage.getItem("uh-sso-token") || ""); return; }
-  const suite = ensureSuiteLogin(); // runs beside the portal; a jump to a tool waits for it so the tool finds the cookie
-  if (sessionStorage.getItem("uh-jump")) await suite;
+  suiteLoginReady = ensureSuiteLogin(newCompanySession);
   if (await resumeAppJump(u)) return;
+  // A provider callback can arrive before the public setup metadata was requested.
+  if (window._setup === undefined) {
+    anonBackend.getSetup().then(setup => { window._setup = setup; paintWorkspaceName(); }).catch(() => {});
+  }
   $("login").classList.add("hidden");
   $("layout").classList.add("hidden");
   $("portal").classList.remove("hidden");
@@ -3648,7 +3736,6 @@ async function showPortal(u) {
   renderPortalAsk();
   renderPortalReviews();
   refreshNotifications();
-  loadPortalLogo();
   // Normal workspace sessions keep checking active status. Handoffs return above.
   clearInterval(portalPoller);
   portalPoller = setInterval(async () => { // live status: deactivation kills the session view
@@ -3660,14 +3747,14 @@ async function showPortal(u) {
 
 }
 function showPortalData(s) { paintIdentity(s); }
-async function ssoSignOut() {
+function ssoSignOut() {
   clearInterval(portalPoller);
-  await clearSuiteLogin();
-  if (portalMode === "passkey") { try { await backend.revokeSuiteLogin(""); } catch (e) {} try { await authClient.logout(); } catch (e) {} location.reload(); return; }
-  const t = localStorage.getItem("uh-sso-token");
-  localStorage.removeItem("uh-sso-token");
-  if (t) { try { await anonBackend.ssoLogout(t); } catch (e) {} } // ssoLogout also revokes the suite login behind the cookie
-  location.reload();
+  beginWorkspaceSignOut();
+  if (backend && authClient) {
+    const principal = authClient.getIdentity().getPrincipal();
+    if (!principal.isAnonymous()) sessionStorage.setItem("ks-signout-key", principal.toText());
+  }
+  location.replace(location.pathname + "?signout=1");
 }
 
 // ---------- Portal v2: one portal, two ways in ----------
@@ -3676,10 +3763,19 @@ async function ssoSignOut() {
 var portalMode = "sso"; // var: the jsdom smoke flips it to "passkey" so pActor() hits the fake backend
 const pTok = () => (portalMode === "passkey" ? "" : (localStorage.getItem("uh-sso-token") || ""));
 const pActor = () => (portalMode === "passkey" ? backend : anonBackend);
-async function ssoResume() {
+async function ssoResume(jumping = false) {
   const t = localStorage.getItem("uh-sso-token");
   if (!t) return false;
-  const s = opt(await anonBackend.ssoWhoami(t));
+  if (jumping) loginState(true, "Checking your company session…");
+  let s;
+  try { s = opt(await handoffCall(anonBackend.ssoWhoami(t))); }
+  catch (error) {
+    if (!jumping) throw error;
+    handoffRetry = () => location.reload();
+    handoffScreen("Your session could not be confirmed. Check your connection and try again.", true);
+    return true;
+  }
+  if (localStorage.getItem("uh-sso-token") !== t) throw new Error("Your Hub sign-in changed. Reload to continue.");
   if (!s) { localStorage.removeItem("uh-sso-token"); return false; }
   await showPortal(s);
   return true;
@@ -3800,7 +3896,34 @@ $("aiSave").onclick = async () => {
   if (r && r.ok) { $("aiKey").value = ""; refreshAiAdmin(); }
 };
 $("aiClear").onclick = async () => { if (!confirm("Remove the AI key? Every app loses AI features on its next fetch.")) return; const r = await vcall("aiStatus", "removing…", () => backend.clearAi()); if (r && r.ok) refreshAiAdmin(); };
+async function refreshFalcon() {
+  const owner=window._role==="owner";
+  $("falconPanel").classList.toggle("hidden",!owner);
+  if(!owner) return;
+  try {
+    const [state,apps]=await Promise.all([backend.falconSettings(),backend.listConnectors()]);
+    $("falconDesk").replaceChildren(...apps.filter(a=>a.permissionApp==="desk").map(a=>new Option(a.name,String(a.id))));
+    $("falconForm").hidden=state.connected;
+    for (const id of ["falconSync","falconRemove"]) { $(id).classList.toggle("hidden",!state.connected); $(id).disabled=state.running; }
+    $("falconHealth").textContent=state.detail+(state.lastSuccess ? " · Last sync "+new Date(Number(state.lastSuccess/1000000n)).toLocaleString() : "");
+  } catch { $("falconHealth").textContent="Cannot read Falcon connection"; }
+}
+$("falconForm").onsubmit=async e=>{
+  e.preventDefault();
+  const button=e.target.querySelector("button");button.disabled=true;
+  try {
+    const ok=await backend.connectFalcon($("falconRegion").value,$("falconCid").value.trim().toLowerCase(),$("falconClient").value.trim().toLowerCase(),$("falconSecret").value,BigInt($("falconDesk").value),new Date().toISOString());
+    if(!ok) throw Error("Check credentials and Desk selection");
+    await backend.syncFalcon(); await refreshFalcon();
+  } catch(e) { $("falconHealth").textContent=String(e.message||e); }
+  finally { $("falconSecret").value=""; button.disabled=false; }
+};
+for(const [id,method] of [["falconSync","syncFalcon"],["falconRemove","disconnectFalcon"]]) $(id).onclick=async()=>{
+  $(id).disabled=true;
+  try { await backend[method](); await refreshFalcon(); } catch { $("falconHealth").textContent="Action failed. Refresh and retry."; } finally { $(id).disabled=false; }
+};
 async function refreshSlackAdmin() {
+  void refreshFalcon();
   try {
     const [cfg, log, conns] = await Promise.all([backend.listSlackBots(), backend.listRecentNotifications(), backend.listConnectors()]);
     SK.bots = cfg.bots;
@@ -4178,17 +4301,23 @@ async function mountConsoleTopbar() {
     jump: (a) => { portalMode = "passkey"; if (a.kind === "link" || a.kind === "oidc") openLinkTile(a.url); else jumpApp(Number(a.id), a.kind !== "win", a.kind === "win"); },
     theme: { get: () => (document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light"), set: applyTheme },
     extra: [{ id: "cNavBtn", label: "Navigation", title: "Open Hub navigation", onClick: () => { const open = $("layout").classList.toggle("navopen"); $("cNavBtn").setAttribute("aria-expanded", String(open)); if(open)$("consoleNav").querySelector("button:not(.hidden)").focus(); } }],
-    identSection: (box) => { box.innerHTML = `<button class="sm" id="cYouBtn" style="width:100%">Your photo, key and role</button>`; box.querySelector("#cYouBtn").onclick = () => { consoleTopbar.closeAll(); setStatus("youStatus", "", ""); $("youOv").classList.remove("hidden"); }; },
+    identSection: (box) => { box.innerHTML = `<button class="sm" id="cYouBtn" style="width:100%">Your photo, key and role</button>`; box.querySelector("#cYouBtn").onclick = () => { consoleTopbar.closeAll(); setStatus("youStatus", "", ""); $("youOv").showModal(); }; },
     onSignOut: consoleSignOut,
   });
   return consoleTopbar;
 }
 function refreshConsoleBell() { if (consoleTopbar) consoleTopbar.refresh(); }
-$("youClose").onclick = () => $("youOv").classList.add("hidden");
+$("youClose").onclick = () => $("youOv").close();
+$("youOv").onclick = event => {
+  const dialog = event.currentTarget;
+  if (event.target !== dialog) return;
+  const rect = dialog.getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
+};
 $("youAviUpload").onclick = () => $("youAviFile").click();
 $("youAviRemove").onclick = async () => { setStatus("youStatus", "", "removing…"); const ok = await backend.clearMyAvatar(""); setStatus("youStatus", ok ? "ok" : "err", ok ? "photo removed" : "failed"); loadYou(); };
 $("youCopyKey").onclick = async () => { try { await navigator.clipboard.writeText($("youPKey").textContent); setStatus("youStatus", "ok", "key id copied"); } catch (e) { setStatus("youStatus", "err", "copy blocked — select it by hand"); } };
-$("youLink").onclick = async () => { $("youOv").classList.add("hidden"); linkMeThen = "console"; await showLinkMe(); };
+$("youLink").onclick = async () => { $("youOv").close(); linkMeThen = "console"; await showLinkMe(); };
 
 function applyTheme(t) {
   document.documentElement.setAttribute("data-theme", t);
@@ -4247,7 +4376,7 @@ $("loginBtn").onclick = async () => {
     });
   } catch (e) { loginFailure("Could not open passkey sign-in. Please try again."); }
 };
-async function consoleSignOut() { operationsUI?.stop(); screensUI?.stop(); try { await authClient.logout(); } catch (e) {} location.reload(); }
+async function consoleSignOut() { operationsUI?.stop(); screensUI?.stop(); ssoSignOut(); }
 
 // ---------- local directory + wizard + invite claim (KebabStack) ----------
 const connLabel = (u) => (Number(u.connId) === 0 ? "added here" : Number(u.connId) >= 900000000 && Number(u.connId) < 901000000 ? `synced · ${u.connName}` : u.connName);
@@ -4951,7 +5080,7 @@ async function afterLogin() {
     const entry = new URL(location.href), qs = entry.searchParams;
     if (qs.get("console") === "1" && !qs.has("jump")) sessionStorage.setItem("ks-console-entry", "1");
     const signout = qs.has("signout") || !!sessionStorage.getItem("ks-signout");
-    if (signout) sessionStorage.setItem("ks-signout", "1"); // Retry must finish sign-out if startup fails after the URL is scrubbed.
+    if (signout) beginWorkspaceSignOut();
     const hasCallback = qs.has("code") || qs.has("error");
     const ssoStartParam = qs.get("ssostart");
     if (qs.get("jump")) sessionStorage.setItem("uh-jump", qs.get("jump"));
@@ -4964,40 +5093,71 @@ async function afterLogin() {
     history.replaceState(null, "", entry.pathname + entry.search + entry.hash);
     if (oidcPending()) $("loginRole").textContent = "After sign-in, review what the requesting app may receive before continuing.";
     if (sessionStorage.getItem("uh-jump")) { $("loginTitle").textContent = "Continue to your app."; $("loginRole").textContent = "Sign in once. Your Hub will take you straight to the app."; }
+    if (signout && !sessionStorage.getItem("ks-signout-cookie-cleared")) {
+      await handoffCall(clearSuiteLogin());
+      sessionStorage.setItem("ks-signout-cookie-cleared", "1");
+    }
     await loadLibs();
     const anonAgent = await HttpAgent.create({ host: IC_HOST });
     anonBackend = Actor.createActor(idlFactory, { agent: anonAgent, canisterId: BACKEND_CANISTER_ID });
+    if (signout) {
+      authClient = await preparePasskey();
+      if (!await finishWorkspaceSignOut()) {
+        loginWait("The previous passkey is no longer available here.");
+        setStatus("loginStatus", "err", "The workspace cookie was cleared. Hub could not confirm revocation for the previous passkey. Its suite login can remain valid until expiry.");
+        const retry = $("loginRetry");
+        retry.textContent = "Continue to sign-in"; retry.classList.remove("hidden");
+        retry.onclick = () => {
+          clearSignOutIntent(); retry.classList.add("hidden"); retry.textContent = "Reload sign-in"; retry.onclick = () => location.reload();
+          loadPortalLogo(); renderSsoButtons(); loginSettle("Choose an account to continue.");
+        };
+        return;
+      }
+      loadPortalLogo(); loginSettle("You’re signed out. Choose an account to continue.");
+      await renderSsoButtons(); return;
+    }
+    // Both paths verify the credential with Hub before showing a workspace or issuing
+    // an app ticket. Provider discovery and passkey storage are needed only for sign-in.
+    const invited = !!sessionStorage.getItem("ks-invite");
+    const explicitConsole = consoleRequested() && !invited && !sessionStorage.getItem("uh-jump") && !oidcPending();
+    if (hasCallback && await ssoHandleRedirect()) return;
+    const resumeJump = !hasCallback && !invited && !oidcPending() && !!sessionStorage.getItem("uh-jump");
+    if (resumeJump && await ssoResume(true)) return;
     // Independent public metadata starts together; a logo never blocks authentication.
     loadPortalLogo();
     const providers = renderSsoButtons();
-    const clientReady = AuthClient.create({ idleOptions: { disableIdle: true, disableDefaultIdleCallback: true } });
+    const clientReady = preparePasskey();
     clientReady.catch(() => {}); // consumed below; avoid a transient unhandled rejection
-    try { window._setup = await anonBackend.getSetup(); } catch (_) { window._setup = null; }
+    try { window._setup = await handoffCall(anonBackend.getSetup()); } catch (_) { window._setup = null; }
     if (window._setup?.orgName) $("loginOrg").textContent = window._setup.orgName;
     if (window._setup && !window._setup.setupDone) {
       $("loginTitle").textContent = "Set up your workspace.";
       $("loginRole").textContent = "Sign in with a passkey, then enter your one-time setup code.";
     }
-    const invited = !!sessionStorage.getItem("ks-invite");
     if (invited) { $("loginTitle").textContent = "You’re invited."; $("loginRole").textContent = "Use a passkey to link your profile. You can create one during sign-in."; }
-    authClient = await clientReady;
-    if (signout) {
-      sessionStorage.removeItem("ks-console-entry"); sessionStorage.removeItem("ks-signout"); sessionStorage.removeItem("uh-pkce"); sessionStorage.removeItem("uh-jump"); sessionStorage.removeItem("ks-oidc");
-      const t = localStorage.getItem("uh-sso-token"); localStorage.removeItem("uh-sso-token");
-      await Promise.allSettled([clearSuiteLogin(), t ? anonBackend.ssoLogout(t) : Promise.resolve(), authClient.logout()]);
-      await providers; loginSettle("You’re signed out. Choose an account to continue."); return;
+    if (!invited && !hasCallback && !explicitConsole && window._setup?.setupDone && !localStorage.getItem("uh-sso-token")) loginSettle();
+    try { authClient = await clientReady; } catch (error) {
+      if (explicitConsole || invited || window._setup?.setupDone === false) throw error;
+      authClient = null;
+      $("loginRetry").classList.remove("hidden");
     }
+    if (loginClicked) return;
     if (hasCallback) {
-      if (await ssoHandleRedirect()) return;
-      await providers; loginState(false, "Please start a new sign-in attempt."); return;
+      loginState(false, "Please start a new sign-in attempt."); return;
     }
-    if (consoleRequested() && !invited && !sessionStorage.getItem("uh-jump") && !oidcPending() && window._setup?.setupDone) { await providers; await prepareConsoleEntry(); return; }
-    if (!invited && !(window._setup && !window._setup.setupDone) && await ssoResume()) return;
-    if (await authClient.isAuthenticated()) { await afterLogin(); return; }
-    await providers;
+    if (explicitConsole && window._setup?.setupDone) { await prepareConsoleEntry(); return; }
+    if (!resumeJump && !invited && !(window._setup && !window._setup.setupDone) && await ssoResume()) return;
+    if (authClient && await authClient.isAuthenticated()) { if (!loginClicked) await afterLogin(); return; }
+    if (loginClicked) return;
     loginSettle();
-    if (ssoStartParam && !invited) await ssoStart(Number(ssoStartParam));
-  } catch (e) { loginFailure("Sign-in could not be prepared. Check your connection and reload to try again."); $("loginRetry").classList.remove("hidden"); }
+    if (ssoStartParam && !invited) { await providers; await ssoStart(Number(ssoStartParam)); }
+  } catch (e) {
+    if (sessionStorage.getItem("ks-signout")) {
+      loginWait("Sign-out is waiting for your Hub.");
+      setStatus("loginStatus", "err", "Sign-out could not be confirmed. Check your connection, then retry.");
+    } else loginFailure("Sign-in could not be prepared. Check your connection and reload to try again.");
+    $("loginRetry").classList.remove("hidden");
+  }
 })();
 </script>
 

@@ -2,7 +2,7 @@
 
 This module publishes only the static marketing website. It is separate from
 Kitchen and the application suite. It neither upgrades the suite nor publishes
-its source. Target domain: **kebabstack.dev**. Version: **0.5.12**.
+its source. Target domain: **kebabstack.dev**. Version: **0.6.0**.
 
 ## Hetzner Webhosting and GoDaddy DNS
 
@@ -16,7 +16,7 @@ GoDaddy zone. Preserve MX, SPF, DKIM, DMARC, verification and unrelated subdomai
 records. Obtain web A/AAAA targets from the actual Hetzner hosting account.
 Remove conflicting old web records only as part of the cutover. Check DNSSEC/DS
 state and arrange a valid certificate before routing visitors: .dev requires HTTPS.
-Verify both languages, guide routes, redirects, security headers and a true 404.
+Verify both languages, guide routes, redirects, security headers and a true 404. On a narrow screen, also open the navigation with scripting disabled and follow a section link.
 Keep the old hosting and DNS zone available until propagation and rollback checks
 are complete. Domain booking, DNS changes and upload require operator access.
 

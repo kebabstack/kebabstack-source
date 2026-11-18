@@ -1,5 +1,21 @@
 # Changelog — kebab-stack forms
 
+## [0.9.2] — 2026-11-18
+
+- Import and sharing dialogs stay reachable on short and narrow screens. Choose an import format and add people with a keyboard. Escape returns focus to the opener.
+- Text outlines open with the source field in view. Expand the outline guide for format examples and the copyable conversion prompt.
+- Editing the source clears the previous import preview. Empty or invalid source cannot create a draft from an earlier analysis.
+
+## [0.9.1] — 2026-11-17
+
+- Choose Slack recipients per form under Publish & connect. For a connected Desk project each selected person receives a ticket link, subject to Hub delivery settings.
+- Deliver full 10,000-character paragraph responses to Desk with space for contact details, question labels and page context.
+
+## [0.9.0] — 2026-11-17
+
+- Administrators can enable Cloudflare Turnstile for individual public forms. Forms checks the hostname, action and response reference before accepting answers.
+- Public forms can opt into embedding across HTTPS websites. Embedded workspaces and internal previews are blocked.
+
 ## [0.8.3] — 2026-11-04
 
 - Preserve unconfirmed public responses across reloads in the same browser tab using their original request reference and exact payload. Retry remains explicit; expired recovery copies require acknowledgement before starting over.

@@ -13,7 +13,7 @@ export function createPersonContext({root, lifecycleRoot, api, getMe, session, r
   const reset = () => { generation++; key=''; full=null; checked=0; busy=false; root.replaceChildren(); lifecycleRoot.replaceChildren(); root.classList.add('hidden'); lifecycleRoot.classList.add('hidden'); };
   async function load(ticket, force=false) {
     if (!ticket?.canAct || !getMe() || getMe().role === 'requester') { reset(); return; }
-    const next = `${getMe().id}:${getMe().role}:${ticket.ticket.id}:${JSON.stringify(ticket.ticket.fields)}`;
+    const next = `${getMe().id}:${getMe().role}:${ticket.ticket.id}:${ticket.requester.id}:${JSON.stringify(ticket.ticket.fields)}`;
     if (!force && next === key && (busy || Date.now()-checked < 30000)) return;
     if (next !== key) { reset(); key=next; }
     const stamp = ++generation, viewer = getMe().id, viewerRole = getMe().role, id = ticket.ticket.id;

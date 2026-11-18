@@ -1,5 +1,11 @@
 # Brand & Product System changelog
 
+## [1.3.0] — 2026-11-18
+
+- Align workspace backgrounds, field edges and navigation across the light and dark themes. Keep the existing product marks.
+- Provide a viewport-bounded native dialog for forms with long content. The dialog scrolls as one surface and actions wrap at narrow widths.
+- Put company identity and the available sign-in actions on one column in the shared entry screen.
+
 ## [1.2.0] — 2026-09-23
 
 - Add measured workspace composition rules: compact context, bounded selectors, quiet secondary actions and a first-useful-content budget. Preserve touch targets and reflow instead of shrinking controls.

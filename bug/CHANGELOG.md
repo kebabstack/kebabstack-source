@@ -1,5 +1,9 @@
 # Changelog — kebab-stack bug (Ship the Bug)
 
+## [0.20.4] — 2026-11-18
+
+- Refresh the bundled suite palette and navigation client.
+
 ## [0.20.3] — 2026-10-23
 
 - Synchronize the canonical Hub client with the Doku logo registry. Existing behavior is unchanged; this source maintenance release does not imply a production rollout.

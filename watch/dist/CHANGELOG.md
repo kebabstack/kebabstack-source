@@ -1,5 +1,9 @@
 # Changelog — kebab-stack watch
 
+## [0.12.2] — 2026-11-18
+
+- Use the shared single-column company sign-in, workspace colours and app switcher. Account and notification panels scroll within short screens.
+
 ## [0.12.1] — 2026-10-21
 
 - Synchronize the canonical browser logo registry for Doku. Existing application behavior is unchanged. This source update does not by itself deploy this app.

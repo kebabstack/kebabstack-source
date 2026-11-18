@@ -1,7 +1,7 @@
 import {createKnowledge} from "./knowledge.js";
 import { paintCustomerWorkflow } from './customer-workflows.js';
 import { ticketPrivacy } from './customer-privacy.js';
-import { createPersonContext } from './person-context.js';
+import { contextLink, createPersonContext } from './person-context.js';
 import { escapeHtml as esc, formatMessage, plainMessage, readableSubject } from './message-format.js';
 
 const opt = x => x?.length ? x[0] : null;
@@ -17,6 +17,57 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
   let checklistOpen = false, customerSignature = "", privacySignature = "";
   let previewUrl = null;
   const clearPreview = () => { if (previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = null; $("tFilePreview").replaceChildren(); $("tFilePreview").classList.add("hidden"); };
+  let deviceView = null, falconDraft = null;
+  const falconStatuses = [['new','New'],['in_progress','In progress'],['reopened','Reopened'],['closed','Closed']];
+  const falconReasons = [['true_positive','True Positive'],['false_positive','False Positive'],['ignored','Ignored']];
+  function openFalconEdit(status) {
+    const f=opt(current?.falcon);
+    if (!f || !current.canAct || f.pending || opt(f.edit)) return;
+    const existing=opt(f.alert.resolutions) || [];
+    falconDraft={id:current.ticket.id,revision:current.ticket.updatedAt,status,reason:existing.length===1?existing[0]:''};
+    paintFalconEdit(current);
+    $('tFalconEdit').querySelector('select')?.focus();
+  }
+  function paintFalconEdit(full) {
+    if (falconDraft && falconDraft.revision !== full.ticket.updatedAt) falconDraft=null;
+    const box=$('tFalconEdit'), f=opt(full.falcon), draft=falconDraft;
+    if (!draft || !f || !full.canAct || draft.id !== full.ticket.id || opt(f.edit)) {
+      box.hidden=true; box.replaceChildren(); return;
+    }
+    const options=(rows,value)=>rows.map(([v,label])=>`<option value="${v}"${v===value?' selected':''}>${label}</option>`).join('');
+    const closing=draft.status==='closed', alreadyClosed=f.alert.providerStatus==='closed';
+    const placeholder=alreadyClosed?'Keep current Falcon classification':'Choose a resolution';
+    box.hidden=false;
+    html('tFalconEdit',`<h3>Update Falcon status</h3><label>Status<select data-falcon-status>${options(falconStatuses,draft.status)}</select></label>${closing?`<label>Mark as<select data-falcon-reason>${options([['',placeholder],...falconReasons],draft.reason)}</select></label>`:''}<div class="btnrow"><button type="button" data-save class="primary"${closing&&!alreadyClosed&&!draft.reason?' disabled':''}>Update status</button><button type="button" data-cancel>Cancel</button></div>`);
+    box.onchange=e=>{if(e.target.hasAttribute('data-falcon-status'))draft.status=e.target.value;else if(e.target.hasAttribute('data-falcon-reason'))draft.reason=e.target.value;paintFalconEdit(full);};
+    box.onclick=e=>{
+      const button=e.target.closest('button'); if(!button)return;
+      if(button.hasAttribute('data-cancel')){falconDraft=null;paintFalconEdit(full);return;}
+      if(button.hasAttribute('data-save')) void action(button,'tStatus',id=>api().setFalconStatus(session.load(),id,draft.status,draft.status==='closed'?draft.reason:'',draft.revision),()=>{falconDraft=null;});
+    };
+  }
+  const loadFalconDevice = async (id,viewer) => {
+    const entry = {id,viewer,checked:Date.now(),result:null};
+    deviceView = entry;
+    try { entry.result = await api().falconDeviceView(session.load(), BigInt(id)); }
+    catch { entry.result = {state:'unavailable'}; }
+    if (deviceView === entry && same(id) && getMe()?.id === viewer && current) paintFalconDevice();
+  };
+  function paintFalconDevice() {
+    const target = $('tBody').querySelector('[data-falcon-device]');
+    if (!target) return;
+    const result = deviceView?.result, device = opt(result?.device);
+    if (!device) {
+      target.textContent = !result ? 'Checking Assets…' : ({ambiguous:'Multiple devices match in Assets',unmatched:'No matching device in Assets'}[result.state] || 'Assets details unavailable');
+      return;
+    }
+    target.textContent = 'Affected device · ';
+    const href = contextLink(result.url,'#/d/'+String(device.id));
+    const label = [device.title,device.serial].filter(Boolean).join(' · ');
+    if (href) { const link = document.createElement('a'); link.href=href; link.textContent=label; target.append(link); }
+    else target.append(label);
+    target.append(' · Assigned to: '+(device.ownerName || 'Unassigned'));
+  }
   let agents = []; const drafts = new Map(), dirty = new Set();
   const api = () => getBackend();
   const knowledge = createKnowledge({root: $("tKnowledge"),api,session});
@@ -67,7 +118,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     for (const child of [...root.children]) if (!wanted.has(child.dataset.eventId)) child.remove();
     events.forEach((event, index) => {
       const id = String(event.id), internal = ['note', 'ai'].includes(event.kind);
-      const who = event.kind === 'ai' ? 'AI assistant' : nameOf(event.who);
+      const who = event.kind === 'ai' ? 'AI assistant' : event.actorKind === 'system' && event.who === 'Kebabstack bot' ? event.who : nameOf(event.who);
       const mode = event.kind === 'note' ? 'note' : event.kind === 'ai' ? 'ai' : event.actorKind === 'agent' ? 'agent' : '';
       const badge = internal ? 'Internal · support team only' : event.kind === 'file' ? 'Attachment' : event.actorKind === 'agent' ? 'IT support' : '';
       const fileId = event.kind === 'file' ? event.meta?.find(([key]) => key === 'fileId')?.[1] : null;
@@ -94,10 +145,34 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     html('tMeta', `${statusPill(t, staff)}<span class="separator">·</span><span>Created ${date(t.createdAt)}</span>${staff ? `<span class="separator">·</span><span>${esc(t.priority[0].toUpperCase() + t.priority.slice(1))} priority</span>` : ''}`);
     const via = opt(full.slack);
     $('tOrigin').textContent = opt(full.customer) ? `Customer support · ${opt(full.customer).projectName}` : via ? `Slack${via.channelName ? ' · #' + via.channelName : ''}` : t.channel === 'directory' ? 'Directory follow-up' : 'Support portal';
+    const falcon = full.falcon?.[0];
+    if (falcon) $('tOrigin').textContent = 'CrowdStrike Falcon';
     $('tAuthor').textContent = opt(full.customer)?.name || full.requester.displayName || full.requester.email || 'Requester';
     $('tAuthorAvatar').textContent = initials($('tAuthor').textContent); $('tAuthorAvatar').dataset.avatarPerson = full.requester.id; delete $('tAuthorAvatar').dataset.avatarFallback;
     $('tCreated').textContent = date(t.createdAt);
     html('tBody', formatMessage(t.body || 'No description was provided.'));
+    if (falcon) {
+      const line = document.createElement('p');
+      line.textContent = [falcon.alert.host, falcon.alert.severity, falcon.alert.providerStatus, falcon.alert.updated, falcon.pending ? 'Acknowledgement pending' : ''].filter(Boolean).join(' · ');
+      const classified=opt(falcon.alert.resolutions) || [];
+      if(classified.length) line.append(' · '+classified.map(value=>falconReasons.find(([key])=>key===value)?.[1] || value).join(', '));
+      const edit=opt(falcon.edit);
+      if(edit) line.append(' · Awaiting Falcon confirmation: '+edit.status+(edit.reason?' · '+edit.reason:''));
+      const identity = opt(falcon.alert.identity);
+      if (identity?.person && identity.basis) line.append(' · Employee identified by '+identity.basis);
+      const deviceLine = document.createElement('p');
+      deviceLine.dataset.falconDevice = '';
+      $('tBody').append(line,deviceLine);
+      if (!deviceView || deviceView.id !== String(t.id) || deviceView.viewer !== me.id || Date.now()-deviceView.checked > 30000) void loadFalconDevice(String(t.id),me.id);
+      paintFalconDevice();
+      try {
+        const url = new URL(falcon.alert.url);
+        if (url.protocol === 'https:' && /^(falcon|falcon\.(eu-1|us-2))\.crowdstrike\.com$/.test(url.hostname)) {
+          const link = document.createElement('a');
+          link.href = url.href; link.textContent = 'Open in Falcon'; link.target = '_blank'; link.rel = 'noopener noreferrer'; line.append(' ', link);
+        }
+      } catch {}
+    }
     const defs = opt(full.requestType)?.fields || [];
     html('tFieldsView', t.fields.filter(([,v]) => v).map(([k,v]) => `<div>${esc(defs.find(d => d.key === k)?.title || k)}</div><div>${esc(defs.find(d => d.key === k)?.kind === 'person' ? nameOf(v) : v)}</div>`).join(''));
     const paused = staff && reviewPending();
@@ -110,18 +185,28 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     $('tStepTitle').textContent = title; $('tStepText').textContent = text; $('tStepIcon').textContent = icon; $('tNextStep').dataset.state = t.status;
     const active = !['resolved','closed'].includes(t.status);
     html('tStatusBtns', mayWrite && !paused && !workflow ? `<button data-s="${active ? 'resolved' : 'open'}" data-w="">${active ? (staff ? 'Resolve request' : 'Mark as solved') : 'Reopen request'}</button>` : '');
+    if (falcon && staff) {
+      html('tStatusBtns',`<button type="button" data-falcon-edit${falcon.pending || opt(falcon.edit)?' disabled':''}>${active?'Resolve request':'Update Falcon status'}</button>`);
+    }
+    paintFalconEdit(full);
     toggle('tActions', staff); toggle('tStaff', staff); toggle('tSupportCard', !staff); toggle('tRequesterCard', staff && !opt(full.customer)); // agents see who is asking: role, department, location, manager
     if (staff) {
-      const states = [['new','Received'],['open','In progress'],['waiting:requester','Waiting for requester'],['waiting:third-party','Waiting for a partner'],['resolved','Resolved'],['closed','Closed']];
-      if (t.waitingOn === 'approval') states.push(['waiting:approval','Awaiting approval']);
-      html('tState', states.map(([v,l]) => `<option value="${v}"${v === 'new' || v === 'waiting:approval' || ((paused||workflow) && ['resolved','closed'].includes(v)) ? ' disabled' : ''}>${l}</option>`).join(''));
-      $('tState').disabled=!!workflow?.run.outcome;
-      setControl('tState', t.status === 'waiting' ? `waiting:${t.waitingOn}` : t.status);
+      if (falcon) {
+        html('tState',falconStatuses.map(([value,label])=>`<option value="${value}">${label}</option>`).join(''));
+        $('tState').value=falcon.alert.providerStatus;
+        $('tState').disabled=!!opt(falcon.edit) || falcon.pending;
+      } else {
+        const states = [['new','Received'],['open','In progress'],['waiting:requester','Waiting for requester'],['waiting:third-party','Waiting for a partner'],['resolved','Resolved'],['closed','Closed']];
+        if (t.waitingOn === 'approval') states.push(['waiting:approval','Awaiting approval']);
+        html('tState', states.map(([v,l]) => `<option value="${v}"${v === 'new' || v === 'waiting:approval' || ((paused||workflow) && ['resolved','closed'].includes(v)) ? ' disabled' : ''}>${l}</option>`).join(''));
+        $('tState').disabled=!!workflow?.run.outcome;
+        setControl('tState', t.status === 'waiting' ? `waiting:${t.waitingOn}` : t.status);
+      }
       const choices = agents.map(a => `<option value="${esc(a.email)}">${esc(a.displayName)}${a.id === me.id ? ' (you)' : ''}</option>`);
       if (t.assignee && !agents.some(a => a.id === t.assignee)) choices.push(`<option value="${esc(r.assigneeEmail || t.assignee)}">${esc(r.assigneeName || nameOf(t.assignee))}</option>`);
       html('tAssignee', '<option value="">Not assigned</option>' + choices.join(''));
       setControl('tAssignee', agents.find(a => a.id === t.assignee)?.email || r.assigneeEmail || '');
-      toggle('tAssignMe', t.assignee !== me.id);
+      toggle('tAssignMe', falcon ? active && !falcon.pending && (t.assignee !== me.id || falcon.alert.providerStatus === 'new') : t.assignee !== me.id);
       setControl('tQueue', t.queue); setControl('tPriority', t.priority);
       setControl('tDue', opt(t.dueAt) ? new Date(ms(opt(t.dueAt))).toISOString().slice(0,10) : '');
     }
@@ -158,7 +243,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     if(customer && $('tCustomerPrivacy')) {
       const sig=JSON.stringify([String(t.id),String(t.updatedAt),String(customer.deleteAt),customer.hold,full.role||getMe()?.role,Number(opt(customer.hold)?.until||0)>Date.now()*1e6],(_,v)=>typeof v==='bigint'?String(v):v);
       if(sig!==privacySignature){privacySignature=sig;const selected=String(t.id),privacyRoot=$('tCustomerPrivacy');
-        ticketPrivacy({el:privacyRoot,customer,ticket:t,api,token:()=>session.load(),admin:full.role==='admin',active:()=>same(selected)&&privacyRoot.isConnected&&$('tCustomerPrivacy')===privacyRoot&&!!opt(current?.customer)&&getMe()?.role==='admin',reload:async()=>{privacySignature='';await refresh();},onErase:()=>{forget(selected);clearTicketData();current=null;customerSignature='';privacySignature='';$('tCustomer').replaceChildren();toggle('tWrap',false);location.hash='#/customers/'+customer.projectId;}});
+        ticketPrivacy({el:privacyRoot,customer,ticket:t,api,token:()=>session.load(),admin:full.role==='admin',active:()=>same(selected)&&privacyRoot.isConnected&&$('tCustomerPrivacy')===privacyRoot&&!!opt(current?.customer)&&getMe()?.role==='admin',reload:async()=>{privacySignature='';await refresh();},onErase:()=>{forget(selected);clearTicketData();current=null;customerSignature='';privacySignature='';$('tCustomer').replaceChildren();toggle('tWrap',false);location.hash=customer.projectId ? '#/customers/'+customer.projectId : '#/queue';}});
       }
     }
     toggle('tFieldsCard', staff && defs.length > 0 && !opt(full.customer));
@@ -193,7 +278,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     if (!/^\d+$/.test(textId) || !getMe()) { toggle('tWrap',false); toggle('tMissing',true); return; }
     if (background && (pending || loading || !same(id))) return;
     const fresh = activeId !== textId;
-    if (fresh) { clearPreview(); paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); remember(); activeId = textId; current = null; kind = 'comment'; checklistOpen = false; aiSuggestion = null; dirty.clear(); toggle('tWrap',false); toggle('tMissing',false); }
+    if (fresh) { falconDraft=null; deviceView=null; clearPreview(); paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); remember(); activeId = textId; current = null; kind = 'comment'; checklistOpen = false; aiSuggestion = null; dirty.clear(); toggle('tWrap',false); toggle('tMissing',false); }
     const stamp = ++generation, person = getMe().id; loading = true;
     if (!background) sync('Loading request…');
     try {
@@ -203,7 +288,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
       const value = opt(full);
       toggle('tWrap',!!value); toggle('tMissing',!value);
       if (!value) { forget(textId); clearTicketData(); customerSignature=''; privacySignature=''; personContext.reset(); knowledge.clear(); $('tMissing').textContent = 'This request is unavailable. It may not exist, or your account may not have access.'; current = null; sync('Request unavailable',true); return; }
-      if(opt(value.customer)) {
+      if(opt(value.customer)?.projectId) {
         agents = await api().customerProjectAgents(session.load(),opt(value.customer).projectId);
         if(stamp!==generation || !same(textId) || getMe()?.id!==person)return;
         personContext.reset(); knowledge.clear();
@@ -243,8 +328,9 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     if (same(id) && getMe()?.id === person) await load(id, {background:true});
   }
   const statusChange = (button, state, waiting = '') => action(button,'tStatus',id => current.canAct ? api().setStatus(session.load(),id,state,waiting) : api().requesterSetStatus(session.load(),id,state));
-  $('tStatusBtns').onclick = e => { const b = e.target.closest('button[data-s]'); if (b) statusChange(b,b.dataset.s,b.dataset.w); };
-  $('tState').onchange = e => { const [state,waiting=''] = e.target.value.split(':'); statusChange(e.target,state,waiting); };
+  $('tStatusBtns').onclick = e => { if (e.target.closest('[data-falcon-edit]')) { openFalconEdit(current.ticket.status==='resolved'||current.ticket.status==='closed'?opt(current.falcon).alert.providerStatus:'closed');return; }
+    const b = e.target.closest('button[data-s]'); if (b) statusChange(b,b.dataset.s,b.dataset.w); };
+  $('tState').onchange = e => { if(opt(current?.falcon)){const requested=e.target.value;e.target.value=opt(current.falcon).alert.providerStatus;openFalconEdit(requested);return;} const [state,waiting=''] = e.target.value.split(':'); statusChange(e.target,state,waiting); };
   $('tReplyJump').onclick = () => $('cBody').focus();
   $('tRefresh').onclick = () => { if (activeId) load(activeId); };
   $('cBody').oninput = () => { remember(); paintComposer(); };
@@ -276,7 +362,7 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
     });
   };
   $('aiDraftUse').onclick = () => { if (!aiSuggestion) return; remember(); kind = 'comment'; $('cBody').value = aiSuggestion; remember(); toggle('aiDraftReview',false); paintComposer(); $('cBody').focus(); };
-  $('tAssignMe').onclick = e => action(e.currentTarget,'tStatus',id => api().assign(session.load(),id,getMe().email), () => dirty.delete('tAssignee'));
+  $('tAssignMe').onclick = e => action(e.currentTarget,'tStatus',id => current?.falcon?.[0] ? api().takeFalconTicket(session.load(),id) : api().assign(session.load(),id,getMe().email), () => dirty.delete('tAssignee'));
   $('tAssignee').onchange = e => action(e.target,'tStatus',id => api().assign(session.load(),id,e.target.value));
   $('tPriority').onchange = e => action(e.target,'tStatus',id => api().setPriority(session.load(),id,e.target.value));
   $('tQueueSave').onclick = e => action(e.currentTarget,'tStatus',id => api().setQueue(session.load(),id,$('tQueue').value.trim()), () => dirty.delete('tQueue'));
@@ -322,5 +408,5 @@ export function createTicketView({ profilePictures, $, getBackend, getMe, getRet
   const refresh = () => { if (activeId && !document.hidden && getMe()) return load(activeId,{background:true}); };
   setInterval(refresh,7000); document.addEventListener('visibilitychange',refresh);
   window.addEventListener('beforeunload',e => { remember(); if ([...drafts.values()].some(Boolean)) { e.preventDefault(); e.returnValue=''; } });
-  return {load, refresh, leave(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); remember(); activeId=null; generation++; loading=false; current=null;}, reset(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); activeId=null; current=null; generation++; loading=false; drafts.clear(); dirty.clear(); $('cBody').value=''; toggle('tWrap',false);}};
+  return {load, refresh, leave(){falconDraft=null;clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); remember(); activeId=null; generation++; loading=false; current=null;}, reset(){clearPreview();paintCustomerWorkflow({el:$('tWorkflow'),value:null}); customerSignature=""; privacySignature=""; $("tCustomer")?.replaceChildren(); personContext.reset(); knowledge.clear(); activeId=null; current=null; generation++; loading=false; drafts.clear(); dirty.clear(); $('cBody').value=''; toggle('tWrap',false);}};
 }

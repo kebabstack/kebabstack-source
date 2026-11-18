@@ -34,6 +34,8 @@ type Case__414749382 =
 type Check__1026619385 = {at : Int; by : Text; until : Int};
 type ClosedRange__141979310 = {endAt : Int; projectId : Nat; startAt : Int};
 type Column__43375615 = {#active; #done; #planned; #waiting};
+type CompletionReview__673390359 =
+  {attempts : Nat; done : Bool; retryAt : Int; revision : Int};
 type Config__737424465 =
   {
     at : Int;
@@ -127,6 +129,27 @@ type Event__55031293 =
     ticketId : Nat;
     who : Text
   };
+type FalconAlert__323940026 =
+  {
+    compositeId : Text;
+    host : Text;
+    providerStatus : Text;
+    severity : Text;
+    title : Text;
+    updated : Text;
+    url : Text
+  };
+type FalconEdit__684077175 =
+  {
+    by : Text;
+    key : Text;
+    priorReasons : [Text];
+    priorStatus : Text;
+    reason : Text;
+    revision : Int;
+    status : Text
+  };
+type FalconIdentity__40861281 = {basis : Text; person : Text; serial : Text};
 type FieldDef__537266714 =
   {
     key : Text;
@@ -156,6 +179,7 @@ type File__569085171 =
     size : Nat;
     ticketId : Nat
   };
+type FormNotice__604410105 = {nextAt : Int; person : Text; ticket : Nat};
 type FormsSource__545926750 =
   {
     canister : Principal;
@@ -235,6 +259,14 @@ type Key__773594152 =
     scopes : [Text]
   };
 type Kind__581073274 = {#adjustment; #readiness; #work};
+type KnowledgeSolution__482167077 =
+  {
+    confirmedAt : Int;
+    confirmedBy : Text;
+    resolvedAt : ?Int;
+    revision : Nat;
+    summary : Text
+  };
 type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
 type LifecycleCase__125921780 =
   {
@@ -323,6 +355,8 @@ type Notice__935769535 =
     updates : [Update__688900656];
     withdrawnAt : Int
   };
+type NotifyRecord__616662913 =
+  {at : Int; detail : Text; email : Text; ok : Bool; title : Text};
 type Override__569529108 = {assignee : Text; typeId : Nat};
 type Period__630644373 =
   {
@@ -611,6 +645,21 @@ type SlackCred__262947466 =
     teamName : Text;
     token : Text
   };
+type SlackFileJob__996274998 =
+  {
+    attempts : Nat;
+    done : Bool;
+    error : Text;
+    fileId : Nat;
+    incoming : Bool;
+    intakeId : Nat;
+    nextAt : Int;
+    remoteId : Text;
+    ticketId : Nat;
+    uploadUrl : Text;
+    uploaded : Bool;
+    who : Text
+  };
 type SlackIntake__924387788 =
   {
     channel : Text;
@@ -806,6 +855,12 @@ actor {
       snapshots : Map__386906547<Nat, Snapshot__816004714>;
       units : Map__386906547<Nat, Unit__708355153>
     };
+  stable var completionCursor : Nat;
+  stable completionReviews :
+    {
+      var root : Node__430031793<Nat, CompletionReview__673390359>;
+      var size : Nat__58649523
+    };
   stable var customerAccountingReady : Bool;
   stable customerContacts :
     {
@@ -879,10 +934,36 @@ actor {
       var root : Node__430031793<Nat, Event__55031293>;
       var size : Nat__58649523
     };
+  stable falconEdits :
+    {
+      var root : Node__430031793<Nat, FalconEdit__684077175>;
+      var size : Nat__58649523
+    };
+  stable falconIdentities :
+    {
+      var root : Node__430031793<Nat, FalconIdentity__40861281>;
+      var size : Nat__58649523
+    };
+  stable falconPending :
+    {var root : Node__430031793<Nat, Text>; var size : Nat__58649523};
+  stable falconReasons :
+    {var root : Node__430031793<Nat, [Text]>; var size : Nat__58649523};
+  stable falconRecords :
+    {
+      var root : Node__430031793<Nat, FalconAlert__323940026>;
+      var size : Nat__58649523
+    };
+  stable falconTicketIds :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
   stable var fileBytes : Nat;
   stable files :
     {
       var root : Node__430031793<Nat, File__569085171>;
+      var size : Nat__58649523
+    };
+  stable formNotices :
+    {
+      var root : Node__430031793<Nat, FormNotice__604410105>;
       var size : Nat__58649523
     };
   stable former :
@@ -920,6 +1001,11 @@ actor {
   stable internalTickets :
     {var root : Node__430031793<Nat, Bool>; var size : Nat__58649523};
   stable var keyPrefix : Text;
+  stable knowledgeSolutions :
+    {
+      var root : Node__430031793<Nat, KnowledgeSolution__482167077>;
+      var size : Nat__58649523
+    };
   stable lastCreateAt :
     {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
   stable var lastDirectoryCount : Nat;
@@ -942,9 +1028,18 @@ actor {
   stable var nextSlackIntakeId : Nat;
   stable var nextTicketId : Nat;
   stable var nextTypeId : Nat;
+  stable notifyLog :
+    {
+      var blockIndex : Nat__58649523;
+      var blocks : [var [var ?NotifyRecord__616662913]];
+      var elementIndex : Nat__58649523
+    };
   stable nudged :
     {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
   stable var offboardingTemplateId : ?Nat;
+  stable onboardingCases :
+    {var root : Node__430031793<Text, Nat>; var size : Nat__58649523};
+  stable var onboardingFromDirectory : Bool;
   stable oncallCalendarState :
     {
       absences : Map__386906547<Nat, Absence__1035572411>;
@@ -1002,6 +1097,16 @@ actor {
       policies : Map__386906547<Nat, Policy__206082595>;
       work : Map__386906547<Nat, Work__747256676>
     };
+  stable seatProgress :
+    {
+      var root :
+        Node__430031793<Nat,
+                         {
+                           context : Case__414749382;
+                           progress : Progress__763119585
+                         }>;
+      var size : Nat__58649523
+    };
   stable serviceStatusState :
     {
       checks : Map__386906547<Text, Check__1026619385>;
@@ -1028,6 +1133,17 @@ actor {
     };
   stable var slackCredsAt : Int;
   stable var slackCredsError : Text;
+  stable slackFileJobs :
+    {
+      var root : Node__430031793<Text, SlackFileJob__996274998>;
+      var size : Nat__58649523
+    };
+  stable slackFollowups :
+    {
+      var root :
+        Node__430031793<Nat, {delivered : Bool; event : Nat; retryAt : Int}>;
+      var size : Nat__58649523
+    };
   stable var slackGateway : Text;
   stable slackIntakes :
     {
@@ -1044,6 +1160,8 @@ actor {
     {var root : Node__430031793<Text, Int>; var size : Nat__58649523};
   stable slackUserEmail :
     {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
+  stable slackUserName :
+    {var root : Node__430031793<Text, Text>; var size : Nat__58649523};
   stable ticketEvents :
     {var root : Node__430031793<Nat, [Nat]>; var size : Nat__58649523};
   stable ticketFiles :
@@ -1058,6 +1176,8 @@ actor {
       var root : Node__430031793<Nat, Ticket__476694790>;
       var size : Nat__58649523
     };
+  stable var tokenCounter : Nat;
+  stable var tokenSeed : ?Blob;
   stable types :
     {
       var root : Node__430031793<Nat, RequestType__639901818>;

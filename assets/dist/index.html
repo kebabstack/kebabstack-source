@@ -173,22 +173,16 @@
 
 <section id="login" aria-busy="true" class="is-waiting app-auth">
   <div class="auth-shell">
-    <aside class="auth-story">
-      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
-      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
-      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
-    </aside>
+    <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
     <section class="auth-main" aria-labelledby="loginTitle">
       <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
       <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
-      <h1 id="loginTitle"><span class="auth-ready">Welcome to Assets.</span><span class="auth-waiting">Opening Assets…</span></h1>
-      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <h1 id="loginTitle"><span class="auth-ready">Sign in to Assets</span><span class="auth-waiting">Opening Assets…</span></h1>
       <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
       <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
       <div id="loginStatus" class="status" role="alert"></div>
       <div id="loginWarn" class="warnbox hidden"></div>
       <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
-      <p class="lfoot">Access is managed by your company in the Hub.</p>
     </section>
   </div>
 </section>
@@ -492,7 +486,7 @@
 
       <details><summary>Photos</summary><p>Scaled on the phone to at most 1280 px before upload, stored in the app itself, shown in the history. 900 KB per photo, twelve per device, 400 MB in total. When AI reading is enabled, the AI vendor receives the picture. Names, faces or other personal details visible in the image are included; check the image before sending it.</p></details>
 
-      <details><summary>Device management</summary><p>Connect Iru (formerly Kandji), Jamf Pro or Microsoft Intune under Settings. Every six hours — or when you press Sync now — the register pulls what the MDM knows: serial, model, OS, last check-in, the logged-in user. A device the register does not know is created (assigned to the MDM's user if that person is in the hub directory, otherwise in stock with the name noted). A known device gets its gaps filled. Where the register says one person and the MDM another — or the register says sold, scrapped or lost and the MDM still sees the device — nothing is changed; a <b>mismatch</b> is shown on the device and in the list, for a human to settle. Secrets never leave the app except towards the MDM; the calls go out from your engine as single-node requests.</p></details>
+      <details><summary>Device management</summary><p>Connect Iru (formerly Kandji), Jamf Pro or Microsoft Intune under Settings. Every six hours — or when you press Sync now — the register pulls what the MDM knows: serial, model, OS, last check-in, the logged-in user. A device the register does not know is created (assigned to the MDM's user if that person is in the hub directory, otherwise in stock with the name noted). A known device gets its gaps filled. Where the register says one person and the MDM another — or the register says sold, scrapped or lost and the MDM still sees the device — nothing is changed; a <b>mismatch</b> is shown on the device and in the list, for a human to settle. For Iru, an administrator can enable <b>inventory number writeback</b> per connection: non-empty Assets numbers replace Iru values for uniquely matched devices, up to 25 per sync. Grant the token Update Device permission first. Check the result for pending numbers or permission errors and run Sync now again to continue. Empty numbers do not clear Iru values. Pausing or disabling writeback stops future requests; an already-sent request may finish. Secrets never leave the app except towards the MDM; the calls go out from your engine as single-node requests.</p></details>
 
       <details><summary>Apple Business Manager</summary><p>Apple keeps its own register of what a company bought: Apple Business Manager (or Apple School Manager). Under Settings you connect it with the client id, the key id and the private key Apple issued — the key never leaves your browser: it signs one client assertion there (ES256, valid 180 days, Apple's maximum) and only that assertion reaches the app, which trades it for one-hour tokens and reads two lists every six hours — the organisation's devices and which device-management service each one is assigned to. Serials that exist in the register are linked and show an "Apple Business Manager" box on the device; the rest are the gap: devices the company owns but nobody has handed out through this register. The <a href="#/apple">Apple</a> page lists them, with a filter for those no device-management service holds at all. The filter <i>Sold — release in ABM</i> is the other direction: devices the register says are sold, scrapped or lost but Apple still lists — release them in Apple Business Manager once the invoice is paid, otherwise the buyer is forced into your device management at setup; after the next sync they disappear from the list. "Add" takes a device into the register as <i>unknown</i> — Apple, model, capacity, ordered when, from whom — until someone finds it and records the hand-over; as soon as an MDM sees it, the MDM sync links it by serial. Nothing is ever written to Apple. The API account's role must allow reading devices — Apple's <i>Read Only</i> answers 403 to every read (verified); use the smallest role that works for you. Before the 180 days end, drop the .pem again on Edit — the Settings card warns two weeks ahead.</p></details>
 
@@ -504,7 +498,7 @@
 
 
 
-      <details><summary>Not yet</summary><p>Barcode/QR reading in the browser; approvals for hand-overs; per-person self-service returns; pushing the register's tag back into the MDM; sending invoices by mail from the app; QR-IBAN/QRR references; AppleCare coverage per device.</p></details>
+      <details><summary>Not yet</summary><p>Barcode/QR reading in the browser; approvals for hand-overs; per-person self-service returns; inventory number writeback to Jamf Pro and Intune; sending invoices by mail from the app; QR-IBAN/QRR references; AppleCare coverage per device.</p></details>
 
     </section>
   </main>

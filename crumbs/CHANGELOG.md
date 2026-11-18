@@ -1,5 +1,11 @@
 # Crumbs changelog
 
+## [0.13.1] — 2026-11-18
+
+- Keep General settings labels, the timezone search and inputs inside the panel at 320 px.
+
+- Use the shared single-column company sign-in, workspace colours and app switcher. Account and notification panels scroll within short screens.
+
 ## [0.13.0] — 2026-10-29
 
 - Bundle overview and shared-report dimensions into one authorized computation per interval. Read events and build sessions once; reuse exact whole-period totals without sampling, daily-unique summation or persistent caching.

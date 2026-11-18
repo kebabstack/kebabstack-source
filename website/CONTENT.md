@@ -9,7 +9,7 @@ The sanitized MIT source is publicly available; Marketplace distribution remains
 
 The hero is a simplified navigation map, not a live dashboard. Hub's shared
 people, sign-in and permissions correspond to `docs/APP-PERMISSIONS.md` and
-`sdk/README.md`. The seven app links lead to their examples below; the extension
+`sdk/README.md`. The eight app links following Hub lead to their examples below; the extension
 link leads to the implemented SDK explanation. It does not claim that every app
 exchanges every data type or that a new app is installed. Planned Phone remains
 in the labelled app explorer, not among the implemented hero links. The detailed
@@ -232,3 +232,16 @@ DNS, certificate issuance and actual deployment are verified in private receipts
 source changes alone do not establish a completed migration or automatic renewal.
 
 Dashboard profile wording (0.5.12): Hub 0.45.0 `operationsDisplayProfileCreate`, `operationsDisplayJoin`, `operationsDisplayProfileRevoke`; `docs/HUB-OPERATIONS.md`. Six-digit PIN is enrollment-only, each browser keeps its own key. Browser storage deletion still requires reconnecting.
+
+## CrowdStrike Falcon
+
+Desk 0.39.0 and Hub 0.47.0 provide EPP alert intake, confirmed status and closure decisions, and optional Trust screen counts. See the Desk README and docs/HUB-OPERATIONS.md. Tenant setup requires Falcon Alerts read/write access. No live customer detection or provider endorsement is claimed.
+
+## Desk 0.40 — website 0.5.16
+
+Desk README, INSTALL and the Slack integration tests cover requester confirmation after staff assistance, six-hour rechecks and reminders in idle Slack threads. Publish with or after Desk 0.40.
+
+
+## Website 0.6.0
+
+The application directory links the nine implemented Hub, Desk, Doku, Assets, Trust, Contracts, Forms, Watch and Crumbs examples. Separate links lead to the Operations illustration and the SDK explanation. Planned Phone stays in its labelled explorer panel. Both language versions use the existing shared registry marks and tokens. Visitors can open the mobile navigation, reach the guides and switch languages with browser scripting disabled.

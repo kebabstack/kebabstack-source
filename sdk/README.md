@@ -49,6 +49,8 @@ external services. Run the real backend regression tests when adapting this flow
 
 ## Frontend: shared sign-in and navigation
 
+The entry screen puts the company name, destination and available sign-in methods on a single reading edge. The global account and app menus scroll inside the viewport. Bundle the canonical sign-in stylesheet with the markup and client when updating an app.
+
 Copy `sdk/ui/signin.html` (replace `__APP_NAME__`) and `hub/dist/signin.css` alongside
 `hub-client.js` and the design tokens. Include the stylesheet after app styles.
 The seven business tools use exactly this markup and stylesheet; synchronize/check them

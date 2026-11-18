@@ -1,5 +1,20 @@
 # Website — validation
 
+## 0.6.0 · 18 November 2026
+
+**Task.** A visitor chooses a product workflow or evaluates a deployment in German or English. The homepage now puts its primary action next to an application directory. The original mobile header depended on JavaScript to expose the navigation toggle.
+
+| Check | Observed result |
+| --- | --- |
+| 1280 × 800, comparison with the November 17 static release | In Chrome the directory height went from 706 to 485 CSS pixels. The main action moved from y=639 to y=511 in both languages. Every implemented app link, the SDK link and the Operations link remain available. |
+| Light, dark and reflow | Chrome and WebKit exercised both languages at 1280 × 800, 800 × 900, 390 × 844, 320 × 568, 640 × 400 and 844 × 360. No page-level horizontal overflow in those views. In a separate desktop check, doubling computed text sizes throughout the header and hero kept their links on screen. |
+| Sticky bar and keyboard | Wheel scrolling left the top bar at y=0. Opening the narrow menu, reaching the appearance control in short windows, Escape dismissal and focus return succeeded. Choosing Assets from the directory activated the expected explorer panel. |
+| Static fallback | In Chrome and WebKit at 320 × 568 with JavaScript disabled, Enter opened the menu and the first destination reached the stack section. The sovereign-IT guide and its reciprocal language switch worked in both languages. |
+| Release checks | The website build rendered eight German/English pages. The website smokes exercise deep links, planned features, synthetic examples, source attribution, the tracker-free public build and packaged files. The download contains the static host files, including hidden configuration. |
+
+The browser runs used the local static artifact. Screen-reader interaction and performance on a particular hosting account were outside these checks.
+
+
 ## 0.3.1 — suite-level entry, app-level examples
 
 2026-09-22. Scoped follow-up to 0.3.0: replace the hero's duplicate Desk case

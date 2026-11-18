@@ -25,3 +25,31 @@ body{font-size:14px}#layout .cbody{max-width:1600px;width:100%;margin:auto}#layo
 
 /* A mobile drawer is a vertical menu below the persistent suite bar. */
 @media(max-width:760px){#layout #consoleNav{display:block;overflow:visible}#layout #consoleNav .navstep{width:100%;white-space:normal}}
+
+/* Keep the card and its final action reachable in landscape and at text zoom. */
+[data-hub-dialog] {
+  box-sizing: border-box;
+  padding: var(--ks-dialog-gutter);
+}
+[data-hub-dialog] > div:first-child {
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  max-block-size: calc(100vh - 2 * var(--ks-dialog-gutter));
+  max-block-size: calc(100dvh - 2 * var(--ks-dialog-gutter));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding: var(--ks-space-4);
+  overflow-wrap: anywhere;
+}
+[data-hub-dialog] .row > div:has(label) {
+  min-inline-size: min(100%, 12.5rem);
+  justify-content: flex-start;
+}
+[data-hub-dialog] label[for] {
+  letter-spacing: normal;
+  text-transform: none;
+  font: 550 .875rem/1.45 var(--ks-ui);
+}
+
+/* The crop tool uses a fixed 260 px image coordinate system. */
+@media(max-width:360px){#cropOv > .mbox{padding-inline:var(--ks-space-3)}}

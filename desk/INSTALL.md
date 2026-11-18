@@ -264,7 +264,7 @@ See [public forms, embedding and the Desk handoff](../forms/INTAKE.md) for setup
 
 Add bot scopes `files:read` and `files:write` to the existing Slack app, reinstall it in the workspace, and update its Hub token if Slack issues a replacement. Keep the existing Events subscriptions and support-channel membership. Desk Settings → Slack → Refresh pulls the Hub credentials. No public file-sharing scope is required. Downloads remain private; Desk stores its own copy under the ticket's access controls.
 
-Settings → AI → AI assistance controls triage, title summaries, completion detection and follow-up reopening. It defaults to enabled, as triage did previously. The configured provider receives the original request text and the staff completion comment, never internal notes. Explicit completion by a currently authorized staff member may resolve the request; checklist, approval and hardware gates still apply. Disable assistance to retain manual status/reaction handling only. AI can misclassify natural language; the status message and audit note make decisions reviewable and the existing reopen action remains available.
+Settings → AI → AI assistance controls triage, title summaries, completion detection and follow-up reopening. It defaults to enabled, as triage did previously. The configured provider receives the original request and public conversation, excluding private notes. A staff completion statement or a requester confirming a staff solution may resolve the request; checklist, approval and hardware gates still apply. Disable assistance to retain manual status/reaction handling only. AI can misclassify natural language; the status message and audit note make decisions reviewable and the existing reopen action remains available.
 
 Image jobs survive upgrades. Up to five attempts use increasing delays (1–4 minutes); inspect ticket activity and Settings → Slack for errors. After fixing scopes or availability, use Attachments → Retry image sync. PNG, JPEG, GIF and WebP are supported; each stored image is at most 1.5 MB, with 20 attachments per ticket and the existing global storage cap. Large Slack images use available previews; old placeholders and non-image files require manual handling. Deleting a Slack file does not erase Desk's stored copy, or vice versa. Include both systems in retention procedures.
 
@@ -288,25 +288,9 @@ and requests at most four AI reviews; larger queues take several runs. This is
 independent of the browser and does not fetch older Slack history that was never
 synchronized into Desk.
 
-The newest public comment must be from an active, currently authorized Desk staff
-member other than the requester. A newer requester reply, internal note or status
-change requires a new public staff confirmation. A manually reopened ticket is
-therefore not resolved again from its old completion comment. Clear completed work
-may resolve; plans, partial fixes and ambiguity stay open. Checklists, approvals and
-hardware/offboarding gates are the same as manual Resolve. The ticket activity
-quotes the evidence; connected Slack threads receive the status notice. Reopen
-remains available. AI classifications are not guaranteed to be correct.
+Desk 0.40 sends the original request, public replies in order and public workflow status/approval events to the configured AI. It quotes the latest public reply as evidence. An authorized agent can confirm completion, or the identified requester can confirm the solution worked after an agent helped. An unresolved part, a proposal or simple thanks keeps the request open. Private notes and manual status changes invalidate earlier completion evidence. Automatic SLA notices do not. Existing checklist, approval and offboarding rules apply. Falcon tickets use their own confirmed status workflow.
 
-Unchanged evaluated revisions are not repeatedly sent to AI. Failed or invalid
-responses retry after increasing 15–60 minute delays plus queue rotation; Settings
-→ Log records deferrals. A later ticket change permits another review. Decisions,
-retry times and the scan cursor survive upgrades. Customer projects are excluded.
-Internal notes are never transmitted. Requests over 6,000 characters, comments
-over 4,000 characters and activity tails over 100 events remain manual to avoid
-making decisions from a silently truncated conversation. The provider receives the
-original request and latest public staff comment. Existing title/triage/follow-up
-assistance uses the same switch. Disabling it stops new reviews and prevents
-in-flight completion decisions from applying while disabled.
+An eligible request still open after review becomes due again after six hours, subject to queue rotation. Failed AI calls retry after 15–60 minutes plus queue rotation. Customer projects, private notes and attachments are excluded. Conversations above 12,000 characters or 500 recorded events stay manual. With AI assistance enabled, a connected active Slack intake can also follow up after 24 hours without ticket changes. Each unchanged thread gets one successful reminder; failed delivery retries after six hours. The requester or an agent can reply `Desk: resolved` or `Desk: erledigt` to a reminder, or react with ✅ to the original message. Silence leaves the request open. No additional Slack scope is required.
 
 Operator check: use a disposable internal request, add an explicit public staff
 completion comment, and inspect its activity after a background cycle. An ordinary
@@ -321,3 +305,5 @@ Deploy this release before Hub 0.42 using the shared Kitchen update workflow. Ex
 ## Optional Doku integration
 
 Install Hub 0.44 and Doku 0.1 through Kitchen, save Doku permissions and check enforcement. Agents with Doku Author/Reviewer/Admin access receive a handoff link after confirming a resolved internal ticket solution. Existing Desk roles and Slack behavior are unchanged. No AI or Slack notification is added by this first milestone.
+
+For CrowdStrike alert intake, use Desk 0.39.2 with Hub 0.47.0 and Assets 0.31.1 and follow [CrowdStrike setup](../docs/INSTALL.md#crowdstrike-falcon-endpoint-alerts-alpha).

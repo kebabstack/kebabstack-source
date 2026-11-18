@@ -1,6 +1,6 @@
 # Kebabstack Brand & Product System
 
-Version **1.2.0** · 2026-09-23
+Version **1.3.0** · 2026-11-18
 
 Normative target · app adoption is reviewed separately.
 
@@ -304,6 +304,12 @@ Mask secrets, expose them only on an authorized explicit action, and explain whe
 For deletion, publication, permission changes, financial issuance and fleet actions, show affected scope, consequences and recovery limits before the final action. Routine reversible edits need no ritual confirmation. Recheck current authority and record version at execution.
 
 **Verify:** A stale review cannot authorize a different set of records or silently overwrite another operator’s changes.
+
+### FORMS-07 · Keep the whole dialog reachable (must)
+
+Use the native dialog for modal tasks. Align the title, labels and fields to one content edge. Keep one scrolling panel within the visual viewport. Let actions wrap and give inline choices their intrinsic width.
+
+**Verify:** Open a populated dialog at 320 × 568 and 640 × 320. Scroll from the title to the final action, use Tab and Shift+Tab, then press Escape and verify focus returns to the opener.
 
 ## Lists, search & data
 

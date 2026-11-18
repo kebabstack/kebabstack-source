@@ -110,6 +110,6 @@ the audit trail.
 
 ## Background completion review
 
-Desk 0.36.0 reviews existing open internal requests every 15 minutes in bounded batches when AI assistance is enabled. The existing API is unchanged; comments and status actions retain their permissions. Only the latest public staff comment is eligible, and later requester replies, private notes or status changes block old evidence. See [setup, limits and retry behavior](../../desk/INSTALL.md#periodic-completion-review-0360).
+Desk 0.40 reviews open internal tickets in batches. It considers public history, including requester confirmations after staff help. Eligible open tickets may be reassessed after six hours. For daily Slack follow-ups, privacy limits and workflow guards see [Desk setup](../../desk/INSTALL.md#periodic-completion-review-0360).
 
 Lifecycle queue views `onboarding` and `offboarding` require Desk 0.35+. Verify `info().version` first when using generic Candid calls: older releases treat unknown view values as all tickets. Kebab MCP 0.4 checks this before querying.

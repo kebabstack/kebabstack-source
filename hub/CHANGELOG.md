@@ -1,5 +1,31 @@
 # Changelog — kebab-stack hub
 
+## [0.48.0] — 2026-11-18
+
+- Bring the app directory and its search closer to the top of the employee workspace. Give app cards a consistent label edge and keep favourites reachable by keyboard.
+- Keep company sign-in, the account panel and console dialogs within short viewports. Share the updated workspace palette and field geometry across official tools.
+
+- On return from company sign-in, Hub starts verifying the provider response as soon as it can reach the backend. Opening a tool from another tool with an active company session goes directly to the session check and registered app handoff. Hub prepares the company-domain cookie alongside the one-time app ticket.
+- Fresh company sign-in replaces the previous suite cookie. Portal, console and app-initiated Hub sign-out clear local workspace access and confirm revocation with Hub for the company session and linked passkey. Interrupted sign-out keeps its retry state in the current tab.
+- A slow optional cookie can add at most 750 milliseconds after a ticket is ready. Session and provider verification time out with a recovery action. Passkey and company sign-in controls become available as their dependencies finish.
+- The Hub account profile and photo crop keep keyboard focus inside the active dialog. Escape returns to the previous view and restores focus on desktop and mobile.
+
+## [0.47.1] — 2026-11-17
+
+- Expose the Slack delivery outcome of a Forms ticket notification to the connector that queued it.
+
+## [0.47.0] — 2026-11-17
+
+- Read the required fields from large Falcon responses, verify requested alert dispositions, and share endpoint alert counts in Operations and explicitly enabled Trust screen profiles.
+
+## [0.46.1] — 2026-11-17
+
+- Resolve the Falcon account against directory identities, falling back to a unique inventory assignment. Previously imported alerts are enriched without changing the intake watermark or acknowledging them.
+
+## [0.46.0] — 2026-11-17
+
+- Owners can connect a Falcon API client to one Desk under Settings → Notifications, poll endpoint alerts and confirm acknowledgements. Operations links to the Falcon queue.
+
 ## [0.45.1] — 2026-10-29
 
 - Keep the reconnect form available if a suspended or expired screen also loses network access; retry without a page reload. Existing device credentials remain retained.

@@ -67,3 +67,71 @@
 .ks-review-layout>.ks-review-actions{grid-column:1/-1}.ks-review-fields{display:grid;gap:16px}.ks-review-field{min-width:0;margin:0;padding:12px 16px;border:1px solid var(--ks-rule);border-radius:var(--ks-radius-input)}.ks-review-field legend{max-width:100%;padding:0 4px}.ks-review-field legend label{display:flex;align-items:center;gap:8px;letter-spacing:normal;text-transform:none}.ks-review-field input[type=checkbox]{width:auto;min-height:24px}.ks-review-field>label{display:grid;gap:6px}.ks-review-field input[type=text]{width:100%;min-width:0;box-sizing:border-box;font-size:16px;min-height:44px}.ks-review-field .ev{margin-top:12px;overflow-wrap:anywhere}.ks-review-field .ev strong{font-size:13px;color:var(--ks-fg-secondary)}
 
 @media(min-width:1000px) and (min-height:640px){.ks-review-sticky>.ks-evidence{position:sticky;top:80px}}
+
+/* The native dialog owns scrolling and the browser owns modal focus. */
+.ks-workspace dialog.ks-dialog {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(var(--ks-dialog-width, 32rem), calc(100% - 2 * var(--ks-dialog-gutter)));
+  max-width: none;
+  height: fit-content;
+  max-height: calc(100vh - 2 * var(--ks-dialog-gutter));
+  max-height: calc(100dvh - 2 * var(--ks-dialog-gutter));
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--ks-dialog-gutter);
+  border: 1px solid var(--ks-rule);
+  border-radius: var(--ks-dialog-radius);
+  background: var(--ks-bg-card);
+  color: var(--ks-fg);
+  box-shadow: 0 20px 64px -20px rgb(0 0 0 / 35%);
+}
+.ks-workspace dialog.ks-dialog::backdrop {
+  background: rgb(12 22 18 / 56%);
+}
+.ks-workspace .ks-dialog > .mbox {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: clamp(var(--ks-dialog-mobile-padding), 4vw, var(--ks-dialog-padding));
+  overflow: visible;
+  overflow-wrap: anywhere;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.ks-workspace .ks-dialog :is(h2, h3):first-child {
+  margin-block-start: 0;
+  color: var(--ks-fg);
+  font: 600 1.25rem/1.3 var(--ks-ui);
+  letter-spacing: var(--ks-tracking-h2);
+}
+.ks-workspace .ks-dialog :is(.btnrow, .actions) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ks-button-group-gap);
+}
+.ks-workspace .ks-dialog :is(.btnrow, .actions):last-child {
+  margin-block-start: var(--ks-space-5);
+  padding-block-start: var(--ks-space-4);
+  border-block-start: 1px solid var(--ks-rule);
+}
+.ks-workspace .ks-dialog .mbox > :is(h2, h3):first-child { margin-block-end: var(--ks-space-4); }
+.ks-workspace .ks-dialog label:not(:has(input:is([type=checkbox], [type=radio]))) {
+  display: block;
+  margin-block: var(--ks-space-3) var(--ks-space-2);
+  font: 550 .875rem/1.45 var(--ks-ui);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.ks-workspace .ks-dialog :is(input:not([type=checkbox], [type=radio], [type=range], [type=file], [type=hidden], [type=button], [type=submit], [type=color]), textarea, select):not(.share-controls *) {
+  width: 100%;
+  min-width: 0;
+}

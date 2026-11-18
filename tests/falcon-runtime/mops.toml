@@ -1,0 +1,3 @@
+# The default PocketIC 14 binary bundled with the JS client cannot emit PATCH.
+[toolchain]
+pocket-ic = "15.0.0"

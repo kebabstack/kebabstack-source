@@ -1,6 +1,6 @@
 # Measured UI reference
 
-Version 1.2.0. Target reference; runtime app adoption is reviewed separately.
+Version 1.3.0. Target reference; runtime app adoption is reviewed separately.
 
 Open [the visual catalogue](index.html#reference) for rendered states and keyboard examples.
 
@@ -71,4 +71,13 @@ Open [the visual catalogue](index.html#reference) for rendered states and keyboa
 | padding | 24 |
 | mobilePadding | 16 |
 | gap | 24 |
+| radius | 16 |
+
+## dialog
+
+| Dimension | CSS px |
+|---|---:|
+| gutter | 16 |
+| padding | 32 |
+| mobilePadding | 16 |
 | radius | 16 |

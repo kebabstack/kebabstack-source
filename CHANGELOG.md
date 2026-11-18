@@ -1,5 +1,11 @@
 # Monorepo changes
 
+## [0.4.0] — 2026-11-18
+
+- Release the shared workspace design, company sign-in updates and viewport-safe forms. The [workspace review](design/reviews/2026-11-18-workspace-relaunch.md) records the measured scope.
+- Add a real-browser regression for Forms import, Contracts teamspaces and narrow Crumbs settings. Run it with `npm run test:layout`.
+- Refresh the independent German and English product website and its mobile navigation.
+
 ## [0.3.0] — 2026-10-18
 
 - Add shared workspace table/form and source-viewer regression coverage, canonical distribution checks and rotating daily review guidance.

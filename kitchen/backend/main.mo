@@ -244,7 +244,7 @@ persistent actor Kitchen {
     pantryOverride := if (norm(id) == "") "" else (switch (principalSafe(id)) { case null return { ok = false; detail = "not a canister id" }; case (?p) Principal.toText(p) });
     { ok = true; detail = "" };
   };
-  transient let BUILD_VERSION : Text = "0.9.1";
+  transient let BUILD_VERSION : Text = "0.9.2";
   public shared func info() : async { hubId : Text; pantryId : Text; me : Text; version : Text; installed : Nat } {
     { hubId; pantryId = pantryId<system>(); me = Principal.toText(me()); version = BUILD_VERSION; installed = Map.size(installed) };
   };

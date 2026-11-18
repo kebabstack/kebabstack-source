@@ -94,6 +94,9 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
 } });
 const dom = new JSDOM(html, { url: "https://contracts.test/#uht=" + "ab".repeat(20), runScripts: "outside-only", pretendToBeVisual: true });
 const { window } = dom;
+// jsdom has no native top-layer implementation. Browser QA exercises focus and scrolling.
+window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+window.HTMLDialogElement.prototype.close = function () { this.open = false; };
 globalThis.window = window; globalThis.document = window.document; globalThis.location = window.location; globalThis.history = window.history; globalThis.localStorage = window.localStorage;
 globalThis.setInterval = () => 0; window.scrollTo = () => {}; window.Element.prototype.scrollIntoView = () => {}; globalThis.confirm = () => true; globalThis.alert = (m) => { throw new Error("alert: " + m) }; globalThis.prompt = () => { throw new Error("prompt() used — pickers, not free text") };
 globalThis.FormData = window.FormData; globalThis.Event = window.Event; globalThis.Blob = window.Blob; globalThis.File = window.File; globalThis.URL = window.URL; const downloads = []; window.URL.createObjectURL = (b) => { downloads.push(b); return "blob:smoke"; }; window.URL.revokeObjectURL = () => {};
@@ -135,13 +138,13 @@ check((/Watchtower/.test($("tBody").textContent)) === staff && (/Scan of the fra
 check($("nToday").textContent === "3" && $("nInbox").textContent === "3", "nav counters");
 // DONE on the decide task → decision modal → completeTask with the decision
 await click(document.querySelector('#tBody [data-done="21"]'));
-check(on("doneModal") && !hidden("dnDecision"), "decide task asks for the decision");
+check($("doneModal").open && !hidden("dnDecision"), "decide task asks for the decision");
 $("dnSel").value = "cancel"; $("dnNote").value = "too expensive";
 await click($("dnSave"));
 check(last("completeTask") && last("completeTask")[1][1] === 21n && last("completeTask")[1][2] === "cancel" && last("completeTask")[1][3] === "too expensive", "completeTask(21, cancel, note)");
 // LATER → snooze modal (no prompt) → snoozeTask(22, 14)
 await click(document.querySelector('#tBody [data-snooze="22"]'));
-check(on("snoozeModal"), "snooze modal opens"); $("snSel").value = "14"; await click($("snSave"));
+check($("snoozeModal").open, "snooze modal opens"); $("snSel").value = "14"; await click($("snSave"));
 check(last("snoozeTask") && last("snoozeTask")[1][1] === 22n && last("snoozeTask")[1][2] === 14n, "snoozeTask(22, 14 days)");
 
 // ---- inbox
@@ -195,7 +198,7 @@ if(mode === "admin") {
 }
 if (staff) {
 // paste a message (kind manual)
-await click($("ibPaste")); check(on("pasteModal"), "paste modal opens");
+await click($("ibPaste")); check($("pasteModal").open, "paste modal opens");
 $("pmFrom").value = "sales@nimbus.example"; $("pmSubject").value = "Quote"; $("pmText").value = "Pro plan, 12 seats, 480.00 EUR per month.";
 await click($("pmSend"));
 check(last("intakeBegin")[1][1].kind === "manual" && last("intakeBegin")[1][1].text.startsWith("Pro plan") && last("intakeCommit"), "manual intake begin+commit");
@@ -234,13 +237,13 @@ check(!hidden("srcDocuments") && hidden("srcProposals") && /renewal\.pdf/.test($
 await click($("srcDocuments").querySelector("[data-dl]"));
 check(last("documentData") && last("documentData")[1][1] === 31n && downloads.length >= 1, "download via documentData (session-gated)");
 await click($("srcDocuments").querySelector("[data-txt]"));
-check(on("textModal") && /renews on 2028/.test($("txBody").textContent), "extracted text modal"); await click($("txClose"));
+check($("textModal").open && /renews on 2028/.test($("txBody").textContent), "extracted text modal"); await click($("txClose"));
 await go("#/inbox/7/message");
 check(/FYI — the new price/.test($("srcMessage").textContent) && /Dear customer/.test($("srcMessage").textContent), "message tab with the forwarder's comment");
 await go("#/inbox/7/filing");
 check(staff ? !!$("sfLink") : /Workspace owners and editors can file messages/.test($("srcFiling").textContent), "filing tab per role");
 if (staff) {
-  await click($("sfLink")); check(on("linkModal") && !hidden("lkUnlink"), "file dialog opens with unlink (already filed)");
+  await click($("sfLink")); check($("linkModal").open && !hidden("lkUnlink"), "file dialog opens with unlink (already filed)");
   type($("lkIn"), "Rocket"); await settle();
   check(last("listContracts") && last("listContracts")[1][1].q === "Rocket", "contract picker searches listContracts");
   await click($("lkList").querySelector('[data-cid="3"]')); $("lkRule").checked = true; await click($("lkSave"));
@@ -248,7 +251,7 @@ if (staff) {
   check(ls && ls[1][1] === 7n && ls[1][2][0] === 3n && ls[1][3][0].kind === "senderAddress" && ls[1][3][0].value === "billing@sunrise-cloud.example", "linkSource(7 → 3, sender rule)");
   await settle();
   await go("#/inbox/7/filing");
-  await click($("sfIgnore")); check(on("confirmModal"), "ignore asks first"); await click($("cmYes")); await settle();
+  await click($("sfIgnore")); check($("confirmModal").open, "ignore asks first"); await click($("cmYes")); await settle();
   check(last("setSourceStatus") && last("setSourceStatus")[1][2] === "ignored", "ignore → setSourceStatus(ignored)");
 }
 
@@ -417,7 +420,7 @@ if (!staff) {
     const ip = last("importPreview");
     check(ip && ip[1][2] === ";" && ip[1][3].length === 8 && ip[1][3][5][0] === "Renews" && ip[1][3][5][1] === "renewalDate", "importPreview(csv, ';', mapping tuples)");
     check(/1<\/b> would be created/.test($("imReport").innerHTML) && /exists as/.test($("imReport").textContent) && !$("imCommit").disabled, "preview report + import enabled");
-    $("imBatch").value = "sheet 2026-09"; await click($("imCommit")); check(on("confirmModal"), "import asks first"); await click($("cmYes"));
+    $("imBatch").value = "sheet 2026-09"; await click($("imCommit")); check($("confirmModal").open, "import asks first"); await click($("cmYes"));
     check(last("importCommit") && last("importCommit")[1][4] === "sheet 2026-09" && /1 created · 1 skipped/.test($("imStatus").textContent), "importCommit with batch label");
     await go("#/connection/log"); check(/settings saved/.test($("logRows").textContent), "admin log");
     // sample data

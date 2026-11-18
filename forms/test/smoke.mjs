@@ -10,7 +10,7 @@ const html = fs.readFileSync("index.html", "utf8").replace('<script type="module
 const now = BigInt(Date.now()) * 1000000n;
 const mode = process.argv[2] || "admin"; // admin | member | public
 const role = mode === "member" ? "member" : "admin";
-const schema = JSON.stringify({ v: 1, askName: "optional", askEmail: "off", sections: [{ id: 1, title: "About the idea", desc: "", questions: [{ id: 1, type: "short", title: "Name of the idea", req: true }, { id: 2, type: "choice", title: "Who benefits?", opts: ["Customers", "Team"], routes: {}, req: true }, { id: 3, type: "scale", title: "Ready?", min: 1, max: 5, req: false }] }] });
+const schema = JSON.stringify({ v: 1, askName: "optional", askEmail: "off", sections: [{ id: 1, title: "About the idea", desc: "", questions: [{ id: 1, type: "short", title: "Name of the idea", req: true }, { id: 2, type: "choice", title: "Who benefits?", opts: ["Customers", "Team"], routes: {}, req: true }, { id: 3, type: "scale", title: "Ready?", min: 1, max: 5, req: false }, {id:4,type:"para",title:"Reason",req:false}] }] });
 const ANA = "p_00000000000000a1", ME = "p_00000000000000ee"; // forms 0.2.0: people are hub person ids
 const form = { id: 1n, slug: "abcdef0123456789", title: "Idea box", description: "Tell us", schema, status: { open: null }, allowEdit: true, cap: 0n, createdBy: ME, createdAt: now, updatedAt: now, nextNum: 3n };
 const meta = (over = {}) => ({ id: 1n, slug: form.slug, title: form.title, status: { open: null }, allowEdit: true, cap: 0n, createdBy: ME, createdByName: "Me Myself", createdAt: now, updatedAt: now, subs: 2n, subsReceived: 1n, subsInReview: 0n, subsAccepted: 1n, subsDeclined: 0n, myRole: role === "admin" ? "owner" : "viewer", closesAt: 0n, ...over });
@@ -36,6 +36,7 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
     case "createForm": case "duplicateForm": return [meta({ id: 3n, slug: "0123456789abcdef", title: "Untitled form", status: { draft: null }, subs: 0n, subsReceived: 0n, subsAccepted: 0n })];
     case "publicForm": return [{ title: "Idea box", description: "Tell us", schema:recoveryClosed ? '{"sections":[]}' : schema, allowEdit: true, open: !recoveryClosed, capReached: false, closesAt: 0n, orgName: "Acme" }];
     case "previewForm": return [{ id: 1n, title: "Idea box", description: "Tell us", schema, allowEdit: true, status: { open: null }, myRole: "owner", closesAt: 0n }];
+    case "notificationRecipients": case "intakeSiteKey": return [];
     case "submitIntake": submissions.push(a); if(submissions.length===1)throw Error("Synthetic lost response");if(recoveryReject)return {ok:false,num:0n,detail:'Context policy changed'};return { ok: true, num: 7n, detail: "" };
     case "publicIntake": case "getIntake": return [{revision:0n,origins:[],contextKeys:[],privacyUrl:'',retentionDays:0n,graceUntil:0n}];
     case "deliveryStatus": return routedFixture?[{state:"blocked",attempts:1n,ticketId:0n,url:"",detail:"Check the project"}]:[];
@@ -48,6 +49,9 @@ globalThis.__fakeBackend = new Proxy({}, { get: (_, m) => async (...a) => {
 const startUrl = mode === "public" ? "https://forms.test/#/f/abcdef0123456789" : "https://forms.test/#uht=" + "ab".repeat(20);
 const dom = new JSDOM(html, { url: startUrl, runScripts: "outside-only", pretendToBeVisual: true });
 const { window } = dom;
+// jsdom has no native top-layer implementation. Browser QA exercises focus and scrolling.
+window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+window.HTMLDialogElement.prototype.close = function () { this.open = false; };
 globalThis.window = window; globalThis.document = window.document; globalThis.location = window.location; globalThis.history = window.history; globalThis.localStorage = window.localStorage; globalThis.sessionStorage = window.sessionStorage;
 globalThis.setInterval = () => 0; window.scrollTo = () => {}; window.Element.prototype.scrollIntoView = () => {}; globalThis.confirm = () => true; globalThis.alert = (m) => { throw new Error("alert: " + m) };
 globalThis.Blob = window.Blob; globalThis.URL = window.URL; window.URL.createObjectURL = () => "blob:smoke"; globalThis.URL.createObjectURL = () => "blob:smoke"; window.URL.revokeObjectURL = () => {};
@@ -70,6 +74,11 @@ if (mode === "public") {
   check($("fillOrg").textContent === "Acme", "org name on the fill brand line");
   $("fNext").click(); await tick(); check(document.querySelectorAll("#fillWrap .fq.err").length >= 1 && !calls.includes("submitIntake"), "required validation blocks submit");
   const short = document.querySelector('#fillWrap [data-q="1"]'); short.value = "Lunch roulette"; short.dispatchEvent(new window.Event("input"));
+  const para = document.querySelector('textarea[data-q="4"]');
+  para.value = "A".repeat(10001); para.dispatchEvent(new window.Event("input"));
+  check(para.getAttribute("aria-invalid")==="true" && $("count-4").textContent.includes("shorten"),"respondent sees excess length before submission");
+  para.value = "😀".repeat(10000); para.dispatchEvent(new window.Event("input"));
+  check(para.getAttribute("aria-invalid")==="false" && $("count-4").textContent.startsWith("10000 /"),"10,000 astral characters fit");
   const radio = document.querySelector('#fillWrap input[name="q2"]'); radio.checked = true; radio.dispatchEvent(new window.Event("change"));
   $("fNext").click(); for (let i = 0; i < 6; i++) await tick();
   check($('fNext').textContent==='RETRY SAME RESPONSE' && $('idName').disabled,'uncertain submission retains a frozen draft');
@@ -98,17 +107,36 @@ if (mode === "public") {
   check($("viewDash").classList.contains("on") && document.querySelectorAll("#formList .formrow").length === 2, "dashboard rows: " + document.querySelectorAll("#formList .formrow").length);
   check(/SHARED BY ANA RUIZ · EDITOR/.test($("formList").textContent), "shared badge with the person's name");
   check($("settingsBtn").classList.contains("hidden") === (role !== "admin"), "settings button only for admins");
+  $("importBtn").click();
+  check($("importModal").open, "import opens a dialog");
+  const source = $("impSrc");
+  source.value = "false";
+  $("impAnalyze").click();
+  check($("impCreate").disabled && /expected an "items" array/.test($("impReport").textContent), "valid JSON with a non-form value reports a validation error");
+  document.querySelector('[data-imp="text"]').click();
+  source.value = "# Equipment request\nWhich model? [short]";
+  source.dispatchEvent(new window.Event("input"));
+  $("impAnalyze").click();
+  check(!$("impCreate").disabled && /Which model/.test($("impReport").textContent), "analyzed outline enables draft creation");
+  source.value = "";
+  source.dispatchEvent(new window.Event("input"));
+  check($("impCreate").disabled && !$("impReport").textContent, "editing the source invalidates the previous draft preview");
+  const beforeCreate = calls.filter(m => m === "createForm").length;
+  $("impAnalyze").click(); $("impCreate").click();
+  check(calls.filter(m => m === "createForm").length === beforeCreate && /Paste something first/.test($("impReport").textContent), "empty input cannot submit a previously analyzed form");
+  $("impCancel").click();
+  check(!$("importModal").open, "cancel closes the import dialog");
   // workspace
   await go("#/form/1"); for (let i = 0; i < 4; i++) await tick();
   check($("viewForm").classList.contains("on") && $("fwTitle").textContent === "Idea box", "workspace opened");
   if (role === "admin") {
     check(!!$("shareBtn") && /SHARE \(1\)/.test($("shareBtn").textContent), "owner sees share with count");
-    check(document.querySelectorAll("#tabBuild .sect").length === 1 && document.querySelectorAll("#tabBuild .q[data-qi]").length === 3, "builder rendered");
-    $("shareBtn").click(); await tick(); check($("shareModal").classList.contains("on") && /Ana Ruiz/.test($("shList").textContent), "share modal lists current people by name");
+    check(document.querySelectorAll("#tabBuild .sect").length === 1 && document.querySelectorAll("#tabBuild .q[data-qi]").length === 4, "builder rendered");
+    $("shareBtn").click(); await tick(); check($("shareModal").open && /Ana Ruiz/.test($("shList").textContent), "share modal lists current people by name");
     $("shSearch").value = "be"; $("shSearch").dispatchEvent(new window.Event("input")); for (let i = 0; i < 10; i++) await tick();
     check(document.querySelectorAll("#shResults [data-e]").length === 1 && /Ben Ko/.test($("shResults").textContent), "directory search hits (owner and existing shares excluded): " + $("shResults").textContent);
     document.querySelector("#shResults [data-e]").click(); await tick(); check(/Ben Ko/.test($("shList").textContent), "added from picker");
-    $("shSave").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("setShares") && !$("shareModal").classList.contains("on"), "shares saved");
+    $("shSave").click(); for (let i = 0; i < 4; i++) await tick(); check(calls.includes("setShares") && !$("shareModal").open, "shares saved");
     await go("#/form/1/subs"); for (let i = 0; i < 4; i++) await tick();
     check(document.querySelectorAll("#tabSubs tr.rowlink").length === 2 && /Ana Ruiz/.test($("tabSubs").textContent), "submissions table with assignee name");
     document.querySelector("#tabSubs tr.rowlink").click(); await tick();

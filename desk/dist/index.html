@@ -21,22 +21,16 @@
 
 <section id="login" aria-busy="true" class="is-waiting app-auth">
   <div class="auth-shell">
-    <aside class="auth-story">
-      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
-      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
-      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
-    </aside>
+    <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
     <section class="auth-main" aria-labelledby="loginTitle">
       <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
       <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
-      <h1 id="loginTitle"><span class="auth-ready">Welcome to Desk.</span><span class="auth-waiting">Opening Desk…</span></h1>
-      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <h1 id="loginTitle"><span class="auth-ready">Sign in to Desk</span><span class="auth-waiting">Opening Desk…</span></h1>
       <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
       <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
       <div id="loginStatus" class="status" role="alert"></div>
       <div id="loginWarn" class="warnbox hidden"></div>
       <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
-      <p class="lfoot">Access is managed by your company in the Hub.</p>
     </section>
   </div>
 </section>
@@ -94,7 +88,7 @@
       <div class="statgrid" id="statGrid"></div>
       <div class="filters">
         <div class="seg" id="viewSeg">
-          <button data-v="open" class="active">Active</button><button data-v="mine">Assigned to me</button><button data-v="unassigned">Unassigned</button><button data-v="waiting">Waiting</button><button data-v="breached">Overdue</button><button data-v="onboarding">Onboarding</button><button data-v="offboarding">Offboarding</button><button data-v="done">Completed</button><button data-v="all">All</button>
+          <button data-v="open" class="active">Active</button><button data-v="mine">Assigned to me</button><button data-v="unassigned">Unassigned</button><button data-v="waiting">Waiting</button><button data-v="breached">Overdue</button><button data-v="onboarding">Onboarding</button><button data-v="offboarding">Offboarding</button><button data-v="falcon">Falcon</button><button data-v="done">Completed</button><button data-v="all">All</button>
         </div>
         <select data-ks-search id="fQueue" aria-label="Filter by support team"><option value="">All teams</option></select>
         <select data-ks-search id="fStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="new">Received</option><option value="open">In progress</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
@@ -132,7 +126,7 @@
         <header class="ticket-heading"><div><div class="ticket-kicker"><span id="tKey" class="request-key"></span><span id="tType"></span></div><h2 id="tSubject"></h2><div id="tMeta" class="tmeta"></div></div><div class="ticket-heading-actions"><button id="tReplyJump" class="primary sm">Reply ↓</button><button id="tEditBtn" class="subtle sm">Edit request</button></div></header>
         <div id="tEdit" class="card hidden"><label for="teSubject">Summary</label><input type="text" id="teSubject" maxlength="160"><label for="teBody">Description</label><textarea id="teBody"></textarea><div class="btnrow"><button id="teSave" class="primary">Save changes</button><button id="teCancel">Cancel</button></div></div>
         <section class="card workflow-ticket hidden" id="tWorkflow" aria-label="Request workflow"></section>
-        <div class="next-step" id="tNextStep"><div class="step-icon" id="tStepIcon" aria-hidden="true">◷</div><div class="step-copy"><strong id="tStepTitle"></strong><p id="tStepText"></p></div><div id="tStatusBtns" class="btnrow"></div></div>
+        <div class="next-step" id="tNextStep"><div class="step-icon" id="tStepIcon" aria-hidden="true">◷</div><div class="step-copy"><strong id="tStepTitle"></strong><p id="tStepText"></p></div><div id="tStatusBtns" class="btnrow"></div></div><section class="card" id="tFalconEdit" aria-label="Update Falcon status" hidden></section>
         <div id="tStatus" class="status" role="status"></div>
         <div class="tgrid">
           <div class="conversation-column">
@@ -173,7 +167,7 @@
     <section class="view" id="v-settings">
       <h2>Settings</h2>
       <p class="lead">Request types, assignment and connected services.</p>
-      <div class="stabs" id="stabs"><button class="stab active" data-tab="general">General</button><button class="stab" data-tab="catalog">Catalog</button><button class="stab" data-tab="assignment">Assignment</button><button class="stab" data-tab="ai">AI</button><button class="stab" data-tab="slack">Slack</button><button class="stab" data-tab="log">Log</button></div>
+      <div class="stabs" id="stabs"><button class="stab active" data-tab="general">General</button><button class="stab" data-tab="catalog">Catalog</button><button class="stab" data-tab="assignment">Assignment</button><button class="stab" data-tab="ai">AI</button><button class="stab" data-tab="forms">Forms</button><button class="stab" data-tab="slack">Slack</button><button class="stab" data-tab="log">Log</button></div>
 
       <div class="spane active" id="sp-general">
         <div class="card">
@@ -193,6 +187,11 @@
         <div class="card"><h3>Permissions</h3><p class="kv" data-hub-permissions>Roles and access are managed in the Hub. Global Hub owners and admins have Admin access; other roles are assigned per app. <a data-hub-permissions-link href="#">View Hub permissions ↗</a></p><p id="sgRoleCounts" class="kv"></p></div>
       </div>
 
+      <div class="spane" id="sp-forms"><div class="card"><h3>Forms in Internal support</h3>
+        <p>Send new submissions from a form directly to the IT helpdesk. Choose Slack recipients in Forms.</p>
+        <form id="helpdeskSource"><label>Forms backend ID<input name="canister" required autocomplete="off"></label>
+        <label>Form number<input name="formId" type="number" min="1" required></label><button class="primary">Create source</button></form>
+        <p id="helpdeskSourceResult" role="status"></p><div id="helpdeskSources"></div></div></div>
       <div class="spane" id="sp-assignment"></div>
       <div class="spane" id="sp-catalog">
         <div class="card flat">
@@ -348,7 +347,7 @@
         <h3>6 · Notifications</h3>
         <p>desk holds no chat tokens. Assignment, replies, approvals and SLA breaches go to the hub as <code>hub_notify</code> (title + deep link only); the hub delivers to the bell and, if the person opted in, their chat DM. Queue notifications reach the group's members that desk knows from the directory.</p>
         <h3>7 · AI</h3>
-        <p>Optional AI assistance. Clear public completion comments from Desk staff can resolve internal requests after the normal checks. Slack comments are assessed on arrival; existing open requests and Desk replies are also reviewed every 15 minutes in batches of up to four AI calls. Later requester replies, private notes or manual status changes require a new public staff confirmation. Failed AI calls retry automatically; unchanged evaluated tickets are not repeatedly sent. Internal notes and customer projects are excluded. Oversize conversations remain manual. Reopen reverses a resolution; genuine follow-ups can reopen it. Decisions are recorded and posted to the thread. New Slack titles summarize the request. These automations share the AI assistance switch. On a new request (if auto-triage is on), a triage note (summary, suggested priority/type, clarifying questions) is added for agents. The model sees the request with <b>sensitive fields redacted</b> and never sees internal notes. Agents can request a summary of the timeline (stored as a note) or a reply draft (never stored, never sent). Configure any OpenAI-compatible or Anthropic endpoint under Settings → AI; the key stays in the canister.</p>
+        <p>Optional AI assistance. Desk reviews the full public conversation for completed work, including a requester confirming the solution after staff help. Every 15 minutes it reviews up to four eligible requests. Open requests can be reviewed again after six hours. An idle Slack thread can receive a follow-up after 24 hours. Reply “Desk: resolved” or react with ✅ to the original message to resolve. Silence keeps it open. Private notes, attachments, customer projects and Falcon requests are excluded from completion review. Oversize conversations remain manual. Reopen reverses a resolution; genuine follow-ups can reopen it. Decisions are recorded and posted to the thread. New Slack titles summarize the request. These automations share the AI assistance switch. On a new request (if auto-triage is on), a triage note (summary, suggested priority/type, clarifying questions) is added for agents. The model sees the request with <b>sensitive fields redacted</b> and never sees internal notes. Agents can request a summary of the timeline (stored as a note) or a reply draft (never stored, never sent). Configure any OpenAI-compatible or Anthropic endpoint under Settings → AI; the key stays in the canister.</p>
         <h3>8 · SLA</h3>
         <p>In <b>Internal support</b>, select requests with the checkboxes, then assign them, change status or set a target date together. The header selects displayed rows; <b>Select all matching requests</b> includes further pages. Review the count before applying. Blocked or changed requests stay unchanged and appear with a reason. Changing filters clears your selection.</p>
         <p>Each type sets <i>respond within</i> and <i>resolve within</i> hours; a date field (start date, last day) can override the due date. An hourly sweep nudges the assignee (or the queue) once per breach and marks it on the ticket. Resolved tickets auto-close after a configurable number of days.</p>

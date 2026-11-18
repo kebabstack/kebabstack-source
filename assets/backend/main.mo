@@ -72,7 +72,7 @@ persistent actor Assets {
   var labelNote : Text = ""; // free footer text, e.g. "If found, please contact it@example.com"
   public type LabelLayoutView = { size : Text; fields : [Text]; note : Text };
   var trustId : Text = ""; // the trust app's BACKEND canister id — the only caller allowed to read serial → person
-  transient let BUILD_VERSION : Text = "0.30.1";
+  transient let BUILD_VERSION : Text = "0.31.2";
   transient let MAX_PHOTO : Nat = 900_000; // one photo (the frontend scales to ≤ 1280 px first)
   transient let MAX_PHOTO_TOTAL : Nat = 400_000_000;
   transient let MAX_PHOTOS_PER_ASSET : Nat = 12;
@@ -410,6 +410,32 @@ persistent actor Assets {
     Support.ready(out.toArray());
   };
 
+  // Only the paired Hub can correlate an endpoint. The empty viewer is the
+  // Falcon intake service; an interactive caller retains ordinary Assets access.
+  public shared query ({caller}) func hub_falconDevice(host : Text, serial : Text, viewer : Text, viewerRole : Text) : async { state : Text; device : ?{ id : Nat; title : Text; serial : Text; owner : Text; ownerName : Text } } {
+    assert Hub.isHub(caller, hubId);
+    if (viewer != "") {
+      let email = emailOfPid(viewer);
+      if (not Hub.directoryFresh(lastDirectoryPull) or not Hub.isActive(people,email) or roleOf(email) == "none" or Hub.appRole(people,email,"assets") != viewerRole) return {state="unavailable"; device=null};
+    };
+    let sn = lower(norm(serial)); let name = lower(norm(host));
+    var match : ?Asset = null;
+    for (a in assets.values()) {
+      let md = mdmMeta.get(a.id);
+      let inventorySerial = lower(norm(a.serial));
+      let serialSuffix = inventorySerial.size() >= 10 and inventorySerial.size() <= 20 and inventorySerial.chars().all(func c = (c >= 'a' and c <= 'z') or (c >= '0' and c <= '9')) and Text.endsWith(name,#text("-" # inventorySerial));
+      let sameHost = name != "" and (serialSuffix or lower(norm(a.tag)) == name or lower(norm(a.serial)) == name or (switch md { case (?m) lower(norm(m.deviceName)) == name; case null false }));
+      let sameSerial = sn != "" and lower(norm(a.serial)) == sn;
+      if (not a.archived and (if (sn != "") sameSerial else sameHost)) {
+        if (match != null) return {state="ambiguous";device=null};
+        match := ?a;
+      };
+    };
+    let a = match ?? (return {state="unmatched";device=null});
+    if (viewer != "" and roleOf(emailOfPid(viewer)) != "admin" and a.assignee != viewer) return {state="unavailable";device=null};
+    {state="matched";device=?{id=a.id; title=deviceName(a); serial=a.serial; owner=a.assignee; ownerName=nameOf(a.assignee)}}
+  };
+
   // Hardware custody survives account deactivation. Cases and plans are side
   // tables so existing asset, sale and invoice records keep their state contract.
   public type Handover = {
@@ -731,7 +757,7 @@ persistent actor Assets {
     max_response_bytes : ?Nat64;
     headers : [HttpHeader];
     body : ?Blob;
-    method : { #get; #post; #head };
+    method : { #get; #post; #head; #patch };
     transform : ?{ function : shared query TransformArgs -> async HttpResponsePayload; context : Blob };
     is_replicated : ?Bool; // false: single node, no consensus — right for answers that differ every time
   };
@@ -1377,7 +1403,7 @@ persistent actor Assets {
     created : Nat;
   };
   public type MdmMeta = { connId : Nat; connName : Text; kind : Text; externalId : Text; deviceName : Text; osVersion : Text; lastSeen : Text; userEmail : Text; userName : Text; compliance : Text; syncedAt : Int };
-  public type MdmView = { id : Nat; kind : Text; name : Text; url : Text; clientId : Text; secretSet : Bool; enabled : Bool; createdAt : Int; lastSync : Int; lastResult : Text; devices : Nat; matched : Nat; created : Nat };
+  public type MdmView = { tagWriteback : Bool; id : Nat; kind : Text; name : Text; url : Text; clientId : Text; secretSet : Bool; enabled : Bool; createdAt : Int; lastSync : Int; lastResult : Text; devices : Nat; matched : Nat; created : Nat };
   /// What the MDM last reported about the machine itself (0.24.0): processor, cores, RAM, boot volume, encryption.
   /// Sizes are decimal gigabytes as Apple shows them; 0 = unknown. `encrypted` is "yes", "no" or "".
   public type Hardware = { processor : Text; cores : Nat; memoryGb : Nat; storageGb : Nat; storageFreeGb : Nat; encrypted : Text; modelId : Text; source : Text; fetchedAt : Int };
@@ -1388,6 +1414,7 @@ persistent actor Assets {
   transient let _hardwareRefresh = Timer.setTimer<system>(#seconds 0, func() : async () { if (hardwareFormat < 2) { Map.clear(mdmHardware); hardwareFormat := 2 } });
   transient let HARDWARE_PER_SYNC : Nat = 40; // Iru needs one HTTPS call per device for hardware: bounded per sync run
   transient let HARDWARE_FRESH : Int = 7 * 86_400 * 1_000_000_000; // re-read a device's hardware after a week
+  let iruTagWriteback : Map.Map<Nat, Bool> = Map.empty<Nat, Bool>();
   var nextMdmId : Nat = 1;
   transient var mdmBusy : Bool = false;
   transient let MDM_KINDS : [Text] = ["iru", "jamf", "intune"];
@@ -1397,9 +1424,17 @@ persistent actor Assets {
     if (a.status == "sold" or a.status == "scrapped" or a.status == "lost") return true;
     x.userEmail != "" and a.assignee != "" and pidOf(x.userEmail) != a.assignee and lower(x.userEmail) != emailOfPid(a.assignee);
   };
-  func mdmView(c : MdmConn) : MdmView = { id = c.id; kind = c.kind; name = c.name; url = c.url; clientId = c.clientId; secretSet = c.secret != ""; enabled = c.enabled; createdAt = c.createdAt; lastSync = c.lastSync; lastResult = c.lastResult; devices = c.devices; matched = c.matched; created = c.created };
+  func mdmView(c : MdmConn) : MdmView = { tagWriteback = iruTagWriteback.get(c.id) == ?true; id = c.id; kind = c.kind; name = c.name; url = c.url; clientId = c.clientId; secretSet = c.secret != ""; enabled = c.enabled; createdAt = c.createdAt; lastSync = c.lastSync; lastResult = c.lastResult; devices = c.devices; matched = c.matched; created = c.created };
   public shared query func listMdm(tok : Text) : async [MdmView] {
     switch (admin(tok)) { case null []; case (?_) { let out = List.empty<MdmView>(); for ((_, c) in Map.entries(mdmConns)) List.add(out, mdmView(c)); List.toArray(out) } };
+  };
+  public shared func setMdmTagWriteback(tok : Text, id : Nat, enabled : Bool) : async { ok : Bool; detail : Text } {
+    let m = admin(tok) ?? (return { ok = false; detail = "admins only" });
+    let c = mdmConns.get(id) ?? (return { ok = false; detail = "no such connection" });
+    if (c.kind != "iru") return { ok = false; detail = "Inventory number writeback is available for Iru only." };
+    iruTagWriteback.add(id, enabled);
+    log(m.id, "Iru inventory number writeback " # (if (enabled) "enabled" else "disabled") # " for " # c.name);
+    { ok = true; detail = if (enabled) "Assets inventory numbers will replace Iru values on Sync now and every six hours. Empty numbers are skipped." else "Inventory number writeback disabled. A request already sent may still finish." };
   };
   public shared func addMdm(tok : Text, args : { kind : Text; name : Text; url : Text; clientId : Text; secret : Text }) : async { ok : Bool; detail : Text; id : Nat } {
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only"; id = 0 } };
@@ -1429,7 +1464,7 @@ persistent actor Assets {
   public shared func removeMdm(tok : Text, id : Nat) : async { ok : Bool; detail : Text } {
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
     switch (Map.get(mdmConns, Nat.compare, id)) {
-      case (?c) { ignore Map.delete(mdmConns, Nat.compare, id); log(m.email, "MDM connection removed: " # c.name); ({ ok = true; detail = "devices keep their last MDM note" }) };
+      case (?c) { ignore Map.delete(mdmConns, Nat.compare, id); iruTagWriteback.remove(id); log(m.email, "MDM connection removed: " # c.name); ({ ok = true; detail = "devices keep their last MDM note" }) };
       case null ({ ok = false; detail = "no such connection" });
     };
   };
@@ -1545,7 +1580,7 @@ persistent actor Assets {
     let r = await fetch(#get, c.url # "/api/v1/devices?limit=100&offset=" # Nat.toText(offset), [{ name = "Authorization"; value = "Bearer " # c.secret }, { name = "Accept"; value = "application/json" }], null);
     if (not r.ok) return { ok = false; detail = r.detail; devices = [] };
     let j = switch (Json.parse(r.body)) { case (#ok(j)) j; case (#err(_)) return { ok = false; detail = "not JSON"; devices = [] } };
-    let arr = switch (j) { case (#array(a)) a; case (_) jArr(j, "results") };
+    let arr = switch (j) { case (#array(a)) a; case _ { switch (Json.get(j, "results")) { case (?#array(a)) a; case _ return { ok = false; detail = "Invalid Iru device list; no changes applied."; devices = [] } } } };
     let out = List.empty<MdmDevice>();
     for (d in arr.vals()) {
       let model = norm(jStr(d, "model"));
@@ -1606,6 +1641,7 @@ persistent actor Assets {
           for (d in p.devices.vals()) List.add(all, d);
           pages += 1; offset += 100;
           if (onePage or p.devices.size() < 100) break paging;
+          if (pages == 100) return { ok = false; detail = "Iru inventory exceeds the 100-page safety limit; no changes applied."; devices = [] };
         };
       };
       case ("jamf") {
@@ -1655,9 +1691,43 @@ persistent actor Assets {
     for ((_, a) in Map.entries(assets)) if (not a.archived and normId(a.serial) == n) return ?a;
     null;
   };
+  // Check the exact device again before writing. No assignment/blueprint fields leave Assets.
+  func iruWriteTag(c : MdmConn, a : Asset, d : MdmDevice, by : Text, tok : ?Text) : async { ok : Bool; detail : Text } {
+    func current() : Bool {
+      switch (tok) { case (?t) { if (admin(t) == null) return false }; case null {} };
+      let live = assets.get(a.id) ?? (return false);
+      var matches = 0;
+      for ((_, candidate) in assets.entries()) if (not candidate.archived and normId(candidate.serial) == normId(a.serial)) matches += 1;
+      matches == 1 and c.enabled and mdmConns.get(c.id) == ?c and iruTagWriteback.get(c.id) == ?true and
+      not live.archived and live.tag == a.tag and live.serial == a.serial;
+    };
+    if (not current()) return { ok = false; detail = "Device or connection changed; run sync again." };
+    let url = c.url # "/api/v1/devices/" # urlEnc(d.externalId);
+    let headers = [{ name = "Authorization"; value = "Bearer " # c.secret }, { name = "Accept"; value = "application/json" }];
+    let read = await fetch(#get, url, headers, null);
+    if (not read.ok) return { ok = false; detail = "Iru device read failed (HTTP " # read.status.toText() # "). Check device read permission and retry." };
+    let j = switch (Json.parse(read.body)) { case (#ok(j)) j; case _ return { ok = false; detail = "Invalid Iru device response." } };
+    if (normId(jStr(j, "serial_number")) != normId(a.serial) or jStr(j, "device_id") != d.externalId) return { ok = false; detail = "Iru device identity does not match; nothing written." };
+    if (not current()) return { ok = false; detail = "Device or connection changed; run sync again." };
+    if (jStr(j, "asset_tag") == a.tag) return { ok = true; detail = "already current" };
+    let req : HttpRequestArgs = { url; max_response_bytes = ?64_000; headers = headers.concat([{ name = "Content-Type"; value = "application/json" }]); body = ?Text.encodeUtf8("{\"asset_tag\":" # Json.stringify(#string(a.tag), null) # "}"); method = #patch; transform = null; is_replicated = ?false };
+    let res = try { await (with timeout = 60) icHttp.http_request(req) } catch (_) {
+      ignore addEvent(a.id, by, "edited", "Iru inventory number write outcome unknown; sync again to reconcile.", "", 0);
+      return { ok = false; detail = "Iru write outcome unknown; sync again to reconcile." };
+    };
+    if (res.status == 401 or res.status == 403) return { ok = false; detail = "Iru denied inventory number writeback. Grant the API token Update Device permission, then sync again." };
+    if (res.status < 200 or res.status >= 300) return { ok = false; detail = "Iru inventory number write failed (HTTP " # res.status.toText() # "). Check connection or rate limit, then sync again." };
+    // A 2xx alone is not evidence of the expected value. The documented PATCH response is a device.
+    let reply = switch (Json.parse(Text.decodeUtf8(res.body) ?? "")) { case (#ok(j)) j; case _ #null_ };
+    if (jStr(reply, "asset_tag") != a.tag or jStr(reply, "device_id") != d.externalId or normId(jStr(reply, "serial_number")) != normId(a.serial)) return { ok = false; detail = "Iru accepted the request but did not confirm the inventory number; sync again to verify." };
+    ignore addEvent(a.id, by, "edited", "Iru inventory number updated from " # capText(jStr(j, "asset_tag"), 40) # " to " # a.tag, "", 0);
+    if (not current()) return { ok = false; detail = "Iru received the earlier inventory number; local device or connection changed during write. Sync again." };
+    { ok = true; detail = "updated" };
+  };
   /// Full sync: devices → register. Creates what is missing, fills gaps, notes the rest.
-  func mdmSyncOne(c : MdmConn, by : Text) : async { ok : Bool; detail : Text } {
+  func mdmSyncOne(c : MdmConn, by : Text, tok : ?Text) : async { ok : Bool; detail : Text } {
     let p = await mdmPull(c, false);
+    if (mdmConns.get(c.id) != ?c or not c.enabled) return { ok = false; detail = "Connection changed or paused; sync stopped." };
     if (not p.ok) { Map.add(mdmConns, Nat.compare, c.id, { c with lastSync = now(); lastResult = "FAILED: " # p.detail }); return { ok = false; detail = p.detail } };
     var matched = 0; var created = 0; var assigned = 0; var mism = 0;
     let wantHardware = List.empty<(Nat, Text)>(); // Iru devices whose hardware is unknown or older than a week
@@ -1693,20 +1763,51 @@ persistent actor Assets {
         };
       };
     };
+    var written = 0; var pending = 0; var attempts = 0; var writeError = "";
+    if (c.kind == "iru" and iruTagWriteback.get(c.id) == ?true) {
+      let serialCounts = Map.empty<Text, Nat>();
+      let externalCounts = Map.empty<Text, Nat>();
+      for (d in p.devices.values()) {
+        let key = normId(d.serial);
+        serialCounts.add(key, (serialCounts.get(key) ?? 0) + 1);
+        externalCounts.add(d.externalId, (externalCounts.get(d.externalId) ?? 0) + 1);
+      };
+      for (d in p.devices.values()) {
+        switch (findBySerial(d.serial)) {
+          case (?a) {
+            if (a.tag != "" and a.tag != d.assetTag) {
+              var localMatches = 0;
+              for ((_, other) in assets.entries()) if (not other.archived and normId(other.serial) == normId(a.serial)) localMatches += 1;
+              if (d.externalId == "" or serialCounts.get(normId(d.serial)) != ?1 or externalCounts.get(d.externalId) != ?1 or localMatches != 1) {
+                pending += 1; writeError := "Ambiguous device identity; review duplicate or missing serial/device IDs.";
+              } else if (attempts >= 25 or writeError != "") { pending += 1 }
+              else {
+                attempts += 1;
+                let result = await iruWriteTag(c, a, d, by, tok);
+                if (result.ok) { written += 1 } else { pending += 1; writeError := result.detail };
+              };
+            };
+          };
+          case null {};
+        };
+      };
+    };
     // Hardware for Iru devices: one call each, oldest first, at most HARDWARE_PER_SYNC per run; the rest follows next time.
     let wanted = List.toArray(wantHardware); var hwRead = 0; var hwFailed = 0;
     label details for ((assetId, externalId) in wanted.vals()) {
-      if (hwRead + hwFailed >= HARDWARE_PER_SYNC) break details;
+      if (hwRead + hwFailed >= HARDWARE_PER_SYNC or mdmConns.get(c.id) != ?c or not c.enabled) break details;
+      switch (tok) { case (?t) { if (admin(t) == null) break details }; case null {} };
       switch (await iruDetails(c, externalId)) {
         case (?h) { Map.add(mdmHardware, Nat.compare, assetId, h); hwRead += 1 };
         case null { hwFailed += 1; if (Map.get(mdmHardware, Nat.compare, assetId) == null) Map.add(mdmHardware, Nat.compare, assetId, { processor = ""; cores = 0; memoryGb = 0; storageGb = 0; storageFreeGb = 0; encrypted = ""; modelId = ""; source = c.name; fetchedAt = now() }) };
       };
     };
     let hwLeft : Nat = wanted.size() - Nat.min(wanted.size(), hwRead + hwFailed);
-    let detail = Nat.toText(p.devices.size()) # " devices · " # Nat.toText(matched) # " matched · " # Nat.toText(created) # " created" # (if (assigned > 0) " · " # Nat.toText(assigned) # " assigned" else "") # (if (mism > 0) " · " # Nat.toText(mism) # " mismatch" # (if (mism == 1) "" else "es") else "") # (if (hwRead > 0) " · hardware read for " # Nat.toText(hwRead) else "") # (if (hwFailed > 0) " · hardware unavailable for " # Nat.toText(hwFailed) # " (check the token's Device Information permission)" else "") # (if (hwLeft > 0) " · " # Nat.toText(hwLeft) # " more next sync" else "");
-    Map.add(mdmConns, Nat.compare, c.id, { c with lastSync = now(); lastResult = detail; devices = p.devices.size(); matched; created });
+    let detail = Nat.toText(p.devices.size()) # " devices · " # Nat.toText(matched) # " matched · " # Nat.toText(created) # " created" # (if (assigned > 0) " · " # Nat.toText(assigned) # " assigned" else "") # (if (mism > 0) " · " # Nat.toText(mism) # " mismatch" # (if (mism == 1) "" else "es") else "") # (if (hwRead > 0) " · hardware read for " # Nat.toText(hwRead) else "") # (if (hwFailed > 0) " · hardware unavailable for " # Nat.toText(hwFailed) # " (check the token's Device Information permission)" else "") # (if (hwLeft > 0) " · " # Nat.toText(hwLeft) # " more next sync" else "") # (if (c.kind == "iru" and (iruTagWriteback.get(c.id) == ?true or attempts > 0)) " · " # written.toText() # " inventory numbers confirmed in Iru · " # pending.toText() # " pending" # (if (pending > 0) " — " # (if (writeError != "") writeError else "25-device batch limit; sync again to continue.") else "") else "");
+    if (mdmConns.get(c.id) != ?c) return { ok = false; detail = detail # " · Connection changed; result not saved." };
+    Map.add(mdmConns, Nat.compare, c.id, { c with lastSync = now(); lastResult = (if (pending > 0) "PARTIAL: " else "") # detail; devices = p.devices.size(); matched; created });
     log(by, "MDM sync " # c.name # ": " # detail);
-    { ok = true; detail };
+    { ok = pending == 0; detail };
   };
   /// Read one device's hardware from Iru now (admins). Jamf and Intune hardware arrives with the list sync.
   public shared func refreshHardware(tok : Text, assetId : Nat) : async { ok : Bool; detail : Text } {
@@ -1752,9 +1853,10 @@ persistent actor Assets {
     if (migrating()) return { ok = false; detail = MIGRATING };
     let m = switch (admin(tok)) { case (?m) m; case null return { ok = false; detail = "admins only" } };
     let c = switch (Map.get(mdmConns, Nat.compare, id)) { case (?c) c; case null return { ok = false; detail = "no such connection" } };
+    if (not c.enabled) return { ok = false; detail = "Connection is paused." };
     if (mdmBusy) return { ok = false; detail = "a sync is already running" };
     mdmBusy := true;
-    let r = try { await mdmSyncOne(c, m.id) } catch (e) { ({ ok = false; detail = Error.message(e) }) };
+    let r = try { await mdmSyncOne(c, m.id, ?tok) } catch (e) { ({ ok = false; detail = Error.message(e) }) };
     mdmBusy := false;
     r;
   };
@@ -1763,7 +1865,7 @@ persistent actor Assets {
     mdmBusy := true;
     let ids = List.empty<Nat>();
     for ((id, c) in Map.entries(mdmConns)) if (c.enabled) List.add(ids, id);
-    for (id in List.values(ids)) { switch (Map.get(mdmConns, Nat.compare, id)) { case (?c) { try { ignore await mdmSyncOne(c, "timer") } catch (_) {} }; case null {} } };
+    for (id in List.values(ids)) { switch (Map.get(mdmConns, Nat.compare, id)) { case (?c) { try { ignore await mdmSyncOne(c, "timer", null) } catch (_) {} }; case null {} } };
     mdmBusy := false;
   };
 

@@ -269,6 +269,7 @@ type MdmView =
    matched: nat;
    name: text;
    secretSet: bool;
+   tagWriteback: bool;
    url: text;
  };
 type MdmMeta =
@@ -939,6 +940,20 @@ service : {
                                         name: text;
                                       }) query;
   hub_deactivate: (emails: vec text) -> (nat);
+  hub_falconDevice: (host: text, serial: text, viewer: text, viewerRole:
+   text) ->
+   (record {
+      device:
+       opt
+        record {
+          id: nat;
+          owner: text;
+          ownerName: text;
+          serial: text;
+          title: text;
+        };
+      state: text;
+    }) query;
   hub_manifest: () -> (Manifest) query;
   /// Aggregate-only read for Hub Operations; no session or records leave this app.
   hub_operations: (viewer: text) -> (Snapshot) query;
@@ -1203,6 +1218,11 @@ service : {
       ok: bool;
     });
   setLocations: (tok: text, list: vec text) ->
+   (record {
+      detail: text;
+      ok: bool;
+    });
+  setMdmTagWriteback: (tok: text, id: nat, enabled: bool) ->
    (record {
       detail: text;
       ok: bool;

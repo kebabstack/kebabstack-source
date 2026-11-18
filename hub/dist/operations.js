@@ -89,6 +89,16 @@
       $('[data-refresh]').disabled=busy;
       root.dataset.complete=String(entries.length>0 && ready.length===entries.length);
       $('[data-grid]').innerHTML=views.map(e=>card(e)).join('');
+      for (const e of ready.filter(x=>x.source.app==='desk' && 'falconLastSyncMs' in x.data.values)) {
+        const m=e.data.values, last=m.falconLastSyncMs;
+        const target=$('[data-area="trust"]') || $('[data-area="desk"]');
+        if (!target) continue;
+        const row=document.createElement('p'), a=document.createElement('a');
+        a.href=link(e.source,'#/queue/falcon');
+        const known=m.falconOpen!=null && m.falconCritical!=null && m.falconCritical<=m.falconOpen;
+        a.textContent=known ? `Falcon · ${number(m.falconOpen)} open Desk tickets · ${number(m.falconCritical)} critical` : 'Falcon · ticket totals unavailable';
+        row.append(a, document.createTextNode(last ? (now()-last>=180000?' · Sync delayed · Last sync ':' · Last sync ')+new Date(last).toLocaleString() : ' · Awaiting first sync')); target.append(row);
+      }
       const actions=[];
       for(const e of views.filter(e=>e.data.state==='ready')) {
         for(const [count,title,detail,path] of presentation(e.source.app,e.data.values).work) if(count>0) actions.push({e,count,title,detail,path});

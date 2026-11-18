@@ -13,7 +13,7 @@ import Timer "mo:core/Timer";
 import Time "mo:core/Time";
 
 persistent actor Knowledge {
-  transient let BUILD_VERSION : Text = "0.2.0";
+  transient let BUILD_VERSION : Text = "0.2.1";
   var hubId : Text = "";
   let sessions : Map.Map<Text, Hub.Session> = Map.empty();
   let people : Map.Map<Text, Hub.ConnectorUser> = Map.empty();

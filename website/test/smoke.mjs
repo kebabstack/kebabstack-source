@@ -32,6 +32,15 @@ for (const lang of ["de", "en"]) {
     assert.equal(d.querySelectorAll("h1").length, 1);
     assert.equal(d.querySelectorAll(".module-panel:not([hidden])").length, 10);
     assert.equal(d.querySelectorAll(".faq-list details").length, 7);
+    const nativeMenu = d.querySelector(".site-menu");
+    nativeMenu.querySelector("summary").click();
+    assert.equal(nativeMenu.open, true, "mobile navigation works before enhancement");
+    assert.equal(nativeMenu.querySelectorAll("nav a").length, 5);
+    const mapDestinations = [...d.querySelectorAll(".hero-stack a")].map(a => a.hash);
+    assert.deepEqual(new Set(mapDestinations), new Set([
+      ...[...d.querySelectorAll(".module-panel:not(#app-phone)")].map(p => "#" + p.id),
+      "#operations", "#build",
+    ]));
     const ids = [...d.querySelectorAll("[id]")].map((e) => e.id);
     assert.equal(new Set(ids).size, ids.length, "unique anchor/control ids");
     assert.equal(
@@ -123,20 +132,21 @@ for (const lang of ["de", "en"]) {
       w = dom.window,
       d = w.document;
     w.eval(script);
-    const toggle = d.querySelector(".menu-toggle"),
+    const disclosure = d.querySelector(".site-menu"),
+      toggle = disclosure.querySelector("summary"),
       menu = d.getElementById("mobile-nav");
-    assert.equal(toggle.hidden, false);
+    assert.equal(disclosure.open, false);
     toggle.click();
-    assert.equal(toggle.getAttribute("aria-expanded"), "true");
-    assert.equal(menu.hidden, false);
-    d.dispatchEvent(
-      new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
-    assert.equal(menu.hidden, true);
+    assert.equal(disclosure.open, true);
+    d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    assert.equal(disclosure.open, false);
     assert.equal(d.activeElement, toggle);
     toggle.click();
     menu.querySelector("a").click();
-    assert.equal(menu.hidden, true);
+    assert.equal(disclosure.open, false);
+    toggle.click();
+    d.querySelector(".language-switch a").focus();
+    assert.equal(disclosure.open, false);
     dom.window.close();
   });
 }

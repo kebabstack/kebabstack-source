@@ -91,7 +91,7 @@ async function route() {
   if (v === "me") await loadMe();
   if (v === "new") await showNew(arg);
   if (v === "queue") {
-    if (["onboarding","offboarding","breached","unassigned"].includes(arg)) {
+    if (["onboarding","offboarding","breached","unassigned","falcon"].includes(arg)) {
       qView=arg; $("fStatus").value=""; $("fQueue").value=""; $("fQ").value="";
       $("viewSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.v===qView));
     }
@@ -418,7 +418,7 @@ async function showSettings(tab) {
   document.querySelectorAll(".stab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".spane").forEach((p) => p.classList.toggle("active", p.id === "sp-" + tab));
   // Awaited so a failed load reaches route()'s error box instead of leaving an empty pane.
-  const loaders = { assignment: () => assignment.show(), general: loadGeneral, catalog: loadCatalogAdmin, ai: loadAi, slack: loadSlack, log: loadLog };
+  const loaders = { assignment: () => assignment.show(), general: loadGeneral, forms: loadHelpdeskSources, catalog: loadCatalogAdmin, ai: loadAi, slack: loadSlack, log: loadLog };
   await (loaders[tab] || loadGeneral)();
 }
 // Any button handler that fails without its own error path lands here instead of dying silently in the console.
@@ -429,6 +429,23 @@ window.addEventListener("unhandledrejection", (e) => {
   box.classList.remove("hidden");
 });
 $("stabs").onclick = (e) => { const b = e.target.closest(".stab"); if (b) location.hash = "#/settings/" + b.dataset.tab; };
+async function loadHelpdeskSources() {
+  const sources = await backend.listFormsSources(session.load(), 0n);
+  const list = $("helpdeskSources");
+  list.innerHTML = `<p>Connect the source number and Desk backend <code>${esc(BACKEND_CANISTER_ID)}</code> in Forms → Publish &amp; connect.</p>` +
+    sources.map(source => `<p>Form ${source.formId} · Source ${source.id} · ${source.enabled ? `Enabled <button type="button" data-disable="${source.id}">Disable</button>` : 'Disabled'}</p>`).join('');
+  list.onclick = async event => {
+    const button = event.target.closest('[data-disable]');
+    if (button && await backend.disableFormsSource(session.load(), BigInt(button.dataset.disable))) await loadHelpdeskSources();
+  };
+}
+$("helpdeskSource").onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const result = await backend.addFormsSource(session.load(), 0n, 0n, BigInt(form.elements.formId.value), form.elements.canister.value.trim());
+  $("helpdeskSourceResult").textContent = result.ok ? "Source " + result.ticketId + " is ready to connect." : result.detail;
+  if (result.ok) await loadHelpdeskSources();
+};
 async function loadGeneral() {
   const s = opt(await backend.getSettings(session.load())); if (!s) return;
   settingsCache = s; loadGroupsDatalist();

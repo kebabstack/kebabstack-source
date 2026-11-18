@@ -28,7 +28,7 @@ export const idlFactory = ({ IDL }) => {
   const Page = IDL.Record({ checkedAt: IDL.Int, rows: IDL.Vec(Card), state: IDL.Variant({ denied: IDL.Null, ready: IDL.Null, unavailable: IDL.Null }), total: IDL.Nat });
   const OwnedObject = IDL.Record({ id: IDL.Text, kind: IDL.Text, meta: IDL.Text, title: IDL.Text, updatedAt: IDL.Int });
   const NotifyState = IDL.Record({ at: IDL.Int, detail: IDL.Text, ok: IDL.Bool, title: IDL.Text, to: IDL.Text });
-  const MdmView = IDL.Record({ clientId: IDL.Text, created: IDL.Nat, createdAt: IDL.Int, devices: IDL.Nat, enabled: IDL.Bool, id: IDL.Nat, kind: IDL.Text, lastResult: IDL.Text, lastSync: IDL.Int, matched: IDL.Nat, name: IDL.Text, secretSet: IDL.Bool, url: IDL.Text });
+  const MdmView = IDL.Record({ clientId: IDL.Text, created: IDL.Nat, createdAt: IDL.Int, devices: IDL.Nat, enabled: IDL.Bool, id: IDL.Nat, kind: IDL.Text, lastResult: IDL.Text, lastSync: IDL.Int, matched: IDL.Nat, name: IDL.Text, secretSet: IDL.Bool, tagWriteback: IDL.Bool, url: IDL.Text });
   const MdmMeta = IDL.Record({ compliance: IDL.Text, connId: IDL.Nat, connName: IDL.Text, deviceName: IDL.Text, externalId: IDL.Text, kind: IDL.Text, lastSeen: IDL.Text, osVersion: IDL.Text, syncedAt: IDL.Int, userEmail: IDL.Text, userName: IDL.Text });
   const Manifest = IDL.Record({ description: IDL.Text, name: IDL.Text, needs: IDL.Vec(IDL.Text), version: IDL.Text, wants: IDL.Vec(IDL.Text) });
   const LogRow = IDL.Record({ at: IDL.Int, what: IDL.Text, who: IDL.Text });
@@ -100,6 +100,7 @@ export const idlFactory = ({ IDL }) => {
     handoverOf: IDL.Func([IDL.Text, IDL.Nat], [IDL.Opt(HandoverView)], ["query"]),
     handoverOwners: IDL.Func([IDL.Text], [IDL.Vec(IDL.Record({ id: IDL.Text, name: IDL.Text }))], ["query"]),
     hub_deactivate: IDL.Func([IDL.Vec(IDL.Text)], [IDL.Nat], []),
+    hub_falconDevice: IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [IDL.Record({ device: IDL.Opt(IDL.Record({ id: IDL.Nat, owner: IDL.Text, ownerName: IDL.Text, serial: IDL.Text, title: IDL.Text })), state: IDL.Text })], ["query"]),
     hub_manifest: IDL.Func([], [Manifest], ["query"]),
     hub_operations: IDL.Func([IDL.Text], [Snapshot], ["query"]),
     hub_ownedObjects: IDL.Func([IDL.Text], [IDL.Vec(OwnedObject)], ["query"]),
@@ -160,6 +161,7 @@ export const idlFactory = ({ IDL }) => {
     setHub: IDL.Func([IDL.Text], [IDL.Bool], []),
     setLabelLayout: IDL.Func([IDL.Text, LabelLayoutView], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setLocations: IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
+    setMdmTagWriteback: IDL.Func([IDL.Text, IDL.Nat, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setPurchase: IDL.Func([IDL.Text, IDL.Nat, IDL.Opt(IDL.Nat), IDL.Text, IDL.Text, IDL.Text], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSaleChecks: IDL.Func([IDL.Text, IDL.Nat, IDL.Bool, IDL.Bool], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),
     setSettings: IDL.Func([IDL.Text, IDL.Record({ adminGroup: IDL.Text, appUrl: IDL.Text, orgName: IDL.Text })], [IDL.Record({ detail: IDL.Text, ok: IDL.Bool })], []),

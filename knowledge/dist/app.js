@@ -4,7 +4,7 @@ import {createEditor,toolbar} from './editor.js';
 import {appSignIn,takeHubTicket,session,suiteCookie,mountTopbar,topbarIdlFactory} from './hub-client.js';
 const BACKEND_CANISTER_ID = "__BACKEND_CANISTER_ID__";
 const HUB_URL = "__HUB_URL__";
-const APP_VERSION = "0.2.0";
+const APP_VERSION = "0.2.1";
 try { if (localStorage.getItem('ks-theme')==='dark') document.documentElement.dataset.theme='dark'; } catch {}
 session.key='ks-knowledge-session';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

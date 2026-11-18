@@ -237,10 +237,17 @@ service : {
       detail: text;
       ok: bool;
     });
+  changeNotificationRecipient: (tok: text, id: nat, person: text, add:
+   bool) -> (record {
+               detail: text;
+               ok: bool;
+             });
   claimAdmin: (tok: text) -> (record {
                                 detail: text;
                                 ok: bool;
                               });
+  configureTurnstile: (tok: text, hostname: text, siteKey: text, secret:
+   text) -> (bool);
   connectDesk: (tok: text, id: nat, canisterText: text, sourceId: nat) ->
    (record {
       detail: text;
@@ -292,6 +299,7 @@ service : {
       orgName: text;
       version: text;
     }) query;
+  intakeSiteKey: (slug: text) -> (opt text) query;
   /// Own forms + forms shared with me.
   listForms: (tok: text) -> (vec FormMeta) query;
   listSubmissions: (tok: text, formId: nat) -> (vec SubView) query;
@@ -330,6 +338,12 @@ service : {
           status: SubStatus;
           updatable: bool;
         }) query;
+  notificationRecipients: (tok: text, id: nat) ->
+   (vec record {
+          text;
+          text;
+          text;
+        }) query;
   pauseDesk: (tok: text, id: nat) -> (bool);
   /// Internal preview: any status incl. drafts, sign-in + access required, never creates a submission.
   previewForm: (tok: text, slug: text) ->
@@ -344,6 +358,7 @@ service : {
        status: FormStatus;
        title: text;
      }) query;
+  protectIntake: (tok: text, id: nat, enabled: bool) -> (bool);
   publicForm: (slug: text) ->
    (opt
      record {
@@ -449,6 +464,16 @@ service : {
                           num: nat;
                           ok: bool;
                         });
+  submitVerified: (slug: text, name: text, email: text, answers: text,
+   requestId: text, context: vec record {
+                                   text;
+                                   text;
+                                 }, website: text, token: text) ->
+   (record {
+      detail: text;
+      num: nat;
+      ok: bool;
+    });
   syncNow: (tok: text) -> (record {
                              detail: text;
                              ok: bool;

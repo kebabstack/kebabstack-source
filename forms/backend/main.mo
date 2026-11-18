@@ -35,6 +35,7 @@ import Char "mo:core/Char";
 import Timer "mo:core/Timer";
 import Error "mo:core/Error";
 import Intake "Intake";
+import Turnstile "Turnstile";
 import Sha256 "mo:sha2/Sha256";
 import Json "mo:json";
 
@@ -49,7 +50,7 @@ persistent actor Forms {
   var adminGroup : Text = "forms-admins"; // hub group → admins (settings only; everyone in the directory builds forms)
   var adminEmails : [Text] = [];
   var adminClaimed : Bool = false;
-  transient let BUILD_VERSION : Text = "0.8.3";
+  transient let BUILD_VERSION : Text = "0.9.2";
   transient let H : Int = 3_600_000_000_000;
 
   // =====================================================================
@@ -464,7 +465,7 @@ persistent actor Forms {
     let m=me(tok) ?? (return {ok=false;detail="Sign in again"}); let f=forms.get(id) ?? (return {ok=false;detail="Form not found"});
     if(not canEdit(f,m.id))return {ok=false;detail="Editor access required"};
     let old=policyOf(id);if(retentionDays != old.retentionDays and formRole(f,m.id) != ?"owner")return {ok=false;detail="Only the form owner or a Forms admin can change automatic deletion"};if(old.revision != revision)return {ok=false;detail="Settings changed. Reload before saving."};
-    if(origins.size() > 10 or not origins.all(Intake.origin) or contextKeys.size() > 12 or not contextKeys.all(Intake.key))return {ok=false;detail="Use up to 10 exact HTTPS origins and 12 lowercase context keys"};
+    if(origins.size() > 10 or not origins.all(func origin = Intake.origin(origin) or origin == "https://*") or contextKeys.size() > 12 or not contextKeys.all(Intake.key))return {ok=false;detail="Use up to 10 exact HTTPS origins and 12 lowercase context keys"};
     if(privacyUrl.size() > 500 or (privacyUrl != "" and not Text.startsWith(privacyUrl,#text "https://")) or retentionDays > 3650 or (retentionDays > 0 and retentionDays < 7))return {ok=false;detail="Use an HTTPS privacy notice and 7–3650 retention days, or 0 to disable automatic deletion"};
     intakePolicies.add(id,{revision=revision+1;origins;contextKeys;privacyUrl;retentionDays;graceUntil=if(retentionDays > 0 and (old.retentionDays == 0 or retentionDays < old.retentionDays))now()+7*DAY else old.graceUntil});
     {ok=true;detail="Saved. Shorter retention has a seven-day grace period."}
@@ -472,7 +473,53 @@ persistent actor Forms {
   public shared query func submissionContext(tok : Text,id : Nat) : async [(Text,Text)] {
     let m=me(tok) ?? (return []);let s=subs.get(id) ?? (return []);let f=forms.get(s.formId) ?? (return []);if(not canView(f,m.id))return [];intakeContexts.get(id) ?? []
   };
+  var botCheck : ?Turnstile.Config = null;
+  let protectedForms = Map.empty<Nat, Bool>();
+  transient var checksSince : Int = 0;
+  transient var checkCount : Nat = 0;
+
+  public shared func configureTurnstile(tok : Text, hostname : Text, siteKey : Text, secret : Text) : async Bool {
+    let m = admin(tok) ?? (return false);
+    if (not Intake.origin("https://" # hostname) or siteKey.size() < 10 or siteKey.size() > 100 or secret.size() < 10 or secret.size() > 200) return false;
+    botCheck := ?{ hostname; siteKey; secret };
+    log(m.email, "Turnstile widget configured");
+    true
+  };
+  public shared func protectIntake(tok : Text, id : Nat, enabled : Bool) : async Bool {
+    let m = admin(tok) ?? (return false);
+    let f = forms.get(id) ?? (return false);
+    if (isTrashed(id) or (enabled and (botCheck == null or f.allowEdit))) return false;
+    if (enabled) protectedForms.add(id,true) else protectedForms.remove(id);
+    log(m.email, "Turnstile setting changed for form " # Nat.toText(id)); true
+  };
+  public query func intakeSiteKey(slug : Text) : async ?Text {
+    let id = slugIndex.get(slug) ?? (return null);
+    if (not protectedForms.containsKey(id)) return null;
+    let config = botCheck ?? (return null); ?config.siteKey
+  };
+
   public shared func submitIntake(slug : Text,name : Text,email : Text,answers : Text,requestId : Text,context : [(Text,Text)],website : Text) : async {ok : Bool;num : Nat;detail : Text} {
+    if (protectedForms.containsKey(slugIndex.get(slug) ?? 0)) return { ok=false;num=0;detail="Complete the verification before submitting" };
+    acceptIntake<system>(slug,name,email,answers,requestId,context,website)
+  };
+
+  public shared func submitVerified(slug : Text,name : Text,email : Text,answers : Text,requestId : Text,context : [(Text,Text)],website : Text,token : Text) : async {ok : Bool;num : Nat;detail : Text} {
+    let denied = {ok=false;num=0;detail="Verification expired or unavailable. Please try again."};
+    let id = slugIndex.get(slug) ?? (return denied);
+    if (not protectedForms.containsKey(id) or not Intake.token(requestId) or website != "" or token.size() == 0 or token.size() > 2048) return denied;
+    let config = botCheck ?? (return denied);
+    let f = forms.get(id) ?? (return denied);
+    if (isTrashed(id) or f.status == #draft) return denied;
+    if (now()-checksSince >= 60_000_000_000) { checksSince := now(); checkCount := 0 };
+    if (checkCount >= 120) return denied;
+    checkCount += 1;
+    let binding = hex(Sha256.fromArray(#sha256,Blob.toArray(Text.encodeUtf8(slug # ":" # requestId))));
+    if (not (await* Turnstile.verify(config,token,"forms_submit",binding))) return denied;
+    if (botCheck != ?config or not protectedForms.containsKey(id)) return denied;
+    acceptIntake<system>(slug,name,email,answers,requestId,context,website)
+  };
+
+  func acceptIntake<system>(slug : Text,name : Text,email : Text,answers : Text,requestId : Text,context : [(Text,Text)],website : Text) : {ok : Bool;num : Nat;detail : Text} {
     func fail(detail : Text) : {ok:Bool;num:Nat;detail:Text}={ok=false;num=0;detail};
     if(not Intake.token(requestId) or website != "")return fail("Submission could not be accepted");
     let id=slugIndex.get(slug) ?? (return fail("Form not found"));let f=forms.get(id) ?? (return fail("Form not found"));
@@ -489,7 +536,7 @@ persistent actor Forms {
     let target=deskTargets.get(id);
     if(target != null and not Intake.email(email))return fail("A contact email is required for Desk");
     let payload=if(target != null)intakePayload(f,name,email,answers,context) else "";
-    if(target != null and (Text.encodeUtf8(payload).size() > 24_000 or Intake.str(Intake.parse(payload) ?? #null_,"body").size() > 8_000 or norm(name).size() > 100))return fail("This response is too long for the support team. Please shorten it.");
+    if(target != null and (Text.encodeUtf8(payload).size() > 160_000 or Intake.str(Intake.parse(payload) ?? #null_,"body").size() > 64_000))return fail("This response is too long for the support team. Please shorten it.");
     var intakeCost=Text.encodeUtf8(payload).size();for((k,v) in context.values())intakeCost+=Text.encodeUtf8(k).size()+Text.encodeUtf8(v).size();
     if(answerBytesTotal+intakeBytesTotal+Text.encodeUtf8(answers).size()+intakeCost > MAX_ANSWER_BYTES_TOTAL)return fail("Storage is full. Contact the form owner.");
     let subId=nextSubId;
@@ -547,6 +594,28 @@ persistent actor Forms {
     let d=deskDeliveries.get(id) ?? (return false);if(d.state == "delivered" or deliveryBusy.containsKey(id))return false;
     deskDeliveries.add(id,{d with state="queued";attempts=0;nextAt=now();detail="Waiting for delivery"});true
   };
+  let notificationPeople = Map.empty<Nat,[Text]>();
+  public shared query func notificationRecipients(tok : Text,id : Nat) : async [(Text,Text,Text)] {
+    let m=me(tok) ?? (return []); let f=forms.get(id) ?? (return []);
+    if(isTrashed(id) or formRole(f,m.id) != ?"owner") return [];
+    (notificationPeople.get(id) ?? []).map(func pid = (pid,nameOf(pid),emailOfPid(pid)))
+  };
+  public shared func changeNotificationRecipient(tok : Text,id : Nat,person : Text,add : Bool) : async {ok:Bool;detail:Text} {
+    let m=me(tok) ?? (return {ok=false;detail="Sign in again"});
+    let f=forms.get(id) ?? (return {ok=false;detail="Unknown form"});
+    if(isTrashed(id) or formRole(f,m.id) != ?"owner") return {ok=false;detail="Form owner or administrator required"};
+    let current=notificationPeople.get(id) ?? [];
+    if(add) {
+      let email=lower(norm(person));
+      if(not active(email))return {ok=false;detail="Choose an active directory member"};
+      let pid=pidOf(email);
+      if(not has(current,pid)){
+        if(current.size() >= 20)return {ok=false;detail="Choose up to 20 recipients"};
+        notificationPeople.add(id,Array.concat(current,[pid]));
+      };
+    } else {notificationPeople.add(id,current.filter(func pid=pid != person))};
+    {ok=true;detail="Saved"}
+  };
   func intakePayload(f : Form,name : Text,email : Text,answers : Text,context : [(Text,Text)]) : Text {
     let schema=Intake.parse(f.schema) ?? #null_;let values=Intake.parse(answers) ?? #null_;
     var body="Submitted through Forms. Contact details and supplied context are unverified.\n\n";
@@ -555,7 +624,7 @@ persistent actor Forms {
       switch(Json.get(values,key)){case (?v){body#=Intake.str(q,"title")#": "#(switch(v){case (#string t)t;case _ Json.stringify(v,null)})#"\n\n"};case null {}};
     };
     if(context.size() > 0){body#="Supplied page context (unverified):\n";for((k,v) in context.values())body#=k#": "#v#"\n"};
-    Json.stringify(Json.obj([("name",#string(if(norm(name) == "")"External respondent" else norm(name))),("email",#string(email)),("subject",#string(capText(f.title,140)#" #"#f.nextNum.toText())),("body",#string body)]),null)
+    Json.stringify(Json.obj([("name",#string(if(norm(name) == "")"External respondent" else norm(name))),("email",#string(email)),("notificationPeople",#array((notificationPeople.get(f.id) ?? []).map(func pid=#string pid))),("subject",#string(capText(f.title,140)#" #"#f.nextNum.toText())),("body",#string body)]),null)
   };
   func deliver(id : Nat) : async () {
     if(deliveryBusy.containsKey(id))return;
@@ -632,6 +701,7 @@ persistent actor Forms {
   func hardDeleteForm(id : Nat) {
     switch (Map.get(forms, Nat.compare, id)) { case (?f) ignore Map.delete(slugIndex, Text.compare, f.slug); case null {} };
     ignore Map.delete(forms, Nat.compare, id);
+    notificationPeople.remove(id);
     ignore Map.delete(formShares, Nat.compare, id);
     ignore Map.delete(formDeadlines, Nat.compare, id);
     ignore Map.delete(formTrash, Nat.compare, id);
@@ -680,6 +750,7 @@ persistent actor Forms {
     let m = switch (me(tok)) { case (?m) m; case null return { ok = false; detail = "no session" } };
     let f = switch (Map.get(forms, Nat.compare, id)) { case (?f) f; case null return { ok = false; detail = "no such form" } };
     if (not canEdit(f, m.id)) return { ok = false; detail = "you can look at this form but not change it" };
+    if(protectedForms.containsKey(id) and args.allowEdit)return {ok=false;detail="Protected forms do not allow response editing"};
     if(deskTargets.containsKey(id) and (args.allowEdit or Intake.str(Intake.parse(args.schema) ?? #null_,"askEmail") != "required"))return {ok=false;detail="Desk-connected forms require email and do not allow response editing"};
     let tt = norm(args.title);
     if (tt.size() == 0 or tt.size() > MAX_TEXT) return { ok = false; detail = "the title needs 1–4000 characters" };
@@ -838,7 +909,7 @@ persistent actor Forms {
   };
   public shared func submitPublic(slug : Text, name : Text, email : Text, answers : Text, editToken : Text) : async { ok : Bool; num : Nat; detail : Text } {
     let id=slugIndex.get(slug) ?? 0;
-    if(policyOf(id).revision > 0 or deskTargets.containsKey(id))return {ok=false;num=0;detail="Please reload the current form before submitting"};
+    if(protectedForms.containsKey(id) or policyOf(id).revision > 0 or deskTargets.containsKey(id))return {ok=false;num=0;detail="Please reload the current form before submitting"};
     submitCommon<system>(slug,name,email,answers,editToken)
   };
   func submitCommon<system>(slug : Text, name : Text, email : Text, answers : Text, editToken : Text) : { ok : Bool; num : Nat; detail : Text } {
@@ -908,10 +979,13 @@ persistent actor Forms {
     let recipients = List.empty<Text>();
     List.add(recipients, f.createdBy);
     for ((e, r) in sharesOf(f.id).vals()) if (r == "editor") List.add(recipients, e);
+    let selected=notificationPeople.get(f.id) ?? [];
+    let routed=deskTargets.containsKey(f.id);
+    if(not routed) for(pid in selected.vals()) recipients.add(pid);
     let title = "New submission #" # Nat.toText(subNum) # " · " # capText(f.title, 80);
     let url = if (appUrl == "") "" else appUrl # "/#/form/" # Nat.toText(f.id) # "/subs";
     let addr = List.empty<Text>();
-    for (p in List.values(recipients)) { let e = emailOfPid(p); if (e != "" and not has(List.toArray(addr), e)) List.add(addr, e) }; // a former colleague whose address moved on is skipped
+    for (p in List.values(recipients)) { let e = emailOfPid(p); if (e != "" and not (routed and has(selected,p)) and not has(List.toArray(addr), e)) List.add(addr, e) }; // a former colleague whose address moved on is skipped
     let targets = List.toArray(addr);
     ignore Timer.setTimer<system>(#seconds 0, func() : async () {
       for (e in targets.vals()) {

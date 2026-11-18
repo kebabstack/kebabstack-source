@@ -1,5 +1,9 @@
 # Changelog — kebab-stack kitchen
 
+## [0.9.2] — 2026-11-18
+
+- Use the shared workspace colours and field styles on the bootstrap page.
+
 ## [0.9.1] — 2026-10-18
 
 - Regenerate the browser installer interface from compiled Candid so the existing owner-only installation-file method is represented correctly. No permissions or stable-state change.

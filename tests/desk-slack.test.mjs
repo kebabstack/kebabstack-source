@@ -348,13 +348,14 @@ test('periodic AI: old Desk replies resolve without browser or new Slack event; 
   await enableAI(c);await c.desk.setAiTriage(c.tokens.owner,true);await completionCycle(pic);
   const req=await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Renewed and verified, everything works now.'}));assert.doesNotMatch(text(req.body),/PRIVATE/);await quiet(pic);
   assert.equal((await ticket(c,good)).ticket.status,'resolved');
+  const followup=await answer(pic,'ai.example.test',aiResult({kind:'keep',evidence:''}));assert.match(text(followup.body),/Still broken/);await quiet(pic);
   for(const id of [later,privateNote,requester])assert.notEqual((await ticket(c,id)).ticket.status,'resolved');
   unwrap(await c.desk.setStatus(c.tokens.beta,good,'open',''));
   await completionCycle(pic);await noOutcall(pic);assert.equal((await ticket(c,good)).ticket.status,'open','manual reopen must not recycle old completion evidence');
  }finally{await pic.tearDown();}
 });
 
-test('periodic AI: invalid response retries after upgrade; unchanged keep decisions do not spend again',async()=>{
+test('periodic AI: invalid responses retry after upgrade; unchanged open requests are reassessed after six hours',async()=>{
  const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
  try{
   const c=await completionFixture(pic);const id=await c.newRequest();unwrap(await c.desk.comment(c.tokens.beta,id,'I will try tomorrow.'));
@@ -364,10 +365,11 @@ test('periodic AI: invalid response retries after upgrade; unchanged keep decisi
   await completionCycle(pic);await answer(pic,'ai.example.test',aiResult({kind:'keep',evidence:''}));await quiet(pic);
   await pic.upgradeCanister({sender:identity.controller,canisterId:c.b.canisterId,wasm:process.env.KEBAB_CUSTOMER_WASM||'desk/backend/dist/backend.wasm',upgradeModeOptions:{skip_pre_upgrade:[],wasm_memory_persistence:[{keep:null}]}});
   await completionCycle(pic);await noOutcall(pic);
+  await pic.advanceTime(6*3600000);await c.refresh();await completionCycle(pic);await answer(pic,'ai.example.test',aiResult({kind:'keep',evidence:''}));await quiet(pic);
   unwrap(await c.desk.comment(c.tokens.beta,id,'Renewed and verified.'));await completionCycle(pic);
   const pending=await outcall(pic,'ai.example.test');unwrap(await c.desk.comment(c.tokens.employee,id,'The license still fails.'));
   await pic.mockPendingHttpsOutcall({requestId:pending.requestId,subnetId:pending.subnetId,response:{type:'success',statusCode:200,headers:[],body:Buffer.from(JSON.stringify(aiResult({kind:'resolved',evidence:'Renewed and verified.'})))}});await quiet(pic);
-  assert.notEqual((await ticket(c,id)).ticket.status,'resolved','periodic review must discard stale evidence');await completionCycle(pic);await noOutcall(pic);
+  assert.notEqual((await ticket(c,id)).ticket.status,'resolved','periodic review must discard stale evidence');await completionCycle(pic);await answer(pic,'ai.example.test',aiResult({kind:'keep',evidence:''}));
  }finally{await pic.tearDown();}
 });
 
@@ -408,5 +410,41 @@ test('periodic AI: scan continues beyond the 200-ID boundary without sending req
   await enableAI(c);await c.desk.setAiTriage(c.tokens.owner,true);
   await completionCycle(pic);await noOutcall(pic);assert.notEqual((await ticket(c,target)).ticket.status,'resolved');
   await completionCycle(pic);await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Renewed and verified.'}));await quiet(pic);assert.equal((await ticket(c,target)).ticket.status,'resolved');
+ }finally{await pic.tearDown();}
+});
+
+test('periodic AI uses the whole conversation and accepts the original requester’s confirmation after support replied',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await completionFixture(pic);const id=await c.newRequest('How do I sign in?');
+  unwrap(await c.desk.comment(c.tokens.beta,id,'Use Google for the first sign-in.'));
+  unwrap(await c.desk.comment(c.tokens.employee,id,'Google works now, thanks!'));
+  await enableAI(c);await c.desk.setAiTriage(c.tokens.owner,true);await completionCycle(pic);
+  const call=await answer(pic,'ai.example.test',aiResult({kind:'resolved',evidence:'Google works now'}));
+  const prompt=JSON.parse(text(call.body)).messages.at(-1).content;
+  assert.match(prompt,/How do I sign in[?][\s\S]*Staff: Use Google[\s\S]*Requester: Google works now/);
+  await quiet(pic);assert.equal((await ticket(c,id)).ticket.status,'resolved');
+ }finally{await pic.tearDown();}
+});
+
+test('idle Slack intake posts one follow-up in its thread and silence leaves the ticket open',async()=>{
+ const pic=await PocketIc.create(server.getUrl(),{application:[{state:{type:SubnetStateType.New},costSchedule:CanisterCyclesCostSchedule.Free}]});
+ try{
+  const c=await wire(pic),ts='1700000025.000100';
+  await post(pic,c.desk,message('idle','UEMP',ts,'Need login help'));
+  await answer(pic,'users.info',{ok:true,user:{profile:{email:'employee@customer.test'}}});await quiet(pic);
+  await flushOne(pic,c.desk,'chat.postMessage');await answer(pic,'reactions.add',{ok:true});
+  await enableAI(c);await pic.advanceTime(86401000);await c.refresh();await pic.tick(10);
+  for(let i=0;i<3;i++){await pic.advanceTime(910000);await pic.tick(15);if((await pic.getPendingHttpsOutcalls()).some(r=>r.url.includes('chat.postMessage')))break;}
+  const follow=await answer(pic,'chat.postMessage',{ok:true});const payload=JSON.parse(text(follow.body));
+  assert.equal(payload.thread_ts,ts);assert.match(payload.text,/Desk: resolved/);
+  await quiet(pic);await pic.advanceTime(910000);await pic.tick(20);
+  assert.ok(!(await pic.getPendingHttpsOutcalls()).some(r=>r.url.includes('chat.postMessage')));
+  const tokens=async()=>{c.hub.setPrincipal(identity.owner);const grant=await c.hub.mintAppTicket('',c.conn.tileId);return (await c.desk.loginWithTicket(grant.ticket))[0].token;};
+  const owner=await tokens(), id=(await c.desk.internalQueuePage(owner,{view:'all',q:'Need login help',status:'',assignee:'',queue:''},[]))[0].rows[0].id;
+  assert.notEqual((await c.desk.getTicket(owner,id))[0].ticket.status,'resolved');
+  await post(pic,c.desk,message('idle-answer','UEMP','1700086426.000101','Desk: resolved',ts));
+  for(let i=0;i<10;i++){await pic.tick(3);for(const r of await pic.getPendingHttpsOutcalls())if(r.url.includes('users.info'))await answer(pic,'users.info',{ok:true,user:{profile:{email:'employee@customer.test'}}});}
+  assert.equal((await c.desk.getTicket(owner,id))[0].ticket.status,'resolved');
  }finally{await pic.tearDown();}
 });

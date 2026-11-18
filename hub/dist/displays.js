@@ -1,16 +1,16 @@
 /* Operations screens: a separate aggregate capability, never a Hub login. */
 (() => {
   const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const names={'desk-workboard':'Desk + Workboard',workboard:'Workboard',desk:'Desk',trust:'Trust',assets:'Assets',contracts:'Contracts',watch:'Watch'};
+  const names={'trust-falcon':'Trust + Falcon','desk-workboard':'Desk + Workboard',workboard:'Workboard',desk:'Desk',trust:'Trust',assets:'Assets',contracts:'Contracts',watch:'Watch'};
   const deskModes=['desk','desk-workboard','desk-lifecycle','desk-workboard-lifecycle','desk-workboard-personal','desk-workboard-lifecycle-personal'];
   for(const app of deskModes)names[app]='Desk'+(app.includes('-workboard')?' + Workboard':'')+(app.includes('-lifecycle')?' + lifecycle':'')+(app.includes('-personal')?' + personal task totals':'');
   names['assets-sales']='Assets + sales';names.sales='Asset sales';names['workboard-personal']='Workboard';
-  const baseApp=app=>deskModes.includes(app)?'desk':app==='assets-sales'?'assets':app;
+  const baseApp=app=>deskModes.includes(app)?'desk':app==='assets-sales'?'assets':app==='trust-falcon'?'trust':app;
   const choices=(sources,current=[],personalEmail=[])=>{
     const apps=sources.map(s=>baseApp(s.app)),has=part=>current.some(s=>s.app.includes(part));
-    return (apps.includes('desk')?`<label class="screen-scope"><input type="checkbox" name="workboard" ${has('-workboard')?'checked':''}><span><strong>Include Workboard</strong><small>Shared project task totals.</small></span></label><label class="screen-scope"><input type="checkbox" name="personal" ${has('-personal')?'checked':''}><span><strong>Include personal task totals</strong><small>Counts from one explicitly selected account, added to Workboard. No titles or names on the TV.</small></span></label><label>Personal totals account<input name="personalEmail" type="email" value="${esc(personalEmail[0]||'')}" placeholder="Leave blank for your signed-in account"><small>Select only an account whose task totals may be shared in this room. It must have active Desk administrator access. Leaving this blank uses the approving account.</small></label><label class="screen-scope"><input type="checkbox" name="lifecycle" ${has('-lifecycle')?'checked':''}><span><strong>Include onboarding and offboarding</strong><small>Open request counts only, included in the Desk total.</small></span></label>`:'')+(apps.includes('assets')?`<label class="screen-scope"><input type="checkbox" name="sales" ${has('-sales')?'checked':''}><span><strong>Include asset sales</strong><small>Paid sales needing IT follow-up and outstanding payment counts. No buyers or amounts.</small></span></label>`:'');
+    return (apps.includes('trust')?`<label class="screen-scope"><input type="checkbox" name="falcon" ${has('-falcon')?'checked':''}><span><strong>Include Falcon in Trust</strong><small>Open and critical Falcon tickets in Desk, plus the last sync time.</small></span></label>`:'')+(apps.includes('desk')?`<label class="screen-scope"><input type="checkbox" name="workboard" ${has('-workboard')?'checked':''}><span><strong>Include Workboard</strong><small>Shared project task totals.</small></span></label><label class="screen-scope"><input type="checkbox" name="personal" ${has('-personal')?'checked':''}><span><strong>Include personal task totals</strong><small>Counts from one explicitly selected account, added to Workboard. No titles or names on the TV.</small></span></label><label>Personal totals account<input name="personalEmail" type="email" value="${esc(personalEmail[0]||'')}" placeholder="Leave blank for your signed-in account"><small>Select only an account whose task totals may be shared in this room. It must have active Desk administrator access. Leaving this blank uses the approving account.</small></label><label class="screen-scope"><input type="checkbox" name="lifecycle" ${has('-lifecycle')?'checked':''}><span><strong>Include onboarding and offboarding</strong><small>Open request counts only, included in the Desk total.</small></span></label>`:'')+(apps.includes('assets')?`<label class="screen-scope"><input type="checkbox" name="sales" ${has('-sales')?'checked':''}><span><strong>Include asset sales</strong><small>Paid sales needing IT follow-up and outstanding payment counts. No buyers or amounts.</small></span></label>`:'');
   };
-  const selectedOptions=form=>({...Object.fromEntries(['workboard','personal','lifecycle','sales'].map(k=>[k,Boolean(form.elements[k]?.checked)])),personalEmail:form.elements.personalEmail?.value.trim()?[form.elements.personalEmail.value.trim().toLowerCase()]:[]});
+  const selectedOptions=form=>({...Object.fromEntries(['workboard','personal','lifecycle','sales'].map(k=>[k,Boolean(form.elements[k]?.checked)])),falcon:[Boolean(form.elements.falcon?.checked)],personalEmail:form.elements.personalEmail?.value.trim()?[form.elements.personalEmail.value.trim().toLowerCase()]:[]});
   const descriptions={desk:'Internal ticket counts and service targets',trust:'Fleet scores and reporting coverage',assets:'Inventory, stock and preparation',contracts:'Decision dates and ownership coverage',watch:'Domain alerts and monitoring coverage'};
   const ns=n=>Number(n/1000000n), date=n=>n===0n?'Until revoked':new Date(ns(n)).toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
   const number=n=>n==null?'—':n>=100000?new Intl.NumberFormat(undefined,{notation:'compact',maximumFractionDigits:1}).format(n):n.toLocaleString();
@@ -42,6 +42,7 @@
           const cids=Array.from(form.querySelectorAll('[name=scope]:checked'),x=>BigInt(x.value));
           if(!/^\d{6}$/.test(code)||!label||!cids.length){message.textContent='Choose a six-digit code, profile name and at least one area.';return;}
           const options=selectedOptions(form),workboard=options.workboard;
+          if(options.falcon[0]&&!sources.some(s=>s.app==='trust'&&cids.includes(s.cid))){message.textContent='Select Trust to show Falcon totals.';return;}
           if(options.personal&&!workboard){message.textContent='Select Workboard to include personal task totals.';return;}
           if(options.lifecycle&&!sources.some(s=>s.app==='desk'&&cids.includes(s.cid))||options.sales&&!sources.some(s=>s.app==='assets'&&cids.includes(s.cid))){message.textContent='Select the matching Desk or Assets source for these details.';return;}
           if(workboard&&!sources.some(s=>s.app==='desk'&&cids.includes(s.cid))){message.textContent='Select Desk to include its Workboard.';return;}
@@ -49,7 +50,7 @@
           try{
             const result=await getAPI().operationsDisplayProfileCreate(code,label,cids,BigInt(form.elements.days.value),options);if(!active||epoch!==run)return;
             if('ok' in result){await load();$('[data-message]').textContent='Profile created. Enter your six-digit code on each TV to connect it.';}
-            else message.textContent=({denied:'Your Owner access or source permissions changed. Refresh this page.',missing:'This code expired or was already used. Generate a new code on the TV.',limit:'Remove an unused screen before pairing another.',invalid:'Choose a unique six-digit code and check the name and selected areas.'})[Object.keys(result)[0]]||'Approval was not completed. Refresh to check the screen list.';
+            else message.textContent=({denied:'Your Owner access or source permissions changed. Refresh this page.',missing:'This code expired or was already used. Generate a new code on the TV.',limit:'Remove an unused screen before pairing another.',invalid:options.falcon[0]?'Check the code, Trust selection and connected Falcon helpdesk. You need administrator access to Trust and the helpdesk.':'Choose a unique six-digit code and check the name and selected areas.'})[Object.keys(result)[0]]||'Approval was not completed. Refresh to check the screen list.';
           }catch{if(active&&epoch===run)message.textContent='Could not confirm creation. Refresh the profile list before trying again.';}
           finally{button.disabled=false;}
         };
@@ -75,6 +76,7 @@
   // Counts newer app releases add; an older app without them is still a valid source (treated as 0).
   const optional={assets:['deployed'],contracts:['seatsHeld']};
   for(const app of deskModes){if(app==='desk')continue;expected[app]=[...expected.desk,...(app.includes('-workboard')?['workProjects','workOpen','workWaiting','workOverdue','workUnowned','workSteps','workStepsDone']:[])];optional[app]=[...(app.includes('-lifecycle')?['onboarding','offboardingOpen']:[]),...(app.includes('-personal')?['personalOpen','personalWaiting','personalOverdue','personalUnowned','personalSteps','personalStepsDone']:[])];}
+  expected['trust-falcon']=expected.trust;optional['trust-falcon']=['falconOpen','falconCritical','falconLastSyncMs'];
   expected['assets-sales']=expected.assets;optional['assets-sales']=['deployed','sales','salesPaid','salesArchive','salesPreparation','salesHandover','salesInvoice','salesOverdue','salesBuyer','salesDraft','salesAccepted'];
   expected['desk-workboard']=[...expected.desk,'workProjects','workOpen','workWaiting','workOverdue','workUnowned','workSteps','workStepsDone'];
   function parsed(app,result,now){
@@ -86,7 +88,15 @@
     for(const k of ['deployed','seatsHeld'])if(extra.includes(k)&&!(k in m))m[k]=0;
     return {at,m};
   }
-  function summary(app,m){
+  function summary(app,m,clock=Date.now()){
+    if(app==='trust-falcon'){
+      const fleet=summary('trust',m),last=m.falconLastSyncMs;
+      const known=m.falconOpen!=null&&m.falconCritical!=null&&m.falconCritical<=m.falconOpen;
+      const validTime=last>0&&last<=clock+5000;
+      const fresh=validTime&&clock-last<180000;
+      const note=last==null?'Falcon totals unavailable':last===0?'Falcon awaiting first sync':validTime?(fresh?'Falcon last sync ':'Falcon sync delayed · last sync ')+new Date(last).toLocaleString():'Falcon sync time unavailable';
+      return {...fleet,complete:known&&fresh,rows:[...fleet.rows,[known?m.falconOpen:null,'open Falcon tickets'],[known?m.falconCritical:null,'critical Falcon tickets']],flag:fleet.flag+(known?m.falconOpen:0),focus:'review device checks and open Falcon tickets',note};
+    }
     if(app==='desk-lifecycle'){const p=summary('desk',m);return {...p,complete:m.onboarding!=null&&m.offboardingOpen!=null,rows:[[m.onboarding,'open onboarding requests'],[m.offboardingOpen,'open offboarding requests'],...p.rows],flag:p.flag+(m.onboarding||0)+(m.offboardingOpen||0),focus:'review service targets and onboarding/offboarding work',note:'Lifecycle requests are included in open requests.'+(m.onboarding==null||m.offboardingOpen==null?' Lifecycle totals unavailable; update Desk.':'')};}
     if(app==='workboard-personal'){const known=['Open','Overdue','Waiting','Unowned','Steps','StepsDone'].every(k=>('personal'+k) in m),combined={...m};for(const k of ['Open','Overdue','Waiting','Unowned','Steps','StepsDone'])combined['work'+k]=known?m['work'+k]+m['personal'+k]:undefined;const p=summary('workboard',combined);return {...p,value:known?p.value:'—',complete:known,unit:'open tasks',detail:`${number(m.workOpen)} shared · ${number(m.personalOpen)} personal tasks`,flag:known?p.flag:0,note:known?p.note:'Personal totals unavailable; update Desk. Shared work remains in the subtotal.'};}
     switch(app){
@@ -192,13 +202,13 @@
     function card(e){
       const head=`<span class="tv-kicker">${names[e.app]}</span>`;
       if(!e.data)return {cls:'tv-card tv-unverified',flag:false,value:null,html:`${head}<strong class="tv-number">—</strong><h2>${e.waiting?'Checking source':'Source unverified'}</h2><p>${e.waiting?'Reading current totals…':'No current totals. Check this app in Hub.'}</p>`};
-      const p=summary(e.app,e.data.m),n=typeof p.value==='number'?number(p.value):p.value;
+      const p=summary(e.app,e.data.m,now()),n=typeof p.value==='number'?number(p.value):p.value;
       return {cls:'tv-card',flag:p.flag>0,value:typeof p.value==='number'?p.value:null,html:`${head}<strong class="tv-number">${n}</strong><h2>${p.unit}</h2><p>${p.detail}</p>${p.bar===undefined?'':`<div class="tv-bar" aria-label="Assessment coverage ${Math.round(p.bar*100)}%"><span style="width:${Math.max(0,Math.min(100,p.bar*100))}%"></span></div>`}<div class="tv-rows">${p.rows.map(([n,t])=>`<div><strong class="${n?'tv-flag':''}">${number(n)}</strong><span>${t}</span></div>`).join('')}</div>${p.note?`<small>${p.note}</small>`:''}<time class="tv-checked">Checked ${new Date(e.data.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time>`};
     }
     function focusCard(views,checked){
-      const focus=views.filter(e=>e.data&&summary(e.app,e.data.m).flag>0),complete=checked===entries.length&&views.every(e=>e.data&&summary(e.app,e.data.m).complete!==false);
+      const focus=views.filter(e=>e.data&&summary(e.app,e.data.m,now()).flag>0),complete=checked===entries.length&&views.every(e=>e.data&&summary(e.app,e.data.m,now()).complete!==false);
       const clear=!focus.length&&complete;
-      return {cls:'tv-card tv-focus'+(clear?' tv-clear':''),flag:false,value:null,html:`<span class="tv-kicker">THE NEXT CONVERSATION</span><h2>${clear?'All clear':'Where to focus'}</h2>${focus.length?`<div class="tv-signals">${focus.map(e=>`<div class="tv-signal"><strong>${names[e.app]}</strong><span>${summary(e.app,e.data.m).focus}</span></div>`).join('')}</div>`:`<p>${complete?'No follow-up flags in the approved sources.':'Check source coverage before drawing conclusions.'}</p>`}<small>Current snapshots · overlapping counts are not added up</small>`};
+      return {cls:'tv-card tv-focus'+(clear?' tv-clear':''),flag:false,value:null,html:`<span class="tv-kicker">THE NEXT CONVERSATION</span><h2>${clear?'All clear':'Where to focus'}</h2>${focus.length?`<div class="tv-signals">${focus.map(e=>`<div class="tv-signal"><strong>${names[e.app]}</strong><span>${summary(e.app,e.data.m,now()).focus}</span></div>`).join('')}</div>`:`<p>${complete?'No follow-up flags in the approved sources.':'Check source coverage before drawing conclusions.'}</p>`}<small>Current snapshots · overlapping counts are not added up</small>`};
     }
     // Numbers glide to their new value instead of jumping; the first paint shows the final value at once.
     function tween(el,from,to){

@@ -59,3 +59,19 @@ search. See [shared controls and evidence review](../sdk/WORKSPACE-UI.md).
 
 The submission review drawer stays below the shared navigation. Scroll inside the
 review to reach notes and actions; company menus remain available while it is open.
+
+## Managed bot protection for public forms
+
+Create a Cloudflare Managed Turnstile widget for the Forms hostname. In Forms
+Settings enter its site key and secret. In **Publish & connect**, a Forms admin
+can enable verification on a form with respondent editing disabled. The browser
+loads Cloudflare on submission. The backend sends the token and widget secret to
+Siteverify and checks success, hostname, action and the hashed request reference.
+Provider failure blocks the submission and allows a retry. The backend limits
+verification attempts to 120 per minute across the installation. This mitigates
+automated submissions but cannot identify every AI-assisted visitor.
+
+For a public suspension appeal served on changing domains, enter `https://*`
+in Allowed embedding websites. Any HTTPS site can then frame that public form.
+Admin screens and internal previews require a top-level window. Copy the embed
+snippet and the direct link after publishing the form on its permanent hostname.

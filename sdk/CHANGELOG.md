@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.18.0] — 2026-11-18
+
+- Derive the served SDK inventory from the release version and file fingerprints so repeated builds emit identical bytes.
+
+- Use a single-column company sign-in and a scrollable global menu, account panel and notification list. The mounted navigation retains its position while the document scrolls.
+
 ## [0.17.0] — 2026-10-21
 
 - Add the Doku permission vocabulary, typed Desk evidence bridge and canonical open-book logo. Existing session, directory and external-app contracts remain unchanged.

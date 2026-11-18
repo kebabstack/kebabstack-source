@@ -1,5 +1,19 @@
 # Changelog — kebab-stack assets
 
+## [0.31.2] — 2026-11-18
+
+- Use the shared single-column company sign-in, workspace colours and app switcher. Account and notification panels scroll within short screens.
+
+## [0.31.1] — 2026-11-17
+
+- Resolve a unique Falcon endpoint against current inventory by serial or hostname. The ticket device link and current assignee respect the viewer’s Assets access.
+
+## [0.31.0] — 2026-11-09
+
+- Optional Iru inventory number writeback: administrators can make Assets authoritative for `asset_tag` per connection. Off by default, including upgrades. Manual and six-hour syncs confirm up to 25 changes per run; read access remains sufficient when disabled.
+- Writes require Iru Update Device permission and matching unique device IDs/serials. Partial failures stop further writes, remain visible and can be retried; uncertain outcomes are reconciled by reading before writing again. Assignment and other Iru settings are untouched.
+- Retains immutable, automatically allocated Assets inventory numbers and existing hardware retrieval, central permissions and suite login.
+
 ## [0.30.1] — 2026-10-21
 
 - Synchronize the canonical browser logo registry for Doku. Existing application behavior is unchanged. This source update does not by itself deploy this app.

@@ -1,6 +1,6 @@
 # Doku — reviewed team knowledge
 
-Doku 0.2.0 is an **alpha release** of a documentation app in Kebabstack.
+Doku 0.2.1 is an **alpha release** of a documentation app in Kebabstack.
 Write a guide directly, or turn an internal Desk ticket into a human-reviewed documentation change. Nothing
 is published merely because a ticket was resolved.
 

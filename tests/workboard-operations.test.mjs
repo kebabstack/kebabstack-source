@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {test,before,after} from 'node:test';
 import {createHash} from 'node:crypto';
 import {PocketIcServer} from '@dfinity/pic';
-import {setup,identity,key,unwrap,projectInput,taskInput} from './helpers/workboard.mjs';
+import {archiveFixtureInvoice,setup,identity,key,unwrap,projectInput,taskInput} from './helpers/workboard.mjs';
 let server;before(async()=>{server=await PocketIcServer.start();});after(async()=>{await server?.stop();});
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const metrics=s=>{assert.ok('ready' in s.state);return Object.fromEntries(s.metrics);};
@@ -28,6 +28,7 @@ for(const baseline of [false,true])test(`Workboard Operations ${baseline?'popula
  await request('Offboarding',[['person','employee@workboard.test'],['lastDay','2026-10-02'],['manager','owner@workboard.test']]);
  // An approval made through the old API never silently gains Workboard totals.
  x.hub.setPrincipal(identity.owner);const secret='21'.repeat(32);await x.hub.operationsDisplayPair('123456abcd',hash(secret));assert.ok('ok' in await x.hub.operationsDisplayApprove('123456abcd','Test room',[x.apps.desk.conn.id],7n));
+ const invoiceBefore=(await x.apps.assets.app.getSale(x.assetToken,x.saleId))[0].sale.pdfId;
  const beforeLegacy=metrics(await x.hub.operationsDisplaySnapshot(secret,x.apps.desk.conn.id));
  if(baseline){await x.upgrade();d=x.apps.desk.app;}
  x.hub.setPrincipal(identity.owner);const read=async()=>metrics(await x.hub.operationsSnapshot(x.apps.desk.conn.id));
@@ -45,12 +46,21 @@ for(const baseline of [false,true])test(`Workboard Operations ${baseline?'popula
  d.setPrincipal(x.h.canisterId);const alphaMetrics=metrics(await d.hub_operations(x.ids.alpha));assert.equal(alphaMetrics.personalOpen,2n,'viewer sees their own standalone and personal-project work, not the owner task');
  await x.policy('desk',oldPolicy);x.hub.setPrincipal(identity.owner);
  const saleMetrics=()=>x.hub.operationsSnapshot(x.apps.assets.conn.id).then(metrics);
- let sm=await saleMetrics();assert.equal(sm.salesPaid,1n);assert.equal(sm.salesPreparation,1n);assert.equal(sm.salesInvoice,0n);
+ let sm=await saleMetrics();
+ assert.equal((await x.apps.assets.app.getSale(x.assetToken,x.saleId))[0].sale.pdfId,invoiceBefore);
+ assert.equal(sm.salesPaid,1n);assert.equal(sm.salesInvoice,0n);
+ if(invoiceBefore===0n){
+  // Before Assets 0.19 the browser archived the invoice after issue.
+  assert.equal(sm.salesArchive,1n);assert.equal(sm.salesPreparation,0n);
+  await archiveFixtureInvoice(x.apps.assets.app,x.assetToken,x.saleId);
+  sm=await saleMetrics();
+ }
+ assert.equal(sm.salesPaid,1n);assert.equal(sm.salesArchive,0n);assert.equal(sm.salesPreparation,1n);
  unwrap(await x.apps.assets.app.setSaleChecks(x.assetToken,x.saleId,true,true));
  sm=await saleMetrics();assert.equal(sm.salesPaid,1n);assert.equal(sm.salesHandover,1n);assert.equal(sm.salesPreparation,0n);
  assert.equal((await x.apps.assets.app.salesBoard(x.assetToken,'paid','',0n)).matched,sm.salesPaid);
  // An existing paired screen gains these sensitive aggregates only through its approving owner.
- const detailedSecret='ab'.repeat(32),opts={workboard:true,lifecycle:true,sales:true,personal:true,personalEmail:[]};
+ const detailedSecret='ab'.repeat(32),opts={falcon:[],workboard:true,lifecycle:true,sales:true,personal:true,personalEmail:[]};
  await x.hub.operationsDisplayPair('abcdef1234',hash(detailedSecret));
  const detailed=await x.hub.operationsDisplayApprove('abcdef1234','Detailed room',[x.apps.desk.conn.id,x.apps.assets.conn.id],7n);assert.ok('ok' in detailed);
  const newSecret='cd'.repeat(32);await x.hub.operationsDisplayPair('abcdef5678',hash(newSecret));

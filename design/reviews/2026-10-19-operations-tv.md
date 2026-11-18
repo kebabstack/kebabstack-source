@@ -43,3 +43,11 @@ Local preview evidence and release receipts live in the operator's private
 and specifically approved anonymous totals including their personal tasks.
 Record package, full-suite and live results there; this design review alone is
 not proof of deployment or physical-TV verification.
+
+## 17 November 2026 · Falcon on Trust
+
+The Operations card previously hid open Falcon ticket counts three minutes after the last successful provider sync. The TV had no grant for these counts. The operator can now see current Desk ticket counts alongside the time of the last complete Falcon import. A delayed import is labelled. Unavailable counts render with a dash. A TV with incomplete Falcon evidence cannot report “All clear”.
+
+The Trust-only profile option and the per-screen sharing form use a labelled checkbox. UI tests cover selecting it on an existing TV, fresh and delayed data, missing data, old Trust approvals, and the Desk queue link on the authenticated dashboard. A PocketIC test checks the public numeric response, a disallowed direct Desk read, opt-in and removal on an enrolled screen, and a change of Falcon customer. The display state exposes only the public scope name.
+
+Headless Chrome rendered an eight-card sample with four Trust rows and delayed-sync information. At a measured 1920 × 993 CSS viewport the Trust card ended at 750 px and its final timestamp at 730 px. At 1280 × 633 and 500 × 757 the card fit horizontally and all rows remained inside it in the existing scrolling layout. Physical-TV legibility and screen-reader interaction remain unverified.

@@ -1,5 +1,42 @@
 # Changelog — kebab-stack desk
 
+## [0.40.3] — 2026-11-18
+
+- Use the shared single-column company sign-in, workspace colours and app switcher. Account and notification panels scroll within short screens.
+
+## [0.40.2] — 2026-11-17
+
+- Register a Forms source under Settings → Forms to send appeals directly to Internal support. External contacts keep their private ticket and retention controls.
+
+## [0.40.1] — 2026-11-17
+
+- Record a private ticket note for each selected Slack recipient. The note shows whether Slack accepted the message or delivery was skipped, disabled, failed or unconfirmed.
+- Deliver full 10,000-character paragraph responses to Desk with space for contact details, question labels and page context.
+
+## [0.40.0] — 2026-11-17
+
+- Review the full public conversation for clear completion, including confirmation from the original requester after staff assistance. Eligible open requests return for review after six hours. Slack threads idle for a day can receive a follow-up with a reply or reaction to resolve.
+
+## [0.39.2] — 2026-11-17
+
+- Internal support can resolve selected Falcon requests together. Already closed detections retain their classification. For open detections, choose a classification or leave them open. The receipt distinguishes queued Falcon changes from completed Desk updates.
+
+## [0.39.1] — 2026-11-17
+
+- Use the last synced provider status for open Falcon alerts in Desk, Operations and shared Trust screens. Existing tickets reflect the correction on the next read.
+
+## [0.39.0] — 2026-11-17
+
+- Change a Falcon endpoint alert status in its ticket, classify a closure, and resolve the ticket after Hub confirms the provider state.
+
+## [0.38.1] — 2026-11-17
+
+- Internal Falcon tickets show the affected employee as requester, including related work and devices. The separate Assets link shows the current device holder. Unresolved identities are labelled explicitly.
+
+## [0.38.0] — 2026-11-17
+
+- Internal support accepts Falcon endpoint alerts from the configured Hub, deduplicates alert IDs and records a durable acknowledgement when an agent takes a Falcon ticket.
+
 ## [0.37.0] — 2026-10-21
 
 - Confirm a reusable solution on resolved internal tickets and create a Doku proposal. Reopening invalidates source confirmation; customer-project tickets are excluded.

@@ -57,3 +57,8 @@ operator retry; definite Desk rejections stop automatic retries immediately.
   whitespace checks passed. Release-packaged executables remain a rollout gate.
 - Final browser reflow check: host 320/320, iframe body 272/272 client/scroll
   widths; radio control width 13 px after correcting an overly broad field rule.
+
+## Forms 0.9.0 verification update
+
+- Admin configuration, per-form enablement, legacy submission denial, invalid provider claims and successful, idempotent acceptance are exercised by the Forms intake regression using a simulated Siteverify response.
+- The previous release was checked in Chrome at 320, 1366 and 1920 CSS pixels. Live challenge completion and host-page embedding require separate checks.

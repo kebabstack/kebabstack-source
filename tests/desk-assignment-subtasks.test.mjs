@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test,before,after} from 'node:test';
 import {PocketIcServer} from '@dfinity/pic';
-import {setup,identity,key,unwrap,projectInput,taskInput} from './helpers/workboard.mjs';
+import {assertTicketPreserved,setup,identity,key,unwrap,projectInput,taskInput} from './helpers/workboard.mjs';
 let server;before(async()=>{server=await PocketIcServer.start();});after(async()=>server?.stop());
 const fails=(r,kind)=>assert.ok(kind in (r.err||{}),JSON.stringify(r,(_,x)=>typeof x==='bigint'?String(x):x));
 for(const baseline of [false,true])test(`assignment and subtasks: ${baseline?'populated 0.25 upgrade':'fresh install'}`,{skip:baseline&&!process.env.KEBAB_WORKBOARD_BASELINE},async()=>{
@@ -11,7 +11,7 @@ for(const baseline of [false,true])test(`assignment and subtasks: ${baseline?'po
  const input=taskInput(p.id,x.ids.alpha),original=unwrap(await d.saveWorkTask(x.tokens.alpha,0n,0n,key(502),input));
  const ticketBefore=await d.getTicket(x.tokens.owner,x.ticketId);
  if(baseline)await x.upgrade();d=x.apps.desk.app;
- assert.deepEqual(await d.getTicket(x.tokens.owner,x.ticketId),ticketBefore);
+ assertTicketPreserved(await d.getTicket(x.tokens.owner,x.ticketId),ticketBefore);
  assert.equal((await d.workboardTask(x.tokens.alpha,original.id))[0].task.title,input.title);
  assert.deepEqual((await d.workboardTask(x.tokens.alpha,original.id))[0].subtasks,[]);
  const cfg=(await d.getAutoAssignment(x.tokens.owner))[0];assert.equal(cfg.config.defaultAssignee,'');assert.equal(cfg.config.overrides.length,0);

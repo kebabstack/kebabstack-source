@@ -53,3 +53,37 @@ test('stored display credential reconnects after browser recreation and offline 
  const api={operationsDisplayState:async secret=>{reads++;assert.equal(secret,'12'.repeat(32));if(offline)throw Error('offline');if(suspended)return {ended:null};return {ready:{...ready().ready,expiresAt:0n}};},operationsDisplaySnapshot:async()=>snapshot()};
  let f=fixture(api,{storage});await tick();await tick();f.close();f=fixture(api,{storage});try{await tick();await tick();assert.match(f.root.textContent,/Connected until revoked/);offline=true;await f.ui.check();assert.match(f.root.textContent,/Connection paused/);assert.ok(values.has('ks-operations-display-v1'));offline=false;await f.ui.check();assert.match(f.root.textContent,/Connected until revoked/);assert.equal(f.root.querySelector('[data-join]'),null);suspended=true;await f.ui.check();assert.match(f.root.textContent,/no longer approved/);assert.ok(values.has('ks-operations-display-v1'));offline=true;await f.ui.check();assert.ok(f.root.querySelector('[data-join]'),'suspended screen retains reconnect form when network drops');offline=false;await f.ui.check();assert.ok(f.root.querySelector('[data-join]'));suspended=false;await f.ui.check();assert.match(f.root.textContent,/Connected until revoked/);assert.ok(reads>=6);}finally{f.close();}
 });
+
+test('Trust TV keeps Falcon totals opt-in and distinguishes queue size from sync freshness',async()=>{
+ const at=Date.now(),fleet={total:1n,passing:1n,attention:0n,unverified:0n,assessed:1n,score:100n};
+ for(const [app,extra,expected] of [
+   ['trust-falcon',{falconOpen:4n,falconCritical:1n,falconLastSyncMs:BigInt(at)},/4open Falcon tickets.*1critical Falcon tickets.*Falcon last sync/],
+   ['trust-falcon',{falconOpen:0n,falconCritical:0n,falconLastSyncMs:BigInt(at-181000)},/0open Falcon tickets.*Falcon sync delayed/],
+   ['trust-falcon',{},/—open Falcon tickets.*Falcon totals unavailable/],
+   ['trust',{falconOpen:4n},/Source unverified/],
+ ]){
+   const f=fixture({operationsDisplayState:async()=>({ready:{...ready(at).ready,sources:[{cid:1n,app}]}}),operationsDisplaySnapshot:async()=>({schema:1n,state:{ready:null},checkedAt:nano(at),metrics:Object.entries({...fleet,...extra})})},{now:()=>at});
+   try{await tick();await tick();assert.match(f.root.textContent,expected);assert.doesNotMatch(f.root.textContent,/All clear|open requests/);assert.equal(f.root.querySelectorAll('a').length,0);}finally{f.close();}
+ }
+});
+
+test('Owner enables Falcon on an existing Trust-only TV without pairing again',async()=>{
+ const dom=new JSDOM('<main></main>',{runScripts:'outside-only',url:'https://hub.test/#/screens'}),w=dom.window;
+ w.eval(code);
+ let saved;
+ const sources=[{cid:1n,app:'trust'}];
+ const ui=w.KebabDisplays.createManager(w.document.querySelector('main'),()=>({
+   operationsDisplayAdmin:async()=>({canManage:true,displays:[{id:3n,name:'IT room',active:true,expiresAt:0n,sources}]}),
+   operationsDisplayProfilesAdmin:async()=>({profiles:[],locked:false}),operationsSources:async()=>sources,
+   operationsDisplayConfigure:async(id,options)=>{saved={id,enabled:options.falcon[0]};return {ok:id};}
+ }));
+ try{
+   await ui.load();
+   const form=w.document.querySelector('[data-configure]');
+   assert.equal(form.elements.falcon.checked,false);
+   form.elements.falcon.checked=true;
+   form.dispatchEvent(new w.Event('submit',{cancelable:true}));
+   await tick();await tick();
+   assert.deepEqual(saved,{id:3n,enabled:true});
+ }finally{ui.stop();w.close();}
+});

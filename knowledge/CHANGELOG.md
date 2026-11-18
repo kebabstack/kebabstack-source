@@ -1,5 +1,9 @@
 # Changelog — Doku
 
+## [0.2.1] — 2026-11-18
+
+- Use the shared single-column company sign-in, workspace colours and app switcher. Account and notification panels scroll within short screens.
+
 ## [0.2.0] — 2026-10-21
 
 - Create articles directly in Doku and propose edits without a Desk ticket, using the existing WYSIWYG editor and explicit review. Existing Desk drafts retain their source permission checks.

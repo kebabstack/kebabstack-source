@@ -8,8 +8,38 @@ const code=extract('// A handoff owns','let portalPoller').replace('location.rep
 function fixture(){
  const dom=new JSDOM(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,''),{url:'https://hub.test/',runScripts:'outside-only'});const w=dom.window;
  w.api={portalApps:async()=>[{id:3n,kind:'app',url:'https://assets.test/'}],mintAppTicket:async()=>({ok:true,url:'https://assets.test/',ticket:'a'.repeat(64)})};
- w.eval('var $=id=>document.getElementById(id);var opt=x=>x?.[0];const pActor=()=>window.api;const pTok=()=>"session";'+code);return{w,dom};
+ w.token='session';
+ w.eval('var $=id=>document.getElementById(id);var opt=x=>x?.[0];const pActor=()=>window.api;const pTok=()=>window.token;function oidcPending(){return false}'+code+extract('async function showPortal(', 'function showPortalData'));return{w,dom};
 }
+test('the company cookie and bound ticket can be prepared together; changing accounts while waiting discards the old ticket', async () => {
+ for (const changeAccount of [false, true]) {
+  const {w, dom} = fixture();
+  w.sessionStorage.setItem('uh-jump', '3');
+  let releaseCookie;
+  w.ensureSuiteLogin = () => new Promise(resolve => { releaseCookie = resolve; });
+  let issued = 0;
+  w.api.mintAppTicket = async (token, id) => {
+   assert.equal(token, 'session'); assert.equal(id, 3n); issued++;
+   return {ok:true, url:'https://assets.test/', ticket:'a'.repeat(64)};
+  };
+  try {
+   const running = w.showPortal({active:true});
+   await new Promise(resolve => setImmediate(resolve));
+   assert.equal(issued, 1);
+   assert.equal(w.destination, undefined);
+   assert.equal(w.document.getElementById('layout').inert, true);
+   if (changeAccount) w.token = 'different-session';
+   releaseCookie();
+   await running;
+   if (changeAccount) {
+    assert.equal(w.destination, undefined);
+    assert.match(w.document.getElementById('handoffStatus').textContent, /sign-in changed/);
+   } else {
+    assert.match(w.destination, /^https:\/\/assets\.test\/#uht=/);
+   }
+  } finally { dom.window.close(); }
+ }
+});
 for(const target of ['3','https://assets.test/'])test('app handoff '+target+' keeps the console inert until redirect',async()=>{
  const{w,dom}=fixture();w.sessionStorage.setItem('uh-jump',target);
  let resolve;w.api.mintAppTicket=()=>new Promise(r=>resolve=r);
@@ -18,6 +48,12 @@ for(const target of ['3','https://assets.test/'])test('app handoff '+target+' ke
  assert.equal(w.document.getElementById('handoff').classList.contains('hidden'),false);assert.equal(w.destination,undefined);
  resolve({ok:true,url:'https://assets.test/',ticket:'a'.repeat(64)});await pending;
  assert.match(w.destination,/^https:\/\/assets.test\/#uht=/);assert.equal(w.sessionStorage.getItem('uh-jump'),null);dom.window.close();
+});
+test('a granted ticket can navigate while an optional company cookie is still pending', {timeout:2400}, async()=>{
+ const {w,dom}=fixture();w.sessionStorage.setItem('uh-jump','3');
+ w.ensureSuiteLogin=()=>new Promise(()=>{});
+ try {await w.showPortal({active:true});assert.match(w.destination, /^https:\/\/assets\.test\/#uht=/);}
+ finally{dom.window.close();}
 });
 test('a rejected app remains on a recoverable error screen and retries the same app once',async()=>{
  const{w,dom}=fixture();w.sessionStorage.setItem('uh-jump','3');let calls=0;

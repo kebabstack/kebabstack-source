@@ -71,3 +71,49 @@ for(const baseline of [false,true])test(`Operations: ${baseline?'populated upgra
   for(const m of modules)assert.ok('denied' in (await apps[m].app.hub_operations(h.ids.owner)).state,'stale '+m+' directory');
  }finally{await pic.tearDown();}
 });
+
+test('Trust-only screen shares Falcon counts solely for its approved helpdesk and customer',async()=>{
+ const pic=await PocketIc.create(server.getUrl());
+ try{
+   await pic.setTime(new Date('2026-09-18T12:00:00Z'));
+   const h=await setup(pic),trust=await connect(pic,h,'trust'),desk=await connect(pic,h,'desk');
+   await refresh(h,trust,desk);
+   const options={workboard:false,lifecycle:false,personal:false,sales:false,personalEmail:[],falcon:[true]};
+   const create=(pin,source,opts)=>h.hub.operationsDisplayProfileCreate(pin,'Room',[source.c.id],0n,opts);
+   assert.ok('invalid' in await create('090001',trust,options));
+   const tenant='a'.repeat(32),config=['eu-1',tenant,'b'.repeat(32),'fixture',desk.c.id,'2026-09-18T12:00:00Z'];
+   assert.ok(await h.hub.connectFalcon(...config));
+   assert.ok('invalid' in await create('090001',desk,options));
+   assert.ok('ok' in await create('090001',trust,options));
+   assert.ok('ok' in await create('090002',trust,{...options,falcon:[]}));
+   const {createHash}=await import('node:crypto');
+   async function join(pin,secret){const hash=createHash('sha256').update(secret).digest('hex');assert.ok('ok' in await h.hub.operationsDisplayJoin(pin,hash));}
+   const allowed='19'.repeat(32),legacy='20'.repeat(32);
+   await join('090001',allowed);await join('090002',legacy);
+   assert.deepEqual((await h.hub.operationsDisplayState(allowed)).ready.sources,[{cid:trust.c.id,app:'trust-falcon'}]);
+   const read=async secret=>metrics(await h.hub.operationsDisplaySnapshot(secret,trust.c.id));
+   desk.app.setPrincipal(h.canisterId);
+   await desk.app.hub_falconIntake({compositeId:tenant+':sample',updated:config[5],title:'PRIVATE alert',host:'PRIVATE mac',severity:'critical',providerStatus:'new',url:'',identity:[],resolutions:[]});
+   await desk.app.hub_falconIntake({compositeId:'c'.repeat(32)+':historical',updated:config[5],title:'Other tenant',host:'other',severity:'critical',providerStatus:'new',url:'',identity:[],resolutions:[]});
+   await desk.app.hub_falconIntake({compositeId:tenant+':closed',updated:config[5],title:'Locally open follow-up',host:'other',severity:'critical',providerStatus:'closed',url:'',identity:[],resolutions:[]});
+   const totals=await read(allowed);
+   assert.deepEqual(Object.keys(totals).sort(),['total','passing','attention','unverified','assessed','score','falconOpen','falconCritical','falconLastSyncMs'].sort());
+   assert.equal(totals.falconOpen,1n);assert.equal(totals.falconCritical,1n);
+   assert.equal((await read(legacy)).falconOpen,undefined);
+   const existingId=(await h.hub.operationsDisplayState(legacy)).ready.id;
+   h.hub.setPrincipal(principal.alice);
+   assert.ok('denied' in await h.hub.operationsDisplayConfigure(existingId,options));
+   h.hub.setPrincipal(principal.owner);
+   assert.ok('ok' in await h.hub.operationsDisplayConfigure(existingId,options));
+   await pic.advanceTime(11000);
+   assert.equal((await read(legacy)).falconCritical,1n);
+   assert.ok('ok' in await h.hub.operationsDisplayConfigure(existingId,{...options,falcon:[false]}));
+   await pic.advanceTime(11000);
+   assert.equal((await read(legacy)).falconOpen,undefined);
+   assert.ok('denied' in (await h.hub.operationsDisplaySnapshot(allowed,desk.c.id)).state);
+   assert.ok(await h.hub.disconnectFalcon());
+   assert.ok(await h.hub.connectFalcon(config[0],'c'.repeat(32),...config.slice(2)));
+   await pic.advanceTime(11000);
+   assert.equal((await read(allowed)).falconOpen,undefined);
+ }finally{await pic.tearDown();}
+});

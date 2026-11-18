@@ -49,6 +49,10 @@ changes. External integrations can have separate identity and retention rules.
 App login and Hub menu launches show a dedicated handoff screen while the Hub checks
 access and creates a one-time ticket. The console and employee menu stay hidden and
 inert. Errors offer retry or return; a stalled Hub call times out after 30 seconds.
+Hub 0.48 starts provider verification as soon as the callback arrives. When an employee
+switches tools with a current company session, the Hub validates that session and
+issues a one-time ticket for the permitted destination. An expired session returns
+the employee to sign-in with the intended app retained.
 Direct app visits retain their hash route through sign-in. Assets, Contracts, Desk,
 Forms, Trust and Watch share one login template and state controller.
 

@@ -52,3 +52,14 @@ test('Workboard is distinct from tickets and opens its task board and labels old
  const f=fixture({operationsSources:async()=>[source()],operationsSnapshot:async()=>result()});
  try{await f.ui.start();const card=f.root.querySelector('[data-area="workboard"]');assert.match(card.textContent,/7open shared-project tasks/);assert.match(card.textContent,/3 of 5 subtasks/);assert.equal(card.querySelector('a').href,'https://desk.test/#/workboard/operations');assert.equal(f.root.querySelectorAll('.ops-action').length,6);assert.doesNotMatch(card.textContent,/18open requests/);}finally{f.close();}
 });
+
+test('Trust links to open Falcon tickets even when the provider sync is delayed',async()=>{
+ const last=Date.now()-300000;
+ const f=fixture({operationsSources:async()=>[source(),source('trust',2n)],operationsSnapshot:async id=>id===1n?result({...desk,falconOpen:3,falconCritical:1,falconLastSyncMs:last}):result({total:0,passing:0,attention:0,unverified:0,assessed:0,score:0})});
+ try{
+   await f.ui.start();
+   const card=f.root.querySelector('[data-area="trust"]');
+   assert.match(card.textContent,/3 open Desk tickets · 1 critical.*Sync delayed · Last sync/);
+   assert.equal(card.querySelector('a[href*="queue/falcon"]').href,'https://desk.test/#/queue/falcon');
+ }finally{f.close();}
+});

@@ -1,6 +1,6 @@
 # Deploy Ship the Bug 2D alongside 3D
 
-This module is **bug2d v0.2.5**, a separate two-canister application. Never link it to
+This module is **bug2d v0.2.7**, a separate two-canister application. Never link it to
 an existing `bug` backend or frontend. Do not use the Kitchen `bug` recipe for this
 module: that recipe maintains the integrated 2D/3D game. This 2D release uses the CLI.
 

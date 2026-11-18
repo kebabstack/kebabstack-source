@@ -47,7 +47,17 @@ export function createQueueBulk({root, table, selectAll, api, session, getMe, lo
       }
       if(action.value==='status'){
         input.innerHTML='<label for="bulk-state">Status</label><select id="bulk-state"><option value="open">In progress</option><option value="new">Received</option><option value="waiting:requester">Waiting for requester</option><option value="waiting:third-party">Waiting for third party</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>';
-        const explain=()=>{hint.textContent=input.querySelector('select').value==='closed'?'Closing cancels pending approvals. Offboarding checks still apply; review skipped requests below.':'Approvals, checklists and offboarding checks still apply. Requests that cannot change are listed below.';};input.querySelector('select').onchange=explain;explain();
+        const state=input.querySelector('#bulk-state');
+        const explain=()=>{
+          input.querySelector('[data-falcon-choice]')?.remove();
+          hint.textContent='Approvals, checklists and offboarding checks still apply. Requests that cannot change are listed below.';
+          if (!['resolved','closed'].includes(state.value)) return;
+          if (state.value==='closed') hint.textContent='Closing cancels pending approvals. Offboarding checks still apply.';
+          if (![...selected.values()].some(row=>row.channel==='falcon')) return;
+          input.insertAdjacentHTML('beforeend','<label data-falcon-choice>For detections still open in Falcon<select id="bulk-falcon-resolution"><option value="">Leave open</option><option value="true_positive">Close as True Positive</option><option value="false_positive">Close as False Positive</option><option value="ignored">Close as Ignored</option></select></label>');
+          hint.textContent+=' Desk resolves Falcon tickets after Falcon confirms closure. Already closed detections keep their classification.';
+        };
+        state.onchange=explain;explain();
       }
       if(action.value==='due'){input.innerHTML='<label for="bulk-date">Target date</label><input id="bulk-date" type="date" required min="1970-01-01" max="9999-12-31">';hint.textContent='Uses 00:00 UTC on the selected date, the same target as individual requests.';}
       if(restore&&previousValue!==undefined&&action.value===previousAction){const field=input.querySelector('select,input');if(field){field.value=previousValue;field.dispatchEvent(new doc.defaultView.Event('change'));}}
@@ -58,7 +68,7 @@ export function createQueueBulk({root, table, selectAll, api, session, getMe, lo
       if(action.value==='me')change={assign:getMe().id};
       if(action.value==='assign')change={assign:input.querySelector('select').value};
       if(action.value==='unassign')change={assign:''};
-      if(action.value==='status'){const [status,waitingOn='']=input.querySelector('select').value.split(':');change={status:{status,waitingOn}};}
+      if(action.value==='status'){const [status,waitingOn='']=input.querySelector('select').value.split(':');const field=input.querySelector('#bulk-falcon-resolution');change=field?{finish:{status,falconResolution:field.value}}:{status:{status,waitingOn}};}
       if(action.value==='clearDue')change={due:[]};
       if(action.value==='due'){const date=Date.parse(input.querySelector('input').value+'T00:00:00Z');if(!Number.isFinite(date))return;change={due:[BigInt(date)*1000000n]};}
       if(change)await applySelection(change,form);
@@ -80,7 +90,7 @@ export function createQueueBulk({root, table, selectAll, api, session, getMe, lo
   }
   async function applySelection(action, form) {
     const n=epoch, actor=getMe().id, targets=[...selected.values()];busy=true;freeze(true);checks();root.querySelectorAll('button,input,select').forEach(e=>e.disabled=true);
-    const progress=form.querySelector('.bulk-progress'), failures=[];let updated=0,unchanged=0,handled=0;
+    const progress=form.querySelector('.bulk-progress'), failures=[];let queued=0,updated=0,unchanged=0,handled=0;
     try {
       for(let start=0;start<targets.length;start+=50){
         if(!valid(n)||getMe().id!==actor)return;
@@ -93,10 +103,10 @@ export function createQueueBulk({root, table, selectAll, api, session, getMe, lo
           for(const r of targets.slice(handled))failures.push({row:r,detail:reason});handled=targets.length;break;
         }
         const byId=new Map(reply.ok.map(r=>[String(r.id),r.result]));
-        for(const r of batch){const result=byId.get(id(r));if(result&&'updated'in result)updated++;else if(result&&'unchanged'in result)unchanged++;else failures.push({row:r,detail:result?.skipped||'Result not confirmed. Open the request before retrying.'});handled++;}
+        for(const r of batch){const result=byId.get(id(r));if(result&&'updated'in result){if(action.finish && r.channel==='falcon')queued++;else updated++;}else if(result&&'unchanged'in result)unchanged++;else failures.push({row:r,detail:result?.skipped||'Result not confirmed. Open the request before retrying.'});handled++;}
       }
     }catch{if(!valid(n))return;for(const r of targets.slice(handled))failures.push({row:r,detail:'Result not confirmed. Open the request before retrying.'});}
-    finally{if(valid(n)){busy=false;freeze(false);selected.clear();resultText=`${updated} updated · ${unchanged} already matched${failures.length?` · ${failures.length} need review`:''}.`;checks();render();
+    finally{if(valid(n)){busy=false;freeze(false);selected.clear();resultText=`${updated} updated${queued?` · ${queued} awaiting Falcon confirmation`: ''} · ${unchanged} already matched${failures.length?` · ${failures.length} need review`:''}.`;checks();render();
       await refresh();if(!valid(n))return;
       if(failures.length){const details=doc.createElement('details');details.className='bulk-failures';details.open=true;details.innerHTML=`<summary>${failures.length} requests need review</summary><ul>${failures.map(f=>`<li><a href="#/t/${f.row.id}">${esc(f.row.key)}</a> — ${esc(f.detail)}</li>`).join('')}</ul>`;root.append(details);}
       const receipt=root.querySelector('.bulk-receipt');if(receipt){receipt.tabIndex=-1;receipt.focus();}

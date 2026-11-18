@@ -2,6 +2,8 @@
 
 The interface follows the [shared Kebabstack standard](../design/README.md): canonical identity, semantic light/dark colours and common navigation/control sizes. Product access and workflow boundaries remain explicit.
 
+Create a teamspace or edit a contract in a labelled dialog. Tab reaches the fields, search results and actions. Escape closes the active dialog and returns focus to its opener.
+
 App roles are managed exclusively in [Hub → Permissions](../docs/APP-PERMISSIONS.md). Active Hub owners/admins and per-app Admins can see and manage all app content. Employees retain their own and explicitly shared content; Watch requires an explicit Viewer/Admin grant by default.
 
 

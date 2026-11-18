@@ -6,6 +6,17 @@ import {candidateBackend} from '../packaged-wasm.mjs';
 export const identity=Object.fromEntries(['controller','owner','alpha','beta','employee','lunch'].map(n=>[n,createIdentity('workboard-'+n).getPrincipal()]));
 export const key=n=>'workboard-request-'+String(n).padStart(6,'0');
 export const unwrap=r=>{assert.ok(r.ok,JSON.stringify(r,(_,v)=>typeof v==='bigint'?String(v):v));return r.ok;};
+// Desk 0.25 tickets predate the optional Falcon detail. Keep the complete original record.
+export function assertTicketPreserved(actual, before) {
+ assert.equal(before.length, 1, 'expected a populated ticket before upgrading');
+ assert.deepEqual(actual, [{falcon: [], ...before[0]}]);
+}
+export async function archiveFixtureInvoice(app, token, saleId) {
+ const pdf = Buffer.from('%PDF-1.4\n' + 'example '.repeat(40));
+ const result = await app.attachSaleDocument(token, saleId, 'invoice', pdf);
+ assert.ok(result.ok, result.detail);
+ assert.equal((await app.getSale(token, saleId))[0].sale.pdfId, result.docId);
+}
 export async function setup(serverUrl,baseline=false){
  const pic=await PocketIc.create(serverUrl);await pic.setTime(Date.parse('2026-09-29T12:00:00Z'));
  const x={pic,apps:{},tokens:{},ids:{}};

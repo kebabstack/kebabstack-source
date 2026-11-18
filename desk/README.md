@@ -217,25 +217,9 @@ and requests at most four AI reviews; larger queues take several runs. This is
 independent of the browser and does not fetch older Slack history that was never
 synchronized into Desk.
 
-The newest public comment must be from an active, currently authorized Desk staff
-member other than the requester. A newer requester reply, internal note or status
-change requires a new public staff confirmation. A manually reopened ticket is
-therefore not resolved again from its old completion comment. Clear completed work
-may resolve; plans, partial fixes and ambiguity stay open. Checklists, approvals and
-hardware/offboarding gates are the same as manual Resolve. The ticket activity
-quotes the evidence; connected Slack threads receive the status notice. Reopen
-remains available. AI classifications are not guaranteed to be correct.
+Desk 0.40 sends the original request, public replies in order and public workflow status/approval events to the configured AI. It quotes the latest public reply as evidence. An authorized agent can confirm completion, or the identified requester can confirm the solution worked after an agent helped. An unresolved part, a proposal or simple thanks keeps the request open. Private notes and manual status changes invalidate earlier completion evidence. Automatic SLA notices do not. Existing checklist, approval and offboarding rules apply. Falcon tickets use their own confirmed status workflow.
 
-Unchanged evaluated revisions are not repeatedly sent to AI. Failed or invalid
-responses retry after increasing 15–60 minute delays plus queue rotation; Settings
-→ Log records deferrals. A later ticket change permits another review. Decisions,
-retry times and the scan cursor survive upgrades. Customer projects are excluded.
-Internal notes are never transmitted. Requests over 6,000 characters, comments
-over 4,000 characters and activity tails over 100 events remain manual to avoid
-making decisions from a silently truncated conversation. The provider receives the
-original request and latest public staff comment. Existing title/triage/follow-up
-assistance uses the same switch. Disabling it stops new reviews and prevents
-in-flight completion decisions from applying while disabled.
+An eligible request still open after review becomes due again after six hours, subject to queue rotation. Failed AI calls retry after 15–60 minutes plus queue rotation. Customer projects, private notes and attachments are excluded. Conversations above 12,000 characters or 500 recorded events stay manual. With AI assistance enabled, a connected active Slack intake can also follow up after 24 hours without ticket changes. Each unchanged thread gets one successful reminder; failed delivery retries after six hours. The requester or an agent can reply `Desk: resolved` or `Desk: erledigt` to a reminder, or react with ✅ to the original message. Silence leaves the request open. No additional Slack scope is required.
 
 Operator check: use a disposable internal request, add an explicit public staff
 completion comment, and inspect its activity after a background cycle. An ordinary
@@ -250,3 +234,16 @@ Hub 0.42 with Desk 0.35 separates onboarding/offboarding requests and includes y
 ## Documentation handoff (0.37.0)
 
 On a resolved internal ticket, confirm a reusable solution under Documentation, then create a Doku proposal. Requires Hub 0.44 and Doku 0.1 with Author/Reviewer access; publication is a separate human decision. Reopening invalidates the confirmation. Customer-project tickets and automatic AI proposals are excluded. See [Doku](../knowledge/README.md).
+
+## CrowdStrike Falcon in internal support
+
+Hub can send new or updated Falcon endpoint alerts to the ordinary agent queue. Each Falcon composite ID maps to one internal ticket. The Falcon queue shows detections whose last known provider status is New, In progress or Reopened. Closed alerts remain accessible in the helpdesk. Use Assign to me on its detail page to queue acknowledgement. An internal activity entry records the provider readback. Choose New, In progress, Reopened or Closed on the alert ticket. To close an active detection, select True Positive, False Positive or Ignored. Desk keeps the change pending until Hub reads the requested state back from Falcon. If another operator changes the detection first, review the refreshed state in Desk before submitting again. A direct Falcon link opens the investigation. See the [Hub setup guide](../docs/INSTALL.md#crowdstrike-falcon-endpoint-alerts-alpha).
+
+In Active, the Status column shows the Desk workflow. Select the requests, then choose Change status and Resolved or Closed. Leave open skips detections that still need investigation and reconciles existing Falcon closures. To close the remaining selected detections together, choose their shared classification. Desk reports queued confirmations and lists skipped requests individually. Both closing choices resolve the Falcon ticket after provider confirmation.
+
+
+Falcon tickets use the directory identity matching the alert’s UPN or email. When Falcon reports only a local account, a unique Assets assignment identifies the affected employee. A serial from Falcon takes precedence; otherwise Assets checks the hostname against MDM device names, inventory tags and serials, including a complete serial at the end of a managed hostname. When both the login and the inventory match are inconclusive, Desk shows “Affected employee not identified”. Opening a ticket shows the current device assignment with the viewer’s Assets permissions. The originating alert and the private support-team visibility are preserved.
+
+For tickets created by a connected form, the conversation includes a private Kebabstack bot note for each recipient selected in Forms. The note changes from queued to sent when Slack accepts the message. Skipped, disabled, failed and unconfirmed delivery are recorded separately. Use the recipient name and email for follow-up. The public customer link excludes these notes.
+
+To accept external appeals in the IT helpdesk, register the Forms backend and form number in Desk → Settings → Forms. In Forms → Publish & connect enter the Desk backend and source number. New submissions appear in Internal support. External contact details remain unverified and separate from directory identities.

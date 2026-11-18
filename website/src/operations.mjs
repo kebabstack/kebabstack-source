@@ -47,7 +47,7 @@ export function renderOperations(lang, icon, esc) {
     ${tv ? "" : `<a href="#app-${s.id}" aria-label="${esc(s.action)} · ${s.name} · ${t("Produktbeispiel", "Product example")}">${esc(s.action)} ${icon("arrow")}</a>`}
   </li>`).join("")}</ul>`;
   return `<section class="section shell operations-section" id="operations" aria-labelledby="operations-heading">
-    <div class="section-heading"><div><p class="eyebrow">02 / HUB OPERATIONS</p><h2 id="operations-heading">${t("Deine IT auf einen Blick.<br>Der nächste Schritt gleich dabei.", "Your IT at a glance.<br>Your next step in sight.")}</h2></div>
+    <div class="section-heading"><div><p class="eyebrow">Hub Operations</p><h2 id="operations-heading">${t("Deine IT auf einen Blick.<br>Der nächste Schritt gleich dabei.", "Your IT at a glance.<br>Your next step in sight.")}</h2></div>
     <p class="section-intro">${t("Tickets, Gerätezustand, Hardware, Vertragsfristen und Domain-Meldungen laufen im Hub zusammen. Du erkennst, wo Arbeit ansteht, und gehst direkt in der zuständigen App weiter.", "Requests, device posture, hardware, contract deadlines and domain alerts come together in Hub. See what needs attention, then continue in the app that owns the work.")}</p></div>
     <figure class="operations-demo" data-scenario="operations" aria-label="${t("Operations-Dashboard mit Beispieldaten", "Operations dashboard with sample data")}">
       <div class="operations-toolbar"><span class="tiny-label">Hub → Operations</span><span class="badge">${t("Beispieldaten", "Sample data")}</span>

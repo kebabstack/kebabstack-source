@@ -121,13 +121,6 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 .drawer .dbody input[type=text],.drawer .dbody input[type=number],.drawer .dbody input[type=date],.drawer .dbody select,.drawer .dbody textarea{width:100%}
 #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--ks-bg-cta-inverse);color:var(--ks-bg);font:500 13px var(--ks-ui);padding:12px 22px;border-radius:var(--ks-radius-pill);transition:transform .25s ease;z-index:90;max-width:90vw}
 #toast.on{transform:translateX(-50%)}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
-.modal.on{display:flex}
-.modal .mbox{background:var(--ks-bg);border:1px solid var(--ks-rule);border-radius:var(--ks-radius-card);padding:26px;max-width:460px;width:100%;max-height:92vh;overflow:auto}
-.modal .mbox .tt{font-family:var(--ks-ui);font-weight:600;font-size:14px;letter-spacing:.05em;margin-bottom:14px}
-.modal .mbox .ta{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
-.modal .mbox label{display:block;font:500 var(--ks-fz-eyebrow) var(--ks-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ks-fg-secondary);margin:12px 0 5px}
-.modal .mbox input[type=text],.modal .mbox input[type=number],.modal .mbox select,.modal .mbox textarea{width:100%}
 .view{display:none}.view.on{display:block}
 @media (max-width:640px){.wrap,.rhead .in,.mainnav .in{padding-left:16px;padding-right:16px}.warnbox{margin-left:16px;margin-right:16px}}
 
@@ -136,7 +129,6 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 .spacebrand{display:flex;gap:12px;align-items:center;margin-right:auto}.spacebrand strong{display:block;font-size:18px}.eyebrow{display:block;font:11px var(--ks-font-mono,monospace);letter-spacing:.12em;color:var(--ks-fg-muted,#587565);margin-bottom:5px}
 .spaceglyph{font-size:30px;color:var(--ks-accent,#245344)}.spaceselect{font:11px var(--ks-font-mono,monospace);color:var(--ks-fg-muted,#587565);display:grid;gap:4px}.spaceselect select{min-width:210px;max-width:320px;padding:9px 12px}.spaceaccess{font-size:12px;color:var(--ks-fg-muted,#587565)}
 .spacefields{display:grid;gap:14px;max-width:720px}.spacefields label{display:grid;gap:5px}.spacepeople{display:grid;gap:8px;margin:16px 0}.spacemember{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--ks-rule);border-radius:10px}.spacemember span{flex:1;min-width:0;overflow-wrap:anywhere}.spacemember select{width:auto}.spacehelp{font-size:14px;line-height:1.6;color:var(--ks-fg-muted,#587565)}
-#spaceModal .box{max-width:560px;width:calc(100vw - 40px);padding:28px;border-radius:16px;background:var(--ks-bg-card);color:var(--ks-fg,#1b3029)}#spaceModal input,#spaceModal textarea{width:100%;margin:8px 0 16px}#spaceModal p{line-height:1.6}
 @media(max-width:680px){.spacebar .in{padding:16px;gap:10px}.spacebrand{width:100%}.spacebrand strong{font-size:16px}.spaceselect{flex:1 0 100%;min-width:0}.spaceselect select{min-width:0;width:100%;max-width:none}.spaceaccess{display:none}.spacebar .pill{font-size:10px;padding:9px}.spacemember{flex-wrap:wrap}.spacefields{max-width:100%}}
 .drawer:not(.on){visibility:hidden;pointer-events:none}
 .ai-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}.ai-card-heading>div{min-width:0;max-width:720px}.ai-card-heading>button{flex-shrink:0;white-space:normal}.ai-card-heading p{line-height:1.65}.ai-connection-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:26px}.ai-connection-step{display:flex;align-items:center;gap:12px;background:var(--ks-bg-sunk);border:1px solid var(--ks-rule);border-radius:12px;padding:18px}.ai-connection-step strong,.ai-connection-step span:not(.ai-step-icon){display:block}.ai-connection-step strong{font-size:14px;color:var(--ks-fg)}.ai-connection-step span:not(.ai-step-icon){font-size:13px;color:var(--ks-fg-secondary)}.ai-step-icon{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;border:1px solid var(--ks-rule);border-radius:50%;color:var(--ks-fg-secondary)}.ai-step-icon.ready{color:var(--ks-indicator-teal);border-color:var(--ks-indicator-teal)}.ai-connection-detail{margin:20px 0;color:var(--ks-fg-body)}.ai-connection-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;border-top:1px solid var(--ks-rule);padding-top:20px}.ai-connection-meta dt{font-size:12px;color:var(--ks-fg-secondary);margin-bottom:4px}.ai-connection-meta dd{font-weight:500;color:var(--ks-fg);overflow-wrap:anywhere}.ai-test-report{padding:18px 20px;border:1px solid var(--ks-rule);border-left:3px solid var(--ks-indicator-teal);border-radius:12px;background:var(--ks-bg-sunk)}.ai-test-report.err{border-left-color:var(--ks-accent)}.ai-test-report strong{color:var(--ks-fg)}.ai-test-report p{margin:6px 0 10px}#aiTestResult{margin-top:20px}#aiActionStatus{margin-top:16px;display:inline-block;white-space:normal}#aiActionStatus:empty{display:none}
@@ -154,22 +146,16 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 
 <section id="login" aria-busy="true" class="is-waiting app-auth">
   <div class="auth-shell">
-    <aside class="auth-story">
-      <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
-      <div><h2>Your work.<br>Your people.<br><em>One place to start.</em></h2><p>The tools you need, connected through one company sign-in.</p></div>
-      <div class="auth-path"><span>Sign in</span><i></i><span>Your workspace</span><i></i><span>Get things done</span></div>
-    </aside>
+    <div class="auth-brand"><div class="lstage" id="loginStage" aria-hidden="true">    <svg id="lgSvg" viewBox="0 0 40 48" width="27" height="35" xmlns="http://www.w3.org/2000/svg"><path class="lg-stick" d="M20 3v42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect class="lg-piece" data-i="0" x="10" y="9" width="20" height="6" rx="3" fill="#ffb23a"/><rect class="lg-piece" data-i="1" x="4" y="18" width="32" height="6" rx="3" fill="#ff8a3d"/><rect class="lg-piece" data-i="2" x="7" y="27" width="26" height="6" rx="3" fill="#ff6b4a"/><rect class="lg-piece" data-i="3" x="12" y="36" width="16" height="6" rx="3" fill="#f0503c"/></svg></div><div class="mark" id="loginMark">kebab<span class="brand-hyphen">-</span>stack</div></div>
     <section class="auth-main" aria-labelledby="loginTitle">
       <div class="auth-org"><img id="loginLogo" class="hidden" alt=""><div class="lorg" id="loginSub">Your company workspace</div></div>
       <img class="auth-app-logo" src="./favicon.svg" width="36" height="36" alt="">
-      <h1 id="loginTitle"><span class="auth-ready">Welcome to Contracts.</span><span class="auth-waiting">Opening Contracts…</span></h1>
-      <p class="auth-intro">Your company account. One sign-in for all your tools.</p>
+      <h1 id="loginTitle"><span class="auth-ready">Sign in to Contracts</span><span class="auth-waiting">Opening Contracts…</span></h1>
       <button id="loginBtn" class="lbtn" disabled>Continue with company sign-in</button>
       <div class="auth-progress" role="status" aria-live="polite"><span class="auth-progress-dot" aria-hidden="true"></span><span id="authProgress">Checking your session…</span></div>
       <div id="loginStatus" class="status" role="alert"></div>
       <div id="loginWarn" class="warnbox hidden"></div>
       <p class="lhint">Your Hub checks your access and brings you straight back here.</p>
-      <p class="lfoot">Access is managed by your company in the Hub.</p>
     </section>
   </div>
 </section>
@@ -199,7 +185,7 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
     <div class="pagehead"><div><span class="eyebrow">YOUR WORKSPACE</span><h2 id="spHeading">Space settings</h2></div><button class="pill outline sm" id="spBack">BACK TO CONTRACTS</button><div class="sub" id="spIntro">Members share this space’s contracts, inbox and deadlines. Hub-assigned app admins can access every workspace.</div></div>
     <div id="spContent"></div>
   </div></section>
-  <div class="modal" id="spaceModal"><div class="box"><h2>Create a teamspace</h2><p>For Finance, People, Sales, Marketing — or your next project. Only people you add can open it.</p><label class="lbl" for="spNewName">Name</label><input id="spNewName" maxlength="80" placeholder="e.g. Finance"><label class="lbl" for="spNewDescription">Description</label><textarea id="spNewDescription" maxlength="500" placeholder="What belongs here?"></textarea><div class="status" id="spNewStatus"></div><div class="btnrow"><button class="pill outline" id="spNewCancel">Cancel</button><button class="pill primary" id="spNewSave">CREATE TEAMSPACE</button></div></div></div>
+  <dialog class="modal ks-dialog" id="spaceModal" aria-labelledby="spaceModalTitle" style="--ks-dialog-width:560px"><div class="mbox"><h2 class="tt" id="spaceModalTitle">Create a teamspace</h2><p>Invite colleagues to work on contracts together. App administrators can access every teamspace.</p><label class="lbl" for="spNewName">Name</label><input id="spNewName" maxlength="80" placeholder="e.g. Finance"><label class="lbl" for="spNewDescription">Description</label><textarea id="spNewDescription" maxlength="500" placeholder="What belongs here?"></textarea><div class="status" role="status" id="spNewStatus"></div><div class="actions"><button class="pill outline" id="spNewCancel">Cancel</button><button class="pill primary" id="spNewSave">Create teamspace</button></div></div></dialog>
   <!-- ============================ today ============================ -->
   <section class="view" id="viewToday">
     <div class="wrap">
@@ -453,82 +439,83 @@ table.plain td.mono{font-family:var(--ks-mono);font-size:12.5px}
 </div>
 
 <!-- paste-a-message modal -->
-<div class="modal" id="pasteModal"><div class="mbox" style="max-width:620px">
-  <div class="tt">Paste text</div>
+<dialog class="modal ks-dialog" id="pasteModal" aria-labelledby="pasteModalTitle" style="--ks-dialog-width:620px"><div class="mbox">
+  <h2 class="tt" id="pasteModalTitle">Paste text</h2>
   <div class="kv">For a message you cannot forward or save: paste the text. It goes through the same pipeline as mail.</div>
-  <div class="row"><div><label>From (address)</label><input type="text" id="pmFrom" placeholder="billing@vendor.example"></div><div><label>Sent (date)</label><input type="date" id="pmDate"></div></div>
-  <label>Subject</label><input type="text" id="pmSubject" maxlength="500">
-  <label>Text</label><textarea id="pmText" rows="10" spellcheck="false"></textarea>
-  <div class="ta"><button class="pill primary sm" id="pmSend">HAND IN</button><button class="pill outline sm" id="pmCancel">Cancel</button><span id="pmStatus" class="status"></span></div>
-</div></div>
+  <div class="row"><div><label for="pmFrom">From (address)</label><input type="text" id="pmFrom" placeholder="billing@vendor.example"></div><div><label for="pmDate">Sent (date)</label><input type="date" id="pmDate"></div></div>
+  <label for="pmSubject">Subject</label><input type="text" id="pmSubject" maxlength="500">
+  <label for="pmText">Text</label><textarea id="pmText" rows="10" spellcheck="false"></textarea>
+  <div class="actions"><button class="pill primary sm" id="pmSend">HAND IN</button><button class="pill outline sm" id="pmCancel">Cancel</button><span id="pmStatus" role="status" class="status"></span></div>
+</div></dialog>
 
 <!-- generic small modals -->
-<div class="modal" id="statusModal"><div class="mbox">
-  <div class="tt">CHANGE THE CONTRACT STATUS</div>
+<dialog class="modal ks-dialog" id="statusModal" aria-labelledby="statusModalTitle"><div class="mbox">
+  <h2 class="tt" id="statusModalTitle">Change contract status</h2>
   <div class="kv">Your decision, not the AI's. "End confirmed" needs an end date on the record; "ended" is for a date that has passed.</div>
-  <label>New status</label><select data-ks-search id="stSel"><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
-  <label>Why (history)</label><input type="text" id="stNote" maxlength="300">
-  <div class="ta"><button class="pill primary sm" id="stSave">Save</button><button class="pill outline sm" id="stCancel">Cancel</button><span id="stStatus" class="status"></span></div>
-</div></div>
+  <label for="stSel">New status</label><select data-ks-search id="stSel"><option value="draft">Draft</option><option value="active">Active</option><option value="cancelling">Cancellation in progress</option><option value="endConfirmed">End confirmed</option><option value="ended">Ended</option><option value="archived">Archived</option></select>
+  <label for="stNote">Why (history)</label><input type="text" id="stNote" maxlength="300">
+  <div class="actions"><button class="pill primary sm" id="stSave">Save</button><button class="pill outline sm" id="stCancel">Cancel</button><span id="stStatus" role="status" class="status"></span></div>
+</div></dialog>
 
-<div class="modal" id="taskModal"><div class="mbox">
-  <div class="tt" id="tkTitle">NEW TASK</div>
-  <label>What needs doing</label><input type="text" id="tkText" maxlength="300">
-  <label>Due (optional)</label><input type="date" id="tkDue">
-  <label>Assign to</label>
+<dialog class="modal ks-dialog" id="taskModal" aria-labelledby="tkTitle"><div class="mbox">
+  <h2 class="tt" id="tkTitle">New task</h2>
+  <label for="tkText">What needs doing</label><input type="text" id="tkText" maxlength="300">
+  <label for="tkDue">Due (optional)</label><input type="date" id="tkDue">
+  <label for="tkAssIn">Assign to</label>
   <div class="pick"><input type="text" id="tkAssIn" placeholder="Search the directory…" autocomplete="off"><div class="list hidden" id="tkAssList"></div></div>
   <div class="chips" id="tkAssChip"></div>
-  <div class="ta"><button class="pill primary sm" id="tkSave">Add</button><button class="pill outline sm" id="tkCancel">Cancel</button><span id="tkStatus" class="status"></span></div>
-</div></div>
+  <div class="actions"><button class="pill primary sm" id="tkSave">Add</button><button class="pill outline sm" id="tkCancel">Cancel</button><span id="tkStatus" role="status" class="status"></span></div>
+</div></dialog>
 
-<div class="modal" id="doneModal"><div class="mbox">
-  <div class="tt" id="dnTitle">DONE</div>
-  <div id="dnDecision"><label>What was decided?</label><select data-ks-search id="dnSel"><option value="continue">Continue — keep the contract</option><option value="cancel">Cancel — start the cancellation</option><option value="">Just mark it done</option></select></div>
-  <label>Note (history)</label><input type="text" id="dnNote" maxlength="300">
-  <div class="ta"><button class="pill primary sm" id="dnSave">Save</button><button class="pill outline sm" id="dnCancel">Cancel</button><span id="dnStatus" class="status"></span></div>
-</div></div>
+<dialog class="modal ks-dialog" id="doneModal" aria-labelledby="dnTitle"><div class="mbox">
+  <h2 class="tt" id="dnTitle">Complete task</h2>
+  <div id="dnDecision"><label for="dnSel">What was decided?</label><select data-ks-search id="dnSel"><option value="continue">Continue — keep the contract</option><option value="cancel">Cancel — start the cancellation</option><option value="">Just mark it done</option></select></div>
+  <label for="dnNote">Note (history)</label><input type="text" id="dnNote" maxlength="300">
+  <div class="actions"><button class="pill primary sm" id="dnSave">Save</button><button class="pill outline sm" id="dnCancel">Cancel</button><span id="dnStatus" role="status" class="status"></span></div>
+</div></dialog>
 
-<div class="modal" id="snoozeModal"><div class="mbox">
-  <div class="tt">REMIND ME LATER</div>
+<dialog class="modal ks-dialog" id="snoozeModal" aria-labelledby="snoozeModalTitle"><div class="mbox">
+  <h2 class="tt" id="snoozeModalTitle">Remind me later</h2>
   <div class="kv">Only when this shows up again changes — the deadline itself does not move.</div>
-  <label>Show again in</label><select data-ks-search id="snSel"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
-  <div class="ta"><button class="pill primary sm" id="snSave">SNOOZE</button><button class="pill outline sm" id="snCancel">Cancel</button><span id="snStatus" class="status"></span></div>
-</div></div>
+  <label for="snSel">Show again in</label><select data-ks-search id="snSel"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
+  <div class="actions"><button class="pill primary sm" id="snSave">SNOOZE</button><button class="pill outline sm" id="snCancel">Cancel</button><span id="snStatus" role="status" class="status"></span></div>
+</div></dialog>
 
-<div class="modal" id="pickPersonModal"><div class="mbox">
-  <div class="tt" id="ppTitle">HAND TO A COLLEAGUE</div>
-  <div class="pick"><input type="text" id="ppIn" placeholder="Search the directory…" autocomplete="off"><div class="list hidden" id="ppList"></div></div>
+<dialog class="modal ks-dialog" id="pickPersonModal" aria-labelledby="ppTitle"><div class="mbox">
+  <h2 class="tt" id="ppTitle">Hand to a colleague</h2>
+  <div class="pick"><input type="text" id="ppIn" aria-label="Search the directory" placeholder="Search the directory…" autocomplete="off"><div class="list hidden" id="ppList"></div></div>
   <div class="chips" id="ppChip"></div>
-  <div class="ta"><button class="pill primary sm" id="ppSave">Save</button><button class="pill outline sm" id="ppCancel">Cancel</button><span id="ppStatus" class="status"></span></div>
-</div></div>
+  <div class="actions"><button class="pill primary sm" id="ppSave">Save</button><button class="pill outline sm" id="ppCancel">Cancel</button><span id="ppStatus" role="status" class="status"></span></div>
+</div></dialog>
 
-<div class="modal" id="proposeModal"><div class="mbox" style="max-width:560px">
-  <div class="tt">PROPOSE A CHANGE</div>
+<dialog class="modal ks-dialog" id="proposeModal" aria-labelledby="proposeModalTitle" style="--ks-dialog-width:560px"><div class="mbox">
+  <h2 class="tt" id="proposeModalTitle">Propose a change</h2>
   <div class="kv">Goes through the same confirmation as a proposal from mail — useful when you know something the record does not.</div>
   <div id="prRows"></div>
   <button class="linkbtn" id="prAdd" style="margin-top:8px">+ ANOTHER FIELD</button>
-  <label>Summary</label><input type="text" id="prSummary" maxlength="400" placeholder="e.g. vendor confirmed the new price on the phone">
-  <div class="ta"><button class="pill primary sm" id="prSave">PROPOSE</button><button class="pill outline sm" id="prCancel">Cancel</button><span id="prStatus" class="status"></span></div>
-</div></div>
+  <label for="prSummary">Summary</label><input type="text" id="prSummary" maxlength="400" placeholder="e.g. vendor confirmed the new price on the phone">
+  <div class="actions"><button class="pill primary sm" id="prSave">PROPOSE</button><button class="pill outline sm" id="prCancel">Cancel</button><span id="prStatus" role="status" class="status"></span></div>
+</div></dialog>
 
-<div class="modal" id="linkModal"><div class="mbox" style="max-width:560px">
-  <div class="tt">FILE THIS MESSAGE TO A CONTRACT</div>
-  <div class="pick"><input type="text" id="lkIn" placeholder="Search contracts…" autocomplete="off"><div class="list hidden" id="lkList"></div></div>
+<dialog class="modal ks-dialog" id="linkModal" aria-labelledby="linkModalTitle" style="--ks-dialog-width:560px"><div class="mbox">
+  <h2 class="tt" id="linkModalTitle">File this message to a contract</h2>
+  <div class="pick"><input type="text" id="lkIn" aria-label="Search contracts" placeholder="Search contracts…" autocomplete="off"><div class="list hidden" id="lkList"></div></div>
   <div class="chips" id="lkChip"></div>
   <label class="ck" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font:400 14px var(--ks-ui);margin-top:14px"><input type="checkbox" id="lkRule"> Remember: mail from this sender belongs to this contract</label>
-  <div class="ta"><button class="pill primary sm" id="lkSave">FILE</button><button class="pill outline sm" id="lkUnlink">UNLINK</button><button class="pill outline sm" id="lkCancel">Cancel</button><span id="lkStatus" class="status"></span></div>
-</div></div>
+  <div class="actions"><button class="pill primary sm" id="lkSave">FILE</button><button class="pill outline sm" id="lkUnlink">UNLINK</button><button class="pill outline sm" id="lkCancel">Cancel</button><span id="lkStatus" role="status" class="status"></span></div>
+</div></dialog>
 
-<div class="modal" id="textModal"><div class="mbox" style="max-width:760px">
-  <div class="tt" id="txTitle">TEXT</div>
+<dialog class="modal ks-dialog" id="textModal" aria-labelledby="txTitle" style="--ks-dialog-width:760px"><div class="mbox">
+  <h2 class="tt" id="txTitle">Text</h2>
   <div class="msgtext" id="txBody"></div>
-  <div class="ta"><button class="pill outline sm" id="txClose">Close</button></div>
-</div></div>
+  <div class="actions"><button class="pill outline sm" id="txClose">Close</button></div>
+</div></dialog>
 
-<div class="modal" id="confirmModal"><div class="mbox">
-  <div class="tt" id="cmText"></div>
-  <div class="ta"><button class="pill primary sm" id="cmYes">CONFIRM</button><button class="pill outline sm" id="cmNo">Cancel</button></div>
-</div></div>
+<dialog class="modal ks-dialog" id="confirmModal" aria-labelledby="cmText"><div class="mbox">
+  <h2 class="tt" id="cmText"></h2>
+  <div id="cmFields"></div><div id="cmStatus" role="status"></div>
+  <div class="actions"><button class="pill primary sm" id="cmYes">CONFIRM</button><button class="pill outline sm" id="cmNo" autofocus>Cancel</button></div>
+</div></dialog>
 
 <div id="toast"></div>
 <script type="module" src="./app.js"></script>

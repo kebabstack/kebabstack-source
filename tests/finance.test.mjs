@@ -22,7 +22,10 @@ async function setup(baseline=false){
  const ctx={pic,h,a,c,hub,app,ids,policy};
  ctx.login=async name=>{ctx.hub.setPrincipal(principals[name]);const ticket=await ctx.hub.mintAppTicket('',c.tileId);assert.ok(ticket.ok,ticket.detail);const [s]=await ctx.app.loginWithTicket(ticket.ticket);assert.ok(s);return s;};
  ctx.configure=async override=>{ctx.hub.setPrincipal(principals.owner);const view=await ctx.hub.getFinanceTeam();const result=await ctx.hub.setFinanceTeam({...view.config,mode:'team',people:[ids.finance],groups:[],apps:[{cid:c.id,canisterId:a.canisterId}],...override});assert.ok(result.ok,result.detail);await pic.tick(15);if(ctx.admin)assert.ok((await ctx.app.syncNow(ctx.admin.token)).ok);return result;};
- ctx.admin=await ctx.login('owner');await app.setSettings(ctx.admin.token,{orgName:'Finance fixture',appUrl:'https://assets.finance.test/',adminGroup:''});
+ ctx.admin=await ctx.login('owner');
+ const settings={orgName:'Finance fixture',appUrl:'https://assets.finance.test/',adminGroup:''};
+ if(baseline)settings.tagPrefix='INV-';
+ assert.ok((await app.setSettings(ctx.admin.token,settings)).ok);
  ctx.billing={legalName:'Fixture AG',street:'Example street',houseNo:'1',postalCode:'8000',town:'Zurich',country:'CH',uid:'CHE-123.456.789',vatRegistered:true,vatRateBp:810n,iban:'CH9300762011623852957',currency:'CHF',prefix:'TEST-',yearInNumber:true,paymentDays:14n,lang:'en',depreciationMonths:36n,floorPct:10n,minPriceMinor:5000n,waiverText:'Synthetic fixture terms.',waiverVersion:1n,footer:'TEST ONLY'};
  assert.ok((await app.setBilling(ctx.admin.token,ctx.billing)).ok);let seq=0;
  ctx.sale=async(email='outside@finance.test')=>{const asset=await ctx.app.createAsset(ctx.admin.token,{tag:'INV-'+(++seq),serial:'FINANCE-'+seq,vendor:'Example',model:'Hardware',kind:'laptop',note:'Technical context is restricted'});assert.ok(asset.ok,asset.detail);const sale=await ctx.app.createSale(ctx.admin.token,asset.id,{pid:'',name:'Outside buyer',email,street:'Example road',houseNo:'2',postalCode:'8001',town:'Zurich',country:'CH'},10000n,'');assert.ok(sale.ok,sale.detail);assert.ok((await ctx.app.offerSale(ctx.admin.token,sale.id)).ok);assert.ok((await ctx.app.recordWaiver(ctx.admin.token,sale.id,'Fixture signed acceptance')).ok);assert.ok((await ctx.app.issueInvoice(ctx.admin.token,sale.id)).ok);return {id:sale.id,assetId:asset.id};};
@@ -74,7 +77,14 @@ test('production Hub and Assets upgrade with legacy paid invoices, archived PDFs
  const s=await x.sale(),a=x.app;assert.ok((await a.markPaid(x.admin.token,s.id,'Legacy bank record')).ok);const pdf=Buffer.from('%PDF-1.4\n'+ 'legacy invoice fixture '.repeat(15));assert.ok((await a.attachSaleDocument(x.admin.token,s.id,'invoice',pdf)).ok);
  const old=await a.getSale(x.admin.token,s.id),settings=await a.getSettings(x.admin.token),inventory=await a.getAsset(x.admin.token,s.assetId);
  x.hub.setPrincipal(principals.owner);const lunchPrincipal=createIdentity('finance-lunch').getPrincipal(),lunch=await x.hub.connectApp({name:'Lunch',canisterId:lunchPrincipal.toText(),note:'',lanes:['identity'],access:{mode:'everyone',groups:[],roles:[],people:[]},tile:[]});assert.ok(lunch.ok);x.hub.setPrincipal(lunchPrincipal);const roster=await x.hub.team_members();
- await x.upgrade();assert.deepEqual(await x.app.getSale(x.admin.token,s.id),old);const persisted = rows => rows.map(({ai,...rest})=>rest);assert.deepEqual(persisted(await x.app.getSettings(x.admin.token)),persisted(settings));assert.deepEqual(await x.app.getAsset(x.admin.token,s.assetId),inventory);x.hub.setPrincipal(lunchPrincipal);assert.deepEqual(await x.hub.team_members(),roster);
+ await x.upgrade();assert.deepEqual(await x.app.getSale(x.admin.token,s.id),old);const persisted = rows => rows.map(({ai,...rest})=>rest);
+ const currentSettings=persisted(await x.app.getSettings(x.admin.token));
+ // Assets 0.20.2 retired the unused setting. Recorded device tags remain in the inventory comparison.
+ const legacySettings=persisted(settings).map(({tagPrefix,...rest})=>{
+  if(tagPrefix!==undefined)assert.equal(tagPrefix,'INV-');
+  return rest;
+ });
+ assert.deepEqual(currentSettings,legacySettings);assert.deepEqual(await x.app.getAsset(x.admin.token,s.assetId),inventory.map(item=>({hardware:[],location:'',...item})));x.hub.setPrincipal(lunchPrincipal);assert.deepEqual(await x.hub.team_members(),roster);
  x.hub.setPrincipal(principals.owner);assert.equal((await x.hub.getFinanceTeam()).config.mode,'unconfigured');await x.configure();const f=await x.login('finance');const history=(await x.app.salePaymentHistory(f.token,s.id))[0];assert.equal(history.paidMinor,10000n);assert.match(history.entries[0].reason,/before the Finance ledger/);assert.deepEqual(Buffer.from((await x.app.saleDocument(f.token,old[0].sale.pdfId))[0].bytes),pdf);
  x.hub.setPrincipal(lunchPrincipal);assert.deepEqual(await x.hub.team_members(),roster,'enabling Finance must not alter Lunch');
  }finally{await x.pic.tearDown();}});

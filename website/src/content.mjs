@@ -6,26 +6,19 @@ export const content = {
     nav: ["Der Stack", "Die Technologie", "Selbst weiterbauen", "Pilot planen"],
     skip: "Zum Inhalt",
     menu: "Menü",
-    close: "Menü schließen",
-    eyebrow: "DIE IT-SUITE, DIE ZUSAMMENHÄNGE NUTZT.",
-    hero: ["Deine IT.", "Weniger Routine.", "Mehr Freiraum."],
+    eyebrow: "Die offene IT-Suite für Startups und KMU",
+    hero: ["Ein Arbeitsplatz", "für deine IT."],
     intro:
-      "Kebabstack verbindet Menschen, Geräte, Support und Verträge auf deiner Cloud Engine. Damit deine IT weniger nachhalten muss und mehr weiterbringen kann.",
+      "Bearbeite Supportfälle, verwalte Geräte und prüfe Verträge. Die Anwendungen teilen sich ein Personenverzeichnis und laufen auf deiner Cloud Engine.",
     heroPrimary: "Stack entdecken",
-    heroSecondary: "Wie funktioniert das?",
+    heroSecondary: "Technologie ansehen",
     heroNotes: [
       "MIT-lizenziert",
-      "Auf deiner Cloud Engine",
       "Aktuell in Alpha",
     ],
     illustration: "Produktillustration · Beispieldaten",
-    ribbon: [
-      "Ein gemeinsames Verzeichnis",
-      "Verbundene Anwendungen",
-      "Dein eigener Quellcode",
-    ],
-    suiteKicker: "01 / DER STACK",
-    suiteTitle: "Gute Werkzeuge.\nBessere Zusammenarbeit.",
+    suiteKicker: "Produktbeispiele",
+    suiteTitle: "So arbeitet der Stack.",
     suiteIntro:
       "Entdecke konkrete Abläufe aus der implementierten Alpha. Die Beispiele sind nachgestellt: Namen, Geräte und Zahlen sind Beispieldaten, keine Kundenergebnisse.",
     alpha: "IMPLEMENTIERT · ALPHA",
@@ -53,12 +46,13 @@ export const content = {
         title: "Ein Austritt beginnt nicht immer mit einem Ticket.",
         text: "Wird eine bekannte Person in Okta, OpenTeam, per SCIM oder direkt im Hub deaktiviert, fängt Desk die Folgearbeit auf. IT prüft den Anlass und hat den erlaubten Kontext aus den verbundenen Apps direkt im Fall.",
         features: [
+          "CrowdStrike Falcon (Alpha): Endpoint-Alarme im Helpdesk bearbeiten und klassifiziert schließen. Offene Alarme auf Wunsch am Trust-Bildschirm anzeigen",
           "Automatischer Prüffall statt vergessener Nacharbeit",
           "Hardware-Fortschritt aus Assets statt doppelter Checklisten",
           "Optional: KI prüft offene interne Tickets regelmäßig auf eindeutige Lösungskommentare",
           "Auch Kundenprojekte, Rufbereitschaft und HR/Finance-Berichte",
         ],
-        note: "KI benötigt einen verbundenen Anbieter und aktivierte Assistenz. Alle 15 Minuten werden kleine Pakete geprüft; größere Warteschlangen dauern länger. Nur öffentliche Team-Antworten zählen, spätere Rückfragen oder manuelle Statusänderungen sperren alte Belege. Checklisten und Freigaben bleiben verbindlich; Entscheidungen sind protokolliert und Tickets wieder öffnbar. Interne Notizen und Kundenprojekte sind ausgenommen. KI kann sich irren. Bestätigte mobile Alarmierung bleibt geplant.",
+        note: "KI benötigt einen verbundenen Anbieter und aktivierte Assistenz. Alle 15 Minuten werden kleine Pakete geprüft; größere Warteschlangen dauern länger. Ab Desk 0.40 zählt der öffentliche Verlauf einschließlich der Bestätigung des Melders nach einer Teamantwort. Offene Fälle können nach sechs Stunden erneut geprüft werden. Nach einem Tag ohne Aktivität kann Desk im Slack-Thread nachfragen. Checklisten und Freigaben bleiben verbindlich; Entscheidungen sind protokolliert und Tickets wieder öffnbar. Interne Notizen und Kundenprojekte sind ausgenommen. KI kann sich irren. Bestätigte mobile Alarmierung bleibt geplant.",
       },
       {
         id: "knowledge",
@@ -205,7 +199,7 @@ export const content = {
         "bug",
       ],
     ],
-    engineKicker: "03 / DIE TECHNOLOGIE, VERSTÄNDLICH",
+    engineKicker: "Hosting und Daten",
     engineTitle: "Weniger Infrastruktur.\nMehr Zeit für deine IT.",
     engineIntro:
       "Kebabstacks Kernanwendungen speichern ihre Daten direkt mit der Anwendung. Du betreibst dafür keine separate Datenbank. Bei kompatiblen Updates bleiben Tickets, Gerätezuordnungen und Verträge erhalten.",
@@ -248,7 +242,7 @@ export const content = {
     opencloudLink: "OpenCloud kennenlernen",
     engineNote:
       "Persistenz ersetzt kein Backup und macht Fehler nicht ungeschehen. Snapshots gelten je Canister; Wiederherstellung und Datenmigrationen bleiben zu planen. Externe Integrationen können eigene Dienste benötigen. Betreiber, Datenstandort und ICP-Abhängigkeit gehören weiterhin zur Entscheidung.",
-    buildKicker: "04 / DEIN STACK KANN MEHR WERDEN",
+    buildKicker: "Quellcode und SDK",
     buildTitle: "Eure Abläufe sind eigen.\nEure Software darf es auch sein.",
     buildIntro:
       "Ein zusätzliches Feld. Ein anderer Freigabeprozess. Eine ganz neue App. Mit offenem Quellcode und einem gemeinsamen SDK baut ihr auf dem auf, was schon da ist.",
@@ -284,23 +278,20 @@ export const content = {
     licenseLink: "Lizenz lesen",
     buildNote:
       "Motoko hilft, strukturell inkompatible Zustandsänderungen zu erkennen. Fachliche Tests, Berechtigungsprüfungen, Upgrade-Tests und Wiederherstellung bleiben Teil eurer Arbeit.",
-    economicsKicker: "05 / DIE ENTSCHEIDUNG",
+    economicsKicker: "Kostenmodell",
     economicsTitle: "Keine Gebühr pro Kopf.\nEine ehrliche Gesamtrechnung.",
     economicsIntro:
       "kebabstack erhebt keine Lizenzgebühr pro Person. Was es euch insgesamt kostet, entscheidet sich an Infrastruktur, Integrationen und dem Aufwand eures Teams.",
     economicsCards: [
       [
-        "01",
         "Gemeinsame Grundlagen",
         "Ein Verzeichnis und eine Anmeldung können doppelte Integrationsarbeit reduzieren.",
       ],
       [
-        "02",
         "Weniger separate Dienste",
         "Die Motoko-Backends speichern Daten direkt im Canister. Auch Crumbs kann ohne separaten Collector laufen. Zusätzliche Integrationen und deren Betrieb gehören in eure Kalkulation.",
       ],
       [
-        "03",
         "Eigene Prioritäten",
         "Quellcode und App-Kontrolle erlauben eigene Erweiterungen. Pflege, Support und Updates gehören dann ebenfalls zu euch.",
       ],
@@ -315,7 +306,7 @@ export const content = {
     ],
     costNote:
       "Betriebszeit × interner Stundensatz; Migration über einen festgelegten Zeitraum verteilen. Nur tatsächlich kündbare Abos als Einsparung rechnen. Noch kein validierter Kosten- oder Kapazitätsbenchmark.",
-    startKicker: "06 / DER NÄCHSTE SCHRITT",
+    startKicker: "Pilotprojekt",
     startTitle: "Klein anfangen.\nMit echten Fragen.",
     startIntro:
       "Plant einen abgegrenzten Pilot mit Testdaten. Nicht die Anzahl installierter Apps entscheidet, sondern ob eure Abläufe damit besser funktionieren.",
@@ -410,22 +401,16 @@ export const content = {
     nav: ["The stack", "The technology", "Make it yours", "Plan a pilot"],
     skip: "Skip to content",
     menu: "Menu",
-    close: "Close menu",
-    eyebrow: "AN IT SUITE THAT CONNECTS THE DOTS.",
-    hero: ["Your IT.", "Less busywork.", "More possibility."],
+    eyebrow: "Open IT tools for startups and small teams",
+    hero: ["A workspace", "for your IT team."],
     intro:
-      "Kebabstack connects people, devices, support and contracts on your Cloud Engine. Less chasing the next task. More room to make things better.",
+      "Handle support requests, manage devices and review contracts. Your applications share one directory and run on your Cloud Engine.",
     heroPrimary: "Explore the stack",
-    heroSecondary: "How does it work?",
-    heroNotes: ["MIT licensed", "On your Cloud Engine", "Currently in alpha"],
+    heroSecondary: "Explore the technology",
+    heroNotes: ["MIT licensed", "Currently in alpha"],
     illustration: "Product illustration · Sample data",
-    ribbon: [
-      "One shared directory",
-      "Connected applications",
-      "Code you can make your own",
-    ],
-    suiteKicker: "01 / THE STACK",
-    suiteTitle: "Useful tools.\nBetter together.",
+    suiteKicker: "Product examples",
+    suiteTitle: "How the stack works.",
     suiteIntro:
       "Explore real workflows from the implemented alpha. These are illustrated examples: names, devices and numbers are sample data, not customer results.",
     alpha: "IMPLEMENTED · ALPHA",
@@ -453,12 +438,13 @@ export const content = {
         title: "A departure does not always start with a ticket.",
         text: "When a known person is deactivated in Okta, OpenTeam, through SCIM or directly in Hub, Desk picks up the follow-up. IT reviews the reason, with authorized context from connected apps alongside the case.",
         features: [
+          "CrowdStrike Falcon (alpha): manage and classify endpoint alerts in the helpdesk. Optionally show open alert counts on the Trust screen",
           "Automatic review instead of forgotten follow-up",
           "Hardware progress from Assets instead of duplicate checklists",
           "Optional AI periodically reviews open internal tickets for clear completion comments",
           "Also customer projects, on-call and HR/Finance reporting",
         ],
-        note: "AI requires a connected provider and enabled assistance. Small batches run every 15 minutes; larger queues take longer. Only public staff replies qualify; later replies or manual status changes block old evidence. Checklists and approvals remain binding; decisions are recorded and tickets can be reopened. Internal notes and customer projects are excluded. AI can misclassify. Verified mobile alerting remains planned.",
+        note: "AI requires a connected provider and enabled assistance. Small batches run every 15 minutes; larger queues take longer. With Desk 0.40, reviews use the public thread including requester confirmation after staff help. Open cases can be reassessed after six hours. Desk can follow up in an idle Slack thread after one day. Checklists and approvals remain binding; decisions are recorded and tickets can be reopened. Internal notes and customer projects are excluded. AI can misclassify. Verified mobile alerting remains planned.",
       },
       {
         id: "knowledge",
@@ -605,7 +591,7 @@ export const content = {
         "bug",
       ],
     ],
-    engineKicker: "03 / THE TECHNOLOGY, IN PLAIN LANGUAGE",
+    engineKicker: "Hosting and data",
     engineTitle: "Less infrastructure.\nMore time for your IT.",
     engineIntro:
       "Kebabstack’s core applications store their data with the application itself. There is no separate database for you to operate. Compatible upgrades retain tickets, device assignments and contracts.",
@@ -648,7 +634,7 @@ export const content = {
     opencloudLink: "Meet OpenCloud",
     engineNote:
       "Persistence does not replace backups or undo mistakes. Snapshots are per canister; recovery and data migrations still need planning. External integrations may require their own services. Operators, data location and the dependency on ICP remain part of the decision.",
-    buildKicker: "04 / YOUR STACK CAN KEEP GROWING",
+    buildKicker: "Source code and SDK",
     buildTitle: "Your workflows are your own.\nYour software can be, too.",
     buildIntro:
       "An extra field. A different approval flow. An entirely new app. Open source and a shared SDK let your team build on what is already there.",
@@ -684,23 +670,20 @@ export const content = {
     licenseLink: "Read the licence",
     buildNote:
       "Motoko helps detect structurally incompatible state changes. Business logic tests, authorization checks, upgrade tests and recovery remain your responsibility.",
-    economicsKicker: "05 / THE DECISION",
+    economicsKicker: "Cost model",
     economicsTitle: "No fee per seat.\nAn honest total cost.",
     economicsIntro:
       "kebabstack charges no per-person licence fee. Your total cost depends on infrastructure, integrations and the time your team puts in.",
     economicsCards: [
       [
-        "01",
         "Shared foundations",
         "A shared directory and sign-in can reduce duplicate integration work.",
       ],
       [
-        "02",
         "Fewer separate services",
         "The Motoko backends store data directly in canister state. Crumbs can run without a separate collector. Include additional integrations and their operation in your cost model.",
       ],
       [
-        "03",
         "Your own priorities",
         "Source access and application control enable your own extensions. Maintenance, support and updates become your responsibility, too.",
       ],
@@ -715,7 +698,7 @@ export const content = {
     ],
     costNote:
       "Operating hours × internal hourly cost; spread migration over an agreed period. Count only subscriptions you can actually cancel. No validated cost or capacity benchmark yet.",
-    startKicker: "06 / YOUR NEXT STEP",
+    startKicker: "Pilot project",
     startTitle: "Start small.\nAsk real questions.",
     startIntro:
       "Plan a bounded pilot with test data. Success is not the number of apps installed, but whether your workflows actually work better.",

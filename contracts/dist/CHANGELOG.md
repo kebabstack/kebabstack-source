@@ -1,5 +1,10 @@
 # Changelog — kebab-stack contracts
 
+## [0.21.2] — 2026-11-18
+
+- Contract and teamspace dialogs use labelled fields and native keyboard focus. Long forms scroll inside the viewport. Directory and contract matches are keyboard-selectable.
+- The create-teamspace dialog explains administrator access before a teamspace is created.
+
 ## [0.21.1] — 2026-10-21
 
 - Synchronize the canonical browser logo registry for Doku. Existing application behavior is unchanged. This source update does not by itself deploy this app.

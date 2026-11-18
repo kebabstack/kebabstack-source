@@ -8,7 +8,7 @@ developer — or a coding agent — can fetch them from the running hub:
     <hub>/sdk/mcp.md            AI assistants: setup + contract
     <hub>/sdk/README.md         SDK readme
     <hub>/sdk/hub.did           the hub's live Candid interface
-    <hub>/sdk/VERSION           when and from what these were taken
+    <hub>/sdk/VERSION           SDK release version and source-file fingerprints
     <hub>/CHANGELOG.md          the hub's changelog (shown bottom-left in the hub)
 
 It also writes the version from hub/mops.toml into dist/index.html
@@ -17,7 +17,7 @@ It also writes the version from hub/mops.toml into dist/index.html
 Run before every hub frontend deploy; sdk/tools/check-sdk.py fails when the
 served copies are stale.
 """
-import hashlib, pathlib, shutil, subprocess, datetime
+import hashlib, pathlib, shutil, tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = ROOT / "hub/dist/sdk"
@@ -29,9 +29,8 @@ for src, dst in pairs:
     shutil.copyfile(ROOT / src, OUT / dst)
     h = hashlib.sha256((ROOT / src).read_bytes()).hexdigest()[:12]
     lines.append(f"{dst:16s} {h}  ← {src}")
-try: sha = subprocess.run(["git", "--no-optional-locks", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip() or "uncommitted"
-except Exception: sha = "unknown"
-(OUT / "VERSION").write_text(f"kebab-hub SDK · synced {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%d %H:%M} UTC · repo {sha}\n" + "\n".join(lines) + "\n")
+sdk_version = tomllib.loads((ROOT / "sdk/motoko/mops.toml").read_text())["package"]["version"]
+(OUT / "VERSION").write_text(f"kebab-hub SDK · {sdk_version}\n" + "\n".join(lines) + "\n")
 print("\n".join(lines)); print("→", OUT)
 # OpenTeam operator contract
 shutil.copyfile(ROOT / "docs/OPENTEAM.md", ROOT / "hub/dist/openteam-compatibility.md")

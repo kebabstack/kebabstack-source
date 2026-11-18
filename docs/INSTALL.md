@@ -258,3 +258,13 @@ identity. This release does not make company SSO tokens console credentials.
 ### Additional TV sharing (Hub 0.43)
 
 The Owner who paired a screen can open Operations → Screens → Sharing details to include onboarding/offboarding counts, asset-sale stages and personal Workboard totals from one explicitly selected active Desk administrator. These choices are off on existing approvals until explicitly saved. Personal tasks require Workboard; no task text, names, buyers or amounts are shared. Saving preserves the screen key, source selection and expiry. Reload an existing TV once after this update to load the new renderer. Other owners can revoke the screen but cannot change whose personal totals it shares.
+
+## CrowdStrike Falcon endpoint alerts (alpha)
+
+A Hub owner opens Settings → Notifications → CrowdStrike Falcon and selects the connected internal Desk. Choose the Falcon commercial cloud and enter the tenant CID without its checksum, OAuth client ID and secret from a dedicated Falcon Alerts Read/Write client. Secrets are stored in the Hub backend; controllers, backup operators and the selected Cloud Engine hosting trust boundary apply. Submit credentials only through your authenticated Hub. Disconnect clears the live credentials. Revoke the old client in Falcon when retiring it.
+
+The first sync starts from connection time. The one-minute job processes one page of up to 20 EPP alerts and up to ten pending acknowledgements per run. Larger backlogs take multiple runs. The owner can also use Sync now. Check the last successful import and the connection message after an outage. Disconnecting and reconnecting starts a new import window. Existing Desk tickets remain in internal support.
+
+Choose New, In progress, Reopened or Closed on the alert ticket. To close an active detection, select True Positive, False Positive or Ignored. Desk keeps the change pending until Hub reads the requested state back from Falcon. If another operator changes the detection first, review the refreshed state in Desk before submitting again.
+
+Falcon tickets use the directory identity matching the alert’s UPN or email. When Falcon reports only a local account, a unique Assets assignment identifies the affected employee. A serial from Falcon takes precedence; otherwise Assets checks the hostname against MDM device names, inventory tags and serials, including a complete serial at the end of a managed hostname. When both the login and the inventory match are inconclusive, Desk shows “Affected employee not identified”. Opening a ticket shows the current device assignment with the viewer’s Assets permissions. The originating alert and the private support-team visibility are preserved.
